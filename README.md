@@ -19,7 +19,7 @@ You also need to:
   - `<STS2GamePath>` should point to the directory for the game in Steam
   - `<GodotExePath>` should point to the Godot Directory that has `Godot_v4.5.1-stable_mono_win64.exe`
 
-> [!CRITICAL]
+> [!CAUTION]
 > For the moment this mod only supports Windows, primarily because of the way I'm handling real-time logging for the purpose of debugging the app. This should not be the case in the future.
 
 # Building the Projects
