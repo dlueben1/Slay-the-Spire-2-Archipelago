@@ -1,0 +1,178 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<!-- Import user-specific paths -->
+	<Import Project="local.props" Condition="Exists('local.props')" />
+
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<PlatformTarget>x64</PlatformTarget>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+
+		<!-- Fallback defaults if local.props missing -->
+		<STS2GamePath Condition="'$(STS2GamePath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2</STS2GamePath>
+		<GodotExePath Condition="'$(GodotExePath)' == ''">godot</GodotExePath>
+		<ModName Condition="'$(ModName)' == ''">ExampleMod</ModName>
+		<ModDisplayName Condition="'$(ModDisplayName)' == ''">Example Mod</ModDisplayName>
+		<ModAuthor Condition="'$(ModAuthor)' == ''">Unknown</ModAuthor>
+		<ModVersion Condition="'$(ModVersion)' == ''">1.0.0</ModVersion>
+
+		<AssemblyName>$(ModName)</AssemblyName>
+		<Version>$(ModVersion)</Version>
+
+		<!-- Derived paths -->
+		<ModsOutputDir>$(STS2GamePath)\mods\$(ModName)</ModsOutputDir>
+		<GameDataDir>$(STS2GamePath)\data_sts2_windows_x86_64</GameDataDir>
+		<GodotProject>$(ProjectDir)godot</GodotProject>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Reference Include="0Harmony">
+			<HintPath>$(GameDataDir)\0Harmony.dll</HintPath>
+		</Reference>
+		<Reference Include="GodotSharp">
+			<HintPath>$(GameDataDir)\GodotSharp.dll</HintPath>
+		</Reference>
+		<Reference Include="sts2">
+			<HintPath>$(GameDataDir)\sts2.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+
+	<!-- Create Godot folder structure -->
+	<Target Name="CreateGodotFolder" BeforeTargets="BeforeBuild">
+		<MakeDir Directories="$(GodotProject)" />
+		<Message Text="Created Godot folder structure" Importance="high" />
+	</Target>
+
+	<!-- Generate export_presets.cfg -->
+
+
+
+	<!-- Generate project.godot -->
+	<Target Name="GenerateProjectGodot" BeforeTargets="BeforeBuild" DependsOnTargets="CreateGodotFolder">
+		<PropertyGroup>
+			<ProjectGodotPath>$(GodotProject)\project.godot</ProjectGodotPath>
+			<ProjectGodotContent>
+config_version=5
+
+[application]
+config/name="$(ModName)"
+config/features=PackedStringArray("4.5", "Forward Plus")
+
+[dotnet]
+project/assembly_name="$(ModName)"
+			</ProjectGodotContent>
+		</PropertyGroup>
+
+		<WriteLinesToFile File="$(ProjectGodotPath)" Lines="$(ProjectGodotContent)" Overwrite="true" Encoding="UTF-8" />
+		<Message Text="Generated project.godot" Importance="high" />
+	</Target>
+
+	<!-- Generate mod_manifest.json -->
+	<Target Name="GenerateModManifest" BeforeTargets="BeforeBuild" DependsOnTargets="CreateGodotFolder">
+		<PropertyGroup>
+			<ModManifestPath>$(GodotProject)\mod_manifest.json</ModManifestPath>
+			<ModManifestContent>
+{
+	"pck_name": "$(ModName)",
+	"name": "$(ModDisplayName)",
+	"author": "$(ModAuthor)",
+	"version": "$(ModVersion)"
+}
+			</ModManifestContent>
+		</PropertyGroup>
+
+		<WriteLinesToFile File="$(ModManifestPath)" Lines="$(ModManifestContent)" Overwrite="true" Encoding="UTF-8" />
+		<Message Text="Generated mod_manifest.json" Importance="high" />
+	</Target>
+
+	<Target Name="GenerateExportPresets" BeforeTargets="BeforeBuild" DependsOnTargets="CreateGodotFolder">
+		<PropertyGroup>
+			<ExportPresetsPath>$(GodotProject)\export_presets.cfg</ExportPresetsPath>
+			<ExportPresetsContent>
+				<![CDATA[config_version=5
+
+[preset.0]
+
+name="Windows Desktop"
+platform="Windows Desktop"
+runnable=true
+advanced_options=false
+dedicated_server=false
+custom_features=""
+export_filter="all_resources"
+include_filter=""
+exclude_filter=""
+export_path=""
+patches=PackedStringArray()
+encryption_include_filters=""
+encryption_exclude_filters=""
+seed=0
+encrypt_pck=false
+encrypt_directory=false
+script_export_mode=2
+
+[preset.0.options]
+
+custom_template/debug=""
+custom_template/release=""
+debug/export_console_wrapper=1
+binary_format/embed_pck=false
+texture_format/s3tc_bptc=true
+texture_format/etc2_astc=false
+shader_baker/enabled=false
+binary_format/architecture="x86_64"
+codesign/enable=false
+codesign/timestamp=true
+codesign/timestamp_server_url=""
+codesign/digest_algorithm=1
+codesign/description=""
+codesign/custom_options=PackedStringArray()
+application/modify_resources=true
+application/icon=""
+application/console_wrapper_icon=""
+application/icon_interpolation=4
+application/file_version=""
+application/product_version=""
+application/company_name=""
+application/product_name=""
+application/file_description=""
+application/copyright=""
+application/trademarks=""
+application/export_angle=0
+application/export_d3d12=0
+application/d3d12_agility_sdk_multiarch=true
+ssh_remote_deploy/enabled=false
+ssh_remote_deploy/host="user@host_ip"
+ssh_remote_deploy/port="22"
+ssh_remote_deploy/extra_args_ssh=""
+ssh_remote_deploy/extra_args_scp=""
+ssh_remote_deploy/run_script="Expand-Archive -LiteralPath '{temp_dir}\\{archive_name}' -DestinationPath '{temp_dir}'
+$action = New-ScheduledTaskAction -Execute '{temp_dir}\\{exe_name}' -Argument '{cmd_args}'
+$trigger = New-ScheduledTaskTrigger -Once -At 00:00
+$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+$task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings
+Register-ScheduledTask godot_remote_debug -InputObject $task -Force:$true
+Start-ScheduledTask -TaskName godot_remote_debug
+while (Get-ScheduledTask -TaskName godot_remote_debug | ? State -eq running) { Start-Sleep -Milliseconds 100 }
+Unregister-ScheduledTask -TaskName godot_remote_debug -Confirm:$false -ErrorAction:SilentlyContinue"
+ssh_remote_deploy/cleanup_script="Stop-ScheduledTask -TaskName godot_remote_debug -ErrorAction:SilentlyContinue
+Unregister-ScheduledTask -TaskName godot_remote_debug -Confirm:$false -ErrorAction:SilentlyContinue
+Remove-Item -Recurse -Force '{temp_dir}'"
+dotnet/include_scripts_content=false
+dotnet/include_debug_symbols=true
+dotnet/embed_build_outputs=false
+]]>
+			</ExportPresetsContent>
+		</PropertyGroup>
+
+		<WriteLinesToFile File="$(ExportPresetsPath)" Lines="$(ExportPresetsContent)" Overwrite="true" Encoding="UTF-8" />
+		<Message Text="Generated export_presets.cfg" Importance="high" />
+	</Target>
+
+	
+	<Target Name="PostBuild" AfterTargets="Build">
+		<MakeDir Directories="$(ModsOutputDir)" />
+		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModsOutputDir)" />
+		<Exec Command="&quot;$(GodotExePath)&quot; --headless --path &quot;$(GodotProject)&quot; --export-pack &quot;Windows Desktop&quot; &quot;$(ModsOutputDir)\$(ModName).pck&quot;" />
+	</Target>
+</Project>

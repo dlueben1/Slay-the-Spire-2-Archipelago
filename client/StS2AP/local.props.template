@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup>
+    <!-- Paths - Update these with the absolute paths to your Slay the Spire 2 Steam App and Godot Executable -->
+    <STS2GamePath>???\steamapps\common\Slay the Spire 2</STS2GamePath>
+    <GodotExePath>???\Godot_v4.5.1-stable_mono_win64.exe</GodotExePath>
+    
+    <!-- Mod Metadata -->
+    <ModName>Archipelago</ModName>
+    <ModDisplayName>Archipelago Client</ModDisplayName>
+    <ModAuthor>Kirbyfanner</ModAuthor>
+    <ModVersion>0.0.1</ModVersion>
+  </PropertyGroup>
+</Project>
