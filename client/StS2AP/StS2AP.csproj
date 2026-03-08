@@ -26,6 +26,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <PackageReference Include="Archipelago.MultiClient.Net" Version="6.7.0" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<Reference Include="0Harmony">
 			<HintPath>$(GameDataDir)\0Harmony.dll</HintPath>
 		</Reference>
