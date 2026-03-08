@@ -1,10 +1,7 @@
 ﻿using HarmonyLib;
 using MegaCrit.Sts2.Core.Modding;
+using StS2AP.Utils;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace StS2AP
 {
@@ -13,8 +10,26 @@ namespace StS2AP
     {
         public static void Initialize()
         {
-            var harmony = new Harmony("archipelago.patch");
-            harmony.PatchAll();
+            // Initialize debug console first so we can see log output
+            ConsoleLogger.Initialize();
+
+            LogUtility.Info("Archipelago mod initializing...");
+
+            try
+            {
+                var harmony = new Harmony("archipelago.patch");
+                harmony.PatchAll();
+                LogUtility.Success("Harmony patches applied successfully.");
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Error($"Failed to apply Harmony patches: {ex.Message}");
+            }
+
+            LogUtility.Info("Archipelago mod initialized.");
+
+            // Register cleanup when the application exits
+            AppDomain.CurrentDomain.ProcessExit += (s, e) => ConsoleLogger.Shutdown();
         }
     }
 }

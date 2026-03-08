@@ -17,6 +17,7 @@ namespace StS2AP.Patches
         static void Postfix(Player __result)
         {
             // Give 999 gold at the start of the run
+            LogUtility.Info("Test Log");
             __result.Gold = 999;
         }
     }
