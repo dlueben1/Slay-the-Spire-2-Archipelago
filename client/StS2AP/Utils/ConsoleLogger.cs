@@ -10,6 +10,7 @@ public static class ConsoleLogger
     private static StreamWriter? _consoleWriter;
     private static readonly object _lock = new();
 
+    #region Win32 API
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool AllocConsole();
 
@@ -22,6 +23,21 @@ public static class ConsoleLogger
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool SetConsoleTitleW([MarshalAs(UnmanagedType.LPWStr)] string lpConsoleTitle);
 
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GetStdHandle(int nStdHandle);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GetConsoleMode(IntPtr hConsoleHandle, out uint lpMode);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool SetConsoleMode(IntPtr hConsoleHandle, uint dwMode);
+
+    // constants to disable quick edit mode, and fixing the issue with the terminal
+    private const int STD_INPUT_HANDLE = -10;
+    private const uint ENABLE_EXTENDED_FLAGS = 0x0080;
+    private const uint ENABLE_QUICK_EDIT_MODE = 0x0040;
+    #endregion
+
     public static void Initialize()
     {
         lock (_lock)
@@ -32,6 +48,9 @@ public static class ConsoleLogger
             // Allocate a new console window
             AllocConsole();
             SetConsoleTitleW("Slay the Spire 2 - Archipelago Debug Console");
+
+            // disabling the quick edit mode
+            DisableQuickEdit(false);
 
             // Redirect Console.Out to the new console
             var stdOut = Console.OpenStandardOutput();
@@ -45,6 +64,21 @@ public static class ConsoleLogger
             WriteLine(ConsoleColor.Cyan, "========================================");
             WriteLine(ConsoleColor.Gray, $"Started at {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             WriteLine(ConsoleColor.Gray, "");
+        }
+    }
+
+    private static void DisableQuickEdit(bool enable)
+    {
+        IntPtr consoleHandle = GetStdHandle(STD_INPUT_HANDLE);
+        if (GetConsoleMode(consoleHandle, out uint consoleMode))
+        {
+            if (enable)
+                consoleMode |= ENABLE_QUICK_EDIT_MODE;
+            else
+                consoleMode &= ~ENABLE_QUICK_EDIT_MODE;
+            
+            consoleMode |= ENABLE_EXTENDED_FLAGS;
+            SetConsoleMode(consoleHandle, consoleMode);
         }
     }
 
