@@ -1,4 +1,5 @@
 using Godot;
+using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using StS2AP.Utils;
 using System;
 
@@ -15,6 +16,7 @@ namespace StS2AP.UI
         private static LineEdit? _urlInput;
         private static LineEdit? _passwordInput;
         private static Button? _connectButton;
+        private static Button? _closeButton;
         private static Label? _statusLabel;
 
         /// <summary>
@@ -112,9 +114,6 @@ namespace StS2AP.UI
             {
                 _rootPanel.Visible = false;
             }
-
-            // Pop the submenu stack to return to the main menu
-            MenuUtility.SubmenuStack?.Pop();
         }
 
         /// <summary>
@@ -136,6 +135,17 @@ namespace StS2AP.UI
             if (_connectButton != null && IsInstanceValid(_connectButton))
             {
                 _connectButton.Disabled = !enabled;
+            }
+        }
+
+        /// <summary>
+        /// Enables or disables the close button
+        /// </summary>
+        public static void SetCloseButtonEnabled(bool enabled)
+        {
+            if (_closeButton != null && IsInstanceValid(_closeButton))
+            {
+                _closeButton.Disabled = !enabled;
             }
         }
 
@@ -225,9 +235,9 @@ namespace StS2AP.UI
             vbox.AddChild(buttonContainer);
 
             // Close button
-            var closeButton = CreateStyledButton("Close", new Color(0.5f, 0.5f, 0.5f));
-            closeButton.Pressed += OnCloseButtonPressed;
-            buttonContainer.AddChild(closeButton);
+            _closeButton = CreateStyledButton("Close", new Color(0.5f, 0.5f, 0.5f));
+            _closeButton.Pressed += OnCloseButtonPressed;
+            buttonContainer.AddChild(_closeButton);
 
             // Connect button
             _connectButton = CreateStyledButton("Connect", new Color(0.2f, 0.6f, 0.3f));
@@ -333,35 +343,80 @@ namespace StS2AP.UI
             return button;
         }
 
+        /// <summary>
+        /// Fires when "Connect" is pressed, handles connecting to Archipelago
+        /// </summary>
         private static void OnConnectButtonPressed()
         {
             var slotName = _slotNameInput?.Text ?? "";
             var url = _urlInput?.Text ?? "";
             var password = _passwordInput?.Text ?? "";
 
+            // Validates the Slot Name
             if (string.IsNullOrWhiteSpace(slotName))
             {
                 SetStatus("Please enter a slot name");
                 return;
             }
 
+            // Validates a URL is present
             if (string.IsNullOrWhiteSpace(url))
             {
                 SetStatus("Please enter a server URL");
                 return;
             }
 
+            // Begin Connecting
             LogUtility.Info($"Connect pressed - Slot: {slotName}, URL: {url}");
             SetStatus("Connecting...");
             SetConnectButtonEnabled(false);
+            SetCloseButtonEnabled(false);
+            ArchipelagoClient.ServerAddress = url;
+            ArchipelagoClient.ServerPassword = password;
+            ArchipelagoClient.PlayerName = slotName;
+            ArchipelagoClient.ConnectionStateChanged += OnConnectionResult;
+            ArchipelagoClient.Connect();
 
             // Fire the event for external handling
             OnConnectPressed?.Invoke(slotName, url, password);
         }
 
+        /// <summary>
+        /// Fires on when a connection attempt to Archipelago completes
+        /// </summary>
+        private static void OnConnectionResult(object? sender, ResultEventArgs e)
+        {
+            if (e.Value)
+            {
+                // Set status
+                SetStatus("Connected successfully!");
+
+                // Enter the game
+                var _charSelectScreen = MenuUtility.SubmenuStack.GetSubmenuType<NCharacterSelectScreen>();
+                _charSelectScreen?.InitializeSingleplayer();
+                MenuUtility.SubmenuStack.Push(_charSelectScreen);
+
+                // Hide the connection UI
+                Hide();
+            }
+            else
+            {
+                SetStatus("Failed to connect. Please check your details and try again.");
+                SetConnectButtonEnabled(true);
+                SetCloseButtonEnabled(true);
+            }
+        }
+
+        /// <summary>
+        /// Fires when the Close button is pressed
+        /// </summary>
         private static void OnCloseButtonPressed()
         {
+            // Hide the connection UI
             Hide();
+
+            // Pop the submenu stack to return to the main menu
+            MenuUtility.SubmenuStack?.Pop();
         }
     }
 }

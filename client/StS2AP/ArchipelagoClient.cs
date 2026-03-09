@@ -2,15 +2,19 @@
 using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Helpers;
+using Archipelago.MultiClient.Net.Models;
 using Godot;
+using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
+using StS2AP.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+//test
 
 namespace StS2AP
 {
@@ -45,6 +49,7 @@ namespace StS2AP
 
         public static bool Authenticated { get; set; }
         public static bool Connecting { get; set; }
+        public static bool IsConnected => Authenticated && Session?.Socket?.Connected == true;
 
         public static ArchipelagoSession Session { get; set; }
 
@@ -56,9 +61,9 @@ namespace StS2AP
         public static Dictionary<string, object> SlotData { get; set; }
 
         /// <summary>
-        /// Fires when we're successfully connected to Archipelago
+        /// Fires when the connection state changes
         /// </summary>
-        public static event EventHandler<ResultEventArgs> Connected;
+        public static event EventHandler<ResultEventArgs> ConnectionStateChanged;
 
         public static List<long> CheckedLocations { get; set; }
 
@@ -161,12 +166,17 @@ namespace StS2AP
         /// </summary>
         public static void OnConnected()
         {
+            LogUtility.Success("Successfully Connected to Archipelago Server");
+
             // Log all slot data
-            //foreach (var kvp in SlotData)
-            //{
-            //    Plugin.Logger.LogMessage($"KEY: {kvp.Key}");
-            //    Plugin.Logger.LogMessage($"VAL: {kvp.Value.ToString()}");
-            //}
+            foreach (var kvp in SlotData)
+            {
+                LogUtility.Debug($"KEY: {kvp.Key}");
+                LogUtility.Debug($"VAL: {kvp.Value.ToString()}");
+            }
+
+            // Let the game know that we've connected
+            ConnectionStateChanged?.Invoke(null, new ResultEventArgs { Value = true });
         }
 
         /// <summary>
@@ -174,20 +184,26 @@ namespace StS2AP
         /// </summary>
         public static void Disconnect()
         {
-            //Plugin.Logger.LogDebug("Disconnecting from Archipelago...");
-            //Session?.Socket.Disconnect();
+            LogUtility.Debug("Disconnecting from Archipelago...");
+            Task.Run(() => Session?.Socket.DisconnectAsync());
             Session = null;
             Authenticated = false;
 
             // Let the game know that we've disconnected
-            Connected?.Invoke(null, new ResultEventArgs { Value = true });
+            ConnectionStateChanged?.Invoke(null, new ResultEventArgs { Value = false });
         }
 
         /// <summary>
+
         /// Log errors to the console
         /// </summary>
         private static void OnErrorReceived(Exception e, string message)
         {
+            LogUtility.Error($"Archipelago Error: {message}");
+            if (e != null)
+            {
+                LogUtility.Error($"Exception: {e.Message}");
+            }
         }
 
         /// <summary>
@@ -195,6 +211,7 @@ namespace StS2AP
         /// </summary>
         private static void OnSocketSessionEnd(string reason)
         {
+            LogUtility.Warn($"Socket session ended: {reason}");
             Disconnect();
         }
 
@@ -209,8 +226,37 @@ namespace StS2AP
             // Ignore if this item is an old message
             if (helper.Index <= Index) return;
 
+            // Add the Item
+            ProcessItem(receivedItem);
+
+            // Log the item
+            LogUtility.Success($"Received: {receivedItem.ItemName} from {receivedItem.Player.Name} (ID: {receivedItem.ItemId})");
+
             // Keep track of how many messages we've had so far
             Index++;
+        }
+
+        #endregion
+
+        #region Item Processing
+
+        /// <summary>
+        /// Determines what to do with an Item that we've received from Archipelago.
+        /// </summary>
+        /// <param name="item">Received Item</param>
+        private static void ProcessItem(ItemInfo item)
+        {
+            // In the first pass the only thing you can really get is Gold, so this will be updated later.
+            switch (item.ItemId)
+            {
+                default:
+                    {
+                        // Crappy temporary way to scrape the gold amount from the item name
+                        var goldAmt = int.Parse(item.ItemDisplayName.Replace("Gold", "").Trim());
+                        PlayerCmd.GainGold(goldAmt, GameUtility.CurrentPlayer, false);
+                        break;
+                    }
+            }
         }
 
         #endregion

@@ -1,0 +1,131 @@
+﻿using HarmonyLib;
+using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Rooms;
+using MegaCrit.Sts2.Core.Runs;
+using MegaCrit.Sts2.Core.Unlocks;
+using StS2AP.Utils;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace StS2AP.Patches
+{
+    /// <summary>
+    /// Collection of Harmony Patches related to checking if certain conditions have been met in the game to trigger Archipelago Checks/Locations.
+    /// </summary>
+    public static class CheckTriggerPatches
+    {
+        /// <summary>
+        /// The logic to determine if we need to send a location check
+        /// </summary>
+        /// <param name="runState">The current state of the run</param>
+        static void TrySendFloorCheck(IRunState? runState)
+        {
+            // Null checks to shut compiler up
+            if (GameUtility.CurrentPlayer == null || runState == null)
+            {
+                LogUtility.Error("CurrentPlayer or runState is null, skipping Archipelago check");
+                return;
+            }
+
+            // Try to get floor information from runState using reflection
+            var floorProperty = runState.GetType().GetProperty("ActFloor");
+
+            if (floorProperty == null)
+            {
+                LogUtility.Error("fail");
+                return;
+            }
+
+            // Create the Location/Check name to send
+            var floorValue = floorProperty.GetValue(runState);
+            var locationName = $"Act 1 - Reach Floor {floorValue}";
+
+            LogUtility.Debug($"Attempting to send Archipelago location check: {locationName}");
+
+            // Get the location ID from the name
+            if (ArchipelagoClient.Session?.Locations.GetLocationIdFromName("Slay the Spire II", locationName) is long locationId)
+            {
+                // Add to checked locations and complete the check
+                if (!ArchipelagoClient.CheckedLocations.Contains(locationId))
+                {
+                    ArchipelagoClient.CheckedLocations.Add(locationId);
+                    _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(locationId);
+                    LogUtility.Success($"Sent location check: {locationName}");
+                }
+            }
+            else
+            {
+                LogUtility.Warn($"Location '{locationName}' not found in Archipelago");
+            }
+        }
+
+        /// <summary>
+        /// Sends an Archipelago location check when entering a Combat Room.
+        /// We can't patch to abstract classes apparently, so I'm doing it to each one.
+        /// </summary>
+        [HarmonyPatch(typeof(CombatRoom), nameof(CombatRoom.Enter))]
+        public class OnCombatRoomEnterPatch
+        {
+            static void Postfix(IRunState? runState, bool isRestoringRoomStackBase)
+            {
+                TrySendFloorCheck(runState);
+            }
+        }
+
+        /// <summary>
+        /// Sends an Archipelago location check when entering an Event Room.
+        /// We can't patch to abstract classes apparently, so I'm doing it to each one.
+        /// </summary>
+        [HarmonyPatch(typeof(EventRoom), nameof(EventRoom.Enter))]
+        public class OnEventRoomEnterPatch
+        {
+            static void Postfix(IRunState? runState, bool isRestoringRoomStackBase)
+            {
+                TrySendFloorCheck(runState);
+            }
+        }
+
+        /// <summary>
+        /// Sends an Archipelago location check when entering a Treasure Room.
+        /// We can't patch to abstract classes apparently, so I'm doing it to each one.
+        /// </summary>
+        [HarmonyPatch(typeof(TreasureRoom), nameof(TreasureRoom.Enter))]
+        public class OnTreasureRoomEnterPatch
+        {
+            static void Postfix(IRunState? runState, bool isRestoringRoomStackBase)
+            {
+                TrySendFloorCheck(runState);
+            }
+        }
+
+        /// <summary>
+        /// Sends an Archipelago location check when entering a Rest Site Room.
+        /// We can't patch to abstract classes apparently, so I'm doing it to each one.
+        /// </summary>
+        [HarmonyPatch(typeof(RestSiteRoom), nameof(RestSiteRoom.Enter))]
+        public class OnRestSiteRoomEnterPatch
+        {
+            static void Postfix(IRunState? runState, bool isRestoringRoomStackBase)
+            {
+                TrySendFloorCheck(runState);
+            }
+        }
+
+        /// <summary>
+        /// Sends an Archipelago location check when entering a Merchant Room.
+        /// We can't patch to abstract classes apparently, so I'm doing it to each one.
+        /// </summary>
+        [HarmonyPatch(typeof(MerchantRoom), nameof(MerchantRoom.Enter))]
+        public class OnMerchantRoomEnterPatch
+        {
+            static void Postfix(IRunState? runState, bool isRestoringRoomStackBase)
+            {
+                TrySendFloorCheck(runState);
+            }
+        }
+    }
+}
