@@ -10,7 +10,7 @@ Currently it's a simple proof-of-concept where you can only get Gold Rewards and
 
 # Installing the Mod
 
-1. Download the "sts2-client.zip" from the Releases section of the Repo
+1. Download the "sts2-client.zip" from the [Releases](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest) section of the Repo
 2. Go to your Slay the Spire II directory (In Steam, click "Browse Local Files")
 3. If a folder called `mods` does not exist, create it
 4. Unzip the **contents** of `sts2-client.zip` into `mods`
