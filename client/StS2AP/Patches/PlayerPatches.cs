@@ -12,12 +12,13 @@ using System.Threading.Tasks;
 namespace StS2AP.Patches
 {
     /// <summary>
-    /// Collection of Harmony Patches related to reading data from Slay the Spire to make it accessible in the Archipelago Mod
+    /// Patches for `Player`
     /// </summary>
-    public static class ReadDataPatches
+    public static class PlayerPatches
     {
         /// <summary>
-        /// Grabs a reference to the player character
+        /// Grabs a reference to the player character that we can access globally.
+        /// The Player is the entry point to many things, such as giving gold, damage, rewards, etc. so having a reference to it is important.
         /// </summary>
         [HarmonyPatch(typeof(Player), nameof(Player.CreateForNewRun),
             new Type[] { typeof(CharacterModel), typeof(UnlockState), typeof(ulong) })]

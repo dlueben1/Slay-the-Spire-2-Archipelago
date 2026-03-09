@@ -18,9 +18,10 @@ using System.Threading.Tasks;
 namespace StS2AP.Patches
 {
     /// <summary>
-    /// Collection of Harmony patches related to configuring the menu for Archipelago
+    /// Patches for `NMainMenu` and all of its related submenus.
+    /// Used primarily to reconfigure the UI for Archipelago, as well as injecting our custom Archipelago Connection UI.
     /// </summary>
-    public static class APMenuPatches
+    public static class NMainMenuPatches
     {
         /// <summary>
         /// Changes the main menu UI so that "Single Player", "Multiplayer", and everything not necessary is hidden.

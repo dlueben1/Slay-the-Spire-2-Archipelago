@@ -14,54 +14,13 @@ using System.Threading.Tasks;
 namespace StS2AP.Patches
 {
     /// <summary>
-    /// Collection of Harmony Patches related to checking if certain conditions have been met in the game to trigger Archipelago Checks/Locations.
+    /// Patches for `AbstractRoom` and all of its derived classes.
+    /// Note: You can't patch an abstract class, so some patches in this file are duplicated for each type 
+    /// of room (Combat, Event, Treasure, Rest Site, Merchant, etc.) if there's a better way, let me know.
     /// </summary>
-    public static class CheckTriggerPatches
+    public static class AbstractRoomPatches
     {
-        /// <summary>
-        /// The logic to determine if we need to send a location check
-        /// </summary>
-        /// <param name="runState">The current state of the run</param>
-        static void TrySendFloorCheck(IRunState? runState)
-        {
-            // Null checks to shut compiler up
-            if (GameUtility.CurrentPlayer == null || runState == null)
-            {
-                LogUtility.Error("CurrentPlayer or runState is null, skipping Archipelago check");
-                return;
-            }
-
-            // Try to get floor information from runState using reflection
-            var floorProperty = runState.GetType().GetProperty("ActFloor");
-
-            if (floorProperty == null)
-            {
-                LogUtility.Error("fail");
-                return;
-            }
-
-            // Create the Location/Check name to send
-            var floorValue = floorProperty.GetValue(runState);
-            var locationName = $"Act 1 - Reach Floor {floorValue}";
-
-            LogUtility.Debug($"Attempting to send Archipelago location check: {locationName}");
-
-            // Get the location ID from the name
-            if (ArchipelagoClient.Session?.Locations.GetLocationIdFromName("Slay the Spire II", locationName) is long locationId)
-            {
-                // Add to checked locations and complete the check
-                if (!ArchipelagoClient.CheckedLocations.Contains(locationId))
-                {
-                    ArchipelagoClient.CheckedLocations.Add(locationId);
-                    _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(locationId);
-                    LogUtility.Success($"Sent location check: {locationName}");
-                }
-            }
-            else
-            {
-                LogUtility.Warn($"Location '{locationName}' not found in Archipelago");
-            }
-        }
+        #region Patches
 
         /// <summary>
         /// Sends an Archipelago location check when entering a Combat Room.
@@ -127,5 +86,57 @@ namespace StS2AP.Patches
                 TrySendFloorCheck(runState);
             }
         }
+
+        #endregion
+
+        #region Helper Methods
+
+        /// <summary>
+        /// The logic to determine if we need to send a location check
+        /// </summary>
+        /// <param name="runState">The current state of the run</param>
+        static void TrySendFloorCheck(IRunState? runState)
+        {
+            // Null checks to shut compiler up
+            if (GameUtility.CurrentPlayer == null || runState == null)
+            {
+                LogUtility.Error("CurrentPlayer or runState is null, skipping Archipelago check");
+                return;
+            }
+
+            // Try to get floor information from runState using reflection
+            var floorProperty = runState.GetType().GetProperty("ActFloor");
+
+            if (floorProperty == null)
+            {
+                LogUtility.Error("fail");
+                return;
+            }
+
+            // Create the Location/Check name to send
+            var floorValue = floorProperty.GetValue(runState);
+            var locationName = $"Act 1 - Reach Floor {floorValue}";
+
+            LogUtility.Debug($"Attempting to send Archipelago location check: {locationName}");
+
+            // Get the location ID from the name
+            if (ArchipelagoClient.Session?.Locations.GetLocationIdFromName("Slay the Spire II", locationName) is long locationId)
+            {
+                // Add to checked locations and complete the check
+                if (!ArchipelagoClient.CheckedLocations.Contains(locationId))
+                {
+                    ArchipelagoClient.CheckedLocations.Add(locationId);
+                    _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(locationId);
+                    LogUtility.Success($"Sent location check: {locationName}");
+                }
+            }
+            else
+            {
+                LogUtility.Warn($"Location '{locationName}' not found in Archipelago");
+            }
+        }
+
+
+        #endregion
     }
 }

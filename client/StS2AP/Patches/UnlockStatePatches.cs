@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 namespace StS2AP.Patches
 {
     /// <summary>
+    /// Patches for `UnlockState`.
     /// Allows us to control the unlock state of characters, acts, ascension levels, etc. in the game.
     /// </summary>
     [HarmonyPatch(typeof(UnlockState))]
