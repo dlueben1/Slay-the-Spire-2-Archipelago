@@ -49,6 +49,9 @@ Run `./scripts/build-world.ps1` to generate the `.apworld` file. It should be in
 
 Use `Ctrl+Shift+B` or `Build > Build Solution`. This will automatically place the mod in the `mods` folder of Slay the Spire
 
+> [!CAUTION]
+> Note that while this is a Godot game, and Godot is needed for *building* the mod, I don't know how to use the Godot Engine itself to modify/view any game files. All of this is handled entirely in code in Visual Studio.
+
 # Special Thanks
 
 - [Archipelago.MultiClient.Net](https://github.com/ArchipelagoMW/Archipelago.MultiClient.Net)
