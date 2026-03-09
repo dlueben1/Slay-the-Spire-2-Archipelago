@@ -6,6 +6,8 @@ using Archipelago.MultiClient.Net.Models;
 using Godot;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Powers;
+using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Characters;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
 using StS2AP.Utils;
 using System;
@@ -162,7 +164,7 @@ namespace StS2AP
         }
 
         /// <summary>
-        /// @todo clean this lol
+        /// Fires on a successful Archipelago connection.
         /// </summary>
         public static void OnConnected()
         {
