@@ -50,7 +50,7 @@ Run `./scripts/build-world.ps1` to generate the `.apworld` file. It should be in
 Use `Ctrl+Shift+B` or `Build > Build Solution`. This will automatically place the mod in the `mods` folder of Slay the Spire
 
 > [!CAUTION]
-> Note that while this is a Godot game, and Godot is needed for *building* the mod, I don't know how to use the Godot Engine itself to modify/view any game files. All of this is handled entirely in code in Visual Studio.
+> Note that while this is a Godot game, and Godot is needed for _building_ the mod, I don't know how to use the Godot Engine itself to modify/view any game files. All of this is handled entirely in code in Visual Studio.
 
 # Special Thanks
 
@@ -63,38 +63,38 @@ Use `Ctrl+Shift+B` or `Build > Build Solution`. This will automatically place th
 
 ## v1
 
-- [] Fix bug where clicking the debug terminal freezes the game
+- [ ] Fix bug where clicking the debug terminal freezes the game
 - [x] Very Simple Proof-of-Concept Gameplay loop (Receive Gold as Items, Act 1 Boss is clear, reaching each floor is a check)
-- [] Implement Goal: Complete Act 3
-- [] Implement Features
-  - [] Card Rewards
-  - [] Gold Rewards
-  - [] Potions
-  - [] Progressive Campfires
-  - [] "Trap Relics" (Relics that can hurt you when you receive certain traps)
-  - [] "Filler Relic" (Relic that heals you a small amount upon filler item received)
-- [] UI
-  - [] AP Log
-  - [] Archipelago "Rewards" Window/Menu Item
-  - [] Mod Info Details
-  - [] Icon for Mod
-  - [] Icons for Archipelago Window, AP-specific Relics
-- [] Quality-of-Life
-  - [] Unlock all characters, epochs, relics, cards, etc. on Mod Entry
-  - [] Log for Archipelago Items Sent/Received
-- [] Code Quality
-  - [] Handle Errors properly
-  - [] Improve APWorld logic
-  - [] Handle Disconnection / Connection Instability / Sync missed Checks and Items
+- [ ] Implement Goal: Complete Act 3
+- [ ] Implement Features
+  - [ ] Card Rewards
+  - [ ] Gold Rewards
+  - [ ] Potions
+  - [ ] Progressive Campfires
+  - [ ] "Trap Relics" (Relics that can hurt you when you receive certain traps)
+  - [ ] "Filler Relic" (Relic that heals you a small amount upon filler item received)
+- [ ] UI
+  - [ ] AP Log
+  - [ ] Archipelago "Rewards" Window/Menu Item
+  - [ ] Mod Info Details
+  - [ ] Icon for Mod
+  - [ ] Icons for Archipelago Window, AP-specific Relics
+- [ ] Quality-of-Life
+  - [ ] Unlock all characters, epochs, relics, cards, etc. on Mod Entry
+  - [ ] Log for Archipelago Items Sent/Received
+- [ ] Code Quality
+  - [ ] Handle Errors properly
+  - [ ] Improve APWorld logic
+  - [ ] Handle Disconnection / Connection Instability / Sync missed Checks and Items
 
 ## Future
 
 > [!TIP]
 > If there's a feature you're looking for, please reach out on Discord or add a request to the repo!
 
-- [] Per-Character Checks, Unlocks, Items (like how StS 1 handles it)
-- [] Support other Mods
-- [] Multiplayer Support
+- [ ] Per-Character Checks, Unlocks, Items (like how StS 1 handles it)
+- [ ] Support other Mods
+- [ ] Multiplayer Support
 
 > [!IMPORTANT]
 > Multiplayer is going to be complex, and will only be started on when everything else is very stable.
