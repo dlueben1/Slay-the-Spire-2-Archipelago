@@ -52,6 +52,9 @@ Use `Ctrl+Shift+B` or `Build > Build Solution`. This will automatically place th
 > [!CAUTION]
 > Note that while this is a Godot game, and Godot is needed for _building_ the mod, I don't know how to use the Godot Engine itself to modify/view any game files. All of this is handled entirely in code in Visual Studio.
 
+> [!TIP]
+> While developing the mod, use `Ctrl+Alt+J` to view the "Object Browser", this will let you view the `sts2` namespace and all of the source code for the game
+
 # Special Thanks
 
 - [Archipelago.MultiClient.Net](https://github.com/ArchipelagoMW/Archipelago.MultiClient.Net)
