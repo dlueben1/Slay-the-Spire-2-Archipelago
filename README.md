@@ -59,31 +59,18 @@ Use `Ctrl+Shift+B` or `Build > Build Solution`. This will automatically place th
 - [lamali292](https://github.com/lamali292) for their initial guide on creating mods for Slay the Spire 2!
 - [alwaysintreble](https://github.com/alwaysintreble/ArchipelagoBepInExPluginTemplate/tree/master) for their example Archipelago C# Plugin Template
 
-# To-Do List
+# Roadmap
 
-## v1
+You can view the current roadmap in detail [here](https://github.com/users/dlueben1/projects/1)
+
+## MVP
 
 - [ ] Fix bug where clicking the debug terminal freezes the game
 - [x] Very Simple Proof-of-Concept Gameplay loop (Receive Gold as Items, Act 1 Boss is clear, reaching each floor is a check)
 - [ ] Implement Goal: Complete Act 3
-- [ ] Implement Features
-  - [ ] Card Rewards
-  - [ ] Gold Rewards
-  - [ ] Potions
-  - [ ] Progressive Campfires
-  - [ ] "Trap Relics" (Relics that can hurt you when you receive certain traps)
-  - [ ] "Filler Relic" (Relic that heals you a small amount upon filler item received)
-- [ ] UI
-  - [ ] AP Log
-  - [ ] Archipelago "Rewards" Window/Menu Item
-  - [ ] Mod Info Details
-  - [ ] Icon for Mod
-  - [ ] Icons for Archipelago Window, AP-specific Relics
-- [ ] Quality-of-Life
-  - [ ] Unlock all characters, epochs, relics, cards, etc. on Mod Entry
-  - [ ] Log for Archipelago Items Sent/Received
+- [ ] Implement Core Features: Card, Gold, Relic Rewards, Defeating Bosses
+- [ ] UI: Archipelago Rewards Menu, Notifications
 - [ ] Code Quality
-  - [ ] Handle Errors properly
   - [ ] Improve APWorld logic
   - [ ] Handle Disconnection / Connection Instability / Sync missed Checks and Items
 
@@ -92,9 +79,8 @@ Use `Ctrl+Shift+B` or `Build > Build Solution`. This will automatically place th
 > [!TIP]
 > If there's a feature you're looking for, please reach out on Discord or add a request to the repo!
 
-- [ ] Per-Character Checks, Unlocks, Items (like how StS 1 handles it)
 - [ ] Support other Mods
 - [ ] Multiplayer Support
 
 > [!IMPORTANT]
-> Multiplayer is going to be complex, and will only be started on when everything else is very stable.
+> Multiplayer is going to be **complex**, and will only be started on when **everything else is very stable**. Thanks for understanding!
