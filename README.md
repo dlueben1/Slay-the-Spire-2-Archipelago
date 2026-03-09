@@ -52,6 +52,7 @@ Use `Ctrl+Shift+B` or `Build > Build Solution`. This will automatically place th
 # Special Thanks
 
 - [Archipelago.MultiClient.Net](https://github.com/ArchipelagoMW/Archipelago.MultiClient.Net)
+- Platano Bailando for creating the StS 1 Archipelago that inspires this one!
 - [lamali292](https://github.com/lamali292) for their initial guide on creating mods for Slay the Spire 2!
 - [alwaysintreble](https://github.com/alwaysintreble/ArchipelagoBepInExPluginTemplate/tree/master) for their example Archipelago C# Plugin Template
 
