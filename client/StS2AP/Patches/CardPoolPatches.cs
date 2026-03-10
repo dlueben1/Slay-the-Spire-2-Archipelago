@@ -12,6 +12,20 @@ using System.Threading.Tasks;
 
 namespace StS2AP.Patches
 {
+    [HarmonyPatch(typeof(ColorlessCardPool))]
+    public static class ColorlessCardPoolPatches
+    {
+        /// <summary>
+        /// Unlock all Colorless Cards
+        /// </summary>
+        [HarmonyPatch("FilterThroughEpochs")]
+        [HarmonyPostfix]
+        static void UnlockAllCards(ref IEnumerable<CardModel> __result, ColorlessCardPool __instance)
+        {
+            __result = __instance.AllCards.ToList();
+        }
+    }
+
     [HarmonyPatch(typeof(IroncladCardPool))]
     public static class IroncladCardPoolPatches
     {
