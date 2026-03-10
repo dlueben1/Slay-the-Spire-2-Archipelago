@@ -4,19 +4,7 @@ from worlds.generic.Rules import set_rule
 
 from .items import item_table, START_ID as ITEM_START_ID
 from .locations import ACT_1_FLOOR_COUNT, location_table
-
-# The info needed for the Archipelago Website, not the actual `apworld`
-class SlayTheSpire2Web(WebWorld):
-    tutorials = [
-        Tutorial(
-            "Setup Guide",
-            "A very small test world for Slay the Spire II.",
-            "English",
-            "setup_en.md",
-            "setup/en",
-            ["Kirbyfanner"]
-        )
-    ]
+from .web_world import SlayTheSpire2Web
 
 
 class SlayTheSpire2Item(Item):
