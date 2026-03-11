@@ -80,8 +80,9 @@ namespace StS2AP.Patches
                 _customButton.Visible = false;
                 _backButton.Visible = false;
 
-                // Inject the custom Archipelago Connection UI
+                // Inject the custom Archipelago UIs
                 ArchipelagoConnectionUI.InjectUI();
+                ArchipelagoNotificationUI.InjectUI();
             }
         }
     }
