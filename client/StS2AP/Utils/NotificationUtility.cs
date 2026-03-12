@@ -1,4 +1,6 @@
-﻿using StS2AP.UI;
+﻿using Archipelago.MultiClient.Net.Models;
+using StS2AP.UI;
+using static StS2AP.Data.ItemTable;
 
 namespace StS2AP.Utils
 {
@@ -40,6 +42,7 @@ namespace StS2AP.Utils
 
         /// <summary>
         /// Types of notifications.
+        /// Not directly used now, but maybe useful for future styling or categorization of messages.
         /// </summary>
         public enum NotificationType
         {
@@ -50,10 +53,15 @@ namespace StS2AP.Utils
             Warning
         }
 
+        #region Notification Queue
+
         /// <summary>
         /// Queues a notification to be displayed.
+        /// 
+        /// It's best not to hit this directly, but to go through the functions in the "Display Notifications" region below,
+        /// which will format messages appropriately for the user.
         /// </summary>
-        public static void EnqueueNotification(string message, NotificationType type = NotificationType.Info)
+        private static void EnqueueNotification(string message, NotificationType type = NotificationType.Info)
         {
             lock (_lock)
             {
@@ -117,12 +125,74 @@ namespace StS2AP.Utils
             }
         }
 
+        #endregion
+
         #region Display Notifications
 
-        public static void ShowItemReceived(string itemName)
+        /// <summary>
+        /// Display a notification about an item that's been received for you from the Multiworld
+        /// </summary>
+        /// <param name="item">Information about the AP Item</param>
+        public static void ShowItemReceived(ItemInfo item)
         {
+            // Detrermine if a font icon is needed
+            string itemIcon = "";
+            switch ((APItem)item.ItemId)
+            {
+                case APItem._25Gold:
+                case APItem._5Gold:
+                case APItem._2Gold:
+                    {
+                        itemIcon = @"[img]res://images/packed/sprite_fonts/gold_icon.png[/img]";
+                        break;
+                    }
+                case APItem.CardReward:
+                case APItem.RareCardReward:
+                    {
+                        itemIcon = @"[img]res://images/packed/sprite_fonts/card_icon.png[/img]";
+                        break;
+                    }
+                case APItem.PotionReward:
+                    {
+                        itemIcon = @"[img]res://images/packed/sprite_fonts/potion_icon.png[/img]";
+                        break;
+                    }
+                case APItem.Ironclad:
+                    {
+                        itemIcon = @"[img]res://images/packed/sprite_fonts/ironclad_energy_icon.png[/img]";
+                        break;
+                    }
+                case APItem.Silent:
+                    {
+                        itemIcon = @"[img]res://images/packed/sprite_fonts/silent_energy_icon.png[/img]";
+                        break;
+                    }
+                case APItem.Defect:
+                    {
+                        itemIcon = @"[img]res://images/packed/sprite_fonts/defect_energy_icon.png[/img]";
+                        break;
+                    }
+                case APItem.Necrobinder:
+                    {
+                        itemIcon = @"[img]res://images/packed/sprite_fonts/necrobinder_energy_icon.png[/img]";
+                        break;
+                    }
+                case APItem.Regent:
+                    {
+                        itemIcon = @"[img]res://images/packed/sprite_fonts/regent_energy_icon.png[/img]";
+                        break;
+                    }
+                default:
+                    {
+                        itemIcon = @"[img]res://images/packed/sprite_fonts/chest_icon.png[/img]";
+                        break;
+                    }
+            }
+
+            // Setup the final string for the notification
+            var msg = $"{item.Player} sent you {itemIcon} [sine][gold]{item.ItemDisplayName}[/gold]![/sine]";
             EnqueueNotification(
-                itemName,
+                msg,
                 NotificationType.ItemReceived);
         }
 
@@ -134,6 +204,10 @@ namespace StS2AP.Utils
                 NotificationType.LocationCheck);
         }
 
+        /// <summary>
+        /// Display an Error Message to the user
+        /// </summary>
+        /// <param name="errorMessage">The error to display</param>
         public static void ShowError(string errorMessage)
         {
             var message = $"⚠ Error: {errorMessage}";
@@ -142,10 +216,14 @@ namespace StS2AP.Utils
                 NotificationType.Error);
         }
 
-        public static void ShowStatus(string status)
+        /// <summary>
+        /// Displays a notification as-is
+        /// </summary>
+        /// <param name="msg">The message to display</param>
+        public static void ShowRawText(string msg)
         {
             EnqueueNotification(
-                status,
+                msg,
                 NotificationType.Info);
         }
 
