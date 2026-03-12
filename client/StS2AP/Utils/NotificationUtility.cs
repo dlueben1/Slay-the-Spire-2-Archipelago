@@ -1,4 +1,6 @@
-﻿namespace StS2AP.Utils
+﻿using StS2AP.UI;
+
+namespace StS2AP.Utils
 {
     /// <summary>
     /// High-level API for displaying Archipelago notifications.
@@ -55,9 +57,13 @@
         {
             lock (_lock)
             {
+                // Enqueue the notification
                 var notification = new ArchipelagoNotification(message, type);
                 _queue.Enqueue(notification);
                 LogUtility.Info($"Notification queued ({type}): {message}");
+
+                // Show the Notification UI if it isn't already visible
+                if(!ArchipelagoNotificationUI.IsVisible) ArchipelagoNotificationUI.ShowMessage();
             }
 
             // Fire event outside of lock to avoid potential deadlocks
@@ -71,13 +77,9 @@
         {
             lock (_lock)
             {
-                if (_queue.Count > 0)
-                {
-                    var notification = _queue.Dequeue();
-                    LogUtility.Info($"Notification dequeued: {notification.Message}");
-                    return notification;
-                }
-                return null;
+                var notification = _queue.Dequeue();
+                LogUtility.Info($"Notification dequeued: {notification.Message}");
+                return notification;
             }
         }
 
@@ -117,11 +119,10 @@
 
         #region Display Notifications
 
-        public static void ShowItemReceived(string itemName, string senderName = "Archipelago")
+        public static void ShowItemReceived(string itemName)
         {
-            var message = $"📦 {senderName} sent: {itemName}";
             EnqueueNotification(
-                message,
+                itemName,
                 NotificationType.ItemReceived);
         }
 
