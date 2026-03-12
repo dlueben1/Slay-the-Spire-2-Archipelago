@@ -10,38 +10,50 @@ namespace StS2AP.Data
     {
         public enum APItem
         {
-            _2Gold = 900001,
-            _5Gold = 900002,
-            _25Gold = 900003,
-            CardReward = 900004,
-            RareCardReward = 900005,
-            RelicReward = 900006,
-            PotionFiller = 900007,
-            PotionReward = 900008,
-            Ironclad = 900009,
-            Silent = 900010,
-            Defect = 900011,
-            Regent = 900012,
-            Necrobinder = 900013,
-            Victory = 900014
+            CAWCAW = 0,
+            CardReward = 1,
+            RareCardReward = 2,
+            Relic = 3,
+            BossRelic = 4,
+            OneGold = 5,
+            FiveGold = 6,
+            ProgressiveRest = 7,
+            ProgressiveSmith = 8,
+            ShopCardSlot = 9,
+            NeutralShopCardSlot = 10,
+            ShopRelicSlot = 11,
+            ShopPotionSlot = 12,
+            ProgressiveShopRemove = 13,
+            Unlock = 14,
+            _15Gold = 15,
+            _30Gold = 16,
+            BossGold = 17,
+            Potion = 18,
+            AscensionDown = 19
         }
 
         public static Dictionary<int, string> Items = new Dictionary<int, string>
         {
-            { 900001, "2 Gold" },
-            { 900002, "5 Gold" },
-            { 900003, "25 Gold" },
-            { 900004, "Card Reward" },
-            { 900005, "Rare Card Reward" },
-            { 900006, "Relic Reward" },
-            { 900007, "Potion Filler" },
-            { 900008, "Potion Reward" },
-            { 900009, "Ironclad" },
-            { 900010, "Silent" },
-            { 900011, "Defect" },
-            { 900012, "Regent" },
-            { 900013, "Necrobinder" },
-            { 900014, "Victory" }
+            { 0, "CAW CAW" },
+            { 1, "Card Reward" },
+            { 2, "Rare Card Reward" },
+            { 3, "Relic" },
+            { 4, "Boss Relic" },
+            { 5, "One Gold" },
+            { 6, "Five Gold" },
+            { 7, "Progressive Rest" },
+            { 8, "Progressive Smith" },
+            { 9, "Shop Card Slot" },
+            { 10, "Neutral Shop Card Slot" },
+            { 11, "Shop Relic Slot" },
+            { 12, "Shop Potion Slot" },
+            { 13, "Progressive Shop Remove" },
+            { 14, "Unlock" },
+            { 15, "15 Gold" },
+            { 16, "30 Gold" },
+            { 17, "Boss Gold" },
+            { 18, "Potion" },
+            { 19, "Ascension Down" }
         };
 
     }

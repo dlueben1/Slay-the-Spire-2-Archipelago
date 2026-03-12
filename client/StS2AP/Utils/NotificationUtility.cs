@@ -1,5 +1,6 @@
 ﻿using Archipelago.MultiClient.Net.Models;
 using StS2AP.UI;
+using static StS2AP.Data.CharTable;
 using static StS2AP.Data.ItemTable;
 
 namespace StS2AP.Utils
@@ -137,11 +138,13 @@ namespace StS2AP.Utils
         {
             // Detrermine if a font icon is needed
             string itemIcon = "";
-            switch ((APItem)item.ItemId)
+            switch (item.GetRawItemID())
             {
-                case APItem._25Gold:
-                case APItem._5Gold:
-                case APItem._2Gold:
+                case APItem.OneGold:
+                case APItem.FiveGold:
+                case APItem.BossGold:
+                case APItem._15Gold:
+                case APItem._30Gold:
                     {
                         itemIcon = @"[img]res://images/packed/sprite_fonts/gold_icon.png[/img]";
                         break;
@@ -152,34 +155,41 @@ namespace StS2AP.Utils
                         itemIcon = @"[img]res://images/packed/sprite_fonts/card_icon.png[/img]";
                         break;
                     }
-                case APItem.PotionReward:
+                case APItem.Potion:
                     {
                         itemIcon = @"[img]res://images/packed/sprite_fonts/potion_icon.png[/img]";
                         break;
                     }
-                case APItem.Ironclad:
+                case APItem.Unlock:
                     {
-                        itemIcon = @"[img]res://images/packed/sprite_fonts/ironclad_energy_icon.png[/img]";
-                        break;
-                    }
-                case APItem.Silent:
-                    {
-                        itemIcon = @"[img]res://images/packed/sprite_fonts/silent_energy_icon.png[/img]";
-                        break;
-                    }
-                case APItem.Defect:
-                    {
-                        itemIcon = @"[img]res://images/packed/sprite_fonts/defect_energy_icon.png[/img]";
-                        break;
-                    }
-                case APItem.Necrobinder:
-                    {
-                        itemIcon = @"[img]res://images/packed/sprite_fonts/necrobinder_energy_icon.png[/img]";
-                        break;
-                    }
-                case APItem.Regent:
-                    {
-                        itemIcon = @"[img]res://images/packed/sprite_fonts/regent_energy_icon.png[/img]";
+                        switch(item.GetStSCharID())
+                        {
+                            case APItemCharID.Ironclad:
+                                {
+                                    itemIcon = @"[img]res://images/packed/sprite_fonts/ironclad_energy_icon.png[/img]";
+                                    break;
+                                }
+                            case APItemCharID.Silent:
+                                {
+                                    itemIcon = @"[img]res://images/packed/sprite_fonts/silent_energy_icon.png[/img]";
+                                    break;
+                                }
+                            case APItemCharID.Defect:
+                                {
+                                    itemIcon = @"[img]res://images/packed/sprite_fonts/defect_energy_icon.png[/img]";
+                                    break;
+                                }
+                            case APItemCharID.Necrobinder:
+                                {
+                                    itemIcon = @"[img]res://images/packed/sprite_fonts/necrobinder_energy_icon.png[/img]";
+                                    break;
+                                }
+                            case APItemCharID.Regent:
+                                {
+                                    itemIcon = @"[img]res://images/packed/sprite_fonts/regent_energy_icon.png[/img]";
+                                    break;
+                                }
+                        }
                         break;
                     }
                 default:
