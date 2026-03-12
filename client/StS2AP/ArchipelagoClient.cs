@@ -38,7 +38,7 @@ namespace StS2AP
         public static string ServerPassword { get; set; }
         public static string PlayerName { get; set; }
         public static string Seed { get; set; }
-        
+
         /// <summary>
         /// The name of the Game
         /// </summary>
@@ -71,6 +71,12 @@ namespace StS2AP
 
         public static List<long> CheckedLocations { get; set; }
 
+        /// <summary>
+        /// Pre-scouted location data. Key is location ID, value is a tuple of (ItemName, PlayerName).
+        /// Populated on connection to avoid async calls during gameplay.
+        /// </summary>
+        public static Dictionary<long, ScoutedItemInfo> ScoutedLocations { get; set; } = new();
+
         #region Networking
 
         /// <summary>
@@ -86,6 +92,7 @@ namespace StS2AP
             SlotData?.Clear();
             SlotData = new Dictionary<string, object>();
             CheckedLocations = new List<long>();
+            ScoutedLocations.Clear();
 
             // Attempt to create the AP Session
             try
@@ -179,8 +186,52 @@ namespace StS2AP
                 LogUtility.Debug($"VAL: {kvp.Value.ToString()}");
             }
 
+            // Pre-scout all locations so we have item info available for notifications
+            ThreadPool.QueueUserWorkItem(_ => PreScoutAllLocations());
+
+            GameUtility.UnlockedCharacters.Add(ModelDb.Character<Ironclad>());
+
             // Let the game know that we've connected
             ConnectionStateChanged?.Invoke(null, new ResultEventArgs { Value = true });
+        }
+
+        /// <summary>
+        /// Pre-scouts all locations in the game and stores the results.
+        /// This gives us the ability to show item and player names in location/check notifications without having to make async calls during gameplay.
+        /// This runs on a background thread, triggered on connection before gameplay starts.
+        /// </summary>
+        private static void PreScoutAllLocations()
+        {
+            try
+            {
+                if (Session == null)
+                {
+                    LogUtility.Error("Cannot pre-scout locations: Session is null");
+                    return;
+                }
+
+                // Get all location IDs for our game
+                var allLocationIds = Session.Locations.AllLocations.ToArray();
+
+                if (allLocationIds.Length == 0)
+                {
+                    LogUtility.Warn("No locations found to scout");
+                    return;
+                }
+
+                LogUtility.Info($"Pre-scouting {allLocationIds.Length} locations...");
+
+                // Scout all locations at once (blocking call on this thread)
+                var scoutTask = Session.Locations.ScoutLocationsAsync(allLocationIds);
+                scoutTask.Wait(); // Block until complete: faux async to deal with harmony patch skittish-ness
+                ScoutedLocations = scoutTask.Result;
+
+                LogUtility.Success($"Pre-scouted {ScoutedLocations.Count} locations successfully");
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Error($"Failed to pre-scout locations: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -252,7 +303,7 @@ namespace StS2AP
             // Show Notification for the item
             NotificationUtility.ShowItemReceived(item);
         }
-    
+
         #endregion
     }
 }

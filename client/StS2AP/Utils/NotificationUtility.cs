@@ -196,9 +196,34 @@ namespace StS2AP.Utils
                 NotificationType.ItemReceived);
         }
 
-        public static void ShowLocationChecked(string locationName)
+        /// <summary>
+        /// Display a notification about a location that's been checked.
+        /// Looks up the item info from the pre-scouted location cache.
+        /// </summary>
+        /// <param name="locationId">The Archipelago location ID</param>
+        /// <param name="locationName">The display name of the location</param>
+        public static void ShowLocationChecked(long locationId, string? fallbackLocationName = "")
         {
-            var message = $"✓ Checked: {locationName}";
+            // Setup default values if we can't fetch the correct ones
+            string itemName = "An AP Item";
+            string playerName = "Another Player";
+            string locationName = string.IsNullOrEmpty(fallbackLocationName) ? $"Unknown Location ({locationId})" : fallbackLocationName;
+
+            // Look up the pre-scouted info
+            if (ArchipelagoClient.ScoutedLocations.TryGetValue(locationId, out var scoutedInfo))
+            {
+                locationName = scoutedInfo.LocationDisplayName;
+                itemName = scoutedInfo.ItemDisplayName;
+                playerName = scoutedInfo.Player.Name;
+            }
+            else
+            {
+                // Fallback if location wasn't pre-scouted
+                LogUtility.Warn($"Location ID: {locationId} was not pre-scouted! Using default values!");
+            }
+
+            // Build the message
+            var message = $"Found [aqua]{playerName}[/aqua]'s [gold][sine]{itemName}[/sine][/gold] at [green]{locationName}[/green]!";
             EnqueueNotification(
                 message,
                 NotificationType.LocationCheck);
