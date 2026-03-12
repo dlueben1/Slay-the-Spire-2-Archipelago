@@ -168,7 +168,6 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                       "Act 3 Boss",
                                                       # *_create_floor_check(50, 51 + acension_mod),
                                                   ]))
-    print(multiworld.regions.region_cache)
 
 
 def _create_card_rewards(start: int, end: int, every_other: bool) -> List[str]:

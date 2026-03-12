@@ -275,7 +275,6 @@ class SlayTheSpire2World(World):
                 elif ItemType.CHAR_UNLOCK == data.type:
                     if self.options.lock_characters.value != 0 and config.locked:
                         amount = 1
-                        print(name)
                     else:
                         self.push_precollected(self.create_item(name))
                 # elif ItemType.GOLD == data.type:

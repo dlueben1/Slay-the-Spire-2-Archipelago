@@ -7,7 +7,7 @@ from BaseClasses import CollectionState, MultiWorld, Item
 from NetUtils import JSONMessagePart
 from rule_builder.options import OptionFilter
 from rule_builder.rules import HasFromList, Rule, TWorld, True_, Has, HasFromListUnique
-from .characters import CharacterConfig
+from .characters import CharacterConfig, character_offset_map
 from .items import ItemType
 from ..AutoWorld import LogicMixin
 from ..generic.Rules import set_rule
@@ -86,7 +86,7 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
         def explain_json(self, state: CollectionState | None = None) -> List[JSONMessagePart]:
             return [
                 {
-                    "type": "text", "text": f"Has power level {self.power_level}"
+                    "type": "text", "text": f"{character_offset_map[self.char_offset]} has power level {self.power_level}"
                 }
             ]
 
@@ -95,8 +95,10 @@ def set_rules(world: 'SlayTheSpire2World') -> None:
     for config in world.characters:
         _set_rules(world, config)
 
+    num_goals = len(world.characters) if world.options.num_chars_goal.value == 0 else world.options.num_chars_goal.value
+    assert num_goals > 0
     world.set_completion_rule(HasFromListUnique(*[f"{config.name} Victory" for config in world.characters],
-                                          count=world.options.num_chars_goal.value))
+                                          count=num_goals))
 
 def _set_rules(world: 'SlayTheSpire2World', config: CharacterConfig) -> None:
     prefix = config.name
