@@ -1,21 +1,27 @@
 import string
-from typing import List, Optional
+import typing
+from collections import defaultdict
+from typing import List, Optional, Any
 
-from BaseClasses import Item, Location, Region, MultiWorld
+from BaseClasses import Item, Location, Region, MultiWorld, ItemClassification, CollectionState
 from Options import OptionError
 from worlds.AutoWorld import World
 from .regions import create_regions
-from .rules import set_rules
+from .rules import set_rules, SpireLogic
 from .web_world import SlayTheSpire2Web
 from .characters import CharacterConfig, character_list, character_offset_map
 from .constants import NUM_CUSTOM
-from .items import item_table, chars_to_items, ItemType, base_event_item_pairs
+from .items import item_table, chars_to_items, ItemType, base_event_item_pairs, ItemData
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
 from .options import Spire2Options
 
 
 class SlayTheSpire2Item(Item):
     game = "Slay the Spire II"
+
+    def __init__(self, item_data: ItemData, name: str, classification: ItemClassification, code: Optional[int], player: int):
+        super().__init__(name, classification, code, player)
+        self.item_data = item_data
 
 
 class SlayTheSpire2Location(Location):
@@ -80,6 +86,9 @@ class SlayTheSpire2World(World):
         if num_chars_goal != 0:
             if num_chars_goal > len(self.characters):
                 self.options.num_chars_goal.value = 0
+        for char in self.characters:
+            if not char.locked:
+                self.options.start_inventory.value[f"{char.name} Unlock"] = 1
         # for weight in self.options.trap_weights.values():
         #     if weight > 0:
         #         break
@@ -124,7 +133,7 @@ class SlayTheSpire2World(World):
         for char_val in selected_chars:
             option_name = char_val
             char_offset = character_offset_map[option_name.lower()]
-            name = character_list[char_offset]
+            name = character_list[char_offset - 1]
             if self.options.seeded:
                 seed = "".join(self.random.choice(string.ascii_letters) for i in range(16))
             else:
@@ -228,7 +237,7 @@ class SlayTheSpire2World(World):
     def create_item(self, name: str) -> SlayTheSpire2Item:
         data = item_table[name]
         item_id = self.item_name_to_id[name]
-        return SlayTheSpire2Item(name, data.classification, item_id, self.player)
+        return SlayTheSpire2Item(data, name, data.classification, item_id, self.player)
 
     # Randomly selects a filler item name from the item table
     def get_filler_item_name(self) -> str:
@@ -264,11 +273,11 @@ class SlayTheSpire2World(World):
                 #     if self.options.campfire_sanity.value != 0:
                 #         amount = 3
                 elif ItemType.CHAR_UNLOCK == data.type:
-                    if self.options.lock_characters.value != 0:
-                        if config.locked:
-                            amount = 1
-                        else:
-                            self.push_precollected(self.create_item(name))
+                    if self.options.lock_characters.value != 0 and config.locked:
+                        amount = 1
+                        print(name)
+                    else:
+                        self.push_precollected(self.create_item(name))
                 # elif ItemType.GOLD == data.type:
                 #     if self.options.gold_sanity.value != 0:
                 #         if '15 Gold' in name:
@@ -336,7 +345,7 @@ class SlayTheSpire2World(World):
                 event = f"{config.name} {base_event}"
                 item = f"{config.name} {base_item}"
                 item_data = item_table[item]
-                event_item = SlayTheSpire2Item(item, item_data.classification, item_data.code, self.player)
+                event_item = SlayTheSpire2Item(item_data, item, item_data.classification, item_data.code, self.player)
                 self.multiworld.get_location(event, self.player).place_locked_item(event_item)
 
         self.multiworld.itempool += pool
@@ -354,7 +363,7 @@ class SlayTheSpire2World(World):
         #         return False
         #     total_shop = self.total_shop_locations
         #     return total_shop >= data.id - 163
-        elif data.type == LocationType.Start and (self.options.lock_characters == 0 or not config.locked):
+        elif data.type == LocationType.Start and (self.options.lock_characters.value == 0 or not config.locked):
             return False
         # elif data.type == LocationType.Gold and self.options.gold_sanity.value == 0:
         #     return False
@@ -379,7 +388,101 @@ class SlayTheSpire2World(World):
         # self.multiworld.completion_condition[self.player] = (
         #     lambda state: state.has("Victory", self.player)
         # )
-        set_rules(self, self.player)
+        set_rules(self)
+
+    # TODO: needs to include character discriminator
+    def collect(self, state: CollectionState, item: Item) -> bool:
+        change = super().collect(state, item)
+        item_data = typing.cast(SlayTheSpire2Item, item).item_data
+        if change and item_data.type in state.item_levels[self.player]:
+            level = state.item_levels[self.player].get(item_data.type, 0.0)
+            # char_level = state.power_level.setdefault(item.player, defaultdict(int))
+            char_level = state.power_level[item.player]
+            char_level[item_data.char_offset] = char_level[item_data.char_offset] + level
+        return change
+
+    def remove(self, state: CollectionState, item: Item) -> bool:
+        change = super().remove(state, item)
+        item_data = typing.cast(SlayTheSpire2Item, item).item_data
+        if change and item_data.type in state.item_levels[self.player]:
+            level = state.item_levels[self.player].get(item_data.type, 0.0)
+            # state.power_level[item.player][item_data.char_offset] -= level
+            # state.power_level.get(item.player, defaultdict(int))[item_data.char_offset] -= level
+            char_level = state.power_level[item.player]
+            # char_level = state.power_level[item.player]
+            char_level[item_data.char_offset] = char_level[item_data.char_offset] - level
+        return change
 
     def fill_slot_data(self) -> dict:
-        return {}
+        slot_data = {
+            'characters': [
+                c.to_dict() for c in self.characters
+            ],
+            # 'shop_sanity_options': {
+            #     "card_slots": self.options.shop_card_slots.value,
+            #     "neutral_slots": self.options.shop_neutral_card_slots.value,
+            #     "relic_slots": self.options.shop_relic_slots.value,
+            #     "potion_slots": self.options.shop_potion_slots.value,
+            #     "card_remove": self.options.shop_remove_slots != 0,
+            #     "costs": self.options.shop_sanity_costs.value,
+            # },
+            "mod_compat_version": self.mod_compat_version,
+        }
+        slot_data.update(self.options.as_dict(
+            "ascension",
+            "num_chars_goal",
+            "shuffle_all_cards",
+        ))
+        return slot_data
+
+    @staticmethod
+    def interpret_slot_data(slot_data: dict[str, Any]) -> Any:
+        return slot_data
+
+    def _setup_ut(self, slot_data: dict[str, Any]) -> None:
+        # self.options.shop_card_slots.value = slot_data["shop_sanity_options"]["card_slots"]
+        # self.options.shop_remove_slots.value = slot_data["shop_sanity_options"]["card_remove"]
+        # self.options.shop_neutral_card_slots.value = slot_data["shop_sanity_options"]["neutral_slots"]
+        # self.options.shop_relic_slots.value = slot_data["shop_sanity_options"]["relic_slots"]
+        # self.options.shop_potion_slots.value = slot_data["shop_sanity_options"]["potion_slots"]
+        for char_dict in slot_data['characters']:
+            config = CharacterConfig(
+                char_dict['name'],
+                char_dict['option_name'],
+                char_dict['char_offset'],
+                char_dict['mod_num'],
+                char_dict['seed'],
+                char_dict['locked'],
+                ascension=char_dict['ascension'],
+            )
+            self.characters.append(config)
+            if char_dict['mod_num'] > 0:
+                self.modded_chars.append(config)
+        # self.total_shop_items = (self.options.shop_card_slots.value + self.options.shop_neutral_card_slots.value +
+        #                          self.options.shop_relic_slots.value + self.options.shop_potion_slots.value)
+        # self.total_shop_locations = self.total_shop_items + (3 if self.options.shop_remove_slots else 0)
+        # if self.total_shop_locations <= 0:
+        #     self.options.shop_sanity.value = 0
+        # self.options.include_floor_checks.value = slot_data['include_floor_checks']
+        # self.options.campfire_sanity.value = slot_data['campfire_sanity']
+        # self.options.shop_sanity.value = slot_data['shop_sanity']
+        # self.options.gold_sanity.value = slot_data['gold_sanity']
+        # self.options.potion_sanity.value = slot_data['potion_sanity']
+        self.options.num_chars_goal.value = slot_data['num_chars_goal']
+        self.location_id_to_alias: dict[int, str] = dict()
+        # pattern = re.compile("Custom Character [0-9]+ (?P<location_name>.*?)$")
+        # for i in range(1, len(self.modded_chars) + 1):
+        # for key, value in SpireWorld.location_id_to_name.items():
+        #     if key < (len(character_list)) * CHAR_OFFSET:
+        #         continue
+        #     modded_index = (key // CHAR_OFFSET) - len(character_list)
+        #     self.logger.info(f"Modded index: {modded_index}")
+        #     self.logger.info(f"modded_chars index: {self.modded_chars}")
+        #     if modded_index >= len(self.modded_chars):
+        #         continue
+        #     match = pattern.match(value)
+        #     if match is None:
+        #         raise Exception("Failed to match " + value)
+        #     name = self.modded_chars[modded_index].official_name
+        #     self.logger.info(name)
+        #     self.location_id_to_alias[key] = name + " " + match.group("location_name")

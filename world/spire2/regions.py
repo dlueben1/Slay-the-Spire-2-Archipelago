@@ -39,7 +39,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                 # *_create_campfire_check(1),
                                                 # *_create_floor_check(1,5),
                                                 # *_create_combat_check(1,3),
-                                                *_create_card_rewards(1, 3, every_other)
+                                                *_create_card_rewards(1, 4, every_other)
                                             ],
                                             ["Mid Act 1", "Act 1 Shop"])
 
@@ -59,7 +59,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                       # "Sapphire Key",
                                                       # *_create_floor_check(6, 10),
                                                       # *_create_combat_check(4, 7),
-                                                      *_create_card_rewards(4,5, every_other)
+                                                      *_create_card_rewards(5,6, every_other)
                                                   ],["Late Act 1"]))
 
     multiworld.regions.append(world.create_region(player, prefix, 'Late Act 1', config,
@@ -68,7 +68,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                       # "Potion Drop 3",
                                                       # *_create_floor_check(11, 15),
                                                       # *_create_combat_check(8, 8),
-                                                      *_create_card_rewards(6,7, every_other)
+                                                      *_create_card_rewards(7,8, every_other)
                                                   ], ['Act 1 Boss Arena']))
 
     multiworld.regions.append(world.create_region(player, prefix, 'Act 1 Boss Arena', config,
@@ -88,7 +88,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                       # *_create_campfire_check(2),
                                                       # *_create_floor_check(18, 22),
                                                       # *_create_combat_check(9, 11),
-                                                      *_create_card_rewards(8, 10, every_other),
+                                                      *_create_card_rewards(9, 10, every_other),
                                                   ], ["Mid Act 2", "Act 2 Shop"]))
 
     multiworld.regions.append(world.create_region(player, prefix, "Act 2 Shop", config,
@@ -167,7 +167,8 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                   [
                                                       "Act 3 Boss",
                                                       # *_create_floor_check(50, 51 + acension_mod),
-                                                  ], []))
+                                                  ]))
+    print(multiworld.regions.region_cache)
 
 
 def _create_card_rewards(start: int, end: int, every_other: bool) -> List[str]:

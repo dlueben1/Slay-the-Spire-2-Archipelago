@@ -35,11 +35,12 @@ class ItemData(typing.NamedTuple):
     classification: ItemClassification
     event: bool = False
     is_victory: bool = False
+    char_offset: int = -1
 
     @staticmethod
     def increment(base: 'ItemData', char_offset: int) -> 'ItemData':
         newcode = base.code + char_offset if base.code is not None else base.code
-        return ItemData(newcode, base.type, base.classification, base.event, base.is_victory)
+        return ItemData(newcode, base.type, base.classification, base.event, base.is_victory, char_offset//CHAR_OFFSET)
 
 base_item_table: Dict[str, ItemData] = {
     'Card Reward': ItemData(1, ItemType.CARD_REWARD, ItemClassification.progression_deprioritized),
@@ -86,7 +87,7 @@ def create_item_tables(vanilla_chars: typing.List[str], extras: int) -> typing.T
 
     characters_to_items: dict[typing.Union[str, int],dict[str, ItemData]] = defaultdict(lambda: dict())
     event_item_pairs: dict[str, str] = dict()
-    char_num = 0
+    char_num = 1
 
     for char in vanilla_chars:
         for key, data in base_item_table.items():

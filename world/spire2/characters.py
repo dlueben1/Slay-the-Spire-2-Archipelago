@@ -22,7 +22,7 @@ character_offset_map = {
     for i, name in enumerate(character_list, start=1)
 }
 
-for i, name in enumerate(official_names):
+for i, name in enumerate(official_names, start=1):
     character_offset_map[name.lower()] = i
 
 class CharacterConfig:
@@ -32,13 +32,22 @@ class CharacterConfig:
         self.option_name: str = option_name
         self.mod_num = mod_num
         self.char_offset: int = char_offset
-        self.official_name: str = official_names[char_offset]
+        self.official_name: str = official_names[char_offset - 1]
         self.seed: str = seed
         self.locked: bool = locked
         self.ascension: int = kwargs['ascension']
 
     def to_dict(self) -> dict[str, Any]:
-        pass
+        return {
+            'name': self.name,
+            'option_name': self.option_name,
+            'char_offset': self.char_offset,
+            'official_name': self.official_name,
+            'seed': self.seed,
+            'locked': self.locked,
+            'mod_num': self.mod_num,
+            'ascension': self.ascension,
+        }
 
     def __repr__(self):
         return self.to_dict().__repr__()
