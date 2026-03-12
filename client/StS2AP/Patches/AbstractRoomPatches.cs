@@ -1,15 +1,7 @@
 ﻿using HarmonyLib;
-using MegaCrit.Sts2.Core.Entities.Players;
-using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
-using MegaCrit.Sts2.Core.Unlocks;
 using StS2AP.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace StS2AP.Patches
 {
@@ -122,12 +114,16 @@ namespace StS2AP.Patches
             // Get the location ID from the name
             if (ArchipelagoClient.Session?.Locations.GetLocationIdFromName("Slay the Spire II", locationName) is long locationId)
             {
-                // Add to checked locations and complete the check
+                // Make sure this is the first time we've hit this location, otherwise we might be sending duplicates
                 if (!ArchipelagoClient.CheckedLocations.Contains(locationId))
                 {
+                    // Check the location off and let the server know
                     ArchipelagoClient.CheckedLocations.Add(locationId);
                     _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(locationId);
+
+                    // Log it and notify the user (uses pre-scouted data)
                     LogUtility.Success($"Sent location check: {locationName}");
+                    NotificationUtility.ShowLocationChecked(locationId, fallbackLocationName: locationName);
                 }
             }
             else

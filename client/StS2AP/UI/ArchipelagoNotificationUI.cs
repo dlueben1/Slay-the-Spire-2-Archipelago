@@ -24,6 +24,7 @@ namespace StS2AP.UI
         private const float BubblePadding = 12f;
         private const float LeftOffset = 16f;
         private const float TopOffset = 154f;
+        private const int FontSize = 20;
         private const float TailWidth = 16f;
 
         /// <summary>
@@ -203,6 +204,11 @@ namespace StS2AP.UI
         {
             if (_messageLabel != null && IsInstanceValid(_messageLabel))
             {
+                // Odd bug-fix: We need to set the font manually EVERY time or it will randomly change
+                _messageLabel.RemoveThemeFontSizeOverride("normal_font_size");
+                _messageLabel.AddThemeFontSizeOverride("normal_font_size", FontSize);
+
+                // Set the message text
                 _messageLabel.Text = message;
             }
         }
@@ -347,7 +353,6 @@ namespace StS2AP.UI
                 if (font != null)
                 {
                     _messageLabel.AddThemeFontOverride("normal_font", font);
-                    _messageLabel.AddThemeFontSizeOverride("normal_font_size", 24);
                 }
                 else
                 {
