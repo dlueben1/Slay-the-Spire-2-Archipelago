@@ -9,6 +9,8 @@ using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
+using StS2AP.Data;
+using StS2AP.UI;
 using StS2AP.Utils;
 using System;
 using System.Collections.Generic;
@@ -16,7 +18,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-//test
+using static StS2AP.Data.ItemTable;
 
 namespace StS2AP
 {
@@ -196,7 +198,6 @@ namespace StS2AP
         }
 
         /// <summary>
-
         /// Log errors to the console
         /// </summary>
         private static void OnErrorReceived(Exception e, string message)
@@ -228,11 +229,8 @@ namespace StS2AP
             // Ignore if this item is an old message
             if (helper.Index <= Index) return;
 
-            // Add the Item
+            // Deal with this Item
             ProcessItem(receivedItem);
-
-            // Log the item
-            LogUtility.Success($"Received: {receivedItem.ItemName} from {receivedItem.Player.Name} (ID: {receivedItem.ItemId})");
 
             // Keep track of how many messages we've had so far
             Index++;
@@ -248,19 +246,13 @@ namespace StS2AP
         /// <param name="item">Received Item</param>
         private static void ProcessItem(ItemInfo item)
         {
-            // In the first pass the only thing you can really get is Gold, so this will be updated later.
-            switch (item.ItemId)
-            {
-                default:
-                    {
-                        // Crappy temporary way to scrape the gold amount from the item name
-                        var goldAmt = int.Parse(item.ItemDisplayName.Replace("Gold", "").Trim());
-                        PlayerCmd.GainGold(goldAmt, GameUtility.CurrentPlayer, false);
-                        break;
-                    }
-            }
-        }
+            // Log the item
+            LogUtility.Success($"Received: {item.ItemName} from {item.Player.Name} (ID: {item.ItemId})");
 
+            // Show Notification for the item
+            NotificationUtility.ShowItemReceived(item);
+        }
+    
         #endregion
     }
 }

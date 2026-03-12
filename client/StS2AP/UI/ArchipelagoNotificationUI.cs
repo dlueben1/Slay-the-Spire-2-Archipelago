@@ -31,6 +31,8 @@ namespace StS2AP.UI
         /// </summary>
         public static bool IsVisible => _rootPanel?.Visible ?? false;
 
+        #region UI Injection
+
         /// <summary>
         /// Injects the Archipelago notification UI into the current scene tree.
         /// Should be called when the user successfully connects to the Archipelago server.
@@ -105,6 +107,8 @@ namespace StS2AP.UI
                 _speakerIcon = null;
             }
         }
+
+        #endregion
 
         /// <summary>
         /// Shows the notification UI by dequeuing the next message and displaying it with a fade-in animation
@@ -203,11 +207,19 @@ namespace StS2AP.UI
             }
         }
 
+        /// <summary>
+        /// Checks if a GodotObject instance is valid (not null and not freed)
+        /// </summary>
+        /// <param name="obj">The GodotObject instance to check</param>
+        /// <returns>True if the instance is valid, false otherwise</returns>
         private static bool IsInstanceValid(GodotObject obj)
         {
             return GodotObject.IsInstanceValid(obj);
         }
 
+        /// <summary>
+        /// Builds the UI from scratch, since we don't have the Godot editor
+        /// </summary>
         private static Control CreateUI()
         {
             // Root container - positioned in upper left
@@ -295,11 +307,11 @@ namespace StS2AP.UI
                 maxBubbleWidth = viewport.Root.GetViewport().GetVisibleRect().Size.X * 0.25f;
             }
 
-            bubble.CustomMinimumSize = new Vector2(100, IconSize); // Minimum size, height matches icon
+            bubble.CustomMinimumSize = new Vector2(100, IconSize);
 
             // Style the bubble like NAncientDialogueLine
             var bubbleStyle = new StyleBoxFlat();
-            bubbleStyle.BgColor = new Color(0.18f, 0.15f, 0.25f, 0.95f); // Dark purple background
+            bubbleStyle.BgColor = new Color(0.18f, 0.15f, 0.25f, 0.95f);
             bubbleStyle.SetBorderWidthAll(0);
             bubbleStyle.SetCornerRadiusAll(8);
             bubbleStyle.ContentMarginLeft = BubblePadding;
@@ -315,26 +327,27 @@ namespace StS2AP.UI
             textContainer.SizeFlagsVertical = Control.SizeFlags.Fill;
             bubble.AddChild(textContainer);
 
-            // Message label using MegaRichTextLabel
+            // Message label using MegaRichTextLabel (the in-game rich text label with effects support)
             _messageLabel = new MegaRichTextLabel();
             _messageLabel.Name = "ArchipelagoNotificationLabel";
             _messageLabel.CustomMinimumSize = new Vector2(maxBubbleWidth - (BubblePadding * 2) - TailWidth, 0);
             _messageLabel.SizeFlagsHorizontal = Control.SizeFlags.Fill;
-            _messageLabel.FitContent = true; // Allow height to grow with content
+            _messageLabel.FitContent = true; // Allows height to grow with content
             _messageLabel.AutowrapMode = TextServer.AutowrapMode.Word; // Word wrap for long text
-            // BBCode must be enabled for MegaRichTextLabel effects (e.g. [sine]) to work
-            _messageLabel.BbcodeEnabled = true;
-            
-            // MegaRichTextLabel._Ready() calls AssertThemeFontOverride with ThemeConstants.RichTextLabel.normalFont,
-            // which is the "normal_font" theme property on RichTextLabel. We must set this before the node enters
-            // the tree, otherwise _Ready() will throw. RefreshFont() will then substitute the locale font over it.
+            _messageLabel.BbcodeEnabled = true; // BBCode must be enabled for MegaRichTextLabel effects (e.g. [sine]) to work
+
+            /// MegaRichTextLabel._Ready() calls AssertThemeFontOverride with ThemeConstants.RichTextLabel.normalFont,
+            /// which is the "normal_font" theme property on RichTextLabel.
+            /// 
+            /// Please note: The terminal still complains that we didn't set a "Theme Font", but there won't be a problem
+            /// since we apply it right away.
             try
             {
                 var font = GD.Load<Font>("res://fonts/kreon_regular.ttf");
                 if (font != null)
                 {
                     _messageLabel.AddThemeFontOverride("normal_font", font);
-                    _messageLabel.AddThemeFontSizeOverride("normal_font_size", 16);
+                    _messageLabel.AddThemeFontSizeOverride("normal_font_size", 24);
                 }
                 else
                 {
@@ -346,9 +359,8 @@ namespace StS2AP.UI
                 LogUtility.Warn($"Failed to load notification label font: {ex.Message}");
             }
 
-            _messageLabel.Text = "[sine]Test notification message![/sine]"; // Default test text
+            // Attach everything together
             textContainer.AddChild(_messageLabel);
-
             bubbleContainer.AddChild(bubble);
 
             return bubbleContainer;
