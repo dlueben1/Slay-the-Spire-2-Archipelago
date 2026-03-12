@@ -9,6 +9,8 @@ using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
+using StS2AP.Data;
+using StS2AP.UI;
 using StS2AP.Utils;
 using System;
 using System.Collections.Generic;
@@ -16,7 +18,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-//test
+using static StS2AP.Data.ItemTable;
 
 namespace StS2AP
 {
@@ -36,7 +38,7 @@ namespace StS2AP
         public static string ServerPassword { get; set; }
         public static string PlayerName { get; set; }
         public static string Seed { get; set; }
-        
+
         /// <summary>
         /// The name of the Game
         /// </summary>
@@ -69,6 +71,12 @@ namespace StS2AP
 
         public static List<long> CheckedLocations { get; set; }
 
+        /// <summary>
+        /// Pre-scouted location data. Key is location ID, value is a tuple of (ItemName, PlayerName).
+        /// Populated on connection to avoid async calls during gameplay.
+        /// </summary>
+        public static Dictionary<long, ScoutedItemInfo> ScoutedLocations { get; set; } = new();
+
         #region Networking
 
         /// <summary>
@@ -84,6 +92,7 @@ namespace StS2AP
             SlotData?.Clear();
             SlotData = new Dictionary<string, object>();
             CheckedLocations = new List<long>();
+            ScoutedLocations.Clear();
 
             // Attempt to create the AP Session
             try
@@ -177,8 +186,52 @@ namespace StS2AP
                 LogUtility.Debug($"VAL: {kvp.Value.ToString()}");
             }
 
+            // Pre-scout all locations so we have item info available for notifications
+            ThreadPool.QueueUserWorkItem(_ => PreScoutAllLocations());
+
+            GameUtility.UnlockedCharacters.Add(ModelDb.Character<Ironclad>());
+
             // Let the game know that we've connected
             ConnectionStateChanged?.Invoke(null, new ResultEventArgs { Value = true });
+        }
+
+        /// <summary>
+        /// Pre-scouts all locations in the game and stores the results.
+        /// This gives us the ability to show item and player names in location/check notifications without having to make async calls during gameplay.
+        /// This runs on a background thread, triggered on connection before gameplay starts.
+        /// </summary>
+        private static void PreScoutAllLocations()
+        {
+            try
+            {
+                if (Session == null)
+                {
+                    LogUtility.Error("Cannot pre-scout locations: Session is null");
+                    return;
+                }
+
+                // Get all location IDs for our game
+                var allLocationIds = Session.Locations.AllLocations.ToArray();
+
+                if (allLocationIds.Length == 0)
+                {
+                    LogUtility.Warn("No locations found to scout");
+                    return;
+                }
+
+                LogUtility.Info($"Pre-scouting {allLocationIds.Length} locations...");
+
+                // Scout all locations at once (blocking call on this thread)
+                var scoutTask = Session.Locations.ScoutLocationsAsync(allLocationIds);
+                scoutTask.Wait(); // Block until complete: faux async to deal with harmony patch skittish-ness
+                ScoutedLocations = scoutTask.Result;
+
+                LogUtility.Success($"Pre-scouted {ScoutedLocations.Count} locations successfully");
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Error($"Failed to pre-scout locations: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -196,7 +249,6 @@ namespace StS2AP
         }
 
         /// <summary>
-
         /// Log errors to the console
         /// </summary>
         private static void OnErrorReceived(Exception e, string message)
@@ -228,11 +280,8 @@ namespace StS2AP
             // Ignore if this item is an old message
             if (helper.Index <= Index) return;
 
-            // Add the Item
+            // Deal with this Item
             ProcessItem(receivedItem);
-
-            // Log the item
-            LogUtility.Success($"Received: {receivedItem.ItemName} from {receivedItem.Player.Name} (ID: {receivedItem.ItemId})");
 
             // Keep track of how many messages we've had so far
             Index++;
@@ -248,17 +297,11 @@ namespace StS2AP
         /// <param name="item">Received Item</param>
         private static void ProcessItem(ItemInfo item)
         {
-            // In the first pass the only thing you can really get is Gold, so this will be updated later.
-            switch (item.ItemId)
-            {
-                default:
-                    {
-                        // Crappy temporary way to scrape the gold amount from the item name
-                        var goldAmt = int.Parse(item.ItemDisplayName.Replace("Gold", "").Trim());
-                        PlayerCmd.GainGold(goldAmt, GameUtility.CurrentPlayer, false);
-                        break;
-                    }
-            }
+            // Log the item
+            LogUtility.Success($"Received: {item.ItemName} from {item.Player.Name} (ID: {item.ItemId})");
+
+            // Show Notification for the item
+            NotificationUtility.ShowItemReceived(item);
         }
 
         #endregion

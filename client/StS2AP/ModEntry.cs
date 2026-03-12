@@ -1,5 +1,7 @@
 ﻿using HarmonyLib;
 using MegaCrit.Sts2.Core.Modding;
+using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Characters;
 using StS2AP.Utils;
 using System;
 using System.IO;

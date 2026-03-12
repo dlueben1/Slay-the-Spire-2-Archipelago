@@ -8,6 +8,11 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+		
+		<!-- Debug settings -->
+		<StartAction>Program</StartAction>
+		<StartProgram>$(STS2GamePath)\SlayTheSpire2.exe</StartProgram>
+		<StartWorkingDirectory>$(STS2GamePath)</StartWorkingDirectory>
 
 		<!-- Fallback defaults if local.props missing -->
 		<STS2GamePath Condition="'$(STS2GamePath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2</STS2GamePath>
@@ -41,6 +46,17 @@
 			<HintPath>$(GameDataDir)\sts2.dll</HintPath>
 		</Reference>
 	</ItemGroup>
+
+	<!-- Create steam_appid.txt for debugging outside Steam -->
+	<Target Name="CreateSteamAppId" BeforeTargets="Build">
+		<PropertyGroup>
+			<SteamAppIdPath>$(STS2GamePath)\steam_appid.txt</SteamAppIdPath>
+			<SteamAppId>2868840</SteamAppId>
+		</PropertyGroup>
+		<WriteLinesToFile File="$(SteamAppIdPath)" Lines="$(SteamAppId)" Overwrite="true" Encoding="ASCII" WriteOnlyWhenDifferent="false" />
+		<Exec Command="powershell -Command &quot;Set-Content -Path '$(SteamAppIdPath)' -Value '$(SteamAppId)' -NoNewline -Encoding ASCII&quot;" />
+		<Message Text="Created steam_appid.txt with App ID $(SteamAppId)" Importance="high" />
+	</Target>
 
 	<!-- Create Godot folder structure -->
 	<Target Name="CreateGodotFolder" BeforeTargets="BeforeBuild">
