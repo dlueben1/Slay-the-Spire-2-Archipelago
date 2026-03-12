@@ -16,6 +16,20 @@ item_table: Dict[str, ItemData] = {
     "2 Gold": ItemData(ItemClassification.filler, 2),
     "5 Gold": ItemData(ItemClassification.filler, 5),
     "25 Gold": ItemData(ItemClassification.useful, 25),
+    # Card Rewards
+    "Card Reward": ItemData(ItemClassification.useful),
+    "Rare Card Reward": ItemData(ItemClassification.useful),
+    # Relic Rewards
+    "Relic Reward": ItemData(ItemClassification.useful),
+    # Potion Rewards
+    "Potion Filler": ItemData(ItemClassification.filler),
+    "Potion Reward": ItemData(ItemClassification.useful),
+    # Character Rewards
+    "Ironclad": ItemData(ItemClassification.progression),
+    "Silent": ItemData(ItemClassification.progression),
+    "Defect": ItemData(ItemClassification.progression),
+    "Regent": ItemData(ItemClassification.progression),
+    "Necrobinder": ItemData(ItemClassification.progression),
     # Progression
     "Victory": ItemData(ItemClassification.progression)
 }

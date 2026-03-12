@@ -2,6 +2,7 @@ using Godot;
 using MegaCrit.Sts2.addons.mega_text;
 using StS2AP.Utils;
 using System;
+using System.Threading;
 
 namespace StS2AP.UI
 {
@@ -15,11 +16,14 @@ namespace StS2AP.UI
         private static CanvasLayer? _canvasLayer;
         private static MegaRichTextLabel? _messageLabel;
         private static TextureRect? _speakerIcon;
+        private static System.Threading.Timer? _displayTimer;
+        private static Tween? _fadeTween;
 
         // UI Constants
         private const float IconSize = 64f;
         private const float BubblePadding = 12f;
-        private const float CornerOffset = 20f;
+        private const float LeftOffset = 16f;
+        private const float TopOffset = 154f;
         private const float TailWidth = 16f;
 
         /// <summary>
@@ -80,6 +84,18 @@ namespace StS2AP.UI
         /// </summary>
         public static void RemoveUI()
         {
+            if (_fadeTween != null)
+            {
+                _fadeTween.Kill();
+                _fadeTween = null;
+            }
+
+            if (_displayTimer != null)
+            {
+                _displayTimer.Dispose();
+                _displayTimer = null;
+            }
+
             if (_canvasLayer != null && IsInstanceValid(_canvasLayer))
             {
                 _canvasLayer.QueueFree();
@@ -91,25 +107,89 @@ namespace StS2AP.UI
         }
 
         /// <summary>
-        /// Shows the notification UI
+        /// Shows the notification UI by dequeuing the next message and displaying it with a fade-in animation
         /// </summary>
-        public static void Show()
+        public static void ShowMessage()
         {
-            if (_rootPanel != null && IsInstanceValid(_rootPanel))
+            if (_rootPanel == null || !IsInstanceValid(_rootPanel))
+                return;
+
+            // Dequeue and display the next notification
+            var notification = NotificationUtility.DequeueNotification();
+            if (notification == null) return;
+
+            // Set the message text
+            SetMessage(notification.Message);
+
+            // Cancel any existing fade tween
+            if (_fadeTween != null)
             {
-                _rootPanel.Visible = true;
+                _fadeTween.Kill();
+            }
+
+            // Fade in
+            _rootPanel.Modulate = new Color(1, 1, 1, 0); // Start transparent
+            _rootPanel.Visible = true;
+            _fadeTween = _rootPanel.CreateTween();
+            _fadeTween.TweenProperty(_rootPanel, "modulate", new Color(1, 1, 1, 1), 0.3);
+
+            // Dispose of previous timer if it exists
+            _displayTimer?.Dispose();
+
+            // Create a one-time timer to display the message for the specified duration
+            _displayTimer = new System.Threading.Timer(
+                OnDisplayTimerTimeout,
+                null,
+                TimeSpan.FromSeconds(notification.DisplayDuration),
+                Timeout.InfiniteTimeSpan);
+        }
+
+        /// <summary>
+        /// Called when the display timer times out
+        /// </summary>
+        private static void OnDisplayTimerTimeout(object? state)
+        {
+            // Check if there are more notifications to display
+            if (NotificationUtility.GetQueueCount() > 0)
+            {
+                // Show the next notification
+                ShowMessage();
+            }
+            else
+            {
+                // No more notifications, hide the UI
+                Hide();
             }
         }
 
         /// <summary>
-        /// Hides the notification UI
+        /// Hides the notification UI with a fade-out animation
         /// </summary>
         public static void Hide()
         {
-            if (_rootPanel != null && IsInstanceValid(_rootPanel))
+            if (_rootPanel == null || !IsInstanceValid(_rootPanel))
+                return;
+
+            // Stop the display timer if it exists
+            _displayTimer?.Dispose();
+            _displayTimer = null;
+
+            // Cancel any existing fade tween
+            if (_fadeTween != null)
             {
-                _rootPanel.Visible = false;
+                _fadeTween.Kill();
             }
+
+            // Fade out
+            _fadeTween = _rootPanel.CreateTween();
+            _fadeTween.TweenProperty(_rootPanel, "modulate", new Color(1, 1, 1, 0), 0.3);
+            _fadeTween.TweenCallback(Callable.From(() =>
+            {
+                if (_rootPanel != null && IsInstanceValid(_rootPanel))
+                {
+                    _rootPanel.Visible = false;
+                }
+            }));
         }
 
         /// <summary>
@@ -139,7 +219,7 @@ namespace StS2AP.UI
             // Main container for the notification (positioned with offset from top-left)
             var notificationContainer = new HBoxContainer();
             notificationContainer.Name = "NotificationContainer";
-            notificationContainer.Position = new Vector2(CornerOffset, CornerOffset);
+            notificationContainer.Position = new Vector2(LeftOffset, TopOffset);
             notificationContainer.AddThemeConstantOverride("separation", 0); // No gap, tail connects them
             root.AddChild(notificationContainer);
 
@@ -150,6 +230,9 @@ namespace StS2AP.UI
             // Speech bubble with tail (right side)
             var speechBubble = CreateSpeechBubble();
             notificationContainer.AddChild(speechBubble);
+
+            // Start hidden until we have a message to show
+            root.Visible = false;
 
             return root;
         }
@@ -192,7 +275,7 @@ namespace StS2AP.UI
         {
             // Container that holds both the tail and the bubble
             var bubbleContainer = new HBoxContainer();
-            bubbleContainer.Name = "SpeechBubbleContainer";
+            bubbleContainer.Name = "ArchipelagoSpeechBubbleContainer";
             bubbleContainer.AddThemeConstantOverride("separation", 0);
 
             // Dialogue tail (pointing left toward the speaker)
@@ -201,7 +284,7 @@ namespace StS2AP.UI
 
             // Main bubble panel
             var bubble = new PanelContainer();
-            bubble.Name = "Bubble";
+            bubble.Name = "ArchipelagoBubble";
             bubble.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
 
             // Get viewport width to calculate 25% width
@@ -217,8 +300,7 @@ namespace StS2AP.UI
             // Style the bubble like NAncientDialogueLine
             var bubbleStyle = new StyleBoxFlat();
             bubbleStyle.BgColor = new Color(0.18f, 0.15f, 0.25f, 0.95f); // Dark purple background
-            bubbleStyle.BorderColor = new Color(0.6f, 0.5f, 0.8f, 1f); // Purple border
-            bubbleStyle.SetBorderWidthAll(2);
+            bubbleStyle.SetBorderWidthAll(0);
             bubbleStyle.SetCornerRadiusAll(8);
             bubbleStyle.ContentMarginLeft = BubblePadding;
             bubbleStyle.ContentMarginRight = BubblePadding;
@@ -228,27 +310,31 @@ namespace StS2AP.UI
 
             // Container for centering the text vertically
             var textContainer = new CenterContainer();
-            textContainer.Name = "TextContainer";
+            textContainer.Name = "ArchipelagoTextContainer";
             textContainer.SizeFlagsHorizontal = Control.SizeFlags.Fill;
             textContainer.SizeFlagsVertical = Control.SizeFlags.Fill;
             bubble.AddChild(textContainer);
 
             // Message label using MegaRichTextLabel
             _messageLabel = new MegaRichTextLabel();
-            _messageLabel.Name = "NotificationLabel";
+            _messageLabel.Name = "ArchipelagoNotificationLabel";
             _messageLabel.CustomMinimumSize = new Vector2(maxBubbleWidth - (BubblePadding * 2) - TailWidth, 0);
             _messageLabel.SizeFlagsHorizontal = Control.SizeFlags.Fill;
             _messageLabel.FitContent = true; // Allow height to grow with content
             _messageLabel.AutowrapMode = TextServer.AutowrapMode.Word; // Word wrap for long text
+            // BBCode must be enabled for MegaRichTextLabel effects (e.g. [sine]) to work
+            _messageLabel.BbcodeEnabled = true;
             
-            // Set the font override for MegaRichTextLabel (required to avoid Godot engine bug)
+            // MegaRichTextLabel._Ready() calls AssertThemeFontOverride with ThemeConstants.RichTextLabel.normalFont,
+            // which is the "normal_font" theme property on RichTextLabel. We must set this before the node enters
+            // the tree, otherwise _Ready() will throw. RefreshFont() will then substitute the locale font over it.
             try
             {
                 var font = GD.Load<Font>("res://fonts/kreon_regular.ttf");
                 if (font != null)
                 {
-                    _messageLabel.AddThemeFontOverride("font", font);
-                    _messageLabel.AddThemeFontSizeOverride("font_size", 16);
+                    _messageLabel.AddThemeFontOverride("normal_font", font);
+                    _messageLabel.AddThemeFontSizeOverride("normal_font_size", 16);
                 }
                 else
                 {
@@ -293,19 +379,6 @@ namespace StS2AP.UI
             };
             tail.Color = new Color(0.18f, 0.15f, 0.25f, 0.95f); // Match bubble background
             tailContainer.AddChild(tail);
-
-            // Add a border line for the tail
-            var tailBorder = new Line2D();
-            tailBorder.Name = "TailBorder";
-            tailBorder.Points = new Vector2[]
-            {
-                new Vector2(TailWidth, midY - 10),
-                new Vector2(0, midY),
-                new Vector2(TailWidth, midY + 10)
-            };
-            tailBorder.Width = 2;
-            tailBorder.DefaultColor = new Color(0.6f, 0.5f, 0.8f, 1f); // Match bubble border
-            tailContainer.AddChild(tailBorder);
 
             return tailContainer;
         }

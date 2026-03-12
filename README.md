@@ -45,6 +45,9 @@ You also need to:
 
 Run `./scripts/build-world.ps1` to generate the `.apworld` file. It should be in `dist/slaythespire2.apworld`
 
+> [!WARNING]
+> If you need to update `ItemTable.cs` because you've changed the items in the APWorld, run `./scripts/build-items-for-client.ps1`
+
 ## Building the Game Client
 
 Use `Ctrl+Shift+B` or `Build > Build Solution`. This will automatically place the mod in the `mods` folder of Slay the Spire
