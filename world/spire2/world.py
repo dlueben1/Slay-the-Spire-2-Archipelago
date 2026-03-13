@@ -285,9 +285,9 @@ class SlayTheSpire2World(World):
                 #             amount = 7
                 #         elif 'Boss Gold' in name:
                 #             amount = 2
-                # elif ItemType.POTION == data.type:
-                #     if self.options.potion_sanity.value != 0:
-                #         amount = 9
+                elif ItemType.POTION == data.type:
+                    if self.options.potion_sanity.value != 0:
+                        amount = 9
                 # elif ItemType.ASCENSION_DOWN == data.type:
                 #     if self.options.include_floor_checks.value != 0:
                 #         amount = ascension_downs
@@ -367,8 +367,8 @@ class SlayTheSpire2World(World):
             return False
         # elif data.type == LocationType.Gold and self.options.gold_sanity.value == 0:
         #     return False
-        # elif data.type == LocationType.Potion and self.options.potion_sanity.value == 0:
-        #     return False
+        elif data.type == LocationType.Potion and self.options.potion_sanity.value == 0:
+            return False
         return True
 
     def set_rules(self) -> None:
@@ -416,6 +416,7 @@ class SlayTheSpire2World(World):
             "num_chars_goal",
             "shuffle_all_cards",
             "include_floor_checks",
+            "potion_sanity",
         ))
         return slot_data
 
@@ -451,7 +452,7 @@ class SlayTheSpire2World(World):
         # self.options.campfire_sanity.value = slot_data['campfire_sanity']
         # self.options.shop_sanity.value = slot_data['shop_sanity']
         # self.options.gold_sanity.value = slot_data['gold_sanity']
-        # self.options.potion_sanity.value = slot_data['potion_sanity']
+        self.options.potion_sanity.value = slot_data['potion_sanity']
         self.options.num_chars_goal.value = slot_data['num_chars_goal']
         self.location_id_to_alias: dict[int, str] = dict()
         # pattern = re.compile("Custom Character [0-9]+ (?P<location_name>.*?)$")

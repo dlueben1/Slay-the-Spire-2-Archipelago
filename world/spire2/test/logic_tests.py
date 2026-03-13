@@ -29,19 +29,21 @@ logic_map: dict[PowerLevel, List[str]] = {
     PowerLevel(): [
         "Card Reward 1",
         "Card Reward 2",
+        "Potion Drop 1",
         *_create_floor_check(1,6)
     ],
     PowerLevel(draw=2,relic=0, rest=1): [
         "Relic 1",
         "Relic 2",
         "Card Reward 3",
+        "Potion Drop 2",
         # *_create_combat_check(4, 7),
         *_create_floor_check(7, 11)
     ],
     PowerLevel(draw=2,relic=2,rest=1, shop=2): [
         "Relic 3",
         "Card Reward 4",
-        # "Potion Drop 3",
+        "Potion Drop 3",
         # *_create_combat_check(8, 8),
         # *_create_floor_check(11, 15)
         *_create_floor_check(12, 16)
@@ -61,17 +63,20 @@ logic_map: dict[PowerLevel, List[str]] = {
     ],
     PowerLevel(draw=4,relic=2, rest=1, smith=1, shop=3, shop_remove=1, gold=2): [
         "Card Reward 5",
+        "Potion Drop 4",
         *_create_floor_check(18, 22),
     ],
     PowerLevel(draw=5,relic=2, rest=1, smith=1, shop=3, shop_remove=1, gold=2): [
         "Relic 4",
         "Relic 5",
         "Card Reward 6",
+        "Potion Drop 5",
         *_create_floor_check(23, 27),
     ],
     PowerLevel(draw=6,relic=2, rest=1, smith=1, shop=3, shop_remove=1, gold=2): [
         "Relic 6",
         "Card Reward 7",
+        "Potion Drop 6",
         *_create_floor_check(28, 32),
     ],
     PowerLevel(draw=7, relic=4, boss_relic=1, rest=2, smith=2, shop=6, shop_remove=2, gold=5): [
@@ -94,6 +99,7 @@ logic_map: dict[PowerLevel, List[str]] = {
         # "Boss Relic 2",
         # "Boss Gold 2",
         "Card Reward 8",
+        "Potion Drop 7",
         # "Potion Drop 7",
         # "Act 3 Campfire 1",
         # "Act 3 Campfire 2",
@@ -105,6 +111,7 @@ logic_map: dict[PowerLevel, List[str]] = {
         "Relic 7",
         "Relic 8",
         "Card Reward 9",
+        "Potion Drop 8",
         # "Potion Drop 8",
         *_create_floor_check(39, 43),
         # *_create_combat_check(20, 21),
@@ -113,6 +120,7 @@ logic_map: dict[PowerLevel, List[str]] = {
         "Card Reward 10",
         "Relic 9",
         "Relic 10",
+        "Potion Drop 9",
         *_create_floor_check(44, 47),
         # *_create_combat_check(24, 25),
     ],
@@ -137,7 +145,7 @@ class LogicTestBase(Spire2TestBase):
         # 'shop_potion_slots': 3,
         # 'shop_remove_slots': 1,
         # 'gold_sanity': 1,
-        # 'potion_sanity': 1,
+        'potion_sanity': 1,
     }
 
     def _setup_state_accessible(self, power: PowerLevel) -> CollectionState:
