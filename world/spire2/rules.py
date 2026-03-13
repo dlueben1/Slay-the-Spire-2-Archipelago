@@ -34,24 +34,14 @@ class SpireLogic(LogicMixin):
         }
 
     def copy_mixin(self, new_state: CollectionState) -> CollectionState:
-        # print("copy")
-        # print(self.power_level)
         for k,v in self.power_level.items():
             new_char_pl = defaultdict(float)
             new_state.power_level[k] = new_char_pl
             for ik, iv in v.items():
                 new_char_pl[ik] = iv
-            # new_state.power_level[k]
-        # new_state.power_level = {
-        # k: defaultdict(int,{inner: inner_v for inner, inner_v in v.items() }) for k,v in self.power_level.items()
-        # }
         new_state.item_levels = {
             k: {inner: inner_v for inner, inner_v in v.items() } for k,v in self.item_levels.items()
         }
-        # print(self.power_level)
-        # print(new_state.power_level)
-        # print(self.item_levels)
-        # print(new_state.item_levels)
         return new_state
 
 

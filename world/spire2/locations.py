@@ -55,6 +55,7 @@ class LocationData(typing.NamedTuple):
 
 def create_location_data() -> typing.List[LocationData]:
     return (
+
             [LocationData(f"Card Reward {j}", j, LocationType.Card_Reward) for j in range(1, MAX_CARD_REWARDS + 1)] +
             [LocationData(f"Relic {j}", j + 26, LocationType.Relic) for j in range(1, 11)] +
             [LocationData(f"Shop Slot {j}", j + 36, LocationType.Shop)  for j in range(1,17)] +
@@ -76,7 +77,9 @@ def create_location_data() -> typing.List[LocationData]:
              LocationData('Act 1 Boss', None, LocationType.Event),
              LocationData('Act 2 Boss', None, LocationType.Event),
              LocationData('Act 3 Boss', None, LocationType.Event),
-             ])
+             ] +
+            [LocationData(f"Reached Floor {j}", 100 + j, LocationType.Floor) for j in range(1, 48)]
+    )
 
 def create_location_tables(vanilla_chars: typing.List[str], extras: int) -> typing.Tuple[dict[str, int], dict[
     typing.Union[str, int],dict[str,LocationData]],dict[int,LocationData]]:

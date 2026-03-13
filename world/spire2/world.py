@@ -305,40 +305,41 @@ class SlayTheSpire2World(World):
                 for _ in range(amount):
                     pool.append(self.create_item(name))
 
-            # if self.options.include_floor_checks.value:
-            #
-            #     remaining_checks = 51 - ascension_downs
-            #
-            #     if config.final_act:
-            #         remaining_checks += 4
-            #     if config.ascension >= 20 and config.ascension_down == 0:
-            #         remaining_checks += 1
-            #
-            #     traps: list[bool] = [self.random.randint(0, 100) < self.options.trap_chance for _ in
-            #                          range(remaining_checks)]
-            #     trap_num = traps.count(True)
-            #     filler_num = len(traps) - trap_num
-            #     if trap_num > 0:
-            #         for name in self.random.choices(list(self.options.trap_weights.keys()),
-            #                                         weights=list(self.options.trap_weights.values()), k=trap_num):
-            #             pool.append(SpireItem(name, self.player))
-            #
-            #     # Char specific 1 Gold and 5 Gold, in that order
-            #     filler_pool = [key for key, val in chars_to_items[char_lookup].items()
-            #                    if ItemType.GOLD == val.type and ItemClassification.filler == val.classification]
-            #     filler_pool.append("CAW CAW")
-            #     filler_pool.append("Combat Buff")
-            #     filler_weights = [
-            #         self.options.filler_weights.get("1 Gold", 0),
-            #         self.options.filler_weights.get("5 Gold", 0),
-            #         self.options.filler_weights.get("CAW CAW", 0),
-            #         self.options.filler_weights.get("Combat Buff", 0),
-            #     ]
-            #     if sum(filler_weights) <= 0:
-            #         filler_weights = [40, 60, 0, 0]
-            #
-            #     for name in self.random.choices(filler_pool, weights=filler_weights, k=filler_num):
-            #         pool.append(SpireItem(name, self.player))
+            if self.options.include_floor_checks.value:
+
+                # remaining_checks = 51 - ascension_downs
+                remaining_checks = 48
+                if config.ascension >= 10:
+                    # TODO: handle ascension downs
+                    remaining_checks += 1
+
+                # traps: list[bool] = [self.random.randint(0, 100) < self.options.trap_chance for _ in
+                #                      range(remaining_checks)]
+                # trap_num = traps.count(True)
+                # filler_num = len(traps) - trap_num
+                filler_num = remaining_checks
+                # if trap_num > 0:
+                #     for name in self.random.choices(list(self.options.trap_weights.keys()),
+                #                                     weights=list(self.options.trap_weights.values()), k=trap_num):
+                #         pool.append(SpireItem(name, self.player))
+
+                # Char specific 1 Gold and 5 Gold, in that order
+                filler_pool = [key for key, val in chars_to_items[char_lookup].items()
+                               if ItemType.GOLD == val.type and ItemClassification.filler == val.classification]
+                filler_pool.append("CAW CAW")
+                # filler_pool.append("Combat Buff")
+                filler_weights = [
+                    self.options.filler_weights.get("1 Gold", 0),
+                    self.options.filler_weights.get("5 Gold", 0),
+                    self.options.filler_weights.get("CAW CAW", 0),
+                    # self.options.filler_weights.get("Combat Buff", 0),
+                ]
+                if sum(filler_weights) <= 0:
+                    filler_weights = [40, 60, 0]
+                    # filler_weights = [40, 60, 0, 0]
+
+                for name in self.random.choices(filler_pool, weights=filler_weights, k=filler_num):
+                    pool.append(self.create_item(name))
             # Pair up our event locations with our event items
             for base_event, base_item in base_event_item_pairs.items():
                 event = f"{config.name} {base_event}"
@@ -352,8 +353,8 @@ class SlayTheSpire2World(World):
     def _should_include_location(self, data: LocationData, config: CharacterConfig) -> bool:
         if data is None:
             return True
-        # if data.type == LocationType.Floor and self.options.include_floor_checks == 0:
-        #     return False
+        if data.type == LocationType.Floor and self.options.include_floor_checks == 0:
+            return False
         # elif data.type == LocationType.Campfire and self.options.campfire_sanity == 0:
         #     return False
         elif data.type == LocationType.Shop:
@@ -370,26 +371,9 @@ class SlayTheSpire2World(World):
         #     return False
         return True
 
-    # Set Archipelago Logic
     def set_rules(self) -> None:
-        # TODO: implement
-        # Register linear floor progression (e.g. "Act 1 - Reach Floor 2" requires "Act 1 - Reach Floor 1")
-        # for floor in range(2, ACT_1_FLOOR_COUNT + 1):
-        #     current_name = f"Act 1 - Reach Floor {floor}"
-        #     previous_name = f"Act 1 - Reach Floor {floor - 1}"
-        #
-        #     set_rule(
-        #         self.multiworld.get_location(current_name, self.player),
-        #         lambda state, prev=previous_name: state.can_reach_location(prev, self.player)
-        #     )
-        #
-        # # The goal condition is:
-        # self.multiworld.completion_condition[self.player] = (
-        #     lambda state: state.has("Victory", self.player)
-        # )
         set_rules(self)
 
-    # TODO: needs to include character discriminator
     def collect(self, state: CollectionState, item: Item) -> bool:
         change = super().collect(state, item)
         item_data = typing.cast(SlayTheSpire2Item, item).item_data
@@ -431,6 +415,7 @@ class SlayTheSpire2World(World):
             "ascension",
             "num_chars_goal",
             "shuffle_all_cards",
+            "include_floor_checks",
         ))
         return slot_data
 
@@ -462,7 +447,7 @@ class SlayTheSpire2World(World):
         # self.total_shop_locations = self.total_shop_items + (3 if self.options.shop_remove_slots else 0)
         # if self.total_shop_locations <= 0:
         #     self.options.shop_sanity.value = 0
-        # self.options.include_floor_checks.value = slot_data['include_floor_checks']
+        self.options.include_floor_checks.value = slot_data['include_floor_checks']
         # self.options.campfire_sanity.value = slot_data['campfire_sanity']
         # self.options.shop_sanity.value = slot_data['shop_sanity']
         # self.options.gold_sanity.value = slot_data['gold_sanity']

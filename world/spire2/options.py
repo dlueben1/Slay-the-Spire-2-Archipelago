@@ -78,10 +78,10 @@ class Ascension(Range):
 #     default = 0
 
 
-# class IncludeFloorChecks(Toggle):
-#     """Whether to include reaching new floors as a location.  Adds small amounts of gold as items."""
-#     display_name = "Include Floor Checks"
-#     default = 1
+class IncludeFloorChecks(Toggle):
+    """Whether to include reaching new floors as a location.  Adds small amounts of gold as items."""
+    display_name = "Include Floor Checks"
+    default = 1
 
 # class CampfireSanity(Toggle):
 #     """Whether to shuffle being able to rest and smith at each campsite per act.  Also adds
@@ -251,28 +251,28 @@ class AscensionDown(Range):
 #     default = {trap: 1 for trap in trap_item_table.keys()}
 #     valid_keys = sorted(trap_item_table.keys())
 
-# class FillerWeights(OptionCounter):
-#     """
-#     The list of filler and corresponding weights that will be added to the item pool
-#     1 Gold - One gold, character bound
-#     5 Gold - Five gold, character bound
-#     CAW CAW - CAW CAW
-#     Combat Buff - Similar to traps in function, but beneficial instead of detrimental, not character bound
-#     """
-#     display_name = "Filler Weights"
-#     min = 0
-#     default = {
-#         "1 Gold": 40,
-#         "5 Gold": 60,
-#         "CAW CAW": 0,
-#         "Combat Buff": 0,
-#     }
-#     valid_keys = [
-#         "5 Gold",
-#         "1 Gold",
-#         "CAW CAW",
-#         "Combat Buff",
-#     ]
+class FillerWeights(OptionCounter):
+    """
+    The list of filler and corresponding weights that will be added to the item pool
+    1 Gold - One gold, character bound
+    5 Gold - Five gold, character bound
+    CAW CAW - CAW CAW
+    """
+    # Combat Buff - Similar to traps in function, but beneficial instead of detrimental, not character bound
+    display_name = "Filler Weights"
+    min = 0
+    default = {
+        "1 Gold": 40,
+        "5 Gold": 60,
+        "CAW CAW": 0,
+        # "Combat Buff": 0,
+    }
+    valid_keys = [
+        "5 Gold",
+        "1 Gold",
+        "CAW CAW",
+        # "Combat Buff",
+    ]
 
 
 
@@ -290,8 +290,8 @@ class Spire2Options(PerGameCommonOptions):
     ascension: Ascension
     ascension_down: AscensionDown
     shuffle_all_cards: CardReward
-    # include_floor_checks: IncludeFloorChecks
-    # filler_weights: FillerWeights
+    include_floor_checks: IncludeFloorChecks
+    filler_weights: FillerWeights
     # trap_chance: TrapChance
     # trap_weights: TrapWeights
     # campfire_sanity: CampfireSanity
