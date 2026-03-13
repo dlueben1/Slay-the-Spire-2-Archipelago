@@ -10,6 +10,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
 using StS2AP.Data;
+using StS2AP.Models;
 using StS2AP.UI;
 using StS2AP.Utils;
 using System;
@@ -19,6 +20,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using static StS2AP.Data.ItemTable;
+using static System.Collections.Specialized.BitVector32;
 
 namespace StS2AP
 {
@@ -49,11 +51,18 @@ namespace StS2AP
         /// </summary>
         public const string APVersion = "0.6.6";
 
-        #endregion
-
         public static bool Authenticated { get; set; }
         public static bool Connecting { get; set; }
         public static bool IsConnected => Authenticated && Session?.Socket?.Connected == true;
+
+        #endregion
+
+        #region Session Information
+
+        /// <summary>
+        /// The Player's settings, mostly from the YAML
+        /// </summary>
+        public static ArchipelagoSettings Settings { get; private set; }
 
         public static ArchipelagoSession Session { get; set; }
 
@@ -64,12 +73,20 @@ namespace StS2AP
 
         public static Dictionary<string, object> SlotData { get; set; }
 
+        public static List<long> CheckedLocations { get; set; }
+
+        #endregion
+
+        /// <summary>
+        /// Spinlock for processing incoming items to ensure that we don't have multiple threads trying to process items at the same time
+        /// </summary>
+        private static readonly object _itemLock = new();
+
         /// <summary>
         /// Fires when the connection state changes
         /// </summary>
         public static event EventHandler<ResultEventArgs> ConnectionStateChanged;
 
-        public static List<long> CheckedLocations { get; set; }
 
         /// <summary>
         /// Pre-scouted location data. Key is location ID, value is a tuple of (ItemName, PlayerName).
@@ -179,6 +196,9 @@ namespace StS2AP
         {
             LogUtility.Success("Successfully Connected to Archipelago Server");
 
+            // Get all settings for this player
+            Settings = GetPlayerSettings();
+
             // Log all slot data
             foreach (var kvp in SlotData)
             {
@@ -188,8 +208,6 @@ namespace StS2AP
 
             // Pre-scout all locations so we have item info available for notifications
             ThreadPool.QueueUserWorkItem(_ => PreScoutAllLocations());
-
-            GameUtility.UnlockedCharacters.Add(ModelDb.Character<Ironclad>());
 
             // Let the game know that we've connected
             ConnectionStateChanged?.Invoke(null, new ResultEventArgs { Value = true });
@@ -281,10 +299,14 @@ namespace StS2AP
             if (helper.Index <= Index) return;
 
             // Deal with this Item
-            ProcessItem(receivedItem);
+            lock (_itemLock)
+            {
+                ProcessItem(receivedItem);
+                
+                // Keep track of how many messages we've had so far
+                Index++;
+            }
 
-            // Keep track of how many messages we've had so far
-            Index++;
         }
 
         #endregion
@@ -302,6 +324,43 @@ namespace StS2AP
 
             // Show Notification for the item
             NotificationUtility.ShowItemReceived(item);
+
+            // Apply the item to the game
+            switch(item.GetRawItemID())
+            {
+                case APItem.Unlock:
+                    {
+                        GameUtility.UnlockCharacter(item);
+                        break;
+                    }
+            }
+        }
+
+        #endregion
+
+        #region Slot Information
+
+        /// <summary>
+        /// Get all of the Player's Settings for their Archipelago Slot
+        /// </summary>
+        private static ArchipelagoSettings GetPlayerSettings()
+        {
+            // Get the Data Store from Archipelago & Build the User Settings
+            var slotData = Session.DataStorage.GetSlotData();
+            if(slotData == null)
+            {
+                LogUtility.Error("No slot data found for this player!");
+                throw new InvalidDataException("No slot data found for this player!");
+            }
+            ArchipelagoSettings settings = new();
+
+            // Apply all found settings
+            if (slotData.ContainsKey("ascension")) settings.AscensionLevel = Convert.ToInt32(slotData["ascension"]);
+            if (slotData.ContainsKey("seeded")) settings.IsSeeded = Convert.ToBoolean(slotData["seeded"]);
+            if (slotData.ContainsKey("shuffle_all_cards")) settings.ShouldShuffleAllCards = Convert.ToBoolean(slotData["shuffle_all_cards"]);
+
+            // And return it
+            return settings;
         }
 
         #endregion

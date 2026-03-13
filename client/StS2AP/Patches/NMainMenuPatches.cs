@@ -4,6 +4,7 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
+using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Nodes.Screens.MainMenu;
 using MegaCrit.Sts2.Core.Nodes.Screens.Settings;
 using MegaCrit.Sts2.Core.Unlocks;
@@ -80,9 +81,19 @@ namespace StS2AP.Patches
                 _customButton.Visible = false;
                 _backButton.Visible = false;
 
-                // Inject the custom Archipelago UIs
-                ArchipelagoConnectionUI.InjectUI();
-                ArchipelagoNotificationUI.InjectUI();
+                // If we are connected, dive directly into the game (`ArchipelagoClient.IsConnected` can cause problems at this stage if you're not connected so I manually unraveled it)
+                if (ArchipelagoClient.Authenticated && ArchipelagoClient.Session != null && ArchipelagoClient.Session.Socket != null && ArchipelagoClient.Session.Socket.Connected)
+                {
+                    var _charSelectScreen = MenuUtility.SubmenuStack.GetSubmenuType<NCharacterSelectScreen>();
+                    _charSelectScreen?.InitializeSingleplayer();
+                    MenuUtility.SubmenuStack.Push(_charSelectScreen);
+                }
+                // Inject the custom Archipelago UIs if we're not connected
+                else
+                {
+                    ArchipelagoConnectionUI.InjectUI();
+                    ArchipelagoNotificationUI.InjectUI();
+                }
             }
         }
     }
