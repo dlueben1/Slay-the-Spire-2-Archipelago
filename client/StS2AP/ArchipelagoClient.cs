@@ -196,6 +196,9 @@ namespace StS2AP
         {
             LogUtility.Success("Successfully Connected to Archipelago Server");
 
+            // Get all settings for this player
+            Settings = GetPlayerSettings();
+
             // Log all slot data
             foreach (var kvp in SlotData)
             {
@@ -205,9 +208,6 @@ namespace StS2AP
 
             // Pre-scout all locations so we have item info available for notifications
             ThreadPool.QueueUserWorkItem(_ => PreScoutAllLocations());
-
-            // Get all settings for this player
-            GetPlayerSettings();
 
             // Let the game know that we've connected
             ConnectionStateChanged?.Invoke(null, new ResultEventArgs { Value = true });
