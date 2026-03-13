@@ -19,6 +19,8 @@ namespace StS2AP.Patches
         /// <summary>
         /// Grabs a reference to the player character that we can access globally.
         /// The Player is the entry point to many things, such as giving gold, damage, rewards, etc. so having a reference to it is important.
+        /// 
+        /// Also, resets our progress (we need to clean this up when we refactor patches...)
         /// </summary>
         [HarmonyPatch(typeof(Player), nameof(Player.CreateForNewRun),
             new Type[] { typeof(CharacterModel), typeof(UnlockState), typeof(ulong) })]
@@ -28,12 +30,15 @@ namespace StS2AP.Patches
             {
                 LogUtility.Debug("Caching Player");
                 GameUtility.CurrentPlayer = __result;
+
+                // Reset progress
+                ArchipelagoClient.Progress.ResetTrackers();
             }
 
-        /// <summary>
-        /// Override MaxAscensionWhenRunStarted with the Player's Ascension Level
-        /// </summary>
-        [HarmonyPatch(typeof(Player), nameof(Player.MaxAscensionWhenRunStarted), MethodType.Getter)]
+            /// <summary>
+            /// Override MaxAscensionWhenRunStarted with the Player's Ascension Level
+            /// </summary>
+            [HarmonyPatch(typeof(Player), nameof(Player.MaxAscensionWhenRunStarted), MethodType.Getter)]
         [HarmonyPostfix]
         public static void OverrideMaxAscensionWhenRunStarted(ref int __result)
         {
