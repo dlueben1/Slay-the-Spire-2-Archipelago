@@ -8,6 +8,9 @@ This mod is currently in Alpha, and is unfinished. It's not feature-complete to 
 
 Currently it's a simple proof-of-concept where you can only get Gold Rewards and you only send checks as you climb the Spire. Everything else will be coming soon!
 
+> [!WARNING]
+> The mod only supports English at the moment, but as we understand localization better, we can work with the community to support more languages
+
 # Installing the Mod
 
 1. Download the "sts2-client.zip" from the [Releases](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest) section of the Repo

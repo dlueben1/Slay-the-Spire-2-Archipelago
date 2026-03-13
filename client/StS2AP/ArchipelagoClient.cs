@@ -67,6 +67,12 @@ namespace StS2AP
         public static ArchipelagoSession Session { get; set; }
 
         /// <summary>
+        /// Progress of the player through their Archipelago game.
+        /// Some of this data resets every run.
+        /// </summary>
+        public static ArchipelagoProgress Progress { get; set; } = new();
+
+        /// <summary>
         /// Represents how caught up we are with Archipelago's sent items
         /// </summary>
         private static int Index;
@@ -241,8 +247,19 @@ namespace StS2AP
 
                 // Scout all locations at once (blocking call on this thread)
                 var scoutTask = Session.Locations.ScoutLocationsAsync(allLocationIds);
-                scoutTask.Wait(); // Block until complete: faux async to deal with harmony patch skittish-ness
+                scoutTask.Wait(); // Block until complete. Async doesn't play well with Harmony Patches
                 ScoutedLocations = scoutTask.Result;
+
+                // Add all scouted locations to the game's localization tables so they can be shown as rewards (which require `LocString`)
+                Dictionary<string, string> locationLocalizations = new();
+                foreach(var loc in ScoutedLocations)
+                {
+                    // Add the Item at this location to the localization table with the keys "AP_LOC_{LocationID}"
+                    string locKey = $"AP_LOC_{loc.Key}";
+                    string locText = $"{loc.Value.ItemDisplayName} for {loc.Value.Player.Name}";
+                    locationLocalizations.Add(locKey, locText);
+                }
+                TextUtility.RegisterLocTableAtRuntime("ap", locationLocalizations);
 
                 LogUtility.Success($"Pre-scouted {ScoutedLocations.Count} locations successfully");
             }
