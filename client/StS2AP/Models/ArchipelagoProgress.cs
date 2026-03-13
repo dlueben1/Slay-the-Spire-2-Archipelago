@@ -37,6 +37,13 @@ namespace StS2AP.Models
         /// </summary>
         public int RelicRewardsAttempted { get; set; } = 0;
 
+        public void ResetTrackers()
+        {
+            CardRewardsAttempted = 0;
+            RareCardRewardsAttempted = 0;
+            RelicRewardsAttempted = 0;
+        }
+
         #endregion
     }
 }
