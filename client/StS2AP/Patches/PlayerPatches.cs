@@ -38,6 +38,9 @@ namespace StS2AP.Patches
                 // At start of game, listen to Combat Manager
                 CombatManager.Instance.CombatWon -= GameUtility.OnCombatWin;
                 CombatManager.Instance.CombatWon += GameUtility.OnCombatWin;
+
+                // Send "Press Start" check
+                GameUtility.TrySendPressStartCheck();
             }
 
             /// <summary>

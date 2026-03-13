@@ -134,6 +134,7 @@ namespace StS2AP.Utils
                 _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(_locationId);
 
                 LogUtility.Success($"Sent location check: {_locationId}");
+                NotificationUtility.ShowLocationChecked(_locationId);
             }
         }
 
