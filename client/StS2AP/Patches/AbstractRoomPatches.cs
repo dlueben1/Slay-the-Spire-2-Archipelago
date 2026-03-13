@@ -89,6 +89,9 @@ namespace StS2AP.Patches
         /// <param name="runState">The current state of the run</param>
         static void TrySendFloorCheck(IRunState? runState)
         {
+            // Until the APWorld supports this, ignore the function
+            return;
+
             // Null checks to shut compiler up
             if (GameUtility.CurrentPlayer == null || runState == null)
             {
