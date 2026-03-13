@@ -21,6 +21,8 @@ namespace StS2AP.Models
         /// </summary>
         public const int _maxRelicRewards = 10;
 
+        public const int _maxBossRewards = 3;
+
         #region Per-Run Tracker
 
         /// <summary>
@@ -37,10 +39,13 @@ namespace StS2AP.Models
         /// </summary>
         public int RelicRewardsAttempted { get; set; } = 0;
 
+        public int BossRewardsDistributed { get; set; } = 0;
+
         public void ResetTrackers()
         {
             CardRewardsAttempted = 0;
             RareCardRewardsAttempted = 0;
+            BossRewardsDistributed = 0;
             RelicRewardsAttempted = 0;
         }
 

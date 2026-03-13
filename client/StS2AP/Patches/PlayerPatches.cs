@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Unlocks;
@@ -33,6 +34,10 @@ namespace StS2AP.Patches
 
                 // Reset progress
                 ArchipelagoClient.Progress.ResetTrackers();
+
+                // At start of game, listen to Combat Manager
+                CombatManager.Instance.CombatWon -= GameUtility.OnCombatWin;
+                CombatManager.Instance.CombatWon += GameUtility.OnCombatWin;
             }
 
             /// <summary>

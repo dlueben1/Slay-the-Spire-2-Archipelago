@@ -258,6 +258,7 @@ namespace StS2AP
                     string locKey = $"AP_LOC_{loc.Key}";
                     string locText = $"{loc.Value.ItemDisplayName} for {loc.Value.Player.Name}";
                     locationLocalizations.Add(locKey, locText);
+                    LogUtility.Warn($"{loc.Key}:{loc.Value.LocationName}:{loc.Value.LocationDisplayName}");
                 }
                 TextUtility.RegisterLocTableAtRuntime("ap", locationLocalizations);
 

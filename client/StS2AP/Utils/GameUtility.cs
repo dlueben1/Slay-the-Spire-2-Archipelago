@@ -2,6 +2,8 @@
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
+using MegaCrit.Sts2.Core.Rooms;
+using StS2AP.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -71,6 +73,68 @@ namespace StS2AP.Utils
 
             // Add the character to the game
             if(!UnlockedCharacters.Contains(characterToUnlock)) UnlockedCharacters.Add(characterToUnlock);
+        }
+
+        #endregion
+
+        #region Game State Event Listeners
+
+        public static void OnCombatWin(CombatRoom room)
+        {
+            //// If it's a boss, send a check for boss defeat
+            //if (room.RoomType == RoomType.Boss)
+            //{
+            //    TrySendBossDefeatCheck();
+            //}
+        }
+
+        #endregion
+
+        #region Sending Checks
+
+        public static void TrySendBossDefeatCheck()
+        {
+            // Determine if we send a check for this
+            ArchipelagoClient.Progress.BossRewardsDistributed++;
+            if (ArchipelagoClient.Progress.BossRewardsDistributed <= ArchipelagoProgress._maxBossRewards)
+            {
+                // Grab the Character Name
+                var name = GameUtility.CurrentPlayer.Character.Title.GetFormattedText().Split().Last();
+
+                // Grab the check ID
+                var checkName = $"{name} Act {ArchipelagoClient.Progress.BossRewardsDistributed} Boss";
+                LogUtility.Debug($"BOSS NAME CHECK: {checkName}");
+                var _locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", checkName);
+
+                if (!ArchipelagoClient.CheckedLocations.Contains(_locationId))
+                {
+                    // Check the location off and let the server know
+                    ArchipelagoClient.CheckedLocations.Add(_locationId);
+                    _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(_locationId);
+
+                    LogUtility.Success($"Sent location check: {_locationId}");
+                    NotificationUtility.ShowLocationChecked(_locationId);
+                }
+            }
+        }
+
+        public static void TrySendPressStartCheck()
+        {
+            // Grab the Character Name
+            var name = GameUtility.CurrentPlayer.Character.Title.GetFormattedText().Split().Last();
+
+            // Grab the check ID
+            var checkName = $"{name} Press Start";
+            var _locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", checkName);
+
+            if (!ArchipelagoClient.CheckedLocations.Contains(_locationId))
+            {
+                // Check the location off and let the server know
+                ArchipelagoClient.CheckedLocations.Add(_locationId);
+                _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(_locationId);
+
+                LogUtility.Success($"Sent location check: {_locationId}");
+            }
         }
 
         #endregion
