@@ -43,10 +43,10 @@ You also need to:
 
 ## Building the APWorld
 
-Run `./scripts/build-world.ps1` to generate the `.apworld` file. It should be in `dist/slaythespire2.apworld`
+Copy the folder inside `world` into your local Archipelago Installation's `world` folder, then open the launcher and select "Build APWorlds", and you'll find it in the `build` folder
 
 > [!WARNING]
-> If you need to update `ItemTable.cs` because you've changed the items in the APWorld, run `./scripts/build-items-for-client.ps1`
+> If you need to update `ItemTable.cs` because you've changed the items in the APWorld, run `./scripts/generate_item_enums.ps1`. This will cause many errors but can be helpful if a large change was made.
 
 ## Building the Game Client
 
@@ -73,11 +73,11 @@ You can view the current roadmap in detail [here](https://github.com/users/dlueb
 
 - [ ] Fix bug where clicking the debug terminal freezes the game
 - [x] Very Simple Proof-of-Concept Gameplay loop (Receive Gold as Items, Act 1 Boss is clear, reaching each floor is a check)
-- [ ] Implement Goal: Complete Act 3
-- [ ] Implement Core Features: Card, Gold, Relic Rewards, Defeating Bosses
+- [x] Implement Goal: Complete Act 3
+- [ ] Implement Core Features: Card, Relic Rewards, Defeating Bosses
 - [ ] UI: Archipelago Rewards Menu, Notifications
 - [ ] Code Quality
-  - [ ] Improve APWorld logic
+  - [x] Improve APWorld logic
   - [ ] Handle Disconnection / Connection Instability / Sync missed Checks and Items
 
 ## Future
