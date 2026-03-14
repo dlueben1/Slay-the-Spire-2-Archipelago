@@ -19,5 +19,7 @@ namespace StS2AP.Models
         public bool ShouldShuffleAllCards { get; set; }
 
         public bool IsSeeded { get; set; }
+
+        public bool NoCharactersLocked { get; set; }
     }
 }

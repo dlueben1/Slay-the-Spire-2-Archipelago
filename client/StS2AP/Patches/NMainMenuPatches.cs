@@ -50,11 +50,14 @@ namespace StS2AP.Patches
                 
                 // Set the menu for Archipelago
                 _singleplayerButton.Visible = true;
+                _singleplayerButton.Enable();
                 _multiplayerButton.Visible = false;
                 _continueButton.Visible = false;
                 _abandonRunButton.Visible = false;
                 _compendiumButton.Visible = false;
                 _timelineButton.Visible = false;
+                _timelineButton.Disable();
+                _compendiumButton.Disable();
 
                 // Change the name of the "Single Player" menu to "Archipelago"
                 _singleplayerButton.label.Text = "Archipelago";
