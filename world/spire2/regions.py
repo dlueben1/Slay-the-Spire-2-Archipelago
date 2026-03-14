@@ -34,11 +34,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
     first_char_region = world.create_region(player, prefix, 'Early Act 1', config,
                                             [
                                                 "Press Start",
-                                                # "Card Reward 1",
-                                                # "Card Reward 2",
                                                 "Potion Drop 1",
-                                                # "Ruby Key",
-                                                # *_create_campfire_check(1),
                                                 "Act 1 Campfire 1",
                                                 *_create_floor_check(1,6),
                                                 *_create_combat_check(1,4),
@@ -54,12 +50,9 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
 
     multiworld.regions.append(world.create_region(player, prefix, 'Mid Act 1', config,
                                                   [
-                                                      # 'Card Reward 3',
-                                                      # 'Card Reward 4',
                                                       'Relic 1',
                                                       'Relic 2',
                                                       "Potion Drop 2",
-                                                      # "Sapphire Key",
                                                       "Act 1 Campfire 2",
                                                       *_create_floor_check(7, 11),
                                                       *_create_combat_check(5, 6),
@@ -86,12 +79,8 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
 
     multiworld.regions.append(world.create_region(player, prefix, 'Early Act 2', config,
                                                   [
-                                                      # "Card Reward 5",
-                                                      # "Card Reward 6",
                                                       "Potion Drop 4",
-                                                      # *_create_campfire_check(2),
                                                       *_create_floor_check(18, 22),
-                                                      # *_create_combat_check(9, 11),
                                                       "Act 2 Campfire 1",
                                                       *_create_combat_check(9, 10),
                                                       *_create_card_rewards(9, 10, every_other),
@@ -101,7 +90,6 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                   [f"Shop Slot {i}" for i in range(6,11)]))
     multiworld.regions.append(world.create_region(player, prefix, 'Mid Act 2', config,
                                                   [
-                                                      # 'Card Reward 7',
                                                       'Relic 4',
                                                       'Relic 5',
                                                       "Potion Drop 5",
@@ -113,7 +101,6 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
 
     multiworld.regions.append(world.create_region(player, prefix, 'Late Act 2', config,
                                                   [
-                                                      # 'Card Reward 8',
                                                       'Relic 6',
                                                       "Potion Drop 6",
                                                       *_create_floor_check(28, 32),
@@ -132,10 +119,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
 
     multiworld.regions.append(world.create_region(player, prefix, 'Early Act 3', config,
                                                   [
-                                                      # "Card Reward 9",
-                                                      # "Card Reward 10",
                                                       "Potion Drop 7",
-                                                      # *_create_campfire_check(3),
                                                       "Act 3 Campfire 1",
                                                       *_create_floor_check(34, 38),
                                                       *_create_combat_check(15, 16),
@@ -147,7 +131,6 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
 
     multiworld.regions.append(world.create_region(player, prefix, 'Mid Act 3', config,
                                                   [
-                                                      # "Card Reward 11",
                                                       "Relic 7",
                                                       "Relic 8",
                                                       "Potion Drop 8",
@@ -160,12 +143,9 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
 
     multiworld.regions.append(world.create_region(player, prefix, 'Late Act 3', config,
                                                   [
-                                                      # "Card Reward 12",
-                                                      # "Card Reward 13",
                                                       "Relic 9",
                                                       "Relic 10",
                                                       "Potion Drop 9",
-                                                      # "Emerald Key",
                                                       *_create_floor_check(44, 47),
                                                       *_create_combat_check(19, 20),
                                                       *_create_card_rewards(19, 20, every_other)
@@ -189,6 +169,3 @@ def _create_card_rewards(start: int, end: int, every_other: bool) -> List[str]:
 
 def _create_combat_check(start: int, end: int) -> List[str]:
     return [f"Combat Gold {i}" for i in range(start, end + 1)]
-
-def _create_campfire_check(act: int) -> List[str]:
-    return [f"Act {act} Campfire 1", f"Act {act} Campfire 2"]
