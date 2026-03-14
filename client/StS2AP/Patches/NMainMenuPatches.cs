@@ -50,6 +50,7 @@ namespace StS2AP.Patches
                 
                 // Set the menu for Archipelago
                 _singleplayerButton.Visible = true;
+                _singleplayerButton.Enable();
                 _multiplayerButton.Visible = false;
                 _continueButton.Visible = false;
                 _abandonRunButton.Visible = false;

@@ -70,8 +70,7 @@ namespace StS2AP.UI
             };
 
             // Attempt to load the icon
-            string relativePath = "Mods/StS2AP/placeholder.png";
-            var tex = LoadExternalTexture(relativePath);
+            var tex = GD.Load<Texture2D>("res://images/APIcon.png");
 
             if (tex != null)
             {
@@ -87,14 +86,17 @@ namespace StS2AP.UI
             return button;
         }
 
+        /// <summary>
+        /// Opens the Reward List
+        /// </summary>
         private static void OnAPButtonPressed()
         {
             LogUtility.Info("Opening Archipelago Rewards UI...");
             // Simple dummy rewards for testing visuals (IGNORE)
             // var dummyRewards = new List<string> { "Received: Shuriken", "Received: 50 Gold" };
-            
-            // // This call now handles its own injection if the UI is missing!
-            ArchipelagoRewardUI.ShowTestRewards();
+
+            // This call now handles its own injection if the UI is missing!
+            ArchipelagoRewardUI.ShowRewards();
         }
 
         private static Texture2D? LoadExternalTexture(string relativePath)
