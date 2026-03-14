@@ -70,6 +70,10 @@ Use `Ctrl+Shift+B` or `Build > Build Solution`. This will automatically place th
 - Platano Bailando for creating the StS 1 Archipelago that inspires this one!
 - [lamali292](https://github.com/lamali292) for their initial guide on creating mods for Slay the Spire 2!
 - [alwaysintreble](https://github.com/alwaysintreble/ArchipelagoBepInExPluginTemplate/tree/master) for their example Archipelago C# Plugin Template
+- All of the wonderful contributors to the project!
+<a href="https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=dlueben1/Slay-the-Spire-2-Archipelago" />
+</a>
 
 # Roadmap
 
