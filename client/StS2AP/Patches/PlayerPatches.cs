@@ -50,11 +50,11 @@ namespace StS2AP.Patches
             /// Override MaxAscensionWhenRunStarted with the Player's Ascension Level
             /// </summary>
             [HarmonyPatch(typeof(Player), nameof(Player.MaxAscensionWhenRunStarted), MethodType.Getter)]
-        [HarmonyPostfix]
-        public static void OverrideMaxAscensionWhenRunStarted(ref int __result)
-        {
-            __result = ArchipelagoClient.Settings?.AscensionLevel ?? __result;
-        }
+            [HarmonyPostfix]
+            public static void OverrideMaxAscensionWhenRunStarted(ref int __result)
+            {
+                __result = ArchipelagoClient.Settings?.AscensionLevel ?? __result;
+            }
         }
     }
 }

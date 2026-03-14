@@ -16,6 +16,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static StS2AP.Data.CharTable;
+using StS2AP.UI;
 
 namespace StS2AP.Utils
 {
@@ -199,6 +200,9 @@ namespace StS2AP.Utils
 
                 var reward = new CardReward(options, 3, CurrentPlayer);
                 await reward.Populate();
+
+                // Hide the Reward UI
+                ArchipelagoRewardUI.Hide();
 
                 // OnSelectWrapper opens NCardRewardSelectionScreen and waits for the player to pick
                 await reward.OnSelectWrapper();
