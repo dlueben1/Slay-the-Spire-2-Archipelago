@@ -75,24 +75,5 @@ Use `Ctrl+Shift+B` or `Build > Build Solution`. This will automatically place th
 
 You can view the current roadmap in detail [here](https://github.com/users/dlueben1/projects/1)
 
-## MVP
-
-- [ ] Fix bug where clicking the debug terminal freezes the game
-- [x] Very Simple Proof-of-Concept Gameplay loop (Receive Gold as Items, Act 1 Boss is clear, reaching each floor is a check)
-- [x] Implement Goal: Complete Act 3
-- [ ] Implement Core Features: Card, Relic Rewards, Defeating Bosses
-- [ ] UI: Archipelago Rewards Menu, Notifications
-- [ ] Code Quality
-  - [x] Improve APWorld logic
-  - [ ] Handle Disconnection / Connection Instability / Sync missed Checks and Items
-
-## Future
-
-> [!TIP]
-> If there's a feature you're looking for, please reach out on Discord or add a request to the repo!
-
-- [ ] Support other Mods
-- [ ] Multiplayer Support
-
 > [!IMPORTANT]
 > Multiplayer is going to be **complex**, and will only be started on when **everything else is very stable**. Thanks for understanding!
