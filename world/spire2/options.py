@@ -49,6 +49,7 @@ class LockCharacters(Choice):
     locked_fixed means the unlocked_character option is used to determine which character to start with
     locked_random means which character you start with is randomized
     unlocked means you start with all characters available"""
+    visibility = Visibility.none
     display_name = "Lock Characters"
     option_unlocked = 0
     option_locked_random = 1
@@ -80,6 +81,7 @@ class Ascension(Range):
 
 class IncludeFloorChecks(Toggle):
     """Whether to include reaching new floors as a location.  Adds small amounts of gold as items."""
+    visibility = Visibility.none
     display_name = "Include Floor Checks"
     default = 1
 
@@ -157,11 +159,13 @@ class ShopSanityCosts(Choice):
 
 class GoldSanity(Toggle):
     """Whether to enable shuffling gold rewards into the multiworld. Adds 27 locations per character"""
+    visibility = Visibility.none
     display_name = "Gold Sanity"
     default = 0
 
 class PotionSanity(Toggle):
     """Whether to enable shuffling potion drops into the multiworld; adds 9 locations per character."""
+    visibility = Visibility.none
     display_name = "Potion Sanity"
     default = 0
 
@@ -173,6 +177,7 @@ class CardReward(Toggle):
 
 class SeededRun(Toggle):
     """Whether each character should have a fixed seed to climb the spire with or not."""
+    visibility = Visibility.none
     display_name = "Seeded Run"
     default = 0
 
@@ -267,6 +272,7 @@ class FillerWeights(OptionCounter):
     CAW CAW - CAW CAW
     """
     # Combat Buff - Similar to traps in function, but beneficial instead of detrimental, not character bound
+    visibility = Visibility.none
     display_name = "Filler Weights"
     min = 0
     default = {
