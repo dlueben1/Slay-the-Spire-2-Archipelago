@@ -17,6 +17,9 @@ Currently it's a simple proof-of-concept where you can only get Gold Rewards and
 2. Go to your Slay the Spire II directory (In Steam, click "Browse Local Files")
 3. If a folder called `mods` does not exist, create it
 4. Unzip the **contents** of `sts2-client.zip` into `mods`
+
+- If you've done this step correctly, your directory structure should look like this: `/<slay-the-spire-2-local-files>/mods/Archipelago/` and the contents of that folder should be a bunch of `.dll` files and a `.pck` file (there may be more files too, please don't touch anything in this folder)
+
 5. Start the game
 
 > [!CAUTION]
