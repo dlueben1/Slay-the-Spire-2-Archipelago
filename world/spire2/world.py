@@ -75,11 +75,11 @@ class SlayTheSpire2World(World):
                 break
         else:
             raise OptionError("No character started unlocked!")
-        # self.total_shop_items = (self.options.shop_card_slots.value + self.options.shop_neutral_card_slots.value +
-        #                          self.options.shop_relic_slots.value + self.options.shop_potion_slots.value)
-        # self.total_shop_locations = self.total_shop_items + (3 if self.options.shop_remove_slots else 0)
-        # if self.total_shop_locations <= 0:
-        #     self.options.shop_sanity.value = 0
+        self.total_shop_items = (self.options.shop_card_slots.value + self.options.shop_neutral_card_slots.value +
+                                 self.options.shop_relic_slots.value + self.options.shop_potion_slots.value)
+        self.total_shop_locations = self.total_shop_items + (3 if self.options.shop_remove_slots else 0)
+        if self.total_shop_locations <= 0:
+            self.options.shop_sanity.value = 0
         if len(self.modded_chars) > NUM_CUSTOM:
             raise OptionError(f"StS 2 only supports {NUM_CUSTOM} modded characters; got {len(self.modded_chars)}: {[x.option_name for x in self.modded_chars]}")
         num_chars_goal = self.options.num_chars_goal.value
@@ -207,13 +207,6 @@ class SlayTheSpire2World(World):
                 self.modded_chars.append(config)
 
     def create_regions(self) -> None:
-        # menu = Region("Menu", self.player, self.multiworld)
-        # act_1 = Region("Act 1", self.player, self.multiworld)
-        #
-        # self.multiworld.regions += [menu, act_1]
-        #
-        # act_1.add_locations(self.location_name_to_id, SlayTheSpire2Location)
-        # menu.connect(act_1)
         create_regions(self, self.player)
 
     def create_region(self, player: int, prefix: Optional[str], name: str, config: CharacterConfig, locations: List[str] = None, exits: List[str] =None):
@@ -243,18 +236,7 @@ class SlayTheSpire2World(World):
     def get_filler_item_name(self) -> str:
         return 'CAW CAW'
 
-    # Add items to the multiworld
     def create_items(self) -> None:
-        # TODO: implement
-        # items_to_add = ["Victory"]
-        #
-        # location_count = len(self.location_name_to_id)
-        # filler_count = location_count - len(items_to_add)
-        # for _ in range(filler_count):
-        #     items_to_add.append(self.get_filler_item_name())
-        #
-        # for name in items_to_add:
-        #     self.multiworld.itempool.append(self.create_item(name))
         pool = []
         card_reward_count = MAX_CARD_REWARDS if self.options.shuffle_all_cards.value else MAX_CARD_REWARDS // 2
         for config in self.characters:
@@ -291,17 +273,17 @@ class SlayTheSpire2World(World):
                 # elif ItemType.ASCENSION_DOWN == data.type:
                 #     if self.options.include_floor_checks.value != 0:
                 #         amount = ascension_downs
-                # elif self.options.shop_sanity.value != 0:
-                #     if ItemType.SHOP_CARD == data.type:
-                #         amount = self.options.shop_card_slots.value
-                #     elif ItemType.SHOP_NEUTRAL == data.type:
-                #         amount = self.options.shop_neutral_card_slots.value
-                #     elif ItemType.SHOP_RELIC == data.type:
-                #         amount = self.options.shop_relic_slots.value
-                #     elif ItemType.SHOP_POTION == data.type:
-                #         amount = self.options.shop_potion_slots.value
-                #     elif ItemType.SHOP_REMOVE == data.type and self.options.shop_remove_slots.value != 0:
-                #         amount = 3
+                elif self.options.shop_sanity.value != 0:
+                    if ItemType.SHOP_CARD == data.type:
+                        amount = self.options.shop_card_slots.value
+                    elif ItemType.SHOP_NEUTRAL == data.type:
+                        amount = self.options.shop_neutral_card_slots.value
+                    elif ItemType.SHOP_RELIC == data.type:
+                        amount = self.options.shop_relic_slots.value
+                    elif ItemType.SHOP_POTION == data.type:
+                        amount = self.options.shop_potion_slots.value
+                    elif ItemType.SHOP_REMOVE == data.type and self.options.shop_remove_slots.value != 0:
+                        amount = 3
                 for _ in range(amount):
                     pool.append(self.create_item(name))
 
@@ -358,11 +340,10 @@ class SlayTheSpire2World(World):
         elif data.type == LocationType.Campfire and self.options.campfire_sanity == 0:
             return False
         elif data.type == LocationType.Shop:
-            return False
-        #     if self.options.shop_sanity.value == 0:
-        #         return False
-        #     total_shop = self.total_shop_locations
-        #     return total_shop >= data.id - 163
+            if self.options.shop_sanity.value == 0:
+                return False
+            total_shop = self.total_shop_locations
+            return total_shop >= data.id - 36
         elif data.type == LocationType.Start and (self.options.lock_characters.value == 0 or not config.locked):
             return False
         elif data.type == LocationType.Gold and self.options.gold_sanity.value == 0:
@@ -401,14 +382,14 @@ class SlayTheSpire2World(World):
             'characters': [
                 c.to_dict() for c in self.characters
             ],
-            # 'shop_sanity_options': {
-            #     "card_slots": self.options.shop_card_slots.value,
-            #     "neutral_slots": self.options.shop_neutral_card_slots.value,
-            #     "relic_slots": self.options.shop_relic_slots.value,
-            #     "potion_slots": self.options.shop_potion_slots.value,
-            #     "card_remove": self.options.shop_remove_slots != 0,
-            #     "costs": self.options.shop_sanity_costs.value,
-            # },
+            'shop_sanity_options': {
+                "card_slots": self.options.shop_card_slots.value,
+                "neutral_slots": self.options.shop_neutral_card_slots.value,
+                "relic_slots": self.options.shop_relic_slots.value,
+                "potion_slots": self.options.shop_potion_slots.value,
+                "card_remove": self.options.shop_remove_slots != 0,
+                "costs": self.options.shop_sanity_costs.value,
+            },
             "mod_compat_version": self.mod_compat_version,
         }
         slot_data.update(self.options.as_dict(
@@ -427,11 +408,11 @@ class SlayTheSpire2World(World):
         return slot_data
 
     def _setup_ut(self, slot_data: dict[str, Any]) -> None:
-        # self.options.shop_card_slots.value = slot_data["shop_sanity_options"]["card_slots"]
-        # self.options.shop_remove_slots.value = slot_data["shop_sanity_options"]["card_remove"]
-        # self.options.shop_neutral_card_slots.value = slot_data["shop_sanity_options"]["neutral_slots"]
-        # self.options.shop_relic_slots.value = slot_data["shop_sanity_options"]["relic_slots"]
-        # self.options.shop_potion_slots.value = slot_data["shop_sanity_options"]["potion_slots"]
+        self.options.shop_card_slots.value = slot_data["shop_sanity_options"]["card_slots"]
+        self.options.shop_remove_slots.value = slot_data["shop_sanity_options"]["card_remove"]
+        self.options.shop_neutral_card_slots.value = slot_data["shop_sanity_options"]["neutral_slots"]
+        self.options.shop_relic_slots.value = slot_data["shop_sanity_options"]["relic_slots"]
+        self.options.shop_potion_slots.value = slot_data["shop_sanity_options"]["potion_slots"]
         for char_dict in slot_data['characters']:
             config = CharacterConfig(
                 char_dict['name'],
@@ -445,14 +426,14 @@ class SlayTheSpire2World(World):
             self.characters.append(config)
             if char_dict['mod_num'] > 0:
                 self.modded_chars.append(config)
-        # self.total_shop_items = (self.options.shop_card_slots.value + self.options.shop_neutral_card_slots.value +
-        #                          self.options.shop_relic_slots.value + self.options.shop_potion_slots.value)
-        # self.total_shop_locations = self.total_shop_items + (3 if self.options.shop_remove_slots else 0)
-        # if self.total_shop_locations <= 0:
-        #     self.options.shop_sanity.value = 0
+        self.total_shop_items = (self.options.shop_card_slots.value + self.options.shop_neutral_card_slots.value +
+                                 self.options.shop_relic_slots.value + self.options.shop_potion_slots.value)
+        self.total_shop_locations = self.total_shop_items + (3 if self.options.shop_remove_slots else 0)
+        if self.total_shop_locations <= 0:
+            self.options.shop_sanity.value = 0
         self.options.include_floor_checks.value = slot_data['include_floor_checks']
-        # self.options.campfire_sanity.value = slot_data['campfire_sanity']
-        # self.options.shop_sanity.value = slot_data['shop_sanity']
+        self.options.campfire_sanity.value = slot_data['campfire_sanity']
+        self.options.shop_sanity.value = slot_data['shop_sanity']
         self.options.gold_sanity.value = slot_data['gold_sanity']
         self.options.potion_sanity.value = slot_data['potion_sanity']
         self.options.num_chars_goal.value = slot_data['num_chars_goal']

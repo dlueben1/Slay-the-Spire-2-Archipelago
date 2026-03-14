@@ -90,63 +90,70 @@ class CampfireSanity(Toggle):
     display_name = "Campfire Sanity"
     default = 0
 
-# class ShopSanity(Toggle):
-#     """Whether to shuffle shop slots into the pool.  Also adds new locations at the shop per slot shuffled."""
-#     display_name = "Shop Sanity"
-#     option_true = 1
-#     option_false = 0
-#     default = 0
+class ShopSanity(Toggle):
+    """Whether to shuffle shop slots into the pool.  Also adds new locations at the shop per slot shuffled."""
+    visibility = Visibility.none
+    display_name = "Shop Sanity"
+    option_true = 1
+    option_false = 0
+    default = 0
 
-# class ShopCardSlots(Range):
-#     """When shop_sanity is enabled, the number of colored card slots to shuffle."""
-#     display_name = "Shop Card Slots"
-#     range_start = 0
-#     range_end = 5
-#     default = 2
-#
-# class ShopNeutralSlots(Range):
-#     """When shop_sanity is enabled, the number of neutral card slots to shuffle."""
-#     display_name = "Shop Neutral Card Slots"
-#     range_start = 0
-#     range_end = 2
-#     default = 1
-#
-# class ShopRelicSlots(Range):
-#     """WHen shop_sanity is enabled, the number of relic slots to shuffle."""
-#     display_name = "Shop Relic Slots"
-#     range_start = 0
-#     range_end = 3
-#     default = 2
-#
-# class ShopPotionSlots(Range):
-#     """When shop_sanity is enabled, the number of potion slots to shuffle"""
-#     display_name = "Shop Potion Slots"
-#     range_start = 0
-#     range_end = 3
-#     default = 2
-#
-# class ShopRemoveSlots(Toggle):
-#     """When shop_sanity is enabled, whether to shuffle the ability to remove cards at the shop.
-#     Progressive based on Act; i.e. you'll gain the ability to remove cards per Act, starting from Act 1.
-#     Act 4 will be treated as Act 3."""
-#     display_name = "Shop Remove Slots"
-#     default = 0
-#
-# class ShopSanityCosts(Choice):
-#     """How expensive the AP shop items should be. Tiered means costs map to typical costs rarity for the slot.
-#     Progression = Rare, Useful = Uncommon, Filler = Common
-#     Logic does not take this option into account.
-#     Fixed=15 gold each
-#     Super_Discount_Tiered=20% of tiered costs
-#     Discount_Tiered=50% of tiered costs
-#     Tiered=Vanilla price for slot
-#     """
-#     display_name = "Shop Sanity Costs"
-#     option_Fixed = 0
-#     option_Super_Discount_Tiered = 1
-#     option_Discount_Tiered = 2
-#     option_Tiered = 3
-#     default = 2
+class ShopCardSlots(Range):
+    """When shop_sanity is enabled, the number of colored card slots to shuffle."""
+    visibility = Visibility.none
+    display_name = "Shop Card Slots"
+    range_start = 0
+    range_end = 5
+    default = 2
+
+class ShopNeutralSlots(Range):
+    """When shop_sanity is enabled, the number of neutral card slots to shuffle."""
+    visibility = Visibility.none
+    display_name = "Shop Neutral Card Slots"
+    range_start = 0
+    range_end = 2
+    default = 1
+
+class ShopRelicSlots(Range):
+    """When shop_sanity is enabled, the number of relic slots to shuffle."""
+    visibility = Visibility.none
+    display_name = "Shop Relic Slots"
+    range_start = 0
+    range_end = 3
+    default = 2
+
+class ShopPotionSlots(Range):
+    """When shop_sanity is enabled, the number of potion slots to shuffle"""
+    visibility = Visibility.none
+    display_name = "Shop Potion Slots"
+    range_start = 0
+    range_end = 3
+    default = 2
+
+class ShopRemoveSlots(Toggle):
+    """When shop_sanity is enabled, whether to shuffle the ability to remove cards at the shop.
+    Progressive based on Act; i.e. you'll gain the ability to remove cards per Act, starting from Act 1.
+    Act 4 will be treated as Act 3."""
+    visibility = Visibility.none
+    display_name = "Shop Remove Slots"
+    default = 0
+
+class ShopSanityCosts(Choice):
+    """How expensive the AP shop items should be. Tiered means costs map to typical costs rarity for the slot.
+    Progression = Rare, Useful = Uncommon, Filler = Common
+    Logic does not take this option into account.
+    Fixed=15 gold each
+    Super_Discount_Tiered=20% of tiered costs
+    Discount_Tiered=50% of tiered costs
+    Tiered=Vanilla price for slot
+    """
+    visibility = Visibility.none
+    display_name = "Shop Sanity Costs"
+    option_Fixed = 0
+    option_Super_Discount_Tiered = 1
+    option_Discount_Tiered = 2
+    option_Tiered = 3
+    default = 2
 
 class GoldSanity(Toggle):
     """Whether to enable shuffling gold rewards into the multiworld. Adds 27 locations per character"""
@@ -298,13 +305,13 @@ class Spire2Options(PerGameCommonOptions):
     campfire_sanity: CampfireSanity
     gold_sanity: GoldSanity
     potion_sanity: PotionSanity
-    # shop_sanity: ShopSanity
-    # shop_card_slots: ShopCardSlots
-    # shop_neutral_card_slots: ShopNeutralSlots
-    # shop_relic_slots: ShopRelicSlots
-    # shop_potion_slots: ShopPotionSlots
-    # shop_remove_slots: ShopRemoveSlots
-    # shop_sanity_costs: ShopSanityCosts
+    shop_sanity: ShopSanity
+    shop_card_slots: ShopCardSlots
+    shop_neutral_card_slots: ShopNeutralSlots
+    shop_relic_slots: ShopRelicSlots
+    shop_potion_slots: ShopPotionSlots
+    shop_remove_slots: ShopRemoveSlots
+    shop_sanity_costs: ShopSanityCosts
     seeded: SeededRun
 
 # option_groups: List[OptionGroup] = [
