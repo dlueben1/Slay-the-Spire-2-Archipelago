@@ -56,6 +56,8 @@ namespace StS2AP.Patches
                 _abandonRunButton.Visible = false;
                 _compendiumButton.Visible = false;
                 _timelineButton.Visible = false;
+                _timelineButton.Disable();
+                _compendiumButton.Disable();
 
                 // Change the name of the "Single Player" menu to "Archipelago"
                 _singleplayerButton.label.Text = "Archipelago";

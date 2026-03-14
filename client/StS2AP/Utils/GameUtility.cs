@@ -306,7 +306,7 @@ namespace StS2AP.Utils
             var checkName = $"{name} Press Start";
             var _locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", checkName);
 
-            if (!ArchipelagoClient.CheckedLocations.Contains(_locationId))
+            if (!ArchipelagoClient.CheckedLocations.Contains(_locationId) && _locationId != -1 && ArchipelagoClient.ScoutedLocations.ContainsKey(_locationId))
             {
                 // Check the location off and let the server know
                 ArchipelagoClient.CheckedLocations.Add(_locationId);
