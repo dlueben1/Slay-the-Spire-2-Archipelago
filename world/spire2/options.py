@@ -59,6 +59,7 @@ class LockCharacters(Choice):
 class UnlockedCharacter(TextChoice):
     """Which character to start unlocked, if lock_characters is set to locked_fixed.
     Can also enter a character name for modded characters."""
+    visibility = Visibility.none
     default = ""
     option_ironclad = 0
     option_silent = 1
