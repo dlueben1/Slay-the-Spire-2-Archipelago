@@ -83,12 +83,13 @@ class IncludeFloorChecks(Toggle):
     display_name = "Include Floor Checks"
     default = 1
 
-# class CampfireSanity(Toggle):
-#     """Whether to shuffle being able to rest and smith at each campsite per act.  Also adds
-#     new locations at campsites per act."""
-#     display_name = "Campfire Sanity"
-#     default = 0
-#
+class CampfireSanity(Toggle):
+    """Whether to shuffle being able to rest and smith at each campsite per act.  Also adds
+    new locations at campsites per act."""
+    visibility = Visibility.none
+    display_name = "Campfire Sanity"
+    default = 0
+
 # class ShopSanity(Toggle):
 #     """Whether to shuffle shop slots into the pool.  Also adds new locations at the shop per slot shuffled."""
 #     display_name = "Shop Sanity"
@@ -294,7 +295,7 @@ class Spire2Options(PerGameCommonOptions):
     filler_weights: FillerWeights
     # trap_chance: TrapChance
     # trap_weights: TrapWeights
-    # campfire_sanity: CampfireSanity
+    campfire_sanity: CampfireSanity
     gold_sanity: GoldSanity
     potion_sanity: PotionSanity
     # shop_sanity: ShopSanity

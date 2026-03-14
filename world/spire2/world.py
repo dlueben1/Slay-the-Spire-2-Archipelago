@@ -269,9 +269,9 @@ class SlayTheSpire2World(World):
                     amount = 2
                 elif ItemType.RELIC == data.type:
                     amount = 10
-                # elif ItemType.CAMPFIRE == data.type:
-                #     if self.options.campfire_sanity.value != 0:
-                #         amount = 3
+                elif ItemType.CAMPFIRE == data.type:
+                    if self.options.campfire_sanity.value != 0:
+                        amount = 3
                 elif ItemType.CHAR_UNLOCK == data.type:
                     if self.options.lock_characters.value != 0 and config.locked:
                         amount = 1
@@ -355,8 +355,8 @@ class SlayTheSpire2World(World):
             return True
         if data.type == LocationType.Floor and self.options.include_floor_checks == 0:
             return False
-        # elif data.type == LocationType.Campfire and self.options.campfire_sanity == 0:
-        #     return False
+        elif data.type == LocationType.Campfire and self.options.campfire_sanity == 0:
+            return False
         elif data.type == LocationType.Shop:
             return False
         #     if self.options.shop_sanity.value == 0:
@@ -418,6 +418,7 @@ class SlayTheSpire2World(World):
             "include_floor_checks",
             "potion_sanity",
             "gold_sanity",
+            "campfire_sanity",
         ))
         return slot_data
 

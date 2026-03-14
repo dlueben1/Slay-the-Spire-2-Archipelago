@@ -15,17 +15,16 @@ class ItemType(Enum):
     BOSS_RELIC = auto()
     GOLD = auto()
     EVENT = auto()
-    # CAMPFIRE = auto()
-    # SHOP_CARD = auto()
-    # SHOP_NEUTRAL = auto()
-    # SHOP_RELIC = auto()
-    # SHOP_POTION = auto()
-    # SHOP_REMOVE = auto()
+    CAMPFIRE = auto()
+    SHOP_CARD = auto()
+    SHOP_NEUTRAL = auto()
+    SHOP_RELIC = auto()
+    SHOP_POTION = auto()
+    SHOP_REMOVE = auto()
     CHAR_UNLOCK = auto()
     POTION = auto()
     ASCENSION_DOWN = auto()
     # TRAP = auto()
-    # KEY = auto()
     CAW_CAW = auto()
     OTHER = auto()
 
@@ -52,8 +51,8 @@ base_item_table: Dict[str, ItemData] = {
     '15 Gold': ItemData(15, ItemType.GOLD, ItemClassification.useful),
     '30 Gold': ItemData(16, ItemType.GOLD, ItemClassification.progression_deprioritized_skip_balancing),
     'Boss Gold': ItemData(17, ItemType.GOLD, ItemClassification.progression),
-    # 'Progressive Rest': ItemData(7, ItemType.CAMPFIRE, ItemClassification.progression),
-    # 'Progressive Smith': ItemData(8, ItemType.CAMPFIRE, ItemClassification.progression),
+    'Progressive Rest': ItemData(7, ItemType.CAMPFIRE, ItemClassification.progression),
+    'Progressive Smith': ItemData(8, ItemType.CAMPFIRE, ItemClassification.progression),
     # 'Shop Card Slot': ItemData(9, ItemType.SHOP_CARD, ItemClassification.progression_deprioritized),
     # 'Neutral Shop Card Slot': ItemData(10, ItemType.SHOP_NEUTRAL, ItemClassification.progression_deprioritized),
     # 'Shop Relic Slot': ItemData(11, ItemType.SHOP_RELIC, ItemClassification.progression_deprioritized),

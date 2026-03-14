@@ -62,12 +62,12 @@ def create_location_data() -> typing.List[LocationData]:
             [LocationData(f"Combat Gold {j}", j + 52, LocationType.Gold) for j in range(1,27)] +
             [LocationData(f"Potion Drop {j}", j + 78, LocationType.Potion) for j in range(1,10)] +
             [LocationData('Press Start', 88, LocationType.Start),
-             # LocationData('Act 1 Campfire 1', 89, LocationType.Campfire),
-             # LocationData('Act 1 Campfire 2', 90, LocationType.Campfire),
-             # LocationData('Act 2 Campfire 1', 91, LocationType.Campfire),
-             # LocationData('Act 2 Campfire 2', 92, LocationType.Campfire),
-             # LocationData('Act 3 Campfire 1', 93, LocationType.Campfire),
-             # LocationData('Act 3 Campfire 2', 94, LocationType.Campfire),
+             LocationData('Act 1 Campfire 1', 89, LocationType.Campfire),
+             LocationData('Act 1 Campfire 2', 90, LocationType.Campfire),
+             LocationData('Act 2 Campfire 1', 91, LocationType.Campfire),
+             LocationData('Act 2 Campfire 2', 92, LocationType.Campfire),
+             LocationData('Act 3 Campfire 1', 93, LocationType.Campfire),
+             LocationData('Act 3 Campfire 2', 94, LocationType.Campfire),
              LocationData('Rare Card Reward 1', 95, LocationType.Rare_Card_Reward, True),
              LocationData('Rare Card Reward 2', 96, LocationType.Rare_Card_Reward, True),
              # LocationData('Boss Relic 1', 97, LocationType.Boss_Relic, True),
