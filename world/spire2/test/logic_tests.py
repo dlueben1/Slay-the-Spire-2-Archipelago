@@ -11,8 +11,8 @@ def _create_floor_check(start: int, end: int) -> List[str]:
 # def _create_shop_check(start: int, end: int) -> List[str]:
 #     return [f"Shop Slot {i}" for i in range(start, end + 1)]
 
-# def _create_combat_check(start: int, end: int) -> List[str]:
-#     return [f"Combat Gold {i}" for i in range(start, end + 1)]
+def _create_combat_check(start: int, end: int) -> List[str]:
+    return [f"Combat Gold {i}" for i in range(start, end + 1)]
 
 class PowerLevel(NamedTuple):
     draw: int = 0
@@ -30,21 +30,23 @@ logic_map: dict[PowerLevel, List[str]] = {
         "Card Reward 1",
         "Card Reward 2",
         "Potion Drop 1",
-        *_create_floor_check(1,6)
+        # TODO: need to figure out gold distribution
+        *_create_combat_check(1, 4),
+        *_create_floor_check(1,6),
     ],
     PowerLevel(draw=2,relic=0, rest=1): [
         "Relic 1",
         "Relic 2",
         "Card Reward 3",
         "Potion Drop 2",
-        # *_create_combat_check(4, 7),
+        *_create_combat_check(5, 6),
         *_create_floor_check(7, 11)
     ],
     PowerLevel(draw=2,relic=2,rest=1, shop=2): [
         "Relic 3",
         "Card Reward 4",
         "Potion Drop 3",
-        # *_create_combat_check(8, 8),
+        *_create_combat_check(7, 8),
         # *_create_floor_check(11, 15)
         *_create_floor_check(12, 16)
     ],
@@ -52,7 +54,7 @@ logic_map: dict[PowerLevel, List[str]] = {
         "Act 1 Boss",
         "Rare Card Reward 1",
         # "Boss Relic 1",
-        # "Boss Gold 1",
+        "Boss Gold 1",
         # "Card Reward 5",
         # "Card Reward 6",
         # "Potion Drop 4",
@@ -65,6 +67,7 @@ logic_map: dict[PowerLevel, List[str]] = {
         "Card Reward 5",
         "Potion Drop 4",
         *_create_floor_check(18, 22),
+        *_create_combat_check(9, 10),
     ],
     PowerLevel(draw=5,relic=2, rest=1, smith=1, shop=3, shop_remove=1, gold=2): [
         "Relic 4",
@@ -72,12 +75,14 @@ logic_map: dict[PowerLevel, List[str]] = {
         "Card Reward 6",
         "Potion Drop 5",
         *_create_floor_check(23, 27),
+        *_create_combat_check(11, 12),
     ],
     PowerLevel(draw=6,relic=2, rest=1, smith=1, shop=3, shop_remove=1, gold=2): [
         "Relic 6",
         "Card Reward 7",
         "Potion Drop 6",
         *_create_floor_check(28, 32),
+        *_create_combat_check(13, 14),
     ],
     PowerLevel(draw=7, relic=4, boss_relic=1, rest=2, smith=2, shop=6, shop_remove=2, gold=5): [
         "Act 2 Boss",
@@ -106,6 +111,7 @@ logic_map: dict[PowerLevel, List[str]] = {
         # *_create_floor_check(33, 39),
         # *_create_combat_check(17, 19),
         *_create_floor_check(34, 38),
+        *_create_combat_check(15, 16),
     ],
     PowerLevel(draw=8,relic=4,boss_relic=1, rest=3,smith=2, shop=8, shop_remove=2, gold=5): [
         "Relic 7",
@@ -115,6 +121,7 @@ logic_map: dict[PowerLevel, List[str]] = {
         # "Potion Drop 8",
         *_create_floor_check(39, 43),
         # *_create_combat_check(20, 21),
+        *_create_combat_check(17, 18),
     ],
     PowerLevel(draw=8,relic=6,boss_relic=1, rest=3,smith=2, shop=10, shop_remove=2, gold=5): [
         "Card Reward 10",
@@ -122,7 +129,7 @@ logic_map: dict[PowerLevel, List[str]] = {
         "Relic 10",
         "Potion Drop 9",
         *_create_floor_check(44, 47),
-        # *_create_combat_check(24, 25),
+        *_create_combat_check(19, 20),
     ],
     PowerLevel(draw=8,relic=8,boss_relic=2,rest=3,smith=3, shop=10,shop_remove=3, gold=9, keys=1): [
         "Act 3 Boss",
@@ -144,7 +151,7 @@ class LogicTestBase(Spire2TestBase):
         # 'shop_relic_slots': 3,
         # 'shop_potion_slots': 3,
         # 'shop_remove_slots': 1,
-        # 'gold_sanity': 1,
+        'gold_sanity': 1,
         'potion_sanity': 1,
     }
 

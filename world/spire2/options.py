@@ -147,11 +147,11 @@ class IncludeFloorChecks(Toggle):
 #     option_Tiered = 3
 #     default = 2
 
-# class GoldSanity(Toggle):
-#     """Whether to enable shuffling gold rewards into the multiworld. Adds 27 locations per character"""
-#     display_name = "Gold Sanity"
-#     default = 0
-#
+class GoldSanity(Toggle):
+    """Whether to enable shuffling gold rewards into the multiworld. Adds 27 locations per character"""
+    display_name = "Gold Sanity"
+    default = 0
+
 class PotionSanity(Toggle):
     """Whether to enable shuffling potion drops into the multiworld; adds 9 locations per character."""
     display_name = "Potion Sanity"
@@ -295,7 +295,7 @@ class Spire2Options(PerGameCommonOptions):
     # trap_chance: TrapChance
     # trap_weights: TrapWeights
     # campfire_sanity: CampfireSanity
-    # gold_sanity: GoldSanity
+    gold_sanity: GoldSanity
     potion_sanity: PotionSanity
     # shop_sanity: ShopSanity
     # shop_card_slots: ShopCardSlots

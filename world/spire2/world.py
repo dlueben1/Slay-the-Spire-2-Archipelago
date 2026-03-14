@@ -277,14 +277,14 @@ class SlayTheSpire2World(World):
                         amount = 1
                     else:
                         self.push_precollected(self.create_item(name))
-                # elif ItemType.GOLD == data.type:
-                #     if self.options.gold_sanity.value != 0:
-                #         if '15 Gold' in name:
-                #             amount = 18
-                #         elif '30 Gold' in name:
-                #             amount = 7
-                #         elif 'Boss Gold' in name:
-                #             amount = 2
+                elif ItemType.GOLD == data.type:
+                    if self.options.gold_sanity.value != 0:
+                        if '15 Gold' in name:
+                            amount = 13
+                        elif '30 Gold' in name:
+                            amount = 7
+                        elif 'Boss Gold' in name:
+                            amount = 2
                 elif ItemType.POTION == data.type:
                     if self.options.potion_sanity.value != 0:
                         amount = 9
@@ -365,8 +365,8 @@ class SlayTheSpire2World(World):
         #     return total_shop >= data.id - 163
         elif data.type == LocationType.Start and (self.options.lock_characters.value == 0 or not config.locked):
             return False
-        # elif data.type == LocationType.Gold and self.options.gold_sanity.value == 0:
-        #     return False
+        elif data.type == LocationType.Gold and self.options.gold_sanity.value == 0:
+            return False
         elif data.type == LocationType.Potion and self.options.potion_sanity.value == 0:
             return False
         return True
@@ -417,6 +417,7 @@ class SlayTheSpire2World(World):
             "shuffle_all_cards",
             "include_floor_checks",
             "potion_sanity",
+            "gold_sanity",
         ))
         return slot_data
 
@@ -451,7 +452,7 @@ class SlayTheSpire2World(World):
         self.options.include_floor_checks.value = slot_data['include_floor_checks']
         # self.options.campfire_sanity.value = slot_data['campfire_sanity']
         # self.options.shop_sanity.value = slot_data['shop_sanity']
-        # self.options.gold_sanity.value = slot_data['gold_sanity']
+        self.options.gold_sanity.value = slot_data['gold_sanity']
         self.options.potion_sanity.value = slot_data['potion_sanity']
         self.options.num_chars_goal.value = slot_data['num_chars_goal']
         self.location_id_to_alias: dict[int, str] = dict()
