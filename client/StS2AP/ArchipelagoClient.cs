@@ -205,6 +205,20 @@ namespace StS2AP
             // Get all settings for this player
             Settings = GetPlayerSettings();
 
+            // If all characters should be unlocked, set that up
+            if (Settings.NoCharactersLocked)
+            {
+                CharacterModel[] characters = new CharacterModel[]
+                {
+                    ModelDb.Character<Ironclad>(),
+                    ModelDb.Character<Silent>(),
+                    ModelDb.Character<Regent>(),
+                    ModelDb.Character<Necrobinder>(),
+                    ModelDb.Character<Defect>()
+                };
+                GameUtility.UnlockedCharacters.AddRange(characters);
+            }
+
             // Log all slot data
             foreach (var kvp in SlotData)
             {
@@ -383,6 +397,7 @@ namespace StS2AP
             if (slotData.ContainsKey("ascension")) settings.AscensionLevel = Convert.ToInt32(slotData["ascension"]);
             if (slotData.ContainsKey("seeded")) settings.IsSeeded = Convert.ToBoolean(slotData["seeded"]);
             if (slotData.ContainsKey("shuffle_all_cards")) settings.ShouldShuffleAllCards = Convert.ToBoolean(slotData["shuffle_all_cards"]);
+            if (slotData.ContainsKey("lock_characters")) settings.NoCharactersLocked = Convert.ToString(slotData["lock_characters"]) == "unlocked";
 
             // And return it
             return settings;
