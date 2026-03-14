@@ -343,6 +343,9 @@ namespace StS2AP
             // Show Notification for the item
             NotificationUtility.ShowItemReceived(item);
 
+            // adding reward to the reward screen
+            ArchipelagoRewardUI.AddReward(item);
+
             // Apply the item to the game
             switch(item.GetRawItemID())
             {
