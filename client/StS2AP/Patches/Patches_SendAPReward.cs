@@ -109,48 +109,5 @@ namespace StS2AP.Patches
                 }
             }
         }
-
-        ///// <summary>
-        ///// Patches the Reward Screen to replace one or more of the rewards with an Archipelago Location reward.
-        ///// </summary>
-        //[HarmonyPatch(typeof(NRewardsScreen), nameof(NRewardsScreen.SetRewards))]
-        //public class NRewardsScreenSetRewardsPatch
-        //{
-        //    public static void Prefix(NRewardsScreen __instance, ref IEnumerable<Reward> rewards)
-        //    {
-        //        // Is the user getting a card reward, and if so, should it be replaced?
-        //        var cardReward = rewards.FirstOrDefault(r => r is CardReward);
-        //        if(cardReward != null && ++ArchipelagoClient.Progress.CardRewardsAttempted < ArchipelagoProgress._maxCardRewards)
-        //        {
-        //            // Increment the number of Card Rewards we've seen
-        //            ArchipelagoClient.Progress.CardRewardsAttempted++;
-
-        //            // 
-        //            bool isSkipped = (ArchipelagoClient.Progress.CardRewardsAttempted % 2 == 0 && !ArchipelagoClient.Settings.ShouldShuffleAllCards);
-        //            if((ArchipelagoClient.Progress.CardRewardsAttempted % 2 == 0 && !ArchipelagoClient.Settings.ShouldShuffleAllCards) && )
-        //        }
-
-        //        // Should we replace a Relic?
-        //        var relicReward = rewards.FirstOrDefault(r => r is RelicReward);
-        //        if(relicReward != null)
-        //        {
-
-        //        }
-
-        //        // Should we replace a Rare Card Reward?
-        //        var rareReward = rewards.FirstOrDefault(r => r is SpecialCardReward);
-        //        if(rareReward != null)
-        //        {
-
-        //        }
-
-        //        //TODO: Make decision on WHY and WHAT to load up with
-        //        List<Reward> patchedRewards = new List<Reward>();
-        //        patchedRewards.AddRange(rewards);
-        //        patchedRewards.Add(new ArchipelagoReward("Ironclad Rare Card Reward 1"));
-        //        rewards = patchedRewards;
-        //    }
-        //}
-
     }
 }
