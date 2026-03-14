@@ -38,6 +38,8 @@ namespace StS2AP.Patches
         [HarmonyPrefix]
         public static void OverrideMaxAscension(ref int maxAscension)
         {
+            //small fix
+            if (ArchipelagoClient.Settings == null) return;
             maxAscension = ArchipelagoClient.Settings.AscensionLevel;
         }
 
@@ -48,6 +50,8 @@ namespace StS2AP.Patches
         [HarmonyPrefix]
         public static void OverrideAscension(ref int ascension)
         {
+            //here too
+            if (ArchipelagoClient.Settings == null) return;
             ascension = ArchipelagoClient.Settings.AscensionLevel;
         }
     }
