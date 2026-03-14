@@ -55,28 +55,31 @@ class LocationData(typing.NamedTuple):
 
 def create_location_data() -> typing.List[LocationData]:
     return (
+
             [LocationData(f"Card Reward {j}", j, LocationType.Card_Reward) for j in range(1, MAX_CARD_REWARDS + 1)] +
             [LocationData(f"Relic {j}", j + 26, LocationType.Relic) for j in range(1, 11)] +
             [LocationData(f"Shop Slot {j}", j + 36, LocationType.Shop)  for j in range(1,17)] +
-            # [LocationData(f"Combat Gold {j}", j + 52, LocationType.Gold) for j in range(1,27)] +
-            # [LocationData(f"Potion Drop {j}", j + 78, LocationType.Potion) for j in range(1,10)] +
+            [LocationData(f"Combat Gold {j}", j + 52, LocationType.Gold) for j in range(1,27)] +
+            [LocationData(f"Potion Drop {j}", j + 78, LocationType.Potion) for j in range(1,10)] +
             [LocationData('Press Start', 88, LocationType.Start),
-             # LocationData('Act 1 Campfire 1', 89, LocationType.Campfire),
-             # LocationData('Act 1 Campfire 2', 90, LocationType.Campfire),
-             # LocationData('Act 2 Campfire 1', 91, LocationType.Campfire),
-             # LocationData('Act 2 Campfire 2', 92, LocationType.Campfire),
-             # LocationData('Act 3 Campfire 1', 93, LocationType.Campfire),
-             # LocationData('Act 3 Campfire 2', 94, LocationType.Campfire),
+             LocationData('Act 1 Campfire 1', 89, LocationType.Campfire),
+             LocationData('Act 1 Campfire 2', 90, LocationType.Campfire),
+             LocationData('Act 2 Campfire 1', 91, LocationType.Campfire),
+             LocationData('Act 2 Campfire 2', 92, LocationType.Campfire),
+             LocationData('Act 3 Campfire 1', 93, LocationType.Campfire),
+             LocationData('Act 3 Campfire 2', 94, LocationType.Campfire),
              LocationData('Rare Card Reward 1', 95, LocationType.Rare_Card_Reward, True),
              LocationData('Rare Card Reward 2', 96, LocationType.Rare_Card_Reward, True),
              # LocationData('Boss Relic 1', 97, LocationType.Boss_Relic, True),
              # LocationData('Boss Relic 2', 98, LocationType.Boss_Relic, True),
-             # LocationData('Boss Gold 1', 99, LocationType.Gold, True),
-             # LocationData('Boss Gold 2', 100, LocationType.Gold, True),
+             LocationData('Boss Gold 1', 99, LocationType.Gold, True),
+             LocationData('Boss Gold 2', 100, LocationType.Gold, True),
              LocationData('Act 1 Boss', None, LocationType.Event),
              LocationData('Act 2 Boss', None, LocationType.Event),
              LocationData('Act 3 Boss', None, LocationType.Event),
-             ])
+             ] +
+            [LocationData(f"Reached Floor {j}", 100 + j, LocationType.Floor) for j in range(1, 48)]
+    )
 
 def create_location_tables(vanilla_chars: typing.List[str], extras: int) -> typing.Tuple[dict[str, int], dict[
     typing.Union[str, int],dict[str,LocationData]],dict[int,LocationData]]:

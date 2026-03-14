@@ -75,11 +75,11 @@ class SlayTheSpire2World(World):
                 break
         else:
             raise OptionError("No character started unlocked!")
-        # self.total_shop_items = (self.options.shop_card_slots.value + self.options.shop_neutral_card_slots.value +
-        #                          self.options.shop_relic_slots.value + self.options.shop_potion_slots.value)
-        # self.total_shop_locations = self.total_shop_items + (3 if self.options.shop_remove_slots else 0)
-        # if self.total_shop_locations <= 0:
-        #     self.options.shop_sanity.value = 0
+        self.total_shop_items = (self.options.shop_card_slots.value + self.options.shop_neutral_card_slots.value +
+                                 self.options.shop_relic_slots.value + self.options.shop_potion_slots.value)
+        self.total_shop_locations = self.total_shop_items + (3 if self.options.shop_remove_slots else 0)
+        if self.total_shop_locations <= 0:
+            self.options.shop_sanity.value = 0
         if len(self.modded_chars) > NUM_CUSTOM:
             raise OptionError(f"StS 2 only supports {NUM_CUSTOM} modded characters; got {len(self.modded_chars)}: {[x.option_name for x in self.modded_chars]}")
         num_chars_goal = self.options.num_chars_goal.value
@@ -207,13 +207,6 @@ class SlayTheSpire2World(World):
                 self.modded_chars.append(config)
 
     def create_regions(self) -> None:
-        # menu = Region("Menu", self.player, self.multiworld)
-        # act_1 = Region("Act 1", self.player, self.multiworld)
-        #
-        # self.multiworld.regions += [menu, act_1]
-        #
-        # act_1.add_locations(self.location_name_to_id, SlayTheSpire2Location)
-        # menu.connect(act_1)
         create_regions(self, self.player)
 
     def create_region(self, player: int, prefix: Optional[str], name: str, config: CharacterConfig, locations: List[str] = None, exits: List[str] =None):
@@ -243,18 +236,7 @@ class SlayTheSpire2World(World):
     def get_filler_item_name(self) -> str:
         return 'CAW CAW'
 
-    # Add items to the multiworld
     def create_items(self) -> None:
-        # TODO: implement
-        # items_to_add = ["Victory"]
-        #
-        # location_count = len(self.location_name_to_id)
-        # filler_count = location_count - len(items_to_add)
-        # for _ in range(filler_count):
-        #     items_to_add.append(self.get_filler_item_name())
-        #
-        # for name in items_to_add:
-        #     self.multiworld.itempool.append(self.create_item(name))
         pool = []
         card_reward_count = MAX_CARD_REWARDS if self.options.shuffle_all_cards.value else MAX_CARD_REWARDS // 2
         for config in self.characters:
@@ -269,76 +251,77 @@ class SlayTheSpire2World(World):
                     amount = 2
                 elif ItemType.RELIC == data.type:
                     amount = 10
-                # elif ItemType.CAMPFIRE == data.type:
-                #     if self.options.campfire_sanity.value != 0:
-                #         amount = 3
+                elif ItemType.CAMPFIRE == data.type:
+                    if self.options.campfire_sanity.value != 0:
+                        amount = 3
                 elif ItemType.CHAR_UNLOCK == data.type:
                     if self.options.lock_characters.value != 0 and config.locked:
                         amount = 1
                     else:
                         self.push_precollected(self.create_item(name))
-                # elif ItemType.GOLD == data.type:
-                #     if self.options.gold_sanity.value != 0:
-                #         if '15 Gold' in name:
-                #             amount = 18
-                #         elif '30 Gold' in name:
-                #             amount = 7
-                #         elif 'Boss Gold' in name:
-                #             amount = 2
-                # elif ItemType.POTION == data.type:
-                #     if self.options.potion_sanity.value != 0:
-                #         amount = 9
+                elif ItemType.GOLD == data.type:
+                    if self.options.gold_sanity.value != 0:
+                        if '15 Gold' in name:
+                            amount = 13
+                        elif '30 Gold' in name:
+                            amount = 7
+                        elif 'Boss Gold' in name:
+                            amount = 2
+                elif ItemType.POTION == data.type:
+                    if self.options.potion_sanity.value != 0:
+                        amount = 9
                 # elif ItemType.ASCENSION_DOWN == data.type:
                 #     if self.options.include_floor_checks.value != 0:
                 #         amount = ascension_downs
-                # elif self.options.shop_sanity.value != 0:
-                #     if ItemType.SHOP_CARD == data.type:
-                #         amount = self.options.shop_card_slots.value
-                #     elif ItemType.SHOP_NEUTRAL == data.type:
-                #         amount = self.options.shop_neutral_card_slots.value
-                #     elif ItemType.SHOP_RELIC == data.type:
-                #         amount = self.options.shop_relic_slots.value
-                #     elif ItemType.SHOP_POTION == data.type:
-                #         amount = self.options.shop_potion_slots.value
-                #     elif ItemType.SHOP_REMOVE == data.type and self.options.shop_remove_slots.value != 0:
-                #         amount = 3
+                elif self.options.shop_sanity.value != 0:
+                    if ItemType.SHOP_CARD == data.type:
+                        amount = self.options.shop_card_slots.value
+                    elif ItemType.SHOP_NEUTRAL == data.type:
+                        amount = self.options.shop_neutral_card_slots.value
+                    elif ItemType.SHOP_RELIC == data.type:
+                        amount = self.options.shop_relic_slots.value
+                    elif ItemType.SHOP_POTION == data.type:
+                        amount = self.options.shop_potion_slots.value
+                    elif ItemType.SHOP_REMOVE == data.type and self.options.shop_remove_slots.value != 0:
+                        amount = 3
                 for _ in range(amount):
                     pool.append(self.create_item(name))
 
-            # if self.options.include_floor_checks.value:
-            #
-            #     remaining_checks = 51 - ascension_downs
-            #
-            #     if config.final_act:
-            #         remaining_checks += 4
-            #     if config.ascension >= 20 and config.ascension_down == 0:
-            #         remaining_checks += 1
-            #
-            #     traps: list[bool] = [self.random.randint(0, 100) < self.options.trap_chance for _ in
-            #                          range(remaining_checks)]
-            #     trap_num = traps.count(True)
-            #     filler_num = len(traps) - trap_num
-            #     if trap_num > 0:
-            #         for name in self.random.choices(list(self.options.trap_weights.keys()),
-            #                                         weights=list(self.options.trap_weights.values()), k=trap_num):
-            #             pool.append(SpireItem(name, self.player))
-            #
-            #     # Char specific 1 Gold and 5 Gold, in that order
-            #     filler_pool = [key for key, val in chars_to_items[char_lookup].items()
-            #                    if ItemType.GOLD == val.type and ItemClassification.filler == val.classification]
-            #     filler_pool.append("CAW CAW")
-            #     filler_pool.append("Combat Buff")
-            #     filler_weights = [
-            #         self.options.filler_weights.get("1 Gold", 0),
-            #         self.options.filler_weights.get("5 Gold", 0),
-            #         self.options.filler_weights.get("CAW CAW", 0),
-            #         self.options.filler_weights.get("Combat Buff", 0),
-            #     ]
-            #     if sum(filler_weights) <= 0:
-            #         filler_weights = [40, 60, 0, 0]
-            #
-            #     for name in self.random.choices(filler_pool, weights=filler_weights, k=filler_num):
-            #         pool.append(SpireItem(name, self.player))
+            if self.options.include_floor_checks.value:
+
+                # remaining_checks = 51 - ascension_downs
+                remaining_checks = 48
+                if config.ascension >= 10:
+                    # TODO: handle ascension downs
+                    remaining_checks += 1
+
+                # traps: list[bool] = [self.random.randint(0, 100) < self.options.trap_chance for _ in
+                #                      range(remaining_checks)]
+                # trap_num = traps.count(True)
+                # filler_num = len(traps) - trap_num
+                filler_num = remaining_checks
+                # if trap_num > 0:
+                #     for name in self.random.choices(list(self.options.trap_weights.keys()),
+                #                                     weights=list(self.options.trap_weights.values()), k=trap_num):
+                #         pool.append(SpireItem(name, self.player))
+
+                # Char specific 1 Gold and 5 Gold, in that order
+                filler_pool = [key for key, val in chars_to_items[char_lookup].items()
+                               if ItemType.GOLD == val.type and ItemClassification.filler == val.classification]
+                filler_pool.append("CAW CAW")
+                # filler_pool.append("Combat Buff")
+                filler_weights = [
+                    self.options.filler_weights.get("1 Gold", 0),
+                    self.options.filler_weights.get("5 Gold", 0),
+                    self.options.filler_weights.get("CAW CAW", 0),
+                    # self.options.filler_weights.get("Combat Buff", 0),
+                ]
+                if sum(filler_weights) <= 0:
+                    filler_weights = [40, 60, 0]
+                    # filler_weights = [40, 60, 0, 0]
+
+                for name in self.random.choices(filler_pool, weights=filler_weights, k=filler_num):
+                    pool.append(self.create_item(name))
             # Pair up our event locations with our event items
             for base_event, base_item in base_event_item_pairs.items():
                 event = f"{config.name} {base_event}"
@@ -352,44 +335,26 @@ class SlayTheSpire2World(World):
     def _should_include_location(self, data: LocationData, config: CharacterConfig) -> bool:
         if data is None:
             return True
-        # if data.type == LocationType.Floor and self.options.include_floor_checks == 0:
-        #     return False
-        # elif data.type == LocationType.Campfire and self.options.campfire_sanity == 0:
-        #     return False
-        elif data.type == LocationType.Shop:
+        if data.type == LocationType.Floor and self.options.include_floor_checks == 0:
             return False
-        #     if self.options.shop_sanity.value == 0:
-        #         return False
-        #     total_shop = self.total_shop_locations
-        #     return total_shop >= data.id - 163
+        elif data.type == LocationType.Campfire and self.options.campfire_sanity == 0:
+            return False
+        elif data.type == LocationType.Shop:
+            if self.options.shop_sanity.value == 0:
+                return False
+            total_shop = self.total_shop_locations
+            return total_shop >= data.id - 36
         elif data.type == LocationType.Start and (self.options.lock_characters.value == 0 or not config.locked):
             return False
-        # elif data.type == LocationType.Gold and self.options.gold_sanity.value == 0:
-        #     return False
-        # elif data.type == LocationType.Potion and self.options.potion_sanity.value == 0:
-        #     return False
+        elif data.type == LocationType.Gold and self.options.gold_sanity.value == 0:
+            return False
+        elif data.type == LocationType.Potion and self.options.potion_sanity.value == 0:
+            return False
         return True
 
-    # Set Archipelago Logic
     def set_rules(self) -> None:
-        # TODO: implement
-        # Register linear floor progression (e.g. "Act 1 - Reach Floor 2" requires "Act 1 - Reach Floor 1")
-        # for floor in range(2, ACT_1_FLOOR_COUNT + 1):
-        #     current_name = f"Act 1 - Reach Floor {floor}"
-        #     previous_name = f"Act 1 - Reach Floor {floor - 1}"
-        #
-        #     set_rule(
-        #         self.multiworld.get_location(current_name, self.player),
-        #         lambda state, prev=previous_name: state.can_reach_location(prev, self.player)
-        #     )
-        #
-        # # The goal condition is:
-        # self.multiworld.completion_condition[self.player] = (
-        #     lambda state: state.has("Victory", self.player)
-        # )
         set_rules(self)
 
-    # TODO: needs to include character discriminator
     def collect(self, state: CollectionState, item: Item) -> bool:
         change = super().collect(state, item)
         item_data = typing.cast(SlayTheSpire2Item, item).item_data
@@ -417,20 +382,24 @@ class SlayTheSpire2World(World):
             'characters': [
                 c.to_dict() for c in self.characters
             ],
-            # 'shop_sanity_options': {
-            #     "card_slots": self.options.shop_card_slots.value,
-            #     "neutral_slots": self.options.shop_neutral_card_slots.value,
-            #     "relic_slots": self.options.shop_relic_slots.value,
-            #     "potion_slots": self.options.shop_potion_slots.value,
-            #     "card_remove": self.options.shop_remove_slots != 0,
-            #     "costs": self.options.shop_sanity_costs.value,
-            # },
+            'shop_sanity_options': {
+                "card_slots": self.options.shop_card_slots.value,
+                "neutral_slots": self.options.shop_neutral_card_slots.value,
+                "relic_slots": self.options.shop_relic_slots.value,
+                "potion_slots": self.options.shop_potion_slots.value,
+                "card_remove": self.options.shop_remove_slots != 0,
+                "costs": self.options.shop_sanity_costs.value,
+            },
             "mod_compat_version": self.mod_compat_version,
         }
         slot_data.update(self.options.as_dict(
             "ascension",
             "num_chars_goal",
             "shuffle_all_cards",
+            "include_floor_checks",
+            "potion_sanity",
+            "gold_sanity",
+            "campfire_sanity",
         ))
         return slot_data
 
@@ -439,11 +408,11 @@ class SlayTheSpire2World(World):
         return slot_data
 
     def _setup_ut(self, slot_data: dict[str, Any]) -> None:
-        # self.options.shop_card_slots.value = slot_data["shop_sanity_options"]["card_slots"]
-        # self.options.shop_remove_slots.value = slot_data["shop_sanity_options"]["card_remove"]
-        # self.options.shop_neutral_card_slots.value = slot_data["shop_sanity_options"]["neutral_slots"]
-        # self.options.shop_relic_slots.value = slot_data["shop_sanity_options"]["relic_slots"]
-        # self.options.shop_potion_slots.value = slot_data["shop_sanity_options"]["potion_slots"]
+        self.options.shop_card_slots.value = slot_data["shop_sanity_options"]["card_slots"]
+        self.options.shop_remove_slots.value = slot_data["shop_sanity_options"]["card_remove"]
+        self.options.shop_neutral_card_slots.value = slot_data["shop_sanity_options"]["neutral_slots"]
+        self.options.shop_relic_slots.value = slot_data["shop_sanity_options"]["relic_slots"]
+        self.options.shop_potion_slots.value = slot_data["shop_sanity_options"]["potion_slots"]
         for char_dict in slot_data['characters']:
             config = CharacterConfig(
                 char_dict['name'],
@@ -457,16 +426,16 @@ class SlayTheSpire2World(World):
             self.characters.append(config)
             if char_dict['mod_num'] > 0:
                 self.modded_chars.append(config)
-        # self.total_shop_items = (self.options.shop_card_slots.value + self.options.shop_neutral_card_slots.value +
-        #                          self.options.shop_relic_slots.value + self.options.shop_potion_slots.value)
-        # self.total_shop_locations = self.total_shop_items + (3 if self.options.shop_remove_slots else 0)
-        # if self.total_shop_locations <= 0:
-        #     self.options.shop_sanity.value = 0
-        # self.options.include_floor_checks.value = slot_data['include_floor_checks']
-        # self.options.campfire_sanity.value = slot_data['campfire_sanity']
-        # self.options.shop_sanity.value = slot_data['shop_sanity']
-        # self.options.gold_sanity.value = slot_data['gold_sanity']
-        # self.options.potion_sanity.value = slot_data['potion_sanity']
+        self.total_shop_items = (self.options.shop_card_slots.value + self.options.shop_neutral_card_slots.value +
+                                 self.options.shop_relic_slots.value + self.options.shop_potion_slots.value)
+        self.total_shop_locations = self.total_shop_items + (3 if self.options.shop_remove_slots else 0)
+        if self.total_shop_locations <= 0:
+            self.options.shop_sanity.value = 0
+        self.options.include_floor_checks.value = slot_data['include_floor_checks']
+        self.options.campfire_sanity.value = slot_data['campfire_sanity']
+        self.options.shop_sanity.value = slot_data['shop_sanity']
+        self.options.gold_sanity.value = slot_data['gold_sanity']
+        self.options.potion_sanity.value = slot_data['potion_sanity']
         self.options.num_chars_goal.value = slot_data['num_chars_goal']
         self.location_id_to_alias: dict[int, str] = dict()
         # pattern = re.compile("Custom Character [0-9]+ (?P<location_name>.*?)$")

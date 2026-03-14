@@ -78,84 +78,92 @@ class Ascension(Range):
 #     default = 0
 
 
-# class IncludeFloorChecks(Toggle):
-#     """Whether to include reaching new floors as a location.  Adds small amounts of gold as items."""
-#     display_name = "Include Floor Checks"
-#     default = 1
+class IncludeFloorChecks(Toggle):
+    """Whether to include reaching new floors as a location.  Adds small amounts of gold as items."""
+    display_name = "Include Floor Checks"
+    default = 1
 
-# class CampfireSanity(Toggle):
-#     """Whether to shuffle being able to rest and smith at each campsite per act.  Also adds
-#     new locations at campsites per act."""
-#     display_name = "Campfire Sanity"
-#     default = 0
-#
-# class ShopSanity(Toggle):
-#     """Whether to shuffle shop slots into the pool.  Also adds new locations at the shop per slot shuffled."""
-#     display_name = "Shop Sanity"
-#     option_true = 1
-#     option_false = 0
-#     default = 0
+class CampfireSanity(Toggle):
+    """Whether to shuffle being able to rest and smith at each campsite per act.  Also adds
+    new locations at campsites per act."""
+    visibility = Visibility.none
+    display_name = "Campfire Sanity"
+    default = 0
 
-# class ShopCardSlots(Range):
-#     """When shop_sanity is enabled, the number of colored card slots to shuffle."""
-#     display_name = "Shop Card Slots"
-#     range_start = 0
-#     range_end = 5
-#     default = 2
-#
-# class ShopNeutralSlots(Range):
-#     """When shop_sanity is enabled, the number of neutral card slots to shuffle."""
-#     display_name = "Shop Neutral Card Slots"
-#     range_start = 0
-#     range_end = 2
-#     default = 1
-#
-# class ShopRelicSlots(Range):
-#     """WHen shop_sanity is enabled, the number of relic slots to shuffle."""
-#     display_name = "Shop Relic Slots"
-#     range_start = 0
-#     range_end = 3
-#     default = 2
-#
-# class ShopPotionSlots(Range):
-#     """When shop_sanity is enabled, the number of potion slots to shuffle"""
-#     display_name = "Shop Potion Slots"
-#     range_start = 0
-#     range_end = 3
-#     default = 2
-#
-# class ShopRemoveSlots(Toggle):
-#     """When shop_sanity is enabled, whether to shuffle the ability to remove cards at the shop.
-#     Progressive based on Act; i.e. you'll gain the ability to remove cards per Act, starting from Act 1.
-#     Act 4 will be treated as Act 3."""
-#     display_name = "Shop Remove Slots"
-#     default = 0
-#
-# class ShopSanityCosts(Choice):
-#     """How expensive the AP shop items should be. Tiered means costs map to typical costs rarity for the slot.
-#     Progression = Rare, Useful = Uncommon, Filler = Common
-#     Logic does not take this option into account.
-#     Fixed=15 gold each
-#     Super_Discount_Tiered=20% of tiered costs
-#     Discount_Tiered=50% of tiered costs
-#     Tiered=Vanilla price for slot
-#     """
-#     display_name = "Shop Sanity Costs"
-#     option_Fixed = 0
-#     option_Super_Discount_Tiered = 1
-#     option_Discount_Tiered = 2
-#     option_Tiered = 3
-#     default = 2
+class ShopSanity(Toggle):
+    """Whether to shuffle shop slots into the pool.  Also adds new locations at the shop per slot shuffled."""
+    visibility = Visibility.none
+    display_name = "Shop Sanity"
+    option_true = 1
+    option_false = 0
+    default = 0
 
-# class GoldSanity(Toggle):
-#     """Whether to enable shuffling gold rewards into the multiworld. Adds 27 locations per character"""
-#     display_name = "Gold Sanity"
-#     default = 0
-#
-# class PotionSanity(Toggle):
-#     """Whether to enable shuffling potion drops into the multiworld; adds 9 locations per character."""
-#     display_name = "Potion Sanity"
-#     default = 0
+class ShopCardSlots(Range):
+    """When shop_sanity is enabled, the number of colored card slots to shuffle."""
+    visibility = Visibility.none
+    display_name = "Shop Card Slots"
+    range_start = 0
+    range_end = 5
+    default = 2
+
+class ShopNeutralSlots(Range):
+    """When shop_sanity is enabled, the number of neutral card slots to shuffle."""
+    visibility = Visibility.none
+    display_name = "Shop Neutral Card Slots"
+    range_start = 0
+    range_end = 2
+    default = 1
+
+class ShopRelicSlots(Range):
+    """When shop_sanity is enabled, the number of relic slots to shuffle."""
+    visibility = Visibility.none
+    display_name = "Shop Relic Slots"
+    range_start = 0
+    range_end = 3
+    default = 2
+
+class ShopPotionSlots(Range):
+    """When shop_sanity is enabled, the number of potion slots to shuffle"""
+    visibility = Visibility.none
+    display_name = "Shop Potion Slots"
+    range_start = 0
+    range_end = 3
+    default = 2
+
+class ShopRemoveSlots(Toggle):
+    """When shop_sanity is enabled, whether to shuffle the ability to remove cards at the shop.
+    Progressive based on Act; i.e. you'll gain the ability to remove cards per Act, starting from Act 1.
+    Act 4 will be treated as Act 3."""
+    visibility = Visibility.none
+    display_name = "Shop Remove Slots"
+    default = 0
+
+class ShopSanityCosts(Choice):
+    """How expensive the AP shop items should be. Tiered means costs map to typical costs rarity for the slot.
+    Progression = Rare, Useful = Uncommon, Filler = Common
+    Logic does not take this option into account.
+    Fixed=15 gold each
+    Super_Discount_Tiered=20% of tiered costs
+    Discount_Tiered=50% of tiered costs
+    Tiered=Vanilla price for slot
+    """
+    visibility = Visibility.none
+    display_name = "Shop Sanity Costs"
+    option_Fixed = 0
+    option_Super_Discount_Tiered = 1
+    option_Discount_Tiered = 2
+    option_Tiered = 3
+    default = 2
+
+class GoldSanity(Toggle):
+    """Whether to enable shuffling gold rewards into the multiworld. Adds 27 locations per character"""
+    display_name = "Gold Sanity"
+    default = 0
+
+class PotionSanity(Toggle):
+    """Whether to enable shuffling potion drops into the multiworld; adds 9 locations per character."""
+    display_name = "Potion Sanity"
+    default = 0
 
 class CardReward(Toggle):
     """Whether every card reward is shuffled.  If false, then every other card reward is shuffled
@@ -251,28 +259,28 @@ class AscensionDown(Range):
 #     default = {trap: 1 for trap in trap_item_table.keys()}
 #     valid_keys = sorted(trap_item_table.keys())
 
-# class FillerWeights(OptionCounter):
-#     """
-#     The list of filler and corresponding weights that will be added to the item pool
-#     1 Gold - One gold, character bound
-#     5 Gold - Five gold, character bound
-#     CAW CAW - CAW CAW
-#     Combat Buff - Similar to traps in function, but beneficial instead of detrimental, not character bound
-#     """
-#     display_name = "Filler Weights"
-#     min = 0
-#     default = {
-#         "1 Gold": 40,
-#         "5 Gold": 60,
-#         "CAW CAW": 0,
-#         "Combat Buff": 0,
-#     }
-#     valid_keys = [
-#         "5 Gold",
-#         "1 Gold",
-#         "CAW CAW",
-#         "Combat Buff",
-#     ]
+class FillerWeights(OptionCounter):
+    """
+    The list of filler and corresponding weights that will be added to the item pool
+    1 Gold - One gold, character bound
+    5 Gold - Five gold, character bound
+    CAW CAW - CAW CAW
+    """
+    # Combat Buff - Similar to traps in function, but beneficial instead of detrimental, not character bound
+    display_name = "Filler Weights"
+    min = 0
+    default = {
+        "1 Gold": 40,
+        "5 Gold": 60,
+        "CAW CAW": 0,
+        # "Combat Buff": 0,
+    }
+    valid_keys = [
+        "5 Gold",
+        "1 Gold",
+        "CAW CAW",
+        # "Combat Buff",
+    ]
 
 
 
@@ -290,20 +298,20 @@ class Spire2Options(PerGameCommonOptions):
     ascension: Ascension
     ascension_down: AscensionDown
     shuffle_all_cards: CardReward
-    # include_floor_checks: IncludeFloorChecks
-    # filler_weights: FillerWeights
+    include_floor_checks: IncludeFloorChecks
+    filler_weights: FillerWeights
     # trap_chance: TrapChance
     # trap_weights: TrapWeights
-    # campfire_sanity: CampfireSanity
-    # gold_sanity: GoldSanity
-    # potion_sanity: PotionSanity
-    # shop_sanity: ShopSanity
-    # shop_card_slots: ShopCardSlots
-    # shop_neutral_card_slots: ShopNeutralSlots
-    # shop_relic_slots: ShopRelicSlots
-    # shop_potion_slots: ShopPotionSlots
-    # shop_remove_slots: ShopRemoveSlots
-    # shop_sanity_costs: ShopSanityCosts
+    campfire_sanity: CampfireSanity
+    gold_sanity: GoldSanity
+    potion_sanity: PotionSanity
+    shop_sanity: ShopSanity
+    shop_card_slots: ShopCardSlots
+    shop_neutral_card_slots: ShopNeutralSlots
+    shop_relic_slots: ShopRelicSlots
+    shop_potion_slots: ShopPotionSlots
+    shop_remove_slots: ShopRemoveSlots
+    shop_sanity_costs: ShopSanityCosts
     seeded: SeededRun
 
 # option_groups: List[OptionGroup] = [
