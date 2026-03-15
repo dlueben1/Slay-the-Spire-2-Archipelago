@@ -82,7 +82,6 @@ class Ascension(Range):
 
 class IncludeFloorChecks(Toggle):
     """Whether to include reaching new floors as a location.  Adds small amounts of gold as items."""
-    visibility = Visibility.none
     display_name = "Include Floor Checks"
     default = 1
 

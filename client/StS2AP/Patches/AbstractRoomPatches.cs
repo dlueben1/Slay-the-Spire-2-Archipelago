@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Utils;
@@ -89,9 +90,6 @@ namespace StS2AP.Patches
         /// <param name="runState">The current state of the run</param>
         static void TrySendFloorCheck(IRunState? runState)
         {
-            // Until the APWorld supports this, ignore the function
-            return;
-
             // Null checks to shut compiler up
             if (GameUtility.CurrentPlayer == null || runState == null)
             {
@@ -110,12 +108,13 @@ namespace StS2AP.Patches
 
             // Create the Location/Check name to send
             var floorValue = floorProperty.GetValue(runState);
-            var locationName = $"Act 1 - Reach Floor {floorValue}";
+            var name = GameUtility.CurrentPlayer.Character.Title.GetFormattedText().Split().Last();
+            var locationName = $"{name} Reached Floor {floorValue}";
 
             LogUtility.Debug($"Attempting to send Archipelago location check: {locationName}");
 
             // Get the location ID from the name
-            if (ArchipelagoClient.Session?.Locations.GetLocationIdFromName("Slay the Spire II", locationName) is long locationId)
+            if (ArchipelagoClient.Session?.Locations.GetLocationIdFromName("Slay the Spire II", locationName) is long locationId && locationId != -1)
             {
                 // Make sure this is the first time we've hit this location, otherwise we might be sending duplicates
                 if (!ArchipelagoClient.CheckedLocations.Contains(locationId))
