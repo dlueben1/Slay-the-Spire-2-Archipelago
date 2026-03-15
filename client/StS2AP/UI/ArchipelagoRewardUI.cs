@@ -282,6 +282,29 @@ namespace StS2AP.UI
         }
 
         /// <summary>
+        /// Temporarily hides the reward layer without firing OnScreenClosed.
+        /// Use this when another UI needs to take focus (e.g., card reward selection).
+        /// </summary>
+        public static void HideTemporarily()
+        {
+            if (_rewardLayer == null || !IsInstanceValid(_rewardLayer))
+                return;
+
+            _rewardLayer.Visible = false;
+        }
+
+        /// <summary>
+        /// Restores visibility of the reward layer after HideTemporarily().
+        /// </summary>
+        public static void ShowAgain()
+        {
+            if (_rewardLayer == null || !IsInstanceValid(_rewardLayer))
+                return;
+
+            _rewardLayer.Visible = true;
+        }
+
+        /// <summary>
         /// Removes the reward UI from the scene tree entirely and frees resources
         /// </summary>
         public static void RemoveUI()

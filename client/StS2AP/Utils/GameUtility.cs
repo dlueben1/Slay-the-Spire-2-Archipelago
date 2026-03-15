@@ -202,11 +202,19 @@ namespace StS2AP.Utils
                 await reward.Populate();
 
                 // Hide the Reward UI
-                ArchipelagoRewardUI.Hide();
+                ArchipelagoRewardUI.HideTemporarily();
 
                 // OnSelectWrapper opens NCardRewardSelectionScreen and waits for the player to pick
-                await reward.OnSelectWrapper();
-                LogUtility.Success("Card reward selection completed");
+                try
+                {
+                    await reward.OnSelectWrapper();
+                }
+                finally
+                {
+                    ArchipelagoRewardUI.ShowAgain();
+                    LogUtility.Success("Card reward selection completed");
+                }
+
             }
             catch (Exception ex)
             {
