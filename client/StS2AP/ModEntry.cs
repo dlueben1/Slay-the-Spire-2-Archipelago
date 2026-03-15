@@ -24,6 +24,9 @@ namespace StS2AP
             // Initialize debug console first so we can see log output
             ConsoleLogger.Initialize();
 
+            // Register crash handler to dump logs before the application terminates
+            AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+
             LogUtility.Info("Archipelago mod initializing...");
 
             try
@@ -41,6 +44,34 @@ namespace StS2AP
 
             // Register cleanup when the application exits
             AppDomain.CurrentDomain.ProcessExit += (s, e) => ConsoleLogger.Shutdown();
+        }
+
+        /// <summary>
+        /// Handles unhandled exceptions by dumping all console output to a crash log file.
+        /// The file is saved in the same directory as the game executable.
+        /// </summary>
+        private static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            try
+            {
+                // Log the exception details to the console buffer before dumping
+                if (e.ExceptionObject is Exception ex)
+                {
+                    LogUtility.Error($"UNHANDLED EXCEPTION: {ex.GetType().Name}");
+                    LogUtility.Error($"Message: {ex.Message}");
+                    LogUtility.Error($"Stack Trace:\n{ex.StackTrace}");
+                }
+
+                // Get the game's directory (where the executable is located)
+                var gameDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                var crashLogPath = Path.Combine(gameDirectory, "crash_log_archipelago.txt");
+
+                ConsoleLogger.DumpToFile(crashLogPath);
+            }
+            catch
+            {
+                // Silently fail - we're already crashing
+            }
         }
 
         /// <summary>
