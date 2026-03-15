@@ -98,7 +98,7 @@ namespace StS2AP.Patches
             }
 
             // Try to get floor information from runState using reflection
-            var floorProperty = runState.GetType().GetProperty("ActFloor");
+            var floorProperty = runState.GetType().GetProperty("TotalFloor");
 
             if (floorProperty == null)
             {
@@ -126,6 +126,10 @@ namespace StS2AP.Patches
                     // Log it and notify the user (uses pre-scouted data)
                     LogUtility.Success($"Sent location check: {locationName}");
                     NotificationUtility.ShowLocationChecked(locationId, fallbackLocationName: locationName);
+                }
+                else
+                {
+                    LogUtility.Warn($"Location '{locationName}' already checked, skipping Archipelago check");
                 }
             }
             else
