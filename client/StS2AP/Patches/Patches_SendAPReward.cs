@@ -101,8 +101,11 @@ namespace StS2AP.Patches
                             if (ArchipelagoClient.Progress.CardRewardsAttempted <= ArchipelagoProgress._maxCardRewards && !shouldSkipCardReward)
                             {
                                 // Replace this reward with an AP Location reward
+                                var rewardNumber = ArchipelagoClient.Settings.ShouldShuffleAllCards
+                                    ? ArchipelagoClient.Progress.CardRewardsAttempted
+                                    : (ArchipelagoClient.Progress.CardRewardsAttempted + 1) / 2;
                                 __result.Remove(cardReward);
-                                __result.Add(new ArchipelagoReward($"{name} Card Reward {ArchipelagoClient.Progress.CardRewardsAttempted}"));
+                                __result.Add(new ArchipelagoReward($"{name} Card Reward {rewardNumber}"));
                             }
                         }
                     }
