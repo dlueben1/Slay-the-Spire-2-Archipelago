@@ -158,12 +158,12 @@ namespace StS2AP.UI
             if (NotificationUtility.GetQueueCount() > 0)
             {
                 // Show the next notification
-                ShowMessage();
+                Callable.From(ShowMessage).CallDeferred(); // FIX WILL DO A BETTER COMMENT LATER
             }
             else
             {
                 // No more notifications, hide the UI
-                Hide();
+                Callable.From(Hide).CallDeferred(); // FIX WILL DO A BETTER COMMENT LATER
             }
         }
 

@@ -1,4 +1,5 @@
 ﻿using Archipelago.MultiClient.Net.Models;
+using Godot;
 using StS2AP.UI;
 using static StS2AP.Data.CharTable;
 using static StS2AP.Data.ItemTable;
@@ -72,7 +73,7 @@ namespace StS2AP.Utils
                 LogUtility.Info($"Notification queued ({type}): {message}");
 
                 // Show the Notification UI if it isn't already visible
-                if(!ArchipelagoNotificationUI.IsVisible) ArchipelagoNotificationUI.ShowMessage();
+                if(!ArchipelagoNotificationUI.IsVisible) Callable.From(ArchipelagoNotificationUI.ShowMessage).CallDeferred(); // FIX WILL DO A BETTER COMMENT LATER
             }
 
             // Fire event outside of lock to avoid potential deadlocks
