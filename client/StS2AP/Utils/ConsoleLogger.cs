@@ -1,113 +1,14 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace StS2AP.Utils;
-
-/// <summary>
-/// A TextWriter that writes to both the console and an internal buffer for crash logging.
-/// </summary>
-internal class BufferedConsoleWriter : TextWriter
-{
-    private readonly StreamWriter _consoleWriter;
-    private readonly List<string> _buffer;
-    private readonly object _bufferLock;
-    private readonly StringBuilder _currentLine = new();
-
-    public override Encoding Encoding => Encoding.UTF8;
-
-    public BufferedConsoleWriter(StreamWriter consoleWriter, List<string> buffer, object bufferLock)
-    {
-        _consoleWriter = consoleWriter;
-        _buffer = buffer;
-        _bufferLock = bufferLock;
-    }
-
-    public override void Write(char value)
-    {
-        _consoleWriter.Write(value);
-
-        lock (_bufferLock)
-        {
-            if (value == '\n')
-            {
-                _buffer.Add(_currentLine.ToString());
-                _currentLine.Clear();
-            }
-            else if (value != '\r')
-            {
-                _currentLine.Append(value);
-            }
-        }
-    }
-
-    public override void Write(string? value)
-    {
-        if (value == null) return;
-
-        _consoleWriter.Write(value);
-
-        lock (_bufferLock)
-        {
-            foreach (char c in value)
-            {
-                if (c == '\n')
-                {
-                    _buffer.Add(_currentLine.ToString());
-                    _currentLine.Clear();
-                }
-                else if (c != '\r')
-                {
-                    _currentLine.Append(c);
-                }
-            }
-        }
-    }
-
-    public override void WriteLine(string? value)
-    {
-        _consoleWriter.WriteLine(value);
-
-        lock (_bufferLock)
-        {
-            _currentLine.Append(value);
-            _buffer.Add(_currentLine.ToString());
-            _currentLine.Clear();
-        }
-    }
-
-    public override void Flush()
-    {
-        _consoleWriter.Flush();
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
-        {
-            // Flush any remaining partial line
-            lock (_bufferLock)
-            {
-                if (_currentLine.Length > 0)
-                {
-                    _buffer.Add(_currentLine.ToString());
-                    _currentLine.Clear();
-                }
-            }
-            _consoleWriter.Dispose();
-        }
-        base.Dispose(disposing);
-    }
-}
 
 public static class ConsoleLogger
 {
     private static bool _initialized;
-    private static BufferedConsoleWriter? _consoleWriter;
+    private static StreamWriter? _consoleWriter;
     private static readonly object _lock = new();
-    private static readonly List<string> _logBuffer = new();
 
     #region Win32 API
     [DllImport("kernel32.dll", SetLastError = true)]
@@ -151,10 +52,9 @@ public static class ConsoleLogger
             // disabling the quick edit mode
             DisableQuickEdit(false);
 
-            // Redirect Console.Out to a buffered writer that captures all output
+            // Redirect Console.Out to the new console
             var stdOut = Console.OpenStandardOutput();
-            var streamWriter = new StreamWriter(stdOut) { AutoFlush = true };
-            _consoleWriter = new BufferedConsoleWriter(streamWriter, _logBuffer, _lock);
+            _consoleWriter = new StreamWriter(stdOut) { AutoFlush = true };
             Console.SetOut(_consoleWriter);
 
             _initialized = true;
@@ -223,26 +123,5 @@ public static class ConsoleLogger
     public static void WriteLine(string message)
     {
         WriteLine(ConsoleColor.White, message);
-    }
-
-    /// <summary>
-    /// Dumps all buffered console output to a file.
-    /// This includes all stdout output, not just LogUtility messages.
-    /// Used for crash logging to preserve debug information.
-    /// </summary>
-    /// <param name="filePath">The full path to the output file.</param>
-    public static void DumpToFile(string filePath)
-    {
-        lock (_lock)
-        {
-            try
-            {
-                File.WriteAllLines(filePath, _logBuffer);
-            }
-            catch
-            {
-                // Silently fail - we're likely crashing anyway
-            }
-        }
     }
 }
