@@ -44,7 +44,7 @@ namespace StS2AP.Patches
                 var _abandonRunButton = __instance.GetNode<NMainMenuTextButton>("MainMenuTextButtons/AbandonRunButton");
                 var _compendiumButton = __instance.GetNode<NMainMenuTextButton>("MainMenuTextButtons/CompendiumButton");
                 var _timelineButton = __instance.GetNode<NMainMenuTextButton>("MainMenuTextButtons/TimelineButton");
-
+                var _openProfileScreenButton = __instance.GetNode<NOpenProfileScreenButton>("%ChangeProfileButton");
                 // Shutting the linter up
                 if (_singleplayerButton.label == null) return;
 
@@ -58,6 +58,7 @@ namespace StS2AP.Patches
                 _timelineButton.Visible = false;
                 _timelineButton.Disable();
                 _compendiumButton.Disable();
+                _openProfileScreenButton.Visible = false;
 
                 // Change the name of the "Single Player" menu to "Archipelago"
                 _singleplayerButton.label.Text = "Archipelago";
