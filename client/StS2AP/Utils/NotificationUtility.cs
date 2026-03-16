@@ -193,15 +193,10 @@ namespace StS2AP.Utils
                         }
                         break;
                     }
-                default:
-                    {
-                        itemIcon = @"[img]res://images/packed/sprite_fonts/chest_icon.png[/img]";
-                        break;
-                    }
             }
 
             // Setup the final string for the notification
-            var msg = $"{item.Player} sent you {itemIcon} [sine][gold]{item.ItemDisplayName}[/gold]![/sine]";
+            var msg = $"{item.Player} sent you {itemIcon.Replace("  ", " ")} [sine][gold]{item.ItemDisplayName}[/gold]![/sine]";
             EnqueueNotification(
                 msg,
                 NotificationType.ItemReceived);
