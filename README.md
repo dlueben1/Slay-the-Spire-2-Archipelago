@@ -17,6 +17,9 @@ Currently it's a simple proof-of-concept where you can only get Gold Rewards and
 2. Go to your Slay the Spire II directory (In Steam, click "Browse Local Files")
 3. If a folder called `mods` does not exist, create it
 4. Unzip the **contents** of `sts2-client.zip` into `mods`
+
+- If you've done this step correctly, your directory structure should look like this: `/<slay-the-spire-2-local-files>/mods/Archipelago/` and the contents of that folder should be a bunch of `.dll` files and a `.pck` file (there may be more files too, please don't touch anything in this folder)
+
 5. Start the game
 
 > [!CAUTION]
@@ -67,29 +70,14 @@ Use `Ctrl+Shift+B` or `Build > Build Solution`. This will automatically place th
 - Platano Bailando for creating the StS 1 Archipelago that inspires this one!
 - [lamali292](https://github.com/lamali292) for their initial guide on creating mods for Slay the Spire 2!
 - [alwaysintreble](https://github.com/alwaysintreble/ArchipelagoBepInExPluginTemplate/tree/master) for their example Archipelago C# Plugin Template
+- All of the wonderful contributors to the project!
+<a href="https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=dlueben1/Slay-the-Spire-2-Archipelago" />
+</a>
 
 # Roadmap
 
 You can view the current roadmap in detail [here](https://github.com/users/dlueben1/projects/1)
-
-## MVP
-
-- [ ] Fix bug where clicking the debug terminal freezes the game
-- [x] Very Simple Proof-of-Concept Gameplay loop (Receive Gold as Items, Act 1 Boss is clear, reaching each floor is a check)
-- [x] Implement Goal: Complete Act 3
-- [ ] Implement Core Features: Card, Relic Rewards, Defeating Bosses
-- [ ] UI: Archipelago Rewards Menu, Notifications
-- [ ] Code Quality
-  - [x] Improve APWorld logic
-  - [ ] Handle Disconnection / Connection Instability / Sync missed Checks and Items
-
-## Future
-
-> [!TIP]
-> If there's a feature you're looking for, please reach out on Discord or add a request to the repo!
-
-- [ ] Support other Mods
-- [ ] Multiplayer Support
 
 > [!IMPORTANT]
 > Multiplayer is going to be **complex**, and will only be started on when **everything else is very stable**. Thanks for understanding!

@@ -1,11 +1,12 @@
 using Godot;
-using ItemInfo = Archipelago.MultiClient.Net.Models.ItemInfo;
+using MegaCrit.Sts2.Core.Entities.Players;
 using StS2AP.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using static StS2AP.Data.ItemTable;
+using ItemInfo = Archipelago.MultiClient.Net.Models.ItemInfo;
 
 namespace StS2AP.UI
 {
@@ -15,6 +16,11 @@ namespace StS2AP.UI
     /// </summary>
     public class ArchipelagoRewardData
     {
+        /// <summary>
+        /// The ID that this item originated from, used for tracking and marking items as used in the multiworld progress.
+        /// </summary>
+        public long ItemOriginID { get; set; }
+
         /// <summary>The primary item name shown in large text on the reward button.</summary>
         public string ItemName { get; set; } = string.Empty;
 
@@ -160,6 +166,38 @@ namespace StS2AP.UI
         }
 
         /// <summary>
+        /// Shows the Reward Screen and all of the unused items available to the user in their current run.
+        /// </summary>
+        public static void ShowRewards()
+        {
+            // Ignore if current player is null
+            if (GameUtility.CurrentPlayer == null) return;
+
+            // Get Unused items from the Multiworld for our current character
+            var availableItems = ArchipelagoClient.Progress.AllReceivedItems
+                                .Where(item => !ArchipelagoClient.Progress.UsedItems.Contains(item.LocationId) && item.GetStSCharID() == GameUtility.CurrentCharacterID);
+            
+            // Prepare them for the UI
+            var rewardDataList = availableItems.Select(item => new ArchipelagoRewardData
+            {
+                ItemOriginID = item.LocationId,
+                ItemName    = item.ItemDisplayName,
+                SenderName  = item.Player.Name,
+                IconPath    = GetIconForItem(item),
+                GrantAction = GetGrantAction(item),
+            }).ToList();
+
+            rewardDataList.ForEach(item => item.OnClaimed = () =>
+            {
+                // Mark the item as used in the Multiworld so it doesn't show up again if we reopen the screen
+                ArchipelagoClient.Progress.UsedItems.Add(item.ItemOriginID);
+            });
+
+            // Show the UI with these rewards
+            ShowRewards(rewardDataList);
+        }
+
+        /// <summary>
         /// Shows the reward screen with a list of pre-built reward data objects.
         /// Replaces any currently displayed rewards.
         /// </summary>
@@ -244,6 +282,29 @@ namespace StS2AP.UI
         }
 
         /// <summary>
+        /// Temporarily hides the reward layer without firing OnScreenClosed.
+        /// Use this when another UI needs to take focus (e.g., card reward selection).
+        /// </summary>
+        public static void HideTemporarily()
+        {
+            if (_rewardLayer == null || !IsInstanceValid(_rewardLayer))
+                return;
+
+            _rewardLayer.Visible = false;
+        }
+
+        /// <summary>
+        /// Restores visibility of the reward layer after HideTemporarily().
+        /// </summary>
+        public static void ShowAgain()
+        {
+            if (_rewardLayer == null || !IsInstanceValid(_rewardLayer))
+                return;
+
+            _rewardLayer.Visible = true;
+        }
+
+        /// <summary>
         /// Removes the reward UI from the scene tree entirely and frees resources
         /// </summary>
         public static void RemoveUI()
@@ -263,7 +324,7 @@ namespace StS2AP.UI
 
         #endregion
 
-        #region Internal  Reward Adding
+        #region Internal Reward Adding
 
         /// <summary>
         /// Adds a single reward to the screen on the main thread.

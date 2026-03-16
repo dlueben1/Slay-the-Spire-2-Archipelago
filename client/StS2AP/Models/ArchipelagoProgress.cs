@@ -1,6 +1,9 @@
-﻿using System;
+﻿using Archipelago.MultiClient.Net.Models;
+using StS2AP.UI;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -48,6 +51,22 @@ namespace StS2AP.Models
             BossRewardsDistributed = 0;
             RelicRewardsAttempted = 0;
         }
+
+        #endregion
+
+        #region My Items
+
+        /// <summary>
+        /// All items we've received from the multiworld. Gets dumped into `AvailableItems` at the start of each run.
+        /// </summary>
+        public List<ItemInfo> AllReceivedItems = new List<ItemInfo>();
+
+        /// <summary>
+        /// Any items that have been used up in the current run live here. The difference between this and `AllReceivedItems` 
+        /// represents the items still available for use.
+        /// </summary>
+        public List<long> UsedItems = new List<long>();
+
 
         #endregion
     }

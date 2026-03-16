@@ -22,12 +22,12 @@ namespace StS2AP.Patches
     /// Patches for `NMainMenu` and all of its related submenus.
     /// Used primarily to reconfigure the UI for Archipelago, as well as injecting our custom Archipelago Connection UI.
     /// </summary>
-    public static class NMainMenuPatches
+    public static class Patches_MainMenuBehavior
     {
         /// <summary>
         /// Changes the main menu UI so that "Single Player", "Multiplayer", and everything not necessary is hidden.
         /// </summary>
-        [HarmonyPatch(typeof(NMainMenu), nameof(NMainMenu._Ready), new Type[] {})]
+        [HarmonyPatch(typeof(NMainMenu), nameof(NMainMenu._Ready), new Type[] { })]
         public class ReconfigureMainMenuPatch
         {
             static void Postfix(NMainMenu __instance)
@@ -47,14 +47,17 @@ namespace StS2AP.Patches
 
                 // Shutting the linter up
                 if (_singleplayerButton.label == null) return;
-                
+
                 // Set the menu for Archipelago
                 _singleplayerButton.Visible = true;
+                _singleplayerButton.Enable();
                 _multiplayerButton.Visible = false;
                 _continueButton.Visible = false;
                 _abandonRunButton.Visible = false;
                 _compendiumButton.Visible = false;
                 _timelineButton.Visible = false;
+                _timelineButton.Disable();
+                _compendiumButton.Disable();
 
                 // Change the name of the "Single Player" menu to "Archipelago"
                 _singleplayerButton.label.Text = "Archipelago";
@@ -94,6 +97,21 @@ namespace StS2AP.Patches
                     ArchipelagoConnectionUI.InjectUI();
                     ArchipelagoNotificationUI.InjectUI();
                 }
+            }
+        }
+
+        /// <summary>
+        /// Ensure the Connection UI screen cannot be skipped by new players
+        /// </summary>
+        [HarmonyPatch(typeof(NMainMenu), nameof(NMainMenu.MethodName.SingleplayerButtonPressed))]
+        public static class SingleplayerMenuPatch
+        {
+            [HarmonyPrefix]
+            public static bool Prefix(NMainMenu __instance, NButton _)
+            {
+                // Always open the singleplayer submenu, regardless of NumberOfRuns
+                __instance.OpenSingleplayerSubmenu();
+                return false;
             }
         }
     }

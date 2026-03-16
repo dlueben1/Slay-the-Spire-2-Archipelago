@@ -24,6 +24,9 @@ namespace StS2AP
             // Initialize debug console first so we can see log output
             ConsoleLogger.Initialize();
 
+            // Register unhandled exception handler to log crashes before app closes
+            AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+
             LogUtility.Info("Archipelago mod initializing...");
 
             try
@@ -82,6 +85,46 @@ namespace StS2AP
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Handles unhandled exceptions by logging them before the application terminates.
+        /// </summary>
+        private static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            try
+            {
+                if (e.ExceptionObject is Exception ex)
+                {
+                    LogUtility.Error("=== UNHANDLED EXCEPTION ===");
+                    LogUtility.Error($"Exception Type: {ex.GetType().FullName}");
+                    LogUtility.Error($"Message: {ex.Message}");
+                    LogUtility.Error($"Stack Trace:\n{ex.StackTrace}");
+                    
+                    if (ex.InnerException != null)
+                    {
+                        LogUtility.Error($"Inner Exception: {ex.InnerException.GetType().FullName}");
+                        LogUtility.Error($"Inner Message: {ex.InnerException.Message}");
+                        LogUtility.Error($"Inner Stack Trace:\n{ex.InnerException.StackTrace}");
+                    }
+                    
+                    LogUtility.Error($"Is Terminating: {e.IsTerminating}");
+                    LogUtility.Error("=== END UNHANDLED EXCEPTION ===");
+                }
+                else
+                {
+                    LogUtility.Error($"Unhandled exception (non-Exception type): {e.ExceptionObject}");
+                }
+
+                // Flush the console output to ensure everything is written
+                Console.Out.Flush();
+                Console.Error.Flush();
+            }
+            catch
+            {
+                // If logging fails, at least try to write something to standard output
+                Console.Error.WriteLine($"CRITICAL: Failed to log unhandled exception: {e.ExceptionObject}");
+            }
         }
     }
 }

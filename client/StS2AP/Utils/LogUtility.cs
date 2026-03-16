@@ -1,35 +1,45 @@
 ﻿using System;
-using StS2AP.Utils;
+using MegaCrit.Sts2.Core.Logging;
 
 public static class LogUtility
 {
+    private static readonly Logger _logger = new Logger("AP", LogType.Generic);
+
     public static void Info(string message)
     {
-        string line = $"[{DateTime.Now:HH:mm:ss}] [INFO] {message}";
-        ConsoleLogger.WriteLine(ConsoleColor.White, line);
+        WriteColored(message, ConsoleColor.Cyan);
+        _logger.Info(message);
     }
 
     public static void Warn(string message)
     {
-        string line = $"[{DateTime.Now:HH:mm:ss}] [WARN] {message}";
-        ConsoleLogger.WriteLine(ConsoleColor.Yellow, line);
+        WriteColored(message, ConsoleColor.Yellow);
+        _logger.Warn(message);
     }
 
     public static void Error(string message)
     {
-        string line = $"[{DateTime.Now:HH:mm:ss}] [ERROR] {message}";
-        ConsoleLogger.WriteLine(ConsoleColor.Red, line);
+        WriteColored(message, ConsoleColor.Red);
+        _logger.Error(message);
     }
 
     public static void Debug(string message)
     {
-        string line = $"[{DateTime.Now:HH:mm:ss}] [DEBUG] {message}";
-        ConsoleLogger.WriteLine(ConsoleColor.Gray, line);
+        WriteColored(message, ConsoleColor.Gray);
+        _logger.Debug(message);
     }
 
     public static void Success(string message)
     {
-        string line = $"[{DateTime.Now:HH:mm:ss}] [OK] {message}";
-        ConsoleLogger.WriteLine(ConsoleColor.Green, line);
+        WriteColored(message, ConsoleColor.Green);
+        _logger.Info(message);
+    }
+
+    private static void WriteColored(string message, ConsoleColor color)
+    {
+        var previousColor = Console.ForegroundColor;
+        Console.ForegroundColor = color;
+        Console.WriteLine($"[AP] [{DateTime.Now:HH:mm:ss}] {message}");
+        Console.ForegroundColor = previousColor;
     }
 }
