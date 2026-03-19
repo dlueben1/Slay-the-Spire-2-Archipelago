@@ -1,20 +1,10 @@
-﻿using Godot;
-using HarmonyLib;
-using MegaCrit.Sts2.Core.Entities.Players;
-using MegaCrit.Sts2.Core.Models;
+﻿using HarmonyLib;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Nodes.Screens.MainMenu;
-using MegaCrit.Sts2.Core.Nodes.Screens.Settings;
-using MegaCrit.Sts2.Core.Unlocks;
 using StS2AP.UI;
 using StS2AP.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace StS2AP.Patches
 {
@@ -25,12 +15,14 @@ namespace StS2AP.Patches
     public static class Patches_MainMenuBehavior
     {
         /// <summary>
-        /// Changes the main menu UI so that "Single Player", "Multiplayer", and everything not necessary is hidden.
+        /// Changes the main menu UI for the Archipelago Mod.
+        /// This includes hiding and renaming menu options.
         /// </summary>
-        [HarmonyPatch(typeof(NMainMenu), nameof(NMainMenu._Ready), new Type[] { })]
-        public class ReconfigureMainMenuPatch
+        [HarmonyPatch(typeof(NMainMenu), nameof(NMainMenu._Ready), [])]
+        public static class ReconfigureMainMenu
         {
-            static void Postfix(NMainMenu __instance)
+            [HarmonyPostfix]
+            public static void Postfix(NMainMenu __instance)
             {
                 // Grab reference to the menu stack
                 MenuUtility.SubmenuStack = __instance.SubmenuStack;
@@ -45,6 +37,7 @@ namespace StS2AP.Patches
                 var _compendiumButton = __instance.GetNode<NMainMenuTextButton>("MainMenuTextButtons/CompendiumButton");
                 var _timelineButton = __instance.GetNode<NMainMenuTextButton>("MainMenuTextButtons/TimelineButton");
                 var _openProfileScreenButton = __instance.GetNode<NOpenProfileScreenButton>("%ChangeProfileButton");
+
                 // Shutting the linter up
                 if (_singleplayerButton.label == null) return;
 
@@ -69,11 +62,11 @@ namespace StS2AP.Patches
         /// Adds the Archipelago UI to the main menu.
         /// Injected when the user selects "Single Player".
         /// </summary>
-        [HarmonyPatch(typeof(NMainMenu), nameof(NMainMenu.OpenSingleplayerSubmenu),
-            new Type[] { })]
-        public class InjectAPMenuPatch
+        [HarmonyPatch(typeof(NMainMenu), nameof(NMainMenu.OpenSingleplayerSubmenu), [])]
+        public static class InjectAPMenu
         {
-            static void Postfix(NSingleplayerSubmenu __result)
+            [HarmonyPostfix]
+            public static void Postfix(NSingleplayerSubmenu __result)
             {
                 // Hide the actual sub-menu options
                 var _standardButton = __result.GetNode<NSubmenuButton>("StandardButton");
@@ -85,7 +78,7 @@ namespace StS2AP.Patches
                 _customButton.Visible = false;
                 _backButton.Visible = false;
 
-                // If we are connected, dive directly into the game (`ArchipelagoClient.IsConnected` can cause problems at this stage if you're not connected so I manually unraveled it)
+                // If we are connected, dive directly into the game
                 if (ArchipelagoClient.Authenticated && ArchipelagoClient.Session != null && ArchipelagoClient.Session.Socket != null && ArchipelagoClient.Session.Socket.Connected)
                 {
                     var _charSelectScreen = MenuUtility.SubmenuStack.GetSubmenuType<NCharacterSelectScreen>();
@@ -102,10 +95,11 @@ namespace StS2AP.Patches
         }
 
         /// <summary>
-        /// Ensure the Connection UI screen cannot be skipped by new players
+        /// Normally, first time players skip straight to the Character Select screen after starting a single player run,
+        /// but that step is where the connection UI now lives. This patches that behavior out of the game.
         /// </summary>
         [HarmonyPatch(typeof(NMainMenu), nameof(NMainMenu.MethodName.SingleplayerButtonPressed))]
-        public static class SingleplayerMenuPatch
+        public static class DisableSkippingToCharSelect
         {
             [HarmonyPrefix]
             public static bool Prefix(NMainMenu __instance, NButton _)
@@ -113,6 +107,20 @@ namespace StS2AP.Patches
                 // Always open the singleplayer submenu, regardless of NumberOfRuns
                 __instance.OpenSingleplayerSubmenu();
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Hides the Back Button from the Character Select Screen
+        /// </summary>
+        [HarmonyPatch(typeof(NCharacterSelectScreen))]
+        public static class NCharacterSelectScreenPatches
+        {
+            [HarmonyPatch("_Ready")]
+            [HarmonyPostfix]
+            static void HideBackButtonOnCharSelectScreen(NCharacterSelectScreen __instance)
+            {
+                __instance.GetNode<NBackButton>("BackButton").Visible = false;
             }
         }
     }
