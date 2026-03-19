@@ -54,20 +54,6 @@ namespace StS2AP.Patches
         }
 
         /// <summary>
-        /// Forces the Ascension Level during `StartNewSingleplayerRun()`
-        /// </summary>
-        [HarmonyPatch(typeof(NGame), nameof(NGame.StartNewSingleplayerRun))]
-        [HarmonyPrefix]
-        static void StartNewSingleplayerRun_Prefix(ref int ascension)
-        {
-            int? overrideAscension = ArchipelagoClient.Settings?.AscensionLevel;
-            if (overrideAscension.HasValue && overrideAscension.Value > 0)
-            {
-                ascension = overrideAscension.Value;
-            }
-        }
-
-        /// <summary>
         /// Clears the CurrentPlayer reference when the run ends to avoid stale state.
         /// </summary>
         [HarmonyPatch(typeof(NGame), nameof(NGame.ReturnToMainMenu))]
@@ -76,24 +62,6 @@ namespace StS2AP.Patches
         {
             GameUtility.CurrentPlayer = null;
             LogUtility.Info("CurrentPlayer cleared (returned to main menu)");
-        }
-
-        /// <summary>
-        /// Forces the Ascension Level during `InitializeSingleplayer()`
-        /// </summary>
-        [HarmonyPatch(typeof(NCharacterSelectScreen), nameof(NCharacterSelectScreen.InitializeSingleplayer))]
-        [HarmonyPostfix]
-        static void InitializeSingleplayer_Postfix(NCharacterSelectScreen __instance)
-        {
-            int overrideAscension = ArchipelagoClient.Settings?.AscensionLevel ?? 0;
-
-            var ascensionPanelField = typeof(NCharacterSelectScreen).GetField("_ascensionPanel",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-            if (ascensionPanelField?.GetValue(__instance) is NAscensionPanel ascensionPanel)
-            {
-                ascensionPanel.SetAscensionLevel(overrideAscension);
-            }
         }
     }
 }
