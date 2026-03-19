@@ -15,10 +15,11 @@ namespace StS2AP.Patches
     /// Allows us to control the unlock state of characters, acts, ascension levels, etc. in the game.
     /// </summary>
     [HarmonyPatch(typeof(UnlockState))]
-    public static class UnlockStatePatches
+    public static class Patches_UnlockCharacters
     {
         /// <summary>
-        /// Allows us to control which characters are registered as unlocked, using local state instead of in-game data/saves
+        /// Allows us to control which characters are registered as unlocked, using local state (derived from Archipelago Options)
+        /// instead of in-game data/saves
         /// </summary>
         [HarmonyPatch("get_Characters")]
         [HarmonyPostfix]
