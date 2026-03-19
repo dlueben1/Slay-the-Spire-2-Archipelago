@@ -200,6 +200,8 @@ dotnet/embed_build_outputs=false
 			<DependencyDlls Include="$(TargetDir)*.dll" Exclude="$(TargetDir)$(TargetFileName);$(TargetDir)GodotSharp.dll;$(TargetDir)0Harmony.dll;$(TargetDir)sts2.dll" />
 		</ItemGroup>
 		<Copy SourceFiles="@(DependencyDlls)" DestinationFolder="$(ModsOutputDir)" />
+		<!-- Copy and rename mod_manifest.json to Archipelago.json -->
+		<Copy SourceFiles="$(GodotProject)\mod_manifest.json" DestinationFiles="$(ModsOutputDir)\Archipelago.json" />
 		<Exec Command="&quot;$(GodotExePath)&quot; --headless --path &quot;$(GodotProject)&quot; --export-pack &quot;Windows Desktop&quot; &quot;$(ModsOutputDir)\$(ModName).pck&quot;" />
 	</Target>
 </Project>
