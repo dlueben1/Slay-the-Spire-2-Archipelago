@@ -36,12 +36,12 @@ namespace StS2AP.Patches
         public static class ForceAscensionOnGameStart
         {
             [HarmonyPrefix]
-            public static void Prefix(ref int ascension)
+            public static void Prefix(ref int ascensionLevel)
             {
                 int? overrideAscension = ArchipelagoClient.Settings?.AscensionLevel;
                 if (overrideAscension.HasValue && overrideAscension.Value > 0)
                 {
-                    ascension = overrideAscension.Value;
+                    ascensionLevel = overrideAscension.Value;
                 }
             }
         }
