@@ -273,6 +273,10 @@ namespace StS2AP.Utils
         public static void OnCombatWin(CombatRoom room)
         {
             TrySendBossDefeatCheck();
+
+            // If this was the Act 3 boss check whether the player has met the goal
+            if (ArchipelagoClient.Progress.BossRewardsDistributed >= ArchipelagoProgress._maxBossRewards)
+                _ = TrySetGoalAchieved();
         }
 
         #endregion
@@ -306,6 +310,74 @@ namespace StS2AP.Utils
                 {
                     LogUtility.Error($"Failed to send {checkName}");
                 }
+            }
+        }
+
+        /// <summary>
+        /// Checks whether the player has met the goal condition and sends SetGoalAchieved
+        /// </summary>
+        public static async Task TrySetGoalAchieved()
+        {
+            if (CurrentPlayer == null || !ArchipelagoClient.IsConnected)
+            {
+                LogUtility.Warn("TrySetGoalAchieved: no active player or not connected");
+                return;
+            }
+
+            try
+            {
+                var settings = ArchipelagoClient.Settings;
+                if (settings == null)
+                {
+                    LogUtility.Warn("TrySetGoalAchieved: Settings is null");
+                    return;
+                }
+
+                // The character name that just completed Act 3
+                var charName = CurrentPlayer.Character.Title.GetFormattedText().Split().Last();
+
+                // DataStorage key scoped to this slot
+                // Stored as a comma-separated string e.g. "Ironclad,Silent"
+                const string storageKey = "StS2AP_GoaledChars";
+
+                // Read the current goaled characters string from DataStorage
+                var stored = await ArchipelagoClient.Session.DataStorage[
+                    Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
+                    .GetAsync<string>();
+
+                var goaledChars = string.IsNullOrEmpty(stored)
+                    ? new List<string>()
+                    : stored.Split(',').Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+
+                // Add this character if not already recorded
+                if (!goaledChars.Contains(charName))
+                {
+                    goaledChars.Add(charName);
+                    ArchipelagoClient.Session.DataStorage[
+                        Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
+                        = string.Join(",", goaledChars);
+
+                    LogUtility.Success($"Recorded '{charName}' as having goaled. Total goaled: {goaledChars.Count}");
+                }
+
+                // Determine required number of characters
+                // num_chars_goal == 0 means all characters in the slot must complete
+                int required = settings.NumCharsGoal == 0
+                    ? settings.TotalCharacters
+                    : settings.NumCharsGoal;
+
+                LogUtility.Info($"Goal check: {goaledChars.Count}/{required} characters have completed Act 3");
+
+                if (goaledChars.Count >= required)
+                {
+                    ArchipelagoClient.Session.SetGoalAchieved();
+                    LogUtility.Success("Goal achieved! SetGoalAchieved sent to Archipelago server.");
+                    NotificationUtility.ShowRawText("Goal Complete! You have won....?");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Error($"TrySetGoalAchieved failed: {ex.Message}");
             }
         }
 

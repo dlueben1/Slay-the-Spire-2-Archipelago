@@ -21,5 +21,8 @@ namespace StS2AP.Models
         public bool IsSeeded { get; set; }
 
         public bool NoCharactersLocked { get; set; }
+
+        public int NumCharsGoal { get; set; }
+        public int TotalCharacters { get; set; }
     }
 }
