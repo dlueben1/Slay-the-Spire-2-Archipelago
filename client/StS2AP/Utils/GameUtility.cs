@@ -266,13 +266,13 @@ namespace StS2AP.Utils
 
         #region Game State Event Listeners
 
+        /// <summary>
+        /// Fires when the player wins combat.
+        /// Currently used to deal with boss-related triggers.
+        /// </summary>
         public static void OnCombatWin(CombatRoom room)
         {
-            //// If it's a boss, send a check for boss defeat
-            //if (room.RoomType == RoomType.Boss)
-            //{
-            //    TrySendBossDefeatCheck();
-            //}
+            TrySendBossDefeatCheck();
         }
 
         #endregion
@@ -286,21 +286,25 @@ namespace StS2AP.Utils
             if (ArchipelagoClient.Progress.BossRewardsDistributed <= ArchipelagoProgress._maxBossRewards)
             {
                 // Grab the Character Name
-                var name = GameUtility.CurrentPlayer.Character.Title.GetFormattedText().Split().Last();
+                var name = CurrentPlayer.Character.Title.GetFormattedText().Split().Last();
 
                 // Grab the check ID
                 var checkName = $"{name} Act {ArchipelagoClient.Progress.BossRewardsDistributed} Boss";
-                LogUtility.Debug($"BOSS NAME CHECK: {checkName}");
                 var _locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", checkName);
 
+                // Attempt to send it
                 if (!ArchipelagoClient.CheckedLocations.Contains(_locationId))
                 {
                     // Check the location off and let the server know
                     ArchipelagoClient.CheckedLocations.Add(_locationId);
                     _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(_locationId);
 
-                    LogUtility.Success($"Sent location check: {_locationId}");
+                    LogUtility.Success($"Sent location check: {checkName}");
                     NotificationUtility.ShowLocationChecked(_locationId);
+                }
+                else
+                {
+                    LogUtility.Error($"Failed to send {checkName}");
                 }
             }
         }

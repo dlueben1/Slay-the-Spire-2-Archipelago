@@ -1,88 +1,68 @@
 ﻿using HarmonyLib;
-using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Utils;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 
 namespace StS2AP.Patches
 {
     /// <summary>
     /// Patches for `AbstractRoom` and all of its derived classes.
-    /// Note: You can't patch an abstract class, so some patches in this file are duplicated for each type 
-    /// of room (Combat, Event, Treasure, Rest Site, Merchant, etc.) if there's a better way, let me know.
+    /// Sends Archipelago location checks when entering rooms to track floor progress.
     /// </summary>
-    public static class AbstractRoomPatches
+    public static class Patches_Floorsanity
     {
-        #region Patches
-
         /// <summary>
-        /// Sends an Archipelago location check when entering a Combat Room.
-        /// We can't patch to abstract classes apparently, so I'm doing it to each one.
+        /// Sends an Archipelago location check when entering any room.
+        /// Patches all room types (Combat, Event, Treasure, Rest Site, Merchant) since abstract classes cannot be patched directly.
         /// </summary>
-        [HarmonyPatch(typeof(CombatRoom), nameof(CombatRoom.Enter))]
-        public class OnCombatRoomEnterPatch
+        [HarmonyPatch]
+        public static class OnRoomEnter
         {
-            static void Postfix(IRunState? runState, bool isRestoringRoomStackBase)
+            /// <summary>
+            /// List of all room types that should trigger floor checks when entered.
+            /// </summary>
+            private static readonly Type[] RoomTypes =
+            [
+                typeof(CombatRoom),
+                typeof(EventRoom),
+                typeof(TreasureRoom),
+                typeof(RestSiteRoom),
+                typeof(MerchantRoom)
+            ];
+
+            /// <summary>
+            /// Identifies all the `Enter` methods from each room type that should be patched.
+            /// Harmony will apply the postfix patch to each of these methods.
+            /// </summary>
+            /// <returns>An enumerable of MethodBase objects representing each Enter method to patch.</returns>
+            [HarmonyTargetMethods]
+            static IEnumerable<MethodBase> TargetMethods()
+            {
+                foreach (var type in RoomTypes)
+                {
+                    var method = AccessTools.Method(type, nameof(CombatRoom.Enter));
+                    if (method != null)
+                    {
+                        yield return method;
+                    }
+                }
+            }
+
+            /// <summary>
+            /// Postfix patch that sends a floor check when entering any room type.
+            /// </summary>
+            /// <param name="runState">The current run state.</param>
+            /// <param name="isRestoringRoomStackBase">Whether the room is being restored from save.</param>
+            [HarmonyPostfix]
+            public static void Postfix(IRunState? runState, bool isRestoringRoomStackBase)
             {
                 TrySendFloorCheck(runState);
             }
         }
-
-        /// <summary>
-        /// Sends an Archipelago location check when entering an Event Room.
-        /// We can't patch to abstract classes apparently, so I'm doing it to each one.
-        /// </summary>
-        [HarmonyPatch(typeof(EventRoom), nameof(EventRoom.Enter))]
-        public class OnEventRoomEnterPatch
-        {
-            static void Postfix(IRunState? runState, bool isRestoringRoomStackBase)
-            {
-                TrySendFloorCheck(runState);
-            }
-        }
-
-        /// <summary>
-        /// Sends an Archipelago location check when entering a Treasure Room.
-        /// We can't patch to abstract classes apparently, so I'm doing it to each one.
-        /// </summary>
-        [HarmonyPatch(typeof(TreasureRoom), nameof(TreasureRoom.Enter))]
-        public class OnTreasureRoomEnterPatch
-        {
-            static void Postfix(IRunState? runState, bool isRestoringRoomStackBase)
-            {
-                TrySendFloorCheck(runState);
-            }
-        }
-
-        /// <summary>
-        /// Sends an Archipelago location check when entering a Rest Site Room.
-        /// We can't patch to abstract classes apparently, so I'm doing it to each one.
-        /// </summary>
-        [HarmonyPatch(typeof(RestSiteRoom), nameof(RestSiteRoom.Enter))]
-        public class OnRestSiteRoomEnterPatch
-        {
-            static void Postfix(IRunState? runState, bool isRestoringRoomStackBase)
-            {
-                TrySendFloorCheck(runState);
-            }
-        }
-
-        /// <summary>
-        /// Sends an Archipelago location check when entering a Merchant Room.
-        /// We can't patch to abstract classes apparently, so I'm doing it to each one.
-        /// </summary>
-        [HarmonyPatch(typeof(MerchantRoom), nameof(MerchantRoom.Enter))]
-        public class OnMerchantRoomEnterPatch
-        {
-            static void Postfix(IRunState? runState, bool isRestoringRoomStackBase)
-            {
-                TrySendFloorCheck(runState);
-            }
-        }
-
-        #endregion
-
-        #region Helper Methods
 
         /// <summary>
         /// The logic to determine if we need to send a location check
@@ -137,8 +117,6 @@ namespace StS2AP.Patches
                 LogUtility.Warn($"Location '{locationName}' not found in Archipelago");
             }
         }
-
-
-        #endregion
     }
 }
+

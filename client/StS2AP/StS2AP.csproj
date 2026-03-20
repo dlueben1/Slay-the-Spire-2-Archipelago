@@ -47,6 +47,12 @@
 		</Reference>
 	</ItemGroup>
 
+	<ItemGroup>
+	  <None Update="Archipelago.json">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+
 	<!-- Create steam_appid.txt for debugging outside Steam -->
 	<Target Name="CreateSteamAppId" BeforeTargets="Build">
 		<PropertyGroup>
@@ -86,24 +92,6 @@ project/assembly_name="$(ModName)"
 
 		<WriteLinesToFile File="$(ProjectGodotPath)" Lines="$(ProjectGodotContent)" Overwrite="true" Encoding="UTF-8" />
 		<Message Text="Generated project.godot" Importance="high" />
-	</Target>
-
-	<!-- Generate mod_manifest.json -->
-	<Target Name="GenerateModManifest" BeforeTargets="BeforeBuild" DependsOnTargets="CreateGodotFolder">
-		<PropertyGroup>
-			<ModManifestPath>$(GodotProject)\mod_manifest.json</ModManifestPath>
-			<ModManifestContent>
-{
-	"pck_name": "$(ModName)",
-	"name": "$(ModDisplayName)",
-	"author": "$(ModAuthor)",
-	"version": "$(ModVersion)"
-}
-			</ModManifestContent>
-		</PropertyGroup>
-
-		<WriteLinesToFile File="$(ModManifestPath)" Lines="$(ModManifestContent)" Overwrite="true" Encoding="UTF-8" />
-		<Message Text="Generated mod_manifest.json" Importance="high" />
 	</Target>
 
 	<Target Name="GenerateExportPresets" BeforeTargets="BeforeBuild" DependsOnTargets="CreateGodotFolder">
@@ -200,6 +188,7 @@ dotnet/embed_build_outputs=false
 			<DependencyDlls Include="$(TargetDir)*.dll" Exclude="$(TargetDir)$(TargetFileName);$(TargetDir)GodotSharp.dll;$(TargetDir)0Harmony.dll;$(TargetDir)sts2.dll" />
 		</ItemGroup>
 		<Copy SourceFiles="@(DependencyDlls)" DestinationFolder="$(ModsOutputDir)" />
+		<Copy SourceFiles="Archipelago.json" DestinationFiles="$(ModsOutputDir)\Archipelago.json" />
 		<Exec Command="&quot;$(GodotExePath)&quot; --headless --path &quot;$(GodotProject)&quot; --export-pack &quot;Windows Desktop&quot; &quot;$(ModsOutputDir)\$(ModName).pck&quot;" />
 	</Target>
 </Project>
