@@ -275,7 +275,7 @@ namespace StS2AP.Utils
             TrySendBossDefeatCheck();
 
             // If this was the Act 3 boss check whether the player has met the goal
-            if (ArchipelagoClient.Progress.BossRewardsDistributed >= ArchipelagoProgress._maxBossRewards)
+            if (room.IsVictoryRoom)
                 _ = TrySetGoalAchieved();
         }
 
@@ -341,24 +341,17 @@ namespace StS2AP.Utils
                 const string storageKey = "StS2AP_GoaledChars";
 
                 // Read the current goaled characters string from DataStorage
-                var stored = await ArchipelagoClient.Session.DataStorage[
+               ArchipelagoClient.Session.DataStorage[
                     Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
-                    .GetAsync<string>();
-
-                var goaledChars = string.IsNullOrEmpty(stored)
-                    ? new List<string>()
-                    : stored.Split(',').Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
-
-                // Add this character if not already recorded
-                if (!goaledChars.Contains(charName))
-                {
-                    goaledChars.Add(charName);
-                    ArchipelagoClient.Session.DataStorage[
-                        Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
-                        = string.Join(",", goaledChars);
-
-                    LogUtility.Success($"Recorded '{charName}' as having goaled. Total goaled: {goaledChars.Count}");
-                }
+                    += Operation.Update(new Dictionary<string, bool> { { charName, true } });
+ 
+                // Read back the current dict to get the count
+                var goaledChars = await ArchipelagoClient.Session.DataStorage[
+                    Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
+                    .GetAsync<Dictionary<string, bool>>()
+                    ?? new Dictionary<string, bool>();
+ 
+                LogUtility.Success($"Recorded goal for '{charName}'. Total goaled: {goaledChars.Count}");
 
                 // Determine required number of characters
                 // num_chars_goal == 0 means all characters in the slot must complete
