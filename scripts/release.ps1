@@ -40,7 +40,7 @@ if ($Version -match '(\d+\.\d+\.\d+)') {
 
 Write-Host "`nUpdating files..." -ForegroundColor Cyan
 
-# ─ Update StS2AP.csproj ModVersion ─
+# ~ Update StS2AP.csproj ModVersion ~
 $csprojPath = Join-Path $RepoRoot "client\StS2AP\StS2AP.csproj"
 if (-not (Test-Path $csprojPath)) {
     Write-Error "File not found: $csprojPath"
@@ -59,7 +59,7 @@ if ($csprojNew -ne $csprojContent) {
     Write-Warning "  No match found in StS2AP.csproj"
 }
 
-# ─ Update world/spire2/archipelago.json world_version ─
+# ~ Update world/spire2/archipelago.json world_version ~
 $worldJsonPath = Join-Path $RepoRoot "world\spire2\archipelago.json"
 if (-not (Test-Path $worldJsonPath)) {
     Write-Error "File not found: $worldJsonPath"
@@ -78,7 +78,7 @@ if ($worldJsonNew -ne $worldJsonContent) {
     Write-Warning "  No match found in world/spire2/archipelago.json"
 }
 
-# ─ Update client/StS2AP/Archipelago.json version ─
+# ~ Update client/StS2AP/Archipelago.json version ~
 $clientJsonPath = Join-Path $RepoRoot "client\StS2AP\Archipelago.json"
 if (-not (Test-Path $clientJsonPath)) {
     Write-Error "File not found: $clientJsonPath"
@@ -97,7 +97,7 @@ if ($clientJsonNew -ne $clientJsonContent) {
     Write-Warning "  No match found in client/StS2AP/Archipelago.json"
 }
 
-# ─ Build C# client ─
+# ~ Build C# client ~
 Write-Host "`nBuilding C# client (Release)..." -ForegroundColor Cyan
 $csprojPath = Join-Path $RepoRoot "client\StS2AP\StS2AP.csproj"
 $buildResult = dotnet build $csprojPath -c Release 2>&1
@@ -110,7 +110,7 @@ if ($buildExitCode -ne 0) {
 }
 Write-Host "  Build succeeded." -ForegroundColor Green
 
-# ─ Locate the .pck file from the mods output directory ─
+# ~ Locate the .pck file from the mods output directory ~
 $msbuildJson = dotnet msbuild $csprojPath -getProperty:ModsOutputDir -getProperty:ModName 2>$null | ConvertFrom-Json
 $modsOutputDir = $msbuildJson.Properties.ModsOutputDir
 $modName = $msbuildJson.Properties.ModName
@@ -121,7 +121,7 @@ if (-not (Test-Path $pckPath)) {
     Write-Warning "  Ensure Godot is installed and GodotExePath is set in local.props."
 }
 
-# ─ Build APWorld ─
+# ~ Build APWorld ~
 Write-Host "`nBuilding APWorld..." -ForegroundColor Cyan
 $archRepoRoot = Resolve-Path (Join-Path $RepoRoot "..") | Select-Object -ExpandProperty Path
 $launcherPath = Join-Path $archRepoRoot "Archipelago\Launcher.py"
@@ -144,7 +144,7 @@ if ($apworldExitCode -ne 0) {
 }
 Write-Host "  APWorld build succeeded." -ForegroundColor Green
 
-# ─ Prepare release artifacts ─
+# ~ Prepare release artifacts ~
 Write-Host "`nPreparing files for the new release..." -ForegroundColor Cyan
 $outputDir = Join-Path $RepoRoot "client\StS2AP\bin\Release\net9.0"
 $distDir = Join-Path $RepoRoot "dist"
@@ -202,13 +202,53 @@ try {
     Remove-Item -Recurse -Force $tempDir -ErrorAction SilentlyContinue
 }
 
-# ─ Copy spire2.apworld to dist ─
+# ~ Copy spire2.apworld to dist ~
 $apworldSource = Join-Path $archRepoRoot "Archipelago\build\apworlds\spire2.apworld"
 if (Test-Path $apworldSource) {
     Copy-Item -Path $apworldSource -Destination $distDir -Force
     Write-Host "  Copied: spire2.apworld to $distDir" -ForegroundColor Green
 } else {
     Write-Warning "  spire2.apworld not found at $apworldSource"
+}
+
+# ~ Create GitHub Release ~
+Write-Host "`nCreating GitHub release..." -ForegroundColor Cyan
+
+if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+    Write-Error "GitHub CLI (gh) is required. Install from https://cli.github.com/"
+    exit 1
+}
+
+# Generate release notes from template
+$templatePath = Join-Path $PSScriptRoot "release-notes-template.md"
+if (-not (Test-Path $templatePath)) {
+    Write-Error "Release notes template not found at $templatePath"
+    exit 1
+}
+$releaseNotes = (Get-Content $templatePath -Raw) -replace '\{\{VERSION\}\}', $Version
+
+$releaseNotesFile = Join-Path $env:TEMP "sts2-release-notes-$(Get-Random).md"
+Set-Content $releaseNotesFile -Value $releaseNotes -NoNewline
+
+try {
+    # Tag the latest commit on main with the version name
+    git tag $Version main
+    git push origin $Version
+
+    # Collect all files in dist to upload
+    $distFiles = Get-ChildItem -Path $distDir -File
+    $assetArgs = @()
+    foreach ($f in $distFiles) {
+        $assetArgs += $f.FullName
+    }
+
+    # Create the release
+    gh release create $Version @assetArgs --title $Version --notes-file $releaseNotesFile --latest
+
+    Write-Host "  Release '$Version' created and marked as latest." -ForegroundColor Green
+    Write-Host "  Don't forget to update the Changelist in the release notes on GitHub!" -ForegroundColor Yellow
+} finally {
+    Remove-Item $releaseNotesFile -ErrorAction SilentlyContinue
 }
 
 Write-Host "`nDone!" -ForegroundColor Green
