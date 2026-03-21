@@ -34,6 +34,19 @@ namespace StS2AP
     /// </summary>
     public static class ArchipelagoClient
     {
+        /// <summary>
+        /// The version of the Archipelago Mod (semantic version: major.minor.patch)
+        /// </summary>
+        public static string Version
+        {
+            get
+            {
+                var version = typeof(ArchipelagoClient).Assembly.GetName().Version;
+                if (version == null) return "Version Unknown";
+                return $"v{version.Major}.{version.Minor}.{version.Build}";
+            }
+        }
+
         #region Connection Info
 
         public static string ServerAddress { get; set; }
@@ -398,6 +411,14 @@ namespace StS2AP
             if (slotData.ContainsKey("seeded")) settings.IsSeeded = Convert.ToBoolean(slotData["seeded"]);
             if (slotData.ContainsKey("shuffle_all_cards")) settings.ShouldShuffleAllCards = Convert.ToBoolean(slotData["shuffle_all_cards"]);
             if (slotData.ContainsKey("lock_characters")) settings.NoCharactersLocked = Convert.ToString(slotData["lock_characters"]) == "unlocked";
+
+            // Goal settings num_chars_goal of 0 means "all characters must complete"
+            if (slotData.ContainsKey("num_chars_goal"))
+                settings.NumCharsGoal = Convert.ToInt32(slotData["num_chars_goal"]);
+
+            // Total characters in this slot, needed when num_chars_goal == 0
+            if (slotData.ContainsKey("characters") && slotData["characters"] is System.Collections.IList charsList)
+                settings.TotalCharacters = charsList.Count;
 
             // And return it
             return settings;
