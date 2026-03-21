@@ -143,9 +143,23 @@ if (-not (Test-Path $pckPath)) {
     Write-Warning "  Ensure Godot is installed and GodotExePath is set in local.props."
 }
 
+# ~ Sync world source into Archipelago repo ~
+Write-Host "`nSyncing world source into Archipelago repo..." -ForegroundColor Cyan
+$archRepoRoot = Resolve-Path (Join-Path $RepoRoot "..") | Select-Object -ExpandProperty Path
+$archWorldsDir = Join-Path $archRepoRoot "Archipelago\worlds"
+$archSpire2Dir = Join-Path $archWorldsDir "spire2"
+
+if (Test-Path $archSpire2Dir) {
+    Remove-Item -Recurse -Force $archSpire2Dir
+    Write-Host "  Deleted: $archSpire2Dir" -ForegroundColor Green
+}
+
+$localSpire2Dir = Join-Path $RepoRoot "world\spire2"
+Copy-Item -Path $localSpire2Dir -Destination $archWorldsDir -Recurse -Force
+Write-Host "  Copied: world\spire2 -> $archWorldsDir" -ForegroundColor Green
+
 # ~ Build APWorld ~
 Write-Host "`nBuilding APWorld..." -ForegroundColor Cyan
-$archRepoRoot = Resolve-Path (Join-Path $RepoRoot "..") | Select-Object -ExpandProperty Path
 $launcherPath = Join-Path $archRepoRoot "Archipelago\Launcher.py"
 if (-not (Test-Path $launcherPath)) {
     Write-Error "Launcher.py not found at $launcherPath"
