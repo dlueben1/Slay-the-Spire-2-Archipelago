@@ -121,8 +121,31 @@ if (-not (Test-Path $pckPath)) {
     Write-Warning "  Ensure Godot is installed and GodotExePath is set in local.props."
 }
 
-# ─ Zip the build output into sts2-client.zip ─
-Write-Host "`nPackaging sts2-client.zip..." -ForegroundColor Cyan
+# ─ Build APWorld ─
+Write-Host "`nBuilding APWorld..." -ForegroundColor Cyan
+$archRepoRoot = Resolve-Path (Join-Path $RepoRoot "..") | Select-Object -ExpandProperty Path
+$launcherPath = Join-Path $archRepoRoot "Archipelago\Launcher.py"
+if (-not (Test-Path $launcherPath)) {
+    Write-Error "Launcher.py not found at $launcherPath"
+    exit 1
+}
+# Temporarily lower error preference so Python stderr warnings don't abort the script
+$prevPref = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+$archDir2 = Join-Path $archRepoRoot "Archipelago"
+Push-Location $archDir2
+py -3.13 $launcherPath "Build APWorlds" "Slay the Spire II"
+$apworldExitCode = $LASTEXITCODE
+Pop-Location
+$ErrorActionPreference = $prevPref
+if ($apworldExitCode -ne 0) {
+    Write-Error "APWorld build failed (exit code $apworldExitCode)."
+    exit 1
+}
+Write-Host "  APWorld build succeeded." -ForegroundColor Green
+
+# ─ Prepare release artifacts ─
+Write-Host "`nPreparing files for the new release..." -ForegroundColor Cyan
 $outputDir = Join-Path $RepoRoot "client\StS2AP\bin\Release\net9.0"
 $distDir = Join-Path $RepoRoot "dist"
 $zipPath = Join-Path $distDir "sts2-client.zip"
@@ -167,12 +190,25 @@ try {
     }
 
     # Zip the Archipelago folder directly (so zip contains Archipelago > files)
-    Compress-Archive -Path $archDir -DestinationPath $zipPath
+    Compress-Archive -Path $archDir -DestinationPath $zipPath -Force
+    if (-not (Test-Path $zipPath)) {
+        Write-Error "Failed to create $zipPath"
+        exit 1
+    }
     $fileCount = $filesToZip.Count
-    Write-Host "  Created: $zipPath [$fileCount files]" -ForegroundColor Green
+    Write-Host "  Created: sts2-client.zip [$fileCount files]" -ForegroundColor Green
 } finally {
     # Clean up temp directory
     Remove-Item -Recurse -Force $tempDir -ErrorAction SilentlyContinue
+}
+
+# ─ Copy spire2.apworld to dist ─
+$apworldSource = Join-Path $archRepoRoot "Archipelago\build\apworlds\spire2.apworld"
+if (Test-Path $apworldSource) {
+    Copy-Item -Path $apworldSource -Destination $distDir -Force
+    Write-Host "  Copied: spire2.apworld to $distDir" -ForegroundColor Green
+} else {
+    Write-Warning "  spire2.apworld not found at $apworldSource"
 }
 
 Write-Host "`nDone!" -ForegroundColor Green
