@@ -34,3 +34,16 @@ class Test49Floors(Spire2TestBase):
                 continue
             self.assertTrue(location.address not in stuff, f"location duplicated {location.name} {stuff.get(location.address, None)}")
             stuff[location.address] = location
+
+class Test48Floors(Spire2TestBase):
+    options = {
+        "characters": [
+            "ironclad",
+            "silent",
+        ],
+        "ascension": 9
+    }
+
+    def test_no_floor_49(self):
+        self.assertFalse( "Ironclad Reached Floor 49" in self.world.get_locations())
+
