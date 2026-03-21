@@ -78,7 +78,7 @@ def create_location_data() -> typing.List[LocationData]:
              LocationData('Act 2 Boss', None, LocationType.Event),
              LocationData('Act 3 Boss', None, LocationType.Event),
              ] +
-            [LocationData(f"Reached Floor {j}", 100 + j, LocationType.Floor) for j in range(1, 49)]
+            [LocationData(f"Reached Floor {j}", 100 + j, LocationType.Floor) for j in range(1, 50)]
     )
 
 def create_location_tables(vanilla_chars: typing.List[str], extras: int) -> typing.Tuple[dict[str, int], dict[
