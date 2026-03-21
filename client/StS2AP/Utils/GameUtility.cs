@@ -275,7 +275,14 @@ namespace StS2AP.Utils
             TrySendBossDefeatCheck();
 
             // If this was the Act 3 boss check whether the player has met the goal
-            if (room.IsVictoryRoom)
+            bool isAct3Boss = room.RoomType == RoomType.Boss
+                && CurrentPlayer?.RunState?.CurrentActIndex == 2;
+ 
+            bool isFinalBoss = isAct3Boss && (
+                !CurrentPlayer!.RunState.Act.HasSecondBoss ||
+                ArchipelagoClient.Progress.BossRewardsDistributed > ArchipelagoProgress._maxBossRewards);
+ 
+            if (isFinalBoss)
                 _ = TrySetGoalAchieved();
         }
 
