@@ -34,6 +34,19 @@ namespace StS2AP
     /// </summary>
     public static class ArchipelagoClient
     {
+        /// <summary>
+        /// The version of the Archipelago Mod (semantic version: major.minor.patch)
+        /// </summary>
+        public static string Version
+        {
+            get
+            {
+                var version = typeof(ArchipelagoClient).Assembly.GetName().Version;
+                if (version == null) return "Version Unknown";
+                return $"v{version.Major}.{version.Minor}.{version.Build}";
+            }
+        }
+
         #region Connection Info
 
         public static string ServerAddress { get; set; }

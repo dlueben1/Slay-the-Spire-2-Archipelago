@@ -16,11 +16,14 @@
 .EXAMPLE
   .\scripts\release.ps1 -Version "0.3.0"
   .\scripts\release.ps1 -Version "alpha-0.2.1"
+  .\scripts\release.ps1 -Version "alpha-0.2.1" -skipGitHub
 #>
 
 param(
     [Parameter(Mandatory = $true)]
-    [string]$Version
+    [string]$Version,
+
+    [switch]$skipGitHub
 )
 
 $ErrorActionPreference = "Stop"
@@ -57,6 +60,25 @@ if ($csprojNew -ne $csprojContent) {
     Write-Host "  Already up to date: StS2AP.csproj (ModVersion)" -ForegroundColor Yellow
 } else {
     Write-Warning "  No match found in StS2AP.csproj"
+}
+
+# ~ Update local.props ModVersion ~
+$localPropsPath = Join-Path $RepoRoot "client\StS2AP\local.props"
+if (-not (Test-Path $localPropsPath)) {
+    Write-Warning "  local.props not found at $localPropsPath - skipping."
+} else {
+    $localPropsContent = Get-Content $localPropsPath -Raw
+    $localPropsPattern = '<ModVersion>[^<]*</ModVersion>'
+    $localPropsReplacement = "<ModVersion>$SemVer</ModVersion>"
+    $localPropsNew = $localPropsContent -replace $localPropsPattern, $localPropsReplacement
+    if ($localPropsNew -ne $localPropsContent) {
+        Set-Content $localPropsPath -Value $localPropsNew -NoNewline
+        Write-Host "  Updated: local.props (ModVersion)" -ForegroundColor Green
+    } elseif ($localPropsContent -match $localPropsPattern) {
+        Write-Host "  Already up to date: local.props (ModVersion)" -ForegroundColor Yellow
+    } else {
+        Write-Warning "  No match found in local.props"
+    }
 }
 
 # ~ Update world/spire2/archipelago.json world_version ~
@@ -211,44 +233,48 @@ if (Test-Path $apworldSource) {
     Write-Warning "  spire2.apworld not found at $apworldSource"
 }
 
-# ~ Create GitHub Release ~
-Write-Host "`nCreating GitHub release..." -ForegroundColor Cyan
+if ($skipGitHub) {
+    Write-Host "`nSkipping GitHub release (-skipGitHub specified)." -ForegroundColor Yellow
+} else {
+    # ~ Create GitHub Release ~
+    Write-Host "`nCreating GitHub release..." -ForegroundColor Cyan
 
-if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
-    Write-Error "GitHub CLI (gh) is required. Install from https://cli.github.com/"
-    exit 1
-}
-
-# Generate release notes from template
-$templatePath = Join-Path $PSScriptRoot "release-notes-template.md"
-if (-not (Test-Path $templatePath)) {
-    Write-Error "Release notes template not found at $templatePath"
-    exit 1
-}
-$releaseNotes = (Get-Content $templatePath -Raw) -replace '\{\{VERSION\}\}', $Version
-
-$releaseNotesFile = Join-Path $env:TEMP "sts2-release-notes-$(Get-Random).md"
-Set-Content $releaseNotesFile -Value $releaseNotes -NoNewline
-
-try {
-    # Tag the latest commit on main with the version name
-    git tag $Version main
-    git push origin $Version
-
-    # Collect all files in dist to upload
-    $distFiles = Get-ChildItem -Path $distDir -File
-    $assetArgs = @()
-    foreach ($f in $distFiles) {
-        $assetArgs += $f.FullName
+    if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+        Write-Error "GitHub CLI (gh) is required. Install from https://cli.github.com/"
+        exit 1
     }
 
-    # Create the release
-    gh release create $Version @assetArgs --title $Version --notes-file $releaseNotesFile --latest
+    # Generate release notes from template
+    $templatePath = Join-Path $PSScriptRoot "release-notes-template.md"
+    if (-not (Test-Path $templatePath)) {
+        Write-Error "Release notes template not found at $templatePath"
+        exit 1
+    }
+    $releaseNotes = (Get-Content $templatePath -Raw) -replace '\{\{VERSION\}\}', $Version
 
-    Write-Host "  Release '$Version' created and marked as latest." -ForegroundColor Green
-    Write-Host "  Don't forget to update the Changelist in the release notes on GitHub!" -ForegroundColor Yellow
-} finally {
-    Remove-Item $releaseNotesFile -ErrorAction SilentlyContinue
+    $releaseNotesFile = Join-Path $env:TEMP "sts2-release-notes-$(Get-Random).md"
+    Set-Content $releaseNotesFile -Value $releaseNotes -NoNewline
+
+    try {
+        # Tag the latest commit on main with the version name
+        git tag $Version main
+        git push origin $Version
+
+        # Collect all files in dist to upload
+        $distFiles = Get-ChildItem -Path $distDir -File
+        $assetArgs = @()
+        foreach ($f in $distFiles) {
+            $assetArgs += $f.FullName
+        }
+
+        # Create the release
+        gh release create $Version @assetArgs --title $Version --notes-file $releaseNotesFile --latest
+
+        Write-Host "  Release '$Version' created and marked as latest." -ForegroundColor Green
+        Write-Host "  Don't forget to update the Changelist in the release notes on GitHub!" -ForegroundColor Yellow
+    } finally {
+        Remove-Item $releaseNotesFile -ErrorAction SilentlyContinue
+    }
 }
 
 Write-Host "`nDone!" -ForegroundColor Green
