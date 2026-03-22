@@ -106,6 +106,15 @@ namespace StS2AP.Patches
             {
                 get
                 {
+                    // This gets used in a few places internally in the code:
+                    // 1: For the title of the rest site option
+                    // 2: For the png lookup of the option
+                    // 3: For the description of the option
+                    // 4: For the description of the option when disabled
+                    // For (3), we can override and replace with what we need.
+                    // For the rest, we have to create localization files/pngs.
+                    // Also, previously I tried importing the ItemFlags from Multiclient, but that broke patching
+                    // for some reason.
                     if (info?.Advancement() ?? false)
                         return "PROGRESSION";
                     if (info?.Trap() ?? false)
@@ -118,6 +127,7 @@ namespace StS2AP.Patches
 
             public override Task<bool> OnSelect()
             {
+                // Supposed to return true if selecting this option succeeded.
                 return SendCampfireCheck(locationId);
             }
 
