@@ -33,6 +33,13 @@ namespace StS2AP.Utils
         public static bool IsInRun => CurrentPlayer != null;
 
         /// <summary>
+        /// Local cache of characters that have completed the run in this slot.
+        /// Populated from DataStorage on connect, updated locally on each goal.
+        /// Avoids GetAsync deserialization issues by keeping the source of truth local.
+        /// </summary>
+        private static HashSet<string> _goaledCharacters = new HashSet<string>();
+
+        /// <summary>
         /// Reference to the Current Player character.
         /// Set when a run starts, cleared when a run ends.
         /// </summary>
@@ -272,6 +279,7 @@ namespace StS2AP.Utils
         /// </summary>
         public static void OnCombatWin(CombatRoom room)
         {
+            // LogUtility.Info($"OnCombatWin: RoomType={room.RoomType}, ActIndex={CurrentPlayer?.RunState?.CurrentActIndex}, HasSecondBoss={CurrentPlayer?.RunState?.Act.HasSecondBoss}, BossRewards={ArchipelagoClient.Progress.BossRewardsDistributed}");
             TrySendBossDefeatCheck();
 
             // If this was the Act 3 boss check whether the player has met the goal
@@ -315,13 +323,46 @@ namespace StS2AP.Utils
                 }
                 else
                 {
-                    LogUtility.Error($"Failed to send {checkName}");
+                    LogUtility.Debug($"Failed to send already-sent {checkName}");
                 }
             }
         }
 
+        public static async Task RestoreGoaledCharsFromStorage()
+        {
+            if (!ArchipelagoClient.IsConnected) return;
+
+            try
+            {
+                const string storageKey = "StS2AP_GoaledChars";
+
+                // Initialize the key with an empty dict if it doesn't exist yet
+                ArchipelagoClient.Session.DataStorage[
+                    Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
+                    .Initialize(new Dictionary<string, bool>()); // replace inside () with new Newtonsoft.Json.Linq.JObject() in case it breaks not sure if this is correct
+
+                // Read back whatever is stored
+                var stored = await ArchipelagoClient.Session.DataStorage[
+                    Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
+                    .GetAsync<Dictionary<string, bool>>();
+
+                _goaledCharacters = stored != null
+                    ? new HashSet<string>(stored.Keys)
+                    : new HashSet<string>();
+
+                LogUtility.Info($"Restored {_goaledCharacters.Count} goaled character(s) from DataStorage: {string.Join(", ", _goaledCharacters)}");
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Warn($"Could not restore goaled characters from DataStorage: {ex.Message}. Starting with empty set.");
+                _goaledCharacters = new HashSet<string>();
+            }
+        }
+
         /// <summary>
-        /// Checks whether the player has met the goal condition and sends SetGoalAchieved
+        /// Checks whether the player has met the goal condition and sends SetGoalAchieved if so.
+        /// Uses a local HashSet for deduplication to avoid DataStorage deserialization issues
+        /// and then writes to DataStorage with Operation.Update for cross-session persistence
         /// </summary>
         public static async Task TrySetGoalAchieved()
         {
@@ -340,35 +381,38 @@ namespace StS2AP.Utils
                     return;
                 }
 
-                // The character name that just completed Act 3
                 var charName = CurrentPlayer.Character.Title.GetFormattedText().Split().Last();
-
-                // DataStorage key scoped to this slot
-                // Stored as a comma-separated string e.g. "Ironclad,Silent"
                 const string storageKey = "StS2AP_GoaledChars";
 
-                // Read the current goaled characters string from DataStorage
-               ArchipelagoClient.Session.DataStorage[
-                    Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
-                    += Operation.Update(new Dictionary<string, bool> { { charName, true } });
- 
-                // Read back the current dict to get the count
-                var goaledChars = await ArchipelagoClient.Session.DataStorage[
-                    Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
-                    .GetAsync<Dictionary<string, bool>>()
-                    ?? new Dictionary<string, bool>();
- 
-                LogUtility.Success($"Recorded goal for '{charName}'. Total goaled: {goaledChars.Count}");
+                // Add to local cache HashSet.Add returns false if already present
+                bool wasNew = _goaledCharacters.Add(charName);
 
-                // Determine required number of characters
+                if (wasNew)
+                {
+                    // Persist to DataStorage atomically
+                    ArchipelagoClient.Session.DataStorage[
+                        Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
+                        .Initialize(new Newtonsoft.Json.Linq.JObject());
+ 
+                    ArchipelagoClient.Session.DataStorage[
+                        Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
+                        += Operation.Update(new Dictionary<string, bool> { { charName, true } });
+
+                    LogUtility.Success($"Recorded goal for '{charName}'. Total goaled: {_goaledCharacters.Count}");
+                }
+                else
+                {
+                    LogUtility.Info($"'{charName}' already recorded as goaled. Total goaled: {_goaledCharacters.Count}");
+                }
+
                 // num_chars_goal == 0 means all characters in the slot must complete
                 int required = settings.NumCharsGoal == 0
                     ? settings.TotalCharacters
                     : settings.NumCharsGoal;
 
-                LogUtility.Info($"Goal check: {goaledChars.Count}/{required} characters have completed Act 3");
+                LogUtility.Info($"Goal check: {_goaledCharacters.Count}/{required} characters have completed the run");
 
-                if (goaledChars.Count >= required)
+                if (_goaledCharacters.Count >= required)
                 {
                     ArchipelagoClient.Session.SetGoalAchieved();
                     LogUtility.Success("Goal achieved! SetGoalAchieved sent to Archipelago server.");
