@@ -7,6 +7,8 @@ using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Nodes.Vfx;
 using StS2AP.Utils;
 using StS2AP.Extensions;
+using MegaCrit.Sts2.Core.Runs;
+using MegaCrit.Sts2.Core.Nodes;
 
 
 namespace StS2AP.Patches
@@ -44,7 +46,7 @@ namespace StS2AP.Patches
                                 {
                                     description = info.Player.Alias + "'s " + info.ItemName;
                                 }
-                                __result.Add(new APRestOption(player, locationId, info, description));
+                                //__result.Add(new APRestOption(player, locationId, info, description));
                             }
                         }
 
@@ -55,16 +57,31 @@ namespace StS2AP.Patches
                     .Count() >= Math.Min(player.RunState.CurrentActIndex + 1, 3);
                 bool canSmith = ArchipelagoClient.Session.Items.AllItemsReceived.Where(i => $"{player.APName()} Progressive Smith".Equals(i.ItemName))
                    .Count() >= Math.Min(player.RunState.CurrentActIndex + 1, 3);
-                foreach(var option in __result)
+                bool anyEnabled = canRest || canSmith;
+                // Removing the heal option (potentially) in favor of the fake heal option
+                if(!canRest)
                 {
-                    if(option.OptionId == "HEAL")
-                    {
-                        option.IsEnabled = canRest;
-                    } else if (option.OptionId == "SMITH")
+                    __result.RemoveAll(n => "HEAL".Equals(n.OptionId));
+                }
+
+                foreach (var option in __result)
+                {
+                    if (option.OptionId == "SMITH")
                     {
                         option.IsEnabled = canSmith;
+                    } else
+                    {
+                        anyEnabled |= option.IsEnabled;
                     }
                 }
+
+                if (!anyEnabled)
+                {
+                    // Being unable to do anything results in a softlock, so we give something to do.
+                    // TODO: I wonder how this interacts with the potion when healing relic
+                    __result.Insert(0, new FakeRestOption(player));
+                }
+
             }
         }
 
@@ -134,6 +151,33 @@ namespace StS2AP.Patches
             public static async Task<bool> SendCampfireCheck(long locationId)
             {
                 GameUtility.SendCheck(locationId);
+                return true;
+            }
+        }
+
+        public class FakeRestOption : RestSiteOption
+        {
+            public FakeRestOption(Player owner) : base(owner)
+            {
+            }
+
+            public override string OptionId => "HEAL";
+
+            public override LocString Description
+            {
+                get
+                {
+                    LocString description = new LocString("rest_site_ui", "OPTION_HEAL.descriptionDisabled");
+                    return description;
+                }
+            }
+
+            public override Task<bool> OnSelect()
+            {
+                return DoNothing();
+            }
+            public static async Task<bool> DoNothing()
+            {
                 return true;
             }
         }
