@@ -1,0 +1,10 @@
+{
+  "OPTION_PROGRESSION.name": "Seems important!",
+  "OPTION_APIcon.name": "Seems important!",
+  "OPTION_USEFUL.name": "Might be useful?",
+  "OPTION_FILLER.name": "Who left this here?",
+  "OPTION_TRAP.name": "Seems important?",
+  "OPTION_HEAL.descriptionDisabled": "[red]You have not received enough Progressive Rests[/red]",
+  "OPTION_SMITH.descriptionDisabled": "[red]You have not received enough Progressive Smiths[/red]",
+  "OPTION_CHECK.description": "{description}"
+}

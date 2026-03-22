@@ -88,7 +88,6 @@ class IncludeFloorChecks(Toggle):
 class CampfireSanity(Toggle):
     """Whether to shuffle being able to rest and smith at each campsite per act.  Also adds
     new locations at campsites per act."""
-    visibility = Visibility.none
     display_name = "Campfire Sanity"
     default = 0
 

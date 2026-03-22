@@ -24,5 +24,6 @@ namespace StS2AP.Models
 
         public int NumCharsGoal { get; set; }
         public int TotalCharacters { get; set; }
+        public bool CampfireSanity { get; set; }
     }
 }

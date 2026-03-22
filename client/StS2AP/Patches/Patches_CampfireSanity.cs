@@ -1,0 +1,131 @@
+﻿
+using HarmonyLib;
+using Archipelago.MultiClient.Net.Models;
+using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Entities.RestSite;
+using MegaCrit.Sts2.Core.Localization;
+using MegaCrit.Sts2.Core.Nodes.Vfx;
+using StS2AP.Utils;
+using StS2AP.Extensions;
+
+
+namespace StS2AP.Patches
+{
+    public static class Patches_RestSiteOption
+    {
+        [HarmonyPatch(typeof(RestSiteOption), "Generate")]
+        public static class Generate
+        {
+            [HarmonyPostfix]
+            static void AddOptions(Player player, ref List<RestSiteOption> __result)
+            {
+                if(!ArchipelagoClient.Settings.CampfireSanity)
+                {
+                    return;
+                }
+                var progress = ArchipelagoClient.Progress;
+                LogUtility.Info($"Adding Campfire Locations for act {player.RunState.CurrentActIndex}");
+                for (int i = 1; i <= player.RunState.CurrentActIndex + 1; i++)
+                {
+                    for (int j = 1; j <= 2; j++)
+                    {
+                        {
+                            var checkName = $"{player.APName()} Act {i} Campfire {j}";
+                            bool isChecked = false;
+                            progress.CampfiresChecked.TryGetValue(checkName, out isChecked);
+                            if (!isChecked)
+                            {
+                                
+                                var locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", checkName);
+                                LogUtility.Info($"Adding campfire location {locationId} " + checkName);
+                                var description = checkName;
+                                ScoutedItemInfo info;
+                                if (ArchipelagoClient.ScoutedLocations.TryGetValue(locationId, out info))
+                                {
+                                    description = info.Player.Alias + "'s " + info.ItemName;
+                                }
+                                __result.Add(new APRestOption(player, locationId, info, description));
+                            }
+                        }
+
+                    }
+                }
+
+                bool canRest = ArchipelagoClient.Session.Items.AllItemsReceived.Where(i => $"{player.APName()} Progressive Rest".Equals(i.ItemName))
+                    .Count() >= Math.Min(player.RunState.CurrentActIndex + 1, 3);
+                bool canSmith = ArchipelagoClient.Session.Items.AllItemsReceived.Where(i => $"{player.APName()} Progressive Smith".Equals(i.ItemName))
+                   .Count() >= Math.Min(player.RunState.CurrentActIndex + 1, 3);
+                foreach(var option in __result)
+                {
+                    if(option.OptionId == "HEAL")
+                    {
+                        option.IsEnabled = canRest;
+                    } else if (option.OptionId == "SMITH")
+                    {
+                        option.IsEnabled = canSmith;
+                    }
+                }
+            }
+        }
+
+        public class APRestOption : RestSiteOption
+        {
+            private readonly long locationId;
+            private readonly string description;
+            private readonly ScoutedItemInfo? info;
+            public APRestOption(Player owner, long locationId, ScoutedItemInfo? info, string description) : base(owner)
+            {
+                this.locationId = locationId;
+                this.description = description;
+                this.info = info;
+            }
+
+            public override IEnumerable<string> AssetPaths
+            {
+                get
+                {
+                    List<string> list = new List<string>();
+                    list.AddRange(base.AssetPaths);
+                    list.AddRange(NRestSmokeVfx.AssetPaths);
+                    list.AddRange(NDesaturateTransitionVfx.AssetPaths);
+                    return list;
+                }
+            }
+
+            public override LocString Description
+            {
+                get
+                {
+                    LocString description = new LocString("rest_site_ui", "OPTION_CHECK.description");
+                    description.Add("description", this.description);
+                    return description;
+                }
+            }
+
+            public override string OptionId
+            {
+                get
+                {
+                    if (info?.Advancement() ?? false)
+                        return "PROGRESSION";
+                    if (info?.Trap() ?? false)
+                        return "TRAP";
+                    if (info?.Useful() ?? false)
+                        return "USEFUL";
+                    return "FILLER";
+                }
+            }
+
+            public override Task<bool> OnSelect()
+            {
+                return SendCampfireCheck(locationId);
+            }
+
+            public static async Task<bool> SendCampfireCheck(long locationId)
+            {
+                GameUtility.SendCheck(locationId);
+                return true;
+            }
+        }
+    }
+}

@@ -1,11 +1,7 @@
 ﻿using Archipelago.MultiClient.Net.Models;
-using StS2AP.UI;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
+using MegaCrit.Sts2.Core.Entities.Players;
+using StS2AP.Extensions;
+
 
 namespace StS2AP.Models
 {
@@ -44,12 +40,31 @@ namespace StS2AP.Models
 
         public int BossRewardsDistributed { get; set; } = 0;
 
+        public Dictionary<string, bool> CampfiresChecked { get; set; } = new Dictionary<string, bool>();
+
+        public void InitializeTrackers(Player player)
+        {
+            ResetTrackers();
+            var name = player.Character.Title.GetFormattedText().Split().Last();
+            for(int i = 1; i <= 3; i++)
+            {
+                for(int j = 1; j <=2; j++)
+                {
+                    var checkName = $"{player.APName()} Act {i} Campfire {j}";
+                    var locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", checkName);
+                    CampfiresChecked[checkName] = ArchipelagoClient.Session.Locations.AllLocationsChecked.Contains(locationId);
+                    
+                }
+            }
+        }
+
         public void ResetTrackers()
         {
             CardRewardsAttempted = 0;
             RareCardRewardsAttempted = 0;
             BossRewardsDistributed = 0;
             RelicRewardsAttempted = 0;
+            CampfiresChecked.Clear();
         }
 
         #endregion
