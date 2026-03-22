@@ -46,7 +46,7 @@ namespace StS2AP.Patches
                                 {
                                     description = info.Player.Alias + "'s " + info.ItemName;
                                 }
-                                //__result.Add(new APRestOption(player, locationId, info, description));
+                                __result.Add(new APRestOption(player, locationId, info, description));
                             }
                         }
 
