@@ -339,7 +339,7 @@ namespace StS2AP.Utils
                 // Initialize the key with an empty dict if it doesn't exist yet
                 ArchipelagoClient.Session.DataStorage[
                     Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
-                    .Initialize(new Dictionary<string, bool>()); // replace inside () with new Newtonsoft.Json.Linq.JObject() in case it breaks not sure if this is correct
+                    .Initialize(new Dictionary<string, bool>()); // replace inside () with `new Newtonsoft.Json.Linq.JObject()` in case it breaks not sure if this is correct
 
                 // Read back whatever is stored
                 var stored = await ArchipelagoClient.Session.DataStorage[
