@@ -242,6 +242,9 @@ namespace StS2AP
             // Pre-scout all locations so we have item info available for notifications
             ThreadPool.QueueUserWorkItem(_ => PreScoutAllLocations());
 
+            // Restore goaled characters from DataStorage so cross-session goal tracking works
+            _ = GameUtility.RestoreGoaledCharsFromStorage();
+
             // Let the game know that we've connected
             ConnectionStateChanged?.Invoke(null, new ResultEventArgs { Value = true });
         }
@@ -411,14 +414,8 @@ namespace StS2AP
             if (slotData.ContainsKey("seeded")) settings.IsSeeded = Convert.ToBoolean(slotData["seeded"]);
             if (slotData.ContainsKey("shuffle_all_cards")) settings.ShouldShuffleAllCards = Convert.ToBoolean(slotData["shuffle_all_cards"]);
             if (slotData.ContainsKey("lock_characters")) settings.NoCharactersLocked = Convert.ToString(slotData["lock_characters"]) == "unlocked";
-
-            // Goal settings num_chars_goal of 0 means "all characters must complete"
-            if (slotData.ContainsKey("num_chars_goal"))
-                settings.NumCharsGoal = Convert.ToInt32(slotData["num_chars_goal"]);
-
-            // Total characters in this slot, needed when num_chars_goal == 0
-            if (slotData.ContainsKey("characters") && slotData["characters"] is System.Collections.IList charsList)
-                settings.TotalCharacters = charsList.Count;
+            if (slotData.ContainsKey("num_chars_goal")) settings.NumCharsGoal = Convert.ToInt32(slotData["num_chars_goal"]);
+            if (slotData.ContainsKey("characters") && slotData["characters"] is System.Collections.IList charsList) settings.TotalCharacters = charsList.Count;
 
             // And return it
             return settings;
