@@ -17,6 +17,7 @@ using System.Text;
 using System.Threading.Tasks;
 using static StS2AP.Data.CharTable;
 using StS2AP.UI;
+using StS2AP.Extensions;
 
 namespace StS2AP.Utils
 {
@@ -305,7 +306,7 @@ namespace StS2AP.Utils
             if (ArchipelagoClient.Progress.BossRewardsDistributed <= ArchipelagoProgress._maxBossRewards)
             {
                 // Grab the Character Name
-                var name = CurrentPlayer.Character.Title.GetFormattedText().Split().Last();
+                var name = CurrentPlayer.APName();
 
                 // Grab the check ID
                 var checkName = $"{name} Act {ArchipelagoClient.Progress.BossRewardsDistributed} Boss";
@@ -432,16 +433,26 @@ namespace StS2AP.Utils
 
             // Grab the check ID
             var checkName = $"{name} Press Start";
-            var _locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", checkName);
+            SendCheck(checkName);
 
-            if (!ArchipelagoClient.CheckedLocations.Contains(_locationId) && _locationId != -1 && ArchipelagoClient.ScoutedLocations.ContainsKey(_locationId))
+        }
+
+        public static void SendCheck(string checkName)
+        {
+            var _locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", checkName);
+            SendCheck(_locationId);
+        }
+
+        public static void SendCheck(long locationId)
+        {
+            if (!ArchipelagoClient.CheckedLocations.Contains(locationId) && locationId != -1 && ArchipelagoClient.ScoutedLocations.ContainsKey(locationId))
             {
                 // Check the location off and let the server know
-                ArchipelagoClient.CheckedLocations.Add(_locationId);
-                _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(_locationId);
+                ArchipelagoClient.CheckedLocations.Add(locationId);
+                _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(locationId);
 
-                LogUtility.Success($"Sent location check: {_locationId}");
-                NotificationUtility.ShowLocationChecked(_locationId);
+                LogUtility.Success($"Sent location check: {locationId}");
+                NotificationUtility.ShowLocationChecked(locationId);
             }
         }
 

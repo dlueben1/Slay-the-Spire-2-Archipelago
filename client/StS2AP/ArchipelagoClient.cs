@@ -417,6 +417,9 @@ namespace StS2AP
             if (slotData.ContainsKey("num_chars_goal")) settings.NumCharsGoal = Convert.ToInt32(slotData["num_chars_goal"]);
             if (slotData.ContainsKey("characters") && slotData["characters"] is System.Collections.IList charsList) settings.TotalCharacters = charsList.Count;
 
+            if (slotData.ContainsKey("campfire_sanity"))
+                settings.CampfireSanity = Convert.ToInt32(slotData["campfire_sanity"]) != 0;
+
             // And return it
             return settings;
         }

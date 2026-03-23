@@ -40,5 +40,17 @@ namespace StS2AP
             }
             return (APItemCharID)(Math.Abs(item.ItemId) / 10000L);
         }
+        public static bool Advancement(this ItemInfo info)
+        {
+            return (info.Flags & Archipelago.MultiClient.Net.Enums.ItemFlags.Advancement) > 0;
+        }
+        public static bool Useful(this ItemInfo info)
+        {
+            return (info.Flags & Archipelago.MultiClient.Net.Enums.ItemFlags.NeverExclude) > 0;
+        }
+        public static bool Trap(this ItemInfo info)
+        {
+            return (info.Flags & Archipelago.MultiClient.Net.Enums.ItemFlags.Trap) > 0;
+        }
     }
 }

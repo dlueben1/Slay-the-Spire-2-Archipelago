@@ -29,7 +29,7 @@ namespace StS2AP.Patches
                 GameUtility.CurrentPlayer = __result;
 
                 // Reset progress
-                ArchipelagoClient.Progress.ResetTrackers();
+                ArchipelagoClient.Progress.InitializeTrackers(__result);
 
                 // At start of game, listen to Combat Manager
                 CombatManager.Instance.CombatWon -= GameUtility.OnCombatWin;
