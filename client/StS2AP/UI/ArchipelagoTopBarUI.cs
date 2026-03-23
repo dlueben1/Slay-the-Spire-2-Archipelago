@@ -35,14 +35,14 @@ namespace StS2AP.UI
         /// <summary>
         /// Animation to play when focusing on the button
         /// </summary>
-        private static Tween? _focusTween;
+        static Tween? _oscillateTween;
 
         /// <summary>
-        /// Animation to play when unfocusing from the button
+        /// URI for local resources
         /// </summary>
-        private static Tween? _unfocusTween;
+        private const string FontBold = "res://themes/kreon_bold_glyph_space_two.tres";
 
-        static Tween? _oscillateTween;
+        private const int _countLabelPadding = 4;
 
         /// <summary>
         /// Injects the Archipelago button into the top bar next to the map button.
@@ -147,7 +147,7 @@ namespace StS2AP.UI
                 VerticalAlignment = VerticalAlignment.Center,
                 CustomMinimumSize = new Vector2(30, 24),
                 MouseFilter = Control.MouseFilterEnum.Ignore,
-                ZIndex = 1000
+                ZIndex = 1
             };
 
             // Set top-left anchoring
@@ -159,6 +159,22 @@ namespace StS2AP.UI
             label.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, 0.8f));
             label.AddThemeConstantOverride("shadow_offset_x", 2);
             label.AddThemeConstantOverride("shadow_offset_y", 2);
+            label.AddThemeColorOverride("font_outline_color", new Color(0f, 0f, 0f, 0.7529f));
+            label.AddThemeConstantOverride("outline_size", 10);
+
+            // Try and force the font to use the StS2 font
+            try
+            {
+                var font = GD.Load<Font>(FontBold);
+                if (font != null)
+                    label.AddThemeFontOverride("font", font);
+                else
+                    LogUtility.Warn($"Could not load header font: {FontBold}");
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Warn($"Failed to load reward header font: {ex.Message}");
+            }
 
             return label;
         }
@@ -173,7 +189,7 @@ namespace StS2AP.UI
             // Position label at bottom right corner of button using global position
             _countLabel.GlobalPosition = _apButton.GlobalPosition + new Vector2(
                 _apButton.Size.X - _countLabel.Size.X,
-                _apButton.Size.Y - _countLabel.Size.Y
+                _apButton.Size.Y - _countLabel.Size.Y - _countLabelPadding
             );
         }
 
@@ -248,8 +264,8 @@ namespace StS2AP.UI
             _oscillateTween?.Kill();
             _oscillateTween = _apButton.CreateTween();
             _oscillateTween.SetLoops();
-            _oscillateTween.TweenProperty(_apButton, "rotation", -0.12f, 0.8).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
-            _oscillateTween.TweenProperty(_apButton, "rotation", 0.12f, 0.8).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+            _oscillateTween.TweenProperty(_apButton, "rotation", -0.12f, 0.3).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+            _oscillateTween.TweenProperty(_apButton, "rotation", 0.12f, 0.3).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
         }
 
         public static void StopOscillation()
