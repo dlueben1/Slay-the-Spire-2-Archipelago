@@ -23,6 +23,11 @@ namespace StS2AP.UI
         private static Button? _apButton;
 
         /// <summary>
+        /// Label showing the reward count in the bottom right corner of the button
+        /// </summary>
+        private static Label? _countLabel;
+
+        /// <summary>
         /// Tooltip for the AP Button
         /// </summary>
         private static readonly HoverTip _hoverTip = new HoverTip(new LocString("static_hover_tips", "AP_BTN.title"), new LocString("static_hover_tips", "AP_BTN.description"));
@@ -76,6 +81,14 @@ namespace StS2AP.UI
                 int mapIndex = mapBtn.GetIndex();
                 container.MoveChild(_apButton, Math.Max(0, mapIndex));
 
+                // Create the count label as a child of topBar (not container) so it floats above
+                _countLabel = CreateCountLabel();
+                topBar.AddChild(_countLabel);
+
+                // Position the label in the bottom right corner of the button after layout
+                _apButton.Ready += () => UpdateCountLabelPosition();
+                _apButton.Resized += () => UpdateCountLabelPosition();
+
                 LogUtility.Success("Archipelago TopBar button injected successfully!");
             }
             catch (Exception ex)
@@ -115,12 +128,75 @@ namespace StS2AP.UI
                 button.Text = "AP";
             }
 
+            // Hook events
             button.Pressed += OnAPButtonPressed;
             button.FocusEntered += OnFocus;
             button.MouseEntered += OnFocus;
             button.FocusExited += OnUnfocus;
             button.MouseExited += OnUnfocus;
             return button;
+        }
+
+        private static Label CreateCountLabel()
+        {
+            var label = new Label
+            {
+                Name = "ArchipelagoCountLabel",
+                Text = "0",
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                CustomMinimumSize = new Vector2(30, 24),
+                MouseFilter = Control.MouseFilterEnum.Ignore,
+                ZIndex = 1000
+            };
+
+            // Set top-left anchoring
+            label.SetAnchorsPreset(Control.LayoutPreset.TopLeft);
+
+            // Style the label with larger font and make it visible
+            label.AddThemeFontSizeOverride("font_size", 24);
+            label.AddThemeColorOverride("font_color", new Color(1, 1, 1));
+            label.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, 0.8f));
+            label.AddThemeConstantOverride("shadow_offset_x", 2);
+            label.AddThemeConstantOverride("shadow_offset_y", 2);
+
+            return label;
+        }
+
+        /// <summary>
+        /// Updates the position of the count label to stay in the bottom right corner of the button
+        /// </summary>
+        private static void UpdateCountLabelPosition()
+        {
+            if (_apButton == null || _countLabel == null) return;
+
+            // Position label at bottom right corner of button using global position
+            _countLabel.GlobalPosition = _apButton.GlobalPosition + new Vector2(
+                _apButton.Size.X - _countLabel.Size.X,
+                _apButton.Size.Y - _countLabel.Size.Y
+            );
+        }
+
+        /// <summary>
+        /// Sets the count displayed on the label (1-3 digits)
+        /// </summary>
+        /// <param name="count">The count to display. If 0 or negative, the label is hidden.</param>
+        public static void SetCount(int count)
+        {
+            if (_countLabel == null) return;
+
+            if (count <= 0)
+            {
+                _countLabel.Text = "";
+                _countLabel.Visible = false;
+            }
+            else
+            {
+                // Clamp to 3 digits max (999)
+                _countLabel.Text = Math.Min(count, 999).ToString();
+                _countLabel.Visible = true;
+                UpdateCountLabelPosition();
+            }
         }
 
         /// <summary>
