@@ -45,12 +45,12 @@ namespace StS2AP.Models
         public void InitializeTrackers(Player player)
         {
             ResetTrackers();
-            var name = player.Character.Title.GetFormattedText().Split().Last();
+            var name = player.APName();
             for(int i = 1; i <= 3; i++)
             {
                 for(int j = 1; j <=2; j++)
                 {
-                    var checkName = $"{player.APName()} Act {i} Campfire {j}";
+                    var checkName = $"{name} Act {i} Campfire {j}";
                     var locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", checkName);
                     CampfiresChecked[checkName] = ArchipelagoClient.Session.Locations.AllLocationsChecked.Contains(locationId);
                     

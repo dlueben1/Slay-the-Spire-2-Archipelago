@@ -3,6 +3,7 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
+using StS2AP.Extensions;
 using StS2AP.Models;
 using System.Reflection;
 
@@ -51,8 +52,8 @@ namespace StS2AP.Patches
                 // We only want to inject for post-combat rewards
                 if(room is CombatRoom)
                 {
-                    // Prepare the Character name from it's Title (Note: There is possibly a better way to get the raw name without the "The " prefix)
-                    var name = player.Character.Title.GetFormattedText().Split().Last();
+                    // Prepare the Character name from it's Title
+                    var name = player.APName();
 
                     // Determine if a Relic Reward is being placed
                     var relicReward = __result.FirstOrDefault(r => r is RelicReward);
