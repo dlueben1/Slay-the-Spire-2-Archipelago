@@ -82,6 +82,11 @@ namespace StS2AP.Models
         /// </summary>
         public List<long> UsedItems = new List<long>();
 
+        /// <summary>
+        /// The number of items we've received from the multiworld that we haven't used yet. 
+        /// This is what gets displayed in the top bar UI.
+        /// </summary>
+        public int UnusedItemCount => AllReceivedItems.Count - UsedItems.Count;
 
         #endregion
     }

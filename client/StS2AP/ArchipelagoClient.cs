@@ -384,8 +384,8 @@ namespace StS2AP
                 default:
                     {
                         // adding reward to the reward screen
-                        //ArchipelagoRewardUI.AddReward(item);
-                        ArchipelagoClient.Progress.AllReceivedItems.Add(item);
+                        Progress.AllReceivedItems.Add(item);
+                        ArchipelagoTopBarUI.SetCount(Progress.UnusedItemCount);
                         break;
                     }
             }

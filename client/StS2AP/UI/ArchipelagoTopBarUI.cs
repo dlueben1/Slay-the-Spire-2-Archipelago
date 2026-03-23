@@ -142,7 +142,7 @@ namespace StS2AP.UI
             var label = new Label
             {
                 Name = "ArchipelagoCountLabel",
-                Text = "0",
+                Text = $"{ArchipelagoClient.Progress.UnusedItemCount}",
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
                 CustomMinimumSize = new Vector2(30, 24),
