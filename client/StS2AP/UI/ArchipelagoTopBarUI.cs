@@ -7,87 +7,113 @@ using MegaCrit.Sts2.Core.Nodes.HoverTips;
 using MegaCrit.Sts2.Core.Nodes.TopBar;
 using StS2AP.Utils;
 using System;
-using System.Collections.Generic;
-using System.IO;
 
 namespace StS2AP.UI
 {
     /// <summary>
-    /// class that creates and manages the Archipelago Reward Top Bar button.
+    /// Static class that creates and manages the Archipelago button in the game's top bar.
+    /// The button displays an icon with an item count badge and opens the
+    /// <see cref="ArchipelagoRewardUI"/> reward screen when pressed.
+    /// Injected into the top bar via the <see cref="TopBarInjectionPatch"/> Harmony postfix.
     /// </summary>
     public static class ArchipelagoTopBarUI
     {
-        /// <summary>
-        /// Reference to the AP Button Control
-        /// </summary>
-        private static Button? _apButton;
+        #region Node References
+
+        /// <summary>The injected Archipelago button placed inside the top bar container.</summary>
+        private static Button? _button;
 
         /// <summary>
-        /// Label showing the reward count in the bottom right corner of the button
+        /// Floating label that shows the unclaimed reward count in the bottom-right corner of the button.
+        /// Parented to the <see cref="NTopBar"/> (not the container) so it renders above sibling controls.
         /// </summary>
         private static Label? _countLabel;
 
-        /// <summary>
-        /// Tooltip for the AP Button
-        /// </summary>
-        private static readonly HoverTip _hoverTip = new HoverTip(new LocString("static_hover_tips", "AP_BTN.title"), new LocString("static_hover_tips", "AP_BTN.description"));
+        /// <summary>Active tween used for the oscillation (wiggle) animation on focus.</summary>
+        private static Tween? _oscillateTween;
 
-        /// <summary>
-        /// Animation to play when focusing on the button
-        /// </summary>
-        static Tween? _oscillateTween;
+        #endregion
 
-        /// <summary>
-        /// URI for local resources
-        /// </summary>
+        #region Constants
+
+        /// <summary>URI Resource path to the bold Kreon font used by the count label.</summary>
         private const string FontBold = "res://themes/kreon_bold_glyph_space_two.tres";
 
-        private const int _countLabelPadding = 4;
+        /// <summary>URI Resource path to the Archipelago icon texture displayed on the button.</summary>
+        private const string IconPath = "res://images/APIcon.png";
+
+        // Count label style
+        private const int CountFontSize    = 24;
+        private const int CountOutlineSize = 10;
+
+        /// <summary>Vertical padding subtracted when positioning the count label at the button's bottom edge.</summary>
+        private const int CountLabelPadding = 4;
+
+        // Oscillation animation parameters
+        private const float OscillationAngle    = 0.12f;
+        private const float OscillationDuration = 0.3f;
+        private const float SettleDuration      = 0.5f;
+
+        /// <summary>Maximum displayable count (clamped to three digits).</summary>
+        private const int MaxDisplayCount = 999;
+
+        /// <summary>Vertical offset between the button's bottom edge and the tooltip.</summary>
+        private const float TooltipOffsetY = 20f;
+
+        #endregion
+
+        #region Tooltip
+
+        /// <summary>Hover tooltip shown when the player focuses or hovers over the button.</summary>
+        private static readonly HoverTip _hoverTip = new HoverTip(
+            new LocString("static_hover_tips", "AP_BTN.title"),
+            new LocString("static_hover_tips", "AP_BTN.description"));
+
+        #endregion
+
+        #region Public API
 
         /// <summary>
         /// Injects the Archipelago button into the top bar next to the map button.
-        /// Called by the Harmony Postfix below.
+        /// Called by <see cref="TopBarInjectionPatch"/> each time the <see cref="NTopBar"/> becomes ready.
+        /// Safely no-ops if the button is already present in the same container.
         /// </summary>
+        /// <param name="topBar">The <see cref="NTopBar"/> instance that just entered the scene tree.</param>
         public static void InjectButton(NTopBar topBar)
         {
             try
             {
-                // Finding the Map Button to use as a position anchor
-                var mapBtn = FindChildByType<NTopBarMapButton>(topBar);
-                if (mapBtn == null)
+                // Locate the map button to use as a position anchor
+                var mapButton = FindChildByType<NTopBarMapButton>(topBar);
+                if (mapButton == null)
                 {
                     LogUtility.Info("[AP] Could not find MapButton anchor.");
                     return;
                 }
 
-                var container = mapBtn.GetParent() as Container;
+                var container = mapButton.GetParent() as Container;
                 if (container == null)
                 {
                     LogUtility.Error("[AP] MapButton parent is not a Container.");
                     return;
                 }
 
-                // fixing the issue of duplicate buttons if the TopBar reloads
-                if (_apButton != null && GodotObject.IsInstanceValid(_apButton) && _apButton.GetParent() == container)
-                {
+                // Guard against duplicate injection if the top bar reloads
+                if (_button != null && GodotObject.IsInstanceValid(_button) && _button.GetParent() == container)
                     return;
-                }
 
-                // Create and add the button to the layout
-                _apButton = CreateAPButton();
-                container.AddChild(_apButton);
+                // Create and insert the button immediately before the map button
+                _button = CreateButton();
+                container.AddChild(_button);
+                container.MoveChild(_button, Math.Max(0, mapButton.GetIndex()));
 
-                // Place it right next to the map button
-                int mapIndex = mapBtn.GetIndex();
-                container.MoveChild(_apButton, Math.Max(0, mapIndex));
-
-                // Create the count label as a child of topBar (not container) so it floats above
+                // Count label is parented to topBar (not the container) so it floats above siblings
                 _countLabel = CreateCountLabel();
                 topBar.AddChild(_countLabel);
 
-                // Position the label in the bottom right corner of the button after layout
-                _apButton.Ready += () => UpdateCountLabelPosition();
-                _apButton.Resized += () => UpdateCountLabelPosition();
+                // Keep the count label pinned after layout changes
+                _button.Ready   += () => RepositionCountLabel();
+                _button.Resized += () => RepositionCountLabel();
 
                 LogUtility.Success("Archipelago TopBar button injected successfully!");
             }
@@ -97,30 +123,61 @@ namespace StS2AP.UI
             }
         }
 
-        private static Button CreateAPButton()
+        /// <summary>
+        /// Updates the unclaimed reward count displayed on the button badge.
+        /// Hides the label when the count is zero or negative.
+        /// </summary>
+        /// <param name="count">The number of unclaimed rewards. Values above <see cref="MaxDisplayCount"/> are clamped.</param>
+        public static void SetCount(int count)
+        {
+            if (_countLabel == null) return;
+
+            if (count <= 0)
+            {
+                _countLabel.Text    = "";
+                _countLabel.Visible = false;
+            }
+            else
+            {
+                _countLabel.Text    = Math.Min(count, MaxDisplayCount).ToString();
+                _countLabel.Visible = true;
+                RepositionCountLabel();
+            }
+        }
+
+        #endregion
+
+        #region UI Construction
+
+        /// <summary>
+        /// Creates the Archipelago top bar button with a transparent background,
+        /// the AP icon texture, and all signal handlers wired up.
+        /// </summary>
+        /// <returns>A fully configured <see cref="Button"/> ready to be added to the top bar.</returns>
+        private static Button CreateButton()
         {
             var button = new Button
             {
-                Name = "ArchipelagoButton",
+                Name              = "ArchipelagoButton",
                 CustomMinimumSize = new Vector2(75, 50)
             };
 
-            // Remove background for all button states
+            // Remove the default theme background for every button state
             var emptyStyle = new StyleBoxEmpty();
-            button.AddThemeStyleboxOverride("normal", emptyStyle);
-            button.AddThemeStyleboxOverride("hover", emptyStyle);
-            button.AddThemeStyleboxOverride("pressed", emptyStyle);
-            button.AddThemeStyleboxOverride("focus", emptyStyle);
+            button.AddThemeStyleboxOverride("normal",   emptyStyle);
+            button.AddThemeStyleboxOverride("hover",    emptyStyle);
+            button.AddThemeStyleboxOverride("pressed",  emptyStyle);
+            button.AddThemeStyleboxOverride("focus",    emptyStyle);
             button.AddThemeStyleboxOverride("disabled", emptyStyle);
 
-            // Set pivot offset to the center for rotation animation around center
+            // Centre the pivot so the oscillation rotates around the middle
             button.PivotOffset = button.CustomMinimumSize / 2;
 
-            // Attempt to load the icon
-            var tex = GD.Load<Texture2D>("res://images/APIcon.png");
+            // Load the AP icon; fall back to text if the texture is missing
+            var tex = GD.Load<Texture2D>(IconPath);
             if (tex != null)
             {
-                button.Icon = tex;
+                button.Icon       = tex;
                 button.ExpandIcon = true;
             }
             else
@@ -128,193 +185,190 @@ namespace StS2AP.UI
                 button.Text = "AP";
             }
 
-            // Hook events
-            button.Pressed += OnAPButtonPressed;
-            button.FocusEntered += OnFocus;
-            button.MouseEntered += OnFocus;
-            button.FocusExited += OnUnfocus;
-            button.MouseExited += OnUnfocus;
+            // Wire signal handlers
+            button.Pressed      += OnButtonPressed;
+            button.FocusEntered += OnButtonFocused;
+            button.MouseEntered += OnButtonFocused;
+            button.FocusExited  += OnButtonUnfocused;
+            button.MouseExited  += OnButtonUnfocused;
+
             return button;
         }
 
+        /// <summary>
+        /// Creates the floating count badge label styled with the game's bold font,
+        /// white text, a dark outline, and a drop shadow for readability.
+        /// </summary>
+        /// <returns>A configured <see cref="Label"/> showing the current <see cref="ArchipelagoClient.Progress.UnusedItemCount"/>.</returns>
         private static Label CreateCountLabel()
         {
             var label = new Label
             {
-                Name = "ArchipelagoCountLabel",
-                Text = $"{ArchipelagoClient.Progress.UnusedItemCount}",
+                Name                = "ArchipelagoCountLabel",
+                Text                = $"{ArchipelagoClient.Progress.UnusedItemCount}",
                 HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                CustomMinimumSize = new Vector2(30, 24),
-                MouseFilter = Control.MouseFilterEnum.Ignore,
-                ZIndex = 1
+                VerticalAlignment   = VerticalAlignment.Center,
+                CustomMinimumSize   = new Vector2(30, 24),
+                MouseFilter         = Control.MouseFilterEnum.Ignore,
+                ZIndex              = 1
             };
 
-            // Set top-left anchoring
             label.SetAnchorsPreset(Control.LayoutPreset.TopLeft);
 
-            // Style the label with larger font and make it visible
-            label.AddThemeFontSizeOverride("font_size", 24);
-            label.AddThemeColorOverride("font_color", new Color(1, 1, 1));
-            label.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, 0.8f));
+            // Font style
+            label.AddThemeFontSizeOverride("font_size", CountFontSize);
+            label.AddThemeColorOverride("font_color",         new Color(1f, 1f, 1f));
+            label.AddThemeColorOverride("font_shadow_color",  new Color(0f, 0f, 0f, 0.8f));
             label.AddThemeConstantOverride("shadow_offset_x", 2);
             label.AddThemeConstantOverride("shadow_offset_y", 2);
             label.AddThemeColorOverride("font_outline_color", new Color(0f, 0f, 0f, 0.7529f));
-            label.AddThemeConstantOverride("outline_size", 10);
+            label.AddThemeConstantOverride("outline_size",    CountOutlineSize);
 
-            // Try and force the font to use the StS2 font
+            // Attempt to use the in-game bold font
             try
             {
                 var font = GD.Load<Font>(FontBold);
                 if (font != null)
                     label.AddThemeFontOverride("font", font);
                 else
-                    LogUtility.Warn($"Could not load header font: {FontBold}");
+                    LogUtility.Warn($"Could not load unused item count label font: {FontBold}");
             }
             catch (Exception ex)
             {
-                LogUtility.Warn($"Failed to load reward header font: {ex.Message}");
+                LogUtility.Warn($"Failed to load unused item count label font: {ex.Message}");
             }
 
             return label;
         }
 
-        /// <summary>
-        /// Updates the position of the count label to stay in the bottom right corner of the button
-        /// </summary>
-        private static void UpdateCountLabelPosition()
-        {
-            if (_apButton == null || _countLabel == null) return;
+        #endregion
 
-            // Position label at bottom right corner of button using global position
-            _countLabel.GlobalPosition = _apButton.GlobalPosition + new Vector2(
-                _apButton.Size.X - _countLabel.Size.X,
-                _apButton.Size.Y - _countLabel.Size.Y - _countLabelPadding
-            );
+        #region Event Handlers
+
+        /// <summary>
+        /// Handles the button press by opening the <see cref="ArchipelagoRewardUI"/> reward screen.
+        /// </summary>
+        private static void OnButtonPressed()
+        {
+            LogUtility.Info("Opening Archipelago Rewards UI...");
+            ArchipelagoRewardUI.ShowRewards();
         }
 
         /// <summary>
-        /// Sets the count displayed on the label (1-3 digits)
+        /// Called when the button gains keyboard focus or the mouse enters.
+        /// Shows the hover tooltip and starts the wiggle animation.
         /// </summary>
-        /// <param name="count">The count to display. If 0 or negative, the label is hidden.</param>
-        public static void SetCount(int count)
+        private static void OnButtonFocused()
         {
-            if (_countLabel == null) return;
+            if (_button == null) return;
 
-            if (count <= 0)
-            {
-                _countLabel.Text = "";
-                _countLabel.Visible = false;
-            }
-            else
-            {
-                // Clamp to 3 digits max (999)
-                _countLabel.Text = Math.Min(count, 999).ToString();
-                _countLabel.Visible = true;
-                UpdateCountLabelPosition();
-            }
-        }
-
-        /// <summary>
-        /// Show tooltip and play an animation on focus
-        /// </summary>
-        private static void OnFocus()
-        {
-            // Null check
-            if(_apButton == null) return;
-
-            // Show the tooltip
+            // Show the tooltip anchored below the button
             try
             {
-                NHoverTipSet nHoverTipSet = NHoverTipSet.CreateAndShow(_apButton, _hoverTip);
-                nHoverTipSet.GlobalPosition = _apButton.GlobalPosition + new Vector2(_apButton.Size.X - nHoverTipSet.Size.X, _apButton.Size.Y + 20f);
+                var tipSet = NHoverTipSet.CreateAndShow(_button, _hoverTip);
+                tipSet.GlobalPosition = _button.GlobalPosition + new Vector2(
+                    _button.Size.X - tipSet.Size.X,
+                    _button.Size.Y + TooltipOffsetY);
             }
             catch (Exception ex)
             {
                 LogUtility.Error($"Failed to show tooltip: {ex.Message}");
             }
 
-            // Start animating
             StartOscillation();
         }
 
         /// <summary>
-        /// Hide tooltip and stop animating on exit focus
+        /// Called when the button loses keyboard focus or the mouse exits.
+        /// Hides the hover tooltip and settles the rotation back to zero.
         /// </summary>
-        private static void OnUnfocus()
+        private static void OnButtonUnfocused()
         {
-            if(_apButton == null) return;
+            if (_button == null) return;
 
-            // Hide the tooltip
             try
             {
-                NHoverTipSet.Remove(_apButton);
+                NHoverTipSet.Remove(_button);
             }
             catch (Exception ex)
             {
                 LogUtility.Error($"Failed to hide tooltip: {ex.Message}");
             }
 
-            // Stop animating
             StopOscillation();
         }
 
-        public static void StartOscillation()
-        {
-            _oscillateTween?.Kill();
-            _oscillateTween = _apButton.CreateTween();
-            _oscillateTween.SetLoops();
-            _oscillateTween.TweenProperty(_apButton, "rotation", -0.12f, 0.3).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
-            _oscillateTween.TweenProperty(_apButton, "rotation", 0.12f, 0.3).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
-        }
+        #endregion
 
-        public static void StopOscillation()
+        #region Animations
+
+        /// <summary>
+        /// Starts an infinite sine-wave oscillation (wiggle) on the button's rotation.
+        /// Any existing oscillation tween is killed first.
+        /// </summary>
+        private static void StartOscillation()
         {
             _oscillateTween?.Kill();
-            _oscillateTween = _apButton.CreateTween();
-            _oscillateTween.TweenProperty(_apButton, "rotation", 0f, 0.5).SetTrans(Tween.TransitionType.Spring).SetEase(Tween.EaseType.Out);
+            _oscillateTween = _button!.CreateTween();
+            _oscillateTween.SetLoops();
+            _oscillateTween.TweenProperty(_button, "rotation", -OscillationAngle, OscillationDuration)
+                .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+            _oscillateTween.TweenProperty(_button, "rotation", OscillationAngle, OscillationDuration)
+                .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
         }
 
         /// <summary>
-        /// Opens the Reward List
+        /// Stops the oscillation and smoothly returns the button's rotation to zero
+        /// using a spring ease-out transition.
         /// </summary>
-        private static void OnAPButtonPressed()
+        private static void StopOscillation()
         {
-            LogUtility.Info("Opening Archipelago Rewards UI...");
-
-            // This call now handles its own injection if the UI is missing!
-            ArchipelagoRewardUI.ShowRewards();
+            _oscillateTween?.Kill();
+            _oscillateTween = _button!.CreateTween();
+            _oscillateTween.TweenProperty(_button, "rotation", 0f, SettleDuration)
+                .SetTrans(Tween.TransitionType.Spring).SetEase(Tween.EaseType.Out);
         }
 
-        private static Texture2D? LoadExternalTexture(string relativePath)
+        #endregion
+
+        #region Helpers
+
+        /// <summary>
+        /// Repositions the count label so it sits in the bottom-right corner of the button.
+        /// Uses global coordinates so the label tracks correctly regardless of container layout.
+        /// </summary>
+        private static void RepositionCountLabel()
         {
-            string basePath = OS.GetExecutablePath().GetBaseDir();
-            string fullPath = Path.Combine(basePath, relativePath);
+            if (_button == null || _countLabel == null) return;
 
-            if (!File.Exists(fullPath))
-            {
-                LogUtility.Info($"[AP] Texture not found at: {fullPath}");
-                return null;
-            }
-
-            var img = Image.LoadFromFile(fullPath);
-            return ImageTexture.CreateFromImage(img);
+            _countLabel.GlobalPosition = _button.GlobalPosition + new Vector2(
+                _button.Size.X - _countLabel.Size.X,
+                _button.Size.Y - _countLabel.Size.Y - CountLabelPadding);
         }
 
+        /// <summary>
+        /// Recursively searches a node's children for the first descendant of type <typeparamref name="T"/>.
+        /// </summary>
+        /// <typeparam name="T">The <see cref="Node"/> subtype to locate.</typeparam>
+        /// <param name="parent">The root node to begin the search from.</param>
+        /// <returns>The first matching descendant, or <c>null</c> if none is found.</returns>
         private static T? FindChildByType<T>(Node parent) where T : Node
         {
             foreach (var child in parent.GetChildren())
             {
-                if (child is T typedChild) return typedChild;
+                if (child is T match) return match;
                 var result = FindChildByType<T>(child);
                 if (result != null) return result;
             }
             return null;
         }
+
+        #endregion
     }
 
     /// <summary>
-    /// Harmony patch to trigger the TopBar UI injection.
+    /// Harmony postfix patch on <see cref="NTopBar._Ready"/> that triggers
+    /// <see cref="ArchipelagoTopBarUI.InjectButton"/> each time the top bar enters the scene tree.
     /// </summary>
     [HarmonyPatch(typeof(NTopBar), "_Ready")]
     public static class TopBarInjectionPatch
