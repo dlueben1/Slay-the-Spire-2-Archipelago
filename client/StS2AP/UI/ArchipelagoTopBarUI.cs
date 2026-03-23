@@ -1,6 +1,9 @@
 using Godot;
 using HarmonyLib;
+using MegaCrit.Sts2.Core.HoverTips;
+using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
+using MegaCrit.Sts2.Core.Nodes.HoverTips;
 using MegaCrit.Sts2.Core.Nodes.TopBar;
 using StS2AP.Utils;
 using System;
@@ -14,7 +17,27 @@ namespace StS2AP.UI
     /// </summary>
     public static class ArchipelagoTopBarUI
     {
+        /// <summary>
+        /// Reference to the AP Button Control
+        /// </summary>
         private static Button? _apButton;
+
+        /// <summary>
+        /// Tooltip for the AP Button
+        /// </summary>
+        private static readonly HoverTip _hoverTip = new HoverTip(new LocString("static_hover_tips", "AP_BTN.title"), new LocString("static_hover_tips", "AP_BTN.description"));
+
+        /// <summary>
+        /// Animation to play when focusing on the button
+        /// </summary>
+        private static Tween? _focusTween;
+
+        /// <summary>
+        /// Animation to play when unfocusing from the button
+        /// </summary>
+        private static Tween? _unfocusTween;
+
+        static Tween? _oscillateTween;
 
         /// <summary>
         /// Injects the Archipelago button into the top bar next to the map button.
@@ -66,12 +89,22 @@ namespace StS2AP.UI
             var button = new Button
             {
                 Name = "ArchipelagoButton",
-                CustomMinimumSize = new Vector2(50, 50)
+                CustomMinimumSize = new Vector2(75, 50)
             };
+
+            // Remove background for all button states
+            var emptyStyle = new StyleBoxEmpty();
+            button.AddThemeStyleboxOverride("normal", emptyStyle);
+            button.AddThemeStyleboxOverride("hover", emptyStyle);
+            button.AddThemeStyleboxOverride("pressed", emptyStyle);
+            button.AddThemeStyleboxOverride("focus", emptyStyle);
+            button.AddThemeStyleboxOverride("disabled", emptyStyle);
+
+            // Set pivot offset to the center for rotation animation around center
+            button.PivotOffset = button.CustomMinimumSize / 2;
 
             // Attempt to load the icon
             var tex = GD.Load<Texture2D>("res://images/APIcon.png");
-
             if (tex != null)
             {
                 button.Icon = tex;
@@ -83,7 +116,71 @@ namespace StS2AP.UI
             }
 
             button.Pressed += OnAPButtonPressed;
+            button.FocusEntered += OnFocus;
+            button.MouseEntered += OnFocus;
+            button.FocusExited += OnUnfocus;
+            button.MouseExited += OnUnfocus;
             return button;
+        }
+
+        /// <summary>
+        /// Show tooltip and play an animation on focus
+        /// </summary>
+        private static void OnFocus()
+        {
+            // Null check
+            if(_apButton == null) return;
+
+            // Show the tooltip
+            try
+            {
+                NHoverTipSet nHoverTipSet = NHoverTipSet.CreateAndShow(_apButton, _hoverTip);
+                nHoverTipSet.GlobalPosition = _apButton.GlobalPosition + new Vector2(_apButton.Size.X - nHoverTipSet.Size.X, _apButton.Size.Y + 20f);
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Error($"Failed to show tooltip: {ex.Message}");
+            }
+
+            // Start animating
+            StartOscillation();
+        }
+
+        /// <summary>
+        /// Hide tooltip and stop animating on exit focus
+        /// </summary>
+        private static void OnUnfocus()
+        {
+            if(_apButton == null) return;
+
+            // Hide the tooltip
+            try
+            {
+                NHoverTipSet.Remove(_apButton);
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Error($"Failed to hide tooltip: {ex.Message}");
+            }
+
+            // Stop animating
+            StopOscillation();
+        }
+
+        public static void StartOscillation()
+        {
+            _oscillateTween?.Kill();
+            _oscillateTween = _apButton.CreateTween();
+            _oscillateTween.SetLoops();
+            _oscillateTween.TweenProperty(_apButton, "rotation", -0.12f, 0.8).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+            _oscillateTween.TweenProperty(_apButton, "rotation", 0.12f, 0.8).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+        }
+
+        public static void StopOscillation()
+        {
+            _oscillateTween?.Kill();
+            _oscillateTween = _apButton.CreateTween();
+            _oscillateTween.TweenProperty(_apButton, "rotation", 0f, 0.5).SetTrans(Tween.TransitionType.Spring).SetEase(Tween.EaseType.Out);
         }
 
         /// <summary>
@@ -92,8 +189,6 @@ namespace StS2AP.UI
         private static void OnAPButtonPressed()
         {
             LogUtility.Info("Opening Archipelago Rewards UI...");
-            // Simple dummy rewards for testing visuals (IGNORE)
-            // var dummyRewards = new List<string> { "Received: Shuriken", "Received: 50 Gold" };
 
             // This call now handles its own injection if the UI is missing!
             ArchipelagoRewardUI.ShowRewards();
