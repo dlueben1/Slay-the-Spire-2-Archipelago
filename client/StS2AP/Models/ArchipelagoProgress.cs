@@ -1,6 +1,7 @@
 ﻿using Archipelago.MultiClient.Net.Models;
 using MegaCrit.Sts2.Core.Entities.Players;
 using StS2AP.Extensions;
+using StS2AP.Utils;
 
 
 namespace StS2AP.Models
@@ -86,7 +87,7 @@ namespace StS2AP.Models
         /// The number of items we've received from the multiworld that we haven't used yet. 
         /// This is what gets displayed in the top bar UI.
         /// </summary>
-        public int UnusedItemCount => AllReceivedItems.Count - UsedItems.Count;
+        public int UnusedItemCount => AllReceivedItems.Where(item => item.GetStSCharID() == GameUtility.CurrentCharacterID).Count() - UsedItems.Count;
 
         #endregion
     }
