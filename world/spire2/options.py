@@ -157,8 +157,7 @@ class ShopSanityCosts(Choice):
     default = 2
 
 class GoldSanity(Toggle):
-    """Whether to enable shuffling gold rewards into the multiworld. Adds 27 locations per character"""
-    visibility = Visibility.none
+    """Whether to enable shuffling gold rewards into the multiworld. Adds 20 locations per character"""
     display_name = "Gold Sanity"
     default = 0
 
