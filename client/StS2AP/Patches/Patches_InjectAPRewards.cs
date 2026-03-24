@@ -13,24 +13,8 @@ namespace StS2AP.Patches
     /// Patches needed to support replacing Card/Relic/etc. Rewards with Archipelago Locations,
     /// and then sending those locations to other players when claimed.
     /// </summary>
-    public static class Patches_SendAPReward
+    public static class Patches_InjectAPRewards
     {
-        /// <summary>
-        /// Disables the tutorial rewards - when the game is first played, the rewards you get are fixed rather than dynamic.
-        /// </summary>
-        [HarmonyPatch(typeof(RewardsSet), "TryGenerateTutorialRewards")]
-        public class TurnOffTutorialRewardsDuringArchipelagoPatch
-        {
-            /// <summary>
-            /// Skip the original function and set the result to false
-            /// </summary>
-            static bool Prefix(ref bool __result, Player player, AbstractRoom room)
-            {
-                __result = false;
-                return false;
-            }
-        }
-
         /// <summary>
         /// Patches RewardsSet.GenerateRewardsFor to replace or inject Archipelago Location rewards.
         /// </summary>
