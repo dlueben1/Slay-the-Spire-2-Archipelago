@@ -1,6 +1,7 @@
 ﻿using Archipelago.MultiClient.Net.Models;
 using MegaCrit.Sts2.Core.Entities.Players;
 using StS2AP.Extensions;
+using StS2AP.Utils;
 
 
 namespace StS2AP.Models
@@ -45,12 +46,12 @@ namespace StS2AP.Models
         public void InitializeTrackers(Player player)
         {
             ResetTrackers();
-            var name = player.Character.Title.GetFormattedText().Split().Last();
+            var name = player.APName();
             for(int i = 1; i <= 3; i++)
             {
                 for(int j = 1; j <=2; j++)
                 {
-                    var checkName = $"{player.APName()} Act {i} Campfire {j}";
+                    var checkName = $"{name} Act {i} Campfire {j}";
                     var locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", checkName);
                     CampfiresChecked[checkName] = ArchipelagoClient.Session.Locations.AllLocationsChecked.Contains(locationId);
                     
@@ -82,6 +83,11 @@ namespace StS2AP.Models
         /// </summary>
         public List<long> UsedItems = new List<long>();
 
+        /// <summary>
+        /// The number of items we've received from the multiworld that we haven't used yet. 
+        /// This is what gets displayed in the top bar UI.
+        /// </summary>
+        public int UnusedItemCount => AllReceivedItems.Where(item => item.GetStSCharID() == GameUtility.CurrentCharacterID).Count() - UsedItems.Count;
 
         #endregion
     }

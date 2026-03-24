@@ -55,7 +55,7 @@ namespace StS2AP.Utils
                     LogUtility.Warn("Attempted to get CurrentCharacterID but there is no active player");
                     return null;
                 }
-                var charName = CurrentPlayer.Character.Title.GetFormattedText().Split().Last();
+                var charName = CurrentPlayer.APName();
                 return charName switch
                 {
                     "Ironclad" => APItemCharID.Ironclad,
@@ -382,7 +382,7 @@ namespace StS2AP.Utils
                     return;
                 }
 
-                var charName = CurrentPlayer.Character.Title.GetFormattedText().Split().Last();
+                var charName = CurrentPlayer.APName();
                 const string storageKey = "StS2AP_GoaledChars";
 
                 // Add to local cache HashSet.Add returns false if already present
@@ -429,7 +429,7 @@ namespace StS2AP.Utils
         public static void TrySendPressStartCheck()
         {
             // Grab the Character Name
-            var name = GameUtility.CurrentPlayer.Character.Title.GetFormattedText().Split().Last();
+            var name = GameUtility.CurrentPlayer.APName();
 
             // Grab the check ID
             var checkName = $"{name} Press Start";

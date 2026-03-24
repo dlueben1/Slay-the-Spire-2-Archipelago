@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
+using StS2AP.Extensions;
 using StS2AP.Utils;
 using System;
 using System.Collections.Generic;
@@ -88,7 +89,7 @@ namespace StS2AP.Patches
 
             // Create the Location/Check name to send
             var floorValue = floorProperty.GetValue(runState);
-            var name = GameUtility.CurrentPlayer.Character.Title.GetFormattedText().Split().Last();
+            var name = GameUtility.CurrentPlayer.APName();
             var locationName = $"{name} Reached Floor {floorValue}";
 
             LogUtility.Debug($"Attempting to send Archipelago location check: {locationName}");

@@ -9,9 +9,13 @@ namespace StS2AP.Extensions
 {
     public static class PlayerExtensions
     {
+        /// <summary>
+        /// Returns the name of the character, as their name appears in the Archipelago's APWorld.
+        /// </summary>
+        /// <example>An Ironclad instance returns "Ironclad", because items for that character include "Ironclad Card Reward", "Ironclad Relic", etc.</example>
         public static string APName(this Player player)
         {
-            return player.Character.Title.GetFormattedText().Split().Last();
+            return player.Character.GetType().Name;
         }
     }
 }

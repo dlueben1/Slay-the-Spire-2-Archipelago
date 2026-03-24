@@ -659,6 +659,9 @@ namespace StS2AP.UI
                 _remainingRewards--;
                 UpdateProceedButton();
 
+                // Update the unused item count on the top bar
+                ArchipelagoTopBarUI.SetCount(ArchipelagoClient.Progress.UnusedItemCount);
+
                 // Auto-hide once all rewards are dismissed
                 if (_remainingRewards <= 0)
                     Hide();
