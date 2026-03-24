@@ -420,6 +420,9 @@ namespace StS2AP
             if (slotData.ContainsKey("campfire_sanity"))
                 settings.CampfireSanity = Convert.ToInt32(slotData["campfire_sanity"]) != 0;
 
+            if (slotData.ContainsKey("gold_sanity"))
+                settings.GoldSanity = Convert.ToInt32(slotData["gold_sanity"]) != 0;
+
             // And return it
             return settings;
         }

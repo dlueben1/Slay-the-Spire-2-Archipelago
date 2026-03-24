@@ -21,6 +21,12 @@ namespace StS2AP.Models
         /// </summary>
         public const int _maxRelicRewards = 10;
 
+        /// <summary>
+        /// The maximum possible number of Gold Rewards that a player could have replaced with AP locations.
+        /// Only used if GoldSanity is on, but this is the upper bound on how many gold rewards we would replace even if it is.
+        /// </summary>
+        public const int _maxGoldRewards = 20;
+
         public const int _maxBossRewards = 3;
 
         #region Per-Run Tracker
@@ -39,6 +45,12 @@ namespace StS2AP.Models
         /// </summary>
         public int RelicRewardsAttempted { get; set; } = 0;
 
+        /// <summary>
+        /// Keeps track of the number of times the game has tried to provide a Gold Reward.
+        /// It's only used if the player has GoldSanity on.
+        /// </summary>
+        public int GoldRewardsAttempted { get; set; } = 0;
+
         public int BossRewardsDistributed { get; set; } = 0;
 
         public Dictionary<string, bool> CampfiresChecked { get; set; } = new Dictionary<string, bool>();
@@ -54,7 +66,6 @@ namespace StS2AP.Models
                     var checkName = $"{name} Act {i} Campfire {j}";
                     var locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", checkName);
                     CampfiresChecked[checkName] = ArchipelagoClient.Session.Locations.AllLocationsChecked.Contains(locationId);
-                    
                 }
             }
         }
@@ -65,6 +76,7 @@ namespace StS2AP.Models
             RareCardRewardsAttempted = 0;
             BossRewardsDistributed = 0;
             RelicRewardsAttempted = 0;
+            GoldRewardsAttempted = 0;
             CampfiresChecked.Clear();
         }
 
