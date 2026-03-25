@@ -27,6 +27,11 @@ namespace StS2AP.Patches
             private static readonly PropertyInfo? s_optionsProp = typeof(CardReward).GetProperty("Options", BindingFlags.Instance | BindingFlags.NonPublic);
 
             /// <summary>
+            /// Reflection needed to read `_wasGoldStolenBack` off of a `GoldReward`
+            /// </summary>
+            private static readonly FieldInfo? s_wasGoldStolenBackField = typeof(GoldReward).GetField("_wasGoldStolenBack", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            /// <summary>
             /// Inject Archipelago Rewards into the Loot Screen.
             /// I'm fairly certain I can write this with less nesting, but I'm scared to use `return` wrong on a HarmonyPatch lol
             /// </summary>
@@ -91,7 +96,8 @@ namespace StS2AP.Patches
 
                     // If we're in GoldSanity, we want to replace the Gold Reward with an AP Location reward
                     var goldReward = __result.FirstOrDefault(r => r is GoldReward);
-                    if (goldReward != null && ArchipelagoClient.Settings.GoldSanity)
+                    var wasGoldStolenBack = goldReward != null && s_wasGoldStolenBackField?.GetValue(goldReward) is true;
+                    if (goldReward != null && ArchipelagoClient.Settings.GoldSanity && !wasGoldStolenBack)
                     {
                         // Is this a boss gold reward? (It's a different location/check)
                         if (room.RoomType == RoomType.Boss)
