@@ -93,13 +93,24 @@ namespace StS2AP.Patches
                     var goldReward = __result.FirstOrDefault(r => r is GoldReward);
                     if (goldReward != null && ArchipelagoClient.Settings.GoldSanity)
                     {
-                        // Have we already given out enough gold rewards?
-                        ArchipelagoClient.Progress.GoldRewardsAttempted++;
-                        if (ArchipelagoClient.Progress.GoldRewardsAttempted <= ArchipelagoProgress._maxGoldRewards)
+                        // Is this a boss gold reward? (It's a different location/check)
+                        if (room.RoomType == RoomType.Boss)
                         {
                             // Replace this reward with an AP Location reward
                             __result.Remove(goldReward);
-                            __result.Add(new ArchipelagoReward($"{name} Combat Gold {ArchipelagoClient.Progress.GoldRewardsAttempted}"));
+                            __result.Add(new ArchipelagoReward($"{name} Boss Gold {ArchipelagoClient.Progress.BossRewardsDistributed}"));
+                        }
+                        // Otherwise, see if it's one of the first twenty gold rewards, and if so then replace it with an AP item
+                        else
+                        {
+                            ArchipelagoClient.Progress.GoldRewardsAttempted++;
+                            // Have we already given out enough gold rewards?
+                            if (ArchipelagoClient.Progress.GoldRewardsAttempted <= ArchipelagoProgress._maxGoldRewards)
+                            {
+                                // Replace this reward with an AP Location reward
+                                __result.Remove(goldReward);
+                                __result.Add(new ArchipelagoReward($"{name} Combat Gold {ArchipelagoClient.Progress.GoldRewardsAttempted}"));
+                            }
                         }
                     }
                 }
