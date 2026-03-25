@@ -13,24 +13,8 @@ namespace StS2AP.Patches
     /// Patches needed to support replacing Card/Relic/etc. Rewards with Archipelago Locations,
     /// and then sending those locations to other players when claimed.
     /// </summary>
-    public static class Patches_SendAPReward
+    public static class Patches_InjectAPRewards
     {
-        /// <summary>
-        /// Disables the tutorial rewards - when the game is first played, the rewards you get are fixed rather than dynamic.
-        /// </summary>
-        [HarmonyPatch(typeof(RewardsSet), "TryGenerateTutorialRewards")]
-        public class TurnOffTutorialRewardsDuringArchipelagoPatch
-        {
-            /// <summary>
-            /// Skip the original function and set the result to false
-            /// </summary>
-            static bool Prefix(ref bool __result, Player player, AbstractRoom room)
-            {
-                __result = false;
-                return false;
-            }
-        }
-
         /// <summary>
         /// Patches RewardsSet.GenerateRewardsFor to replace or inject Archipelago Location rewards.
         /// </summary>
@@ -43,6 +27,11 @@ namespace StS2AP.Patches
             private static readonly PropertyInfo? s_optionsProp = typeof(CardReward).GetProperty("Options", BindingFlags.Instance | BindingFlags.NonPublic);
 
             /// <summary>
+            /// Reflection needed to read `_wasGoldStolenBack` off of a `GoldReward`
+            /// </summary>
+            private static readonly FieldInfo? s_wasGoldStolenBackField = typeof(GoldReward).GetField("_wasGoldStolenBack", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            /// <summary>
             /// Inject Archipelago Rewards into the Loot Screen.
             /// I'm fairly certain I can write this with less nesting, but I'm scared to use `return` wrong on a HarmonyPatch lol
             /// </summary>
@@ -50,7 +39,7 @@ namespace StS2AP.Patches
             static void Postfix(ref List<Reward> __result, Player player, AbstractRoom room)
             {
                 // We only want to inject for post-combat rewards
-                if(room is CombatRoom)
+                if (room is CombatRoom)
                 {
                     // Prepare the Character name from it's Title
                     var name = player.APName();
@@ -61,7 +50,7 @@ namespace StS2AP.Patches
                     {
                         // Have we already given out enough relic rewards?
                         ArchipelagoClient.Progress.RelicRewardsAttempted++;
-                        if(ArchipelagoClient.Progress.RelicRewardsAttempted <= ArchipelagoProgress._maxRelicRewards)
+                        if (ArchipelagoClient.Progress.RelicRewardsAttempted <= ArchipelagoProgress._maxRelicRewards)
                         {
                             // Replace this reward with an AP Location reward
                             __result.Remove(relicReward);
@@ -78,7 +67,7 @@ namespace StS2AP.Patches
                         bool isRare = cardOpts.RarityOdds == CardRarityOddsType.BossEncounter;
 
                         // If it's rare, then we always want to replace it (only happens twice, Act 1 & 2 Boss)
-                        if(isRare)
+                        if (isRare)
                         {
                             // Replace this reward with an AP Location reward
                             ArchipelagoClient.Progress.RareCardRewardsAttempted++;
@@ -101,6 +90,32 @@ namespace StS2AP.Patches
                                     : (ArchipelagoClient.Progress.CardRewardsAttempted + 1) / 2;
                                 __result.Remove(cardReward);
                                 __result.Add(new ArchipelagoReward($"{name} Card Reward {rewardNumber}"));
+                            }
+                        }
+                    }
+
+                    // If we're in GoldSanity, we want to replace the Gold Reward with an AP Location reward
+                    var goldReward = __result.FirstOrDefault(r => r is GoldReward);
+                    var wasGoldStolenBack = goldReward != null && s_wasGoldStolenBackField?.GetValue(goldReward) is true;
+                    if (goldReward != null && ArchipelagoClient.Settings.GoldSanity && !wasGoldStolenBack)
+                    {
+                        // Is this a boss gold reward? (It's a different location/check)
+                        if (room.RoomType == RoomType.Boss)
+                        {
+                            // Replace this reward with an AP Location reward
+                            __result.Remove(goldReward);
+                            __result.Add(new ArchipelagoReward($"{name} Boss Gold {ArchipelagoClient.Progress.BossRewardsDistributed}"));
+                        }
+                        // Otherwise, see if it's one of the first twenty gold rewards, and if so then replace it with an AP item
+                        else
+                        {
+                            ArchipelagoClient.Progress.GoldRewardsAttempted++;
+                            // Have we already given out enough gold rewards?
+                            if (ArchipelagoClient.Progress.GoldRewardsAttempted <= ArchipelagoProgress._maxGoldRewards)
+                            {
+                                // Replace this reward with an AP Location reward
+                                __result.Remove(goldReward);
+                                __result.Add(new ArchipelagoReward($"{name} Combat Gold {ArchipelagoClient.Progress.GoldRewardsAttempted}"));
                             }
                         }
                     }
