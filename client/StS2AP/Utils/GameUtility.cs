@@ -107,8 +107,11 @@ namespace StS2AP.Utils
         }
 
         /// <summary>
-        /// Grants a random relic to the current player
+        /// Grants a random relic to the current player.
+        /// This was previously used for granting a relic on the reward screen, but that was before we added `GrantRelic(RelicModel relicModel)`, 
+        /// which should be used instead since the relic should've been pulled from the RelicFactory.
         /// </summary>
+        [Obsolete("GrantRelic() without parameters is likely deprecated, but we'll keep it for now as the code is changing often. Use GrantRelic(RelicModel relicModel) instead to grant a specific pre-assigned relic.")]
         public static async Task GrantRelic()
         {
             if (CurrentPlayer == null)
@@ -130,27 +133,29 @@ namespace StS2AP.Utils
         }
 
         /// <summary>
-        /// Grants a random boss relic to the current player
+        /// Grants a specific pre-assigned relic to the current player.
+        /// Used when the relic was already pulled from the RelicFactory during reward screen creation.
         /// </summary>
-        // public static async Task GrantBossRelic()
-        // {
-        //     if (CurrentPlayer == null)
-        //     {
-        //         LogUtility.Warn("Cannot grant boss relic: no active player (not in a run)");
-        //         return;
-        //     }
+        /// <param name="relicModel">The pre-assigned relic model to grant.</param>
+        public static async Task GrantRelic(RelicModel relicModel)
+        {
+            if (CurrentPlayer == null)
+            {
+                LogUtility.Warn("Cannot grant relic: no active player (not in a run)");
+                return;
+            }
 
-        //     try
-        //     {
-        //         var relic = RelicFactory.PullNextRelicFromFront(CurrentPlayer, RelicRarity.Rare).ToMutable();
-        //         await RelicCmd.Obtain(relic, CurrentPlayer);
-        //         LogUtility.Success($"Granted boss relic '{relic.Id}' to player");
-        //     }
-        //     catch (Exception ex)
-        //     {
-        //         LogUtility.Error($"Failed to grant boss relic: {ex.Message}");
-        //     }
-        // }
+            try
+            {
+                var relic = relicModel.ToMutable();
+                await RelicCmd.Obtain(relic, CurrentPlayer);
+                LogUtility.Success($"Granted pre-assigned relic '{relic.Id}' to player");
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Error($"Failed to grant relic: {ex.Message}");
+            }
+        }
 
         /// <summary>
         /// Grants a random potion to the current player.

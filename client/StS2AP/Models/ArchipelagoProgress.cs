@@ -1,5 +1,8 @@
 ﻿using Archipelago.MultiClient.Net.Models;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Entities.Relics;
+using MegaCrit.Sts2.Core.Factories;
+using MegaCrit.Sts2.Core.Models;
 using StS2AP.Extensions;
 using StS2AP.Utils;
 
@@ -55,6 +58,45 @@ namespace StS2AP.Models
 
         public Dictionary<string, bool> CampfiresChecked { get; set; } = new Dictionary<string, bool>();
 
+        /// <summary>
+        /// Maps an Archipelago item's LocationId to the RelicModel that was pre-pulled from the RelicFactory for it.
+        /// This ensures that opening/closing the reward screen always shows the same relic for each relic reward.
+        /// Cleared on each new run via <see cref="ResetTrackers"/>.
+        /// </summary>
+        public Dictionary<long, RelicModel> RelicAssignments { get; set; } = new Dictionary<long, RelicModel>();
+
+        /// <summary>
+        /// Returns the relic assigned to the given location, pulling one from the RelicFactory if it hasn't been assigned yet.
+        /// This guarantees that the same relic is shown every time the reward screen is opened for the same item.
+        /// </summary>
+        /// <param name="locationId">The Archipelago LocationId that identifies this specific relic reward.</param>
+        /// <param name="player">The current player, needed by RelicFactory.</param>
+        /// <returns>The assigned RelicModel, or null if no player is provided or the factory fails.</returns>
+        public RelicModel? GetOrAssignRelic(long locationId, Player player)
+        {
+            if (RelicAssignments.TryGetValue(locationId, out var existing))
+                return existing;
+
+            if (player == null)
+            {
+                LogUtility.Warn($"Cannot assign relic for location {locationId}: no active player");
+                return null;
+            }
+
+            try
+            {
+                var relic = RelicFactory.PullNextRelicFromFront(player);
+                RelicAssignments[locationId] = relic;
+                LogUtility.Info($"Pre-assigned relic '{relic.Id}' for location {locationId}");
+                return relic;
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Error($"Failed to pre-assign relic for location {locationId}: {ex.Message}");
+                return null;
+            }
+        }
+
         public void InitializeTrackers(Player player)
         {
             ResetTrackers();
@@ -78,6 +120,7 @@ namespace StS2AP.Models
             RelicRewardsAttempted = 0;
             GoldRewardsAttempted = 0;
             CampfiresChecked.Clear();
+            RelicAssignments.Clear();
         }
 
         #endregion
