@@ -386,6 +386,7 @@ namespace StS2AP.UI
         /// </summary>
         private static void OnConnectionResult(object? sender, ResultEventArgs e)
         {
+            // Did we connect?
             if (e.Value)
             {
                 // Set status
@@ -399,6 +400,7 @@ namespace StS2AP.UI
                 // Hide the connection UI
                 Hide();
             }
+            // We failed to connect
             else
             {
                 SetStatus("Failed to connect. Please check your details and try again.");

@@ -1,3 +1,5 @@
+import json
+import os
 import string
 import typing
 from collections import defaultdict
@@ -14,6 +16,17 @@ from .constants import NUM_CUSTOM
 from .items import item_table, chars_to_items, ItemType, base_event_item_pairs, ItemData
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
 from .options import Spire2Options
+
+
+def get_mod_version():
+    """Load mod_compat_version from archipelago.json at build time."""
+    try:
+        json_path = os.path.join(os.path.dirname(__file__), 'archipelago.json')
+        with open(json_path) as f:
+            data = json.load(f)
+        return data.get('world_version', '1')
+    except Exception:
+        return '1'
 
 
 class SlayTheSpire2Item(Item):
@@ -33,7 +46,7 @@ class SlayTheSpire2World(World):
     web = SlayTheSpire2Web()
     options_dataclass = Spire2Options
     options: Spire2Options
-    mod_compat_version = 1
+    mod_compat_version = get_mod_version()
     origin_region_name = "Neow's Room"
 
     # Build the final Item Table
