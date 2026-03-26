@@ -94,10 +94,9 @@ namespace StS2AP.Patches
                         }
                     }
 
-                    // If we're in GoldSanity, we want to replace the Gold Reward with an AP Location reward
-                    var goldReward = __result.FirstOrDefault(r => r is GoldReward);
-                    var wasGoldStolenBack = goldReward != null && s_wasGoldStolenBackField?.GetValue(goldReward) is true;
-                    if (goldReward != null && ArchipelagoClient.Settings.GoldSanity && !wasGoldStolenBack)
+                    // If we're in GoldSanity, we want to replace the Gold Reward with an AP Location reward (so long as it's not returned gold)
+                    var goldReward = __result.FirstOrDefault(r => r is GoldReward && s_wasGoldStolenBackField?.GetValue(r) is false);
+                    if (goldReward != null && ArchipelagoClient.Settings.GoldSanity)
                     {
                         // Is this a boss gold reward? (It's a different location/check)
                         if (room.RoomType == RoomType.Boss)
