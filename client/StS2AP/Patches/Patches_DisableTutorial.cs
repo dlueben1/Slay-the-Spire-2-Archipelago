@@ -1,5 +1,7 @@
 ﻿using HarmonyLib;
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Map;
+using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves;
@@ -27,6 +29,22 @@ namespace StS2AP.Patches
                 {
                     __result = true;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Disables the tutorial rewards - when the game is first played, the rewards you get are fixed rather than dynamic.
+        /// </summary>
+        [HarmonyPatch(typeof(RewardsSet), "TryGenerateTutorialRewards")]
+        public class TurnOffTutorialRewardsDuringArchipelagoPatch
+        {
+            /// <summary>
+            /// Skip the original function and set the result to false
+            /// </summary>
+            static bool Prefix(ref bool __result, Player player, AbstractRoom room)
+            {
+                __result = false;
+                return false;
             }
         }
     }

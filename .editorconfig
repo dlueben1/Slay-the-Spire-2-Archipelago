@@ -1,0 +1,11 @@
+root = true
+
+[*.cs]
+# IDE0051: Remove unused private members
+dotnet_diagnostic.IDE0051.severity = none
+
+# IDE0052: Private member is unused
+dotnet_diagnostic.IDE0052.severity = none
+
+# IDE0060: Remove unused parameter
+dotnet_diagnostic.IDE0060.severity = none

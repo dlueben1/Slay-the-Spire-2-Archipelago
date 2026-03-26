@@ -17,6 +17,7 @@ using System.Text;
 using System.Threading.Tasks;
 using static StS2AP.Data.CharTable;
 using StS2AP.UI;
+using StS2AP.Extensions;
 
 namespace StS2AP.Utils
 {
@@ -33,6 +34,13 @@ namespace StS2AP.Utils
         public static bool IsInRun => CurrentPlayer != null;
 
         /// <summary>
+        /// Local cache of characters that have completed the run in this slot.
+        /// Populated from DataStorage on connect, updated locally on each goal.
+        /// Avoids GetAsync deserialization issues by keeping the source of truth local.
+        /// </summary>
+        private static HashSet<string> _goaledCharacters = new HashSet<string>();
+
+        /// <summary>
         /// Reference to the Current Player character.
         /// Set when a run starts, cleared when a run ends.
         /// </summary>
@@ -47,7 +55,7 @@ namespace StS2AP.Utils
                     LogUtility.Warn("Attempted to get CurrentCharacterID but there is no active player");
                     return null;
                 }
-                var charName = CurrentPlayer.Character.Title.GetFormattedText().Split().Last();
+                var charName = CurrentPlayer.APName();
                 return charName switch
                 {
                     "Ironclad" => APItemCharID.Ironclad,
@@ -99,8 +107,11 @@ namespace StS2AP.Utils
         }
 
         /// <summary>
-        /// Grants a random relic to the current player
+        /// Grants a random relic to the current player.
+        /// This was previously used for granting a relic on the reward screen, but that was before we added `GrantRelic(RelicModel relicModel)`, 
+        /// which should be used instead since the relic should've been pulled from the RelicFactory.
         /// </summary>
+        [Obsolete("GrantRelic() without parameters is likely deprecated, but we'll keep it for now as the code is changing often. Use GrantRelic(RelicModel relicModel) instead to grant a specific pre-assigned relic.")]
         public static async Task GrantRelic()
         {
             if (CurrentPlayer == null)
@@ -122,27 +133,29 @@ namespace StS2AP.Utils
         }
 
         /// <summary>
-        /// Grants a random boss relic to the current player
+        /// Grants a specific pre-assigned relic to the current player.
+        /// Used when the relic was already pulled from the RelicFactory during reward screen creation.
         /// </summary>
-        // public static async Task GrantBossRelic()
-        // {
-        //     if (CurrentPlayer == null)
-        //     {
-        //         LogUtility.Warn("Cannot grant boss relic: no active player (not in a run)");
-        //         return;
-        //     }
+        /// <param name="relicModel">The pre-assigned relic model to grant.</param>
+        public static async Task GrantRelic(RelicModel relicModel)
+        {
+            if (CurrentPlayer == null)
+            {
+                LogUtility.Warn("Cannot grant relic: no active player (not in a run)");
+                return;
+            }
 
-        //     try
-        //     {
-        //         var relic = RelicFactory.PullNextRelicFromFront(CurrentPlayer, RelicRarity.Rare).ToMutable();
-        //         await RelicCmd.Obtain(relic, CurrentPlayer);
-        //         LogUtility.Success($"Granted boss relic '{relic.Id}' to player");
-        //     }
-        //     catch (Exception ex)
-        //     {
-        //         LogUtility.Error($"Failed to grant boss relic: {ex.Message}");
-        //     }
-        // }
+            try
+            {
+                var relic = relicModel.ToMutable();
+                await RelicCmd.Obtain(relic, CurrentPlayer);
+                LogUtility.Success($"Granted pre-assigned relic '{relic.Id}' to player");
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Error($"Failed to grant relic: {ex.Message}");
+            }
+        }
 
         /// <summary>
         /// Grants a random potion to the current player.
@@ -272,6 +285,7 @@ namespace StS2AP.Utils
         /// </summary>
         public static void OnCombatWin(CombatRoom room)
         {
+            // LogUtility.Info($"OnCombatWin: RoomType={room.RoomType}, ActIndex={CurrentPlayer?.RunState?.CurrentActIndex}, HasSecondBoss={CurrentPlayer?.RunState?.Act.HasSecondBoss}, BossRewards={ArchipelagoClient.Progress.BossRewardsDistributed}");
             TrySendBossDefeatCheck();
 
             // If this was the Act 3 boss check whether the player has met the goal
@@ -297,7 +311,7 @@ namespace StS2AP.Utils
             if (ArchipelagoClient.Progress.BossRewardsDistributed <= ArchipelagoProgress._maxBossRewards)
             {
                 // Grab the Character Name
-                var name = CurrentPlayer.Character.Title.GetFormattedText().Split().Last();
+                var name = CurrentPlayer.APName();
 
                 // Grab the check ID
                 var checkName = $"{name} Act {ArchipelagoClient.Progress.BossRewardsDistributed} Boss";
@@ -315,13 +329,46 @@ namespace StS2AP.Utils
                 }
                 else
                 {
-                    LogUtility.Error($"Failed to send {checkName}");
+                    LogUtility.Debug($"Failed to send already-sent {checkName}");
                 }
             }
         }
 
+        public static async Task RestoreGoaledCharsFromStorage()
+        {
+            if (!ArchipelagoClient.IsConnected) return;
+
+            try
+            {
+                const string storageKey = "StS2AP_GoaledChars";
+
+                // Initialize the key with an empty dict if it doesn't exist yet
+                ArchipelagoClient.Session.DataStorage[
+                    Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
+                    .Initialize(new Dictionary<string, bool>()); // replace inside () with `new Newtonsoft.Json.Linq.JObject()` in case it breaks not sure if this is correct
+
+                // Read back whatever is stored
+                var stored = await ArchipelagoClient.Session.DataStorage[
+                    Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
+                    .GetAsync<Dictionary<string, bool>>();
+
+                _goaledCharacters = stored != null
+                    ? new HashSet<string>(stored.Keys)
+                    : new HashSet<string>();
+
+                LogUtility.Info($"Restored {_goaledCharacters.Count} goaled character(s) from DataStorage: {string.Join(", ", _goaledCharacters)}");
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Warn($"Could not restore goaled characters from DataStorage: {ex.Message}. Starting with empty set.");
+                _goaledCharacters = new HashSet<string>();
+            }
+        }
+
         /// <summary>
-        /// Checks whether the player has met the goal condition and sends SetGoalAchieved
+        /// Checks whether the player has met the goal condition and sends SetGoalAchieved if so.
+        /// Uses a local HashSet for deduplication to avoid DataStorage deserialization issues
+        /// and then writes to DataStorage with Operation.Update for cross-session persistence
         /// </summary>
         public static async Task TrySetGoalAchieved()
         {
@@ -340,35 +387,38 @@ namespace StS2AP.Utils
                     return;
                 }
 
-                // The character name that just completed Act 3
-                var charName = CurrentPlayer.Character.Title.GetFormattedText().Split().Last();
-
-                // DataStorage key scoped to this slot
-                // Stored as a comma-separated string e.g. "Ironclad,Silent"
+                var charName = CurrentPlayer.APName();
                 const string storageKey = "StS2AP_GoaledChars";
 
-                // Read the current goaled characters string from DataStorage
-               ArchipelagoClient.Session.DataStorage[
-                    Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
-                    += Operation.Update(new Dictionary<string, bool> { { charName, true } });
- 
-                // Read back the current dict to get the count
-                var goaledChars = await ArchipelagoClient.Session.DataStorage[
-                    Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
-                    .GetAsync<Dictionary<string, bool>>()
-                    ?? new Dictionary<string, bool>();
- 
-                LogUtility.Success($"Recorded goal for '{charName}'. Total goaled: {goaledChars.Count}");
+                // Add to local cache HashSet.Add returns false if already present
+                bool wasNew = _goaledCharacters.Add(charName);
 
-                // Determine required number of characters
+                if (wasNew)
+                {
+                    // Persist to DataStorage atomically
+                    ArchipelagoClient.Session.DataStorage[
+                        Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
+                        .Initialize(new Newtonsoft.Json.Linq.JObject());
+ 
+                    ArchipelagoClient.Session.DataStorage[
+                        Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
+                        += Operation.Update(new Dictionary<string, bool> { { charName, true } });
+
+                    LogUtility.Success($"Recorded goal for '{charName}'. Total goaled: {_goaledCharacters.Count}");
+                }
+                else
+                {
+                    LogUtility.Info($"'{charName}' already recorded as goaled. Total goaled: {_goaledCharacters.Count}");
+                }
+
                 // num_chars_goal == 0 means all characters in the slot must complete
                 int required = settings.NumCharsGoal == 0
                     ? settings.TotalCharacters
                     : settings.NumCharsGoal;
 
-                LogUtility.Info($"Goal check: {goaledChars.Count}/{required} characters have completed Act 3");
+                LogUtility.Info($"Goal check: {_goaledCharacters.Count}/{required} characters have completed the run");
 
-                if (goaledChars.Count >= required)
+                if (_goaledCharacters.Count >= required)
                 {
                     ArchipelagoClient.Session.SetGoalAchieved();
                     LogUtility.Success("Goal achieved! SetGoalAchieved sent to Archipelago server.");
@@ -384,20 +434,30 @@ namespace StS2AP.Utils
         public static void TrySendPressStartCheck()
         {
             // Grab the Character Name
-            var name = GameUtility.CurrentPlayer.Character.Title.GetFormattedText().Split().Last();
+            var name = GameUtility.CurrentPlayer.APName();
 
             // Grab the check ID
             var checkName = $"{name} Press Start";
-            var _locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", checkName);
+            SendCheck(checkName);
 
-            if (!ArchipelagoClient.CheckedLocations.Contains(_locationId) && _locationId != -1 && ArchipelagoClient.ScoutedLocations.ContainsKey(_locationId))
+        }
+
+        public static void SendCheck(string checkName)
+        {
+            var _locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", checkName);
+            SendCheck(_locationId);
+        }
+
+        public static void SendCheck(long locationId)
+        {
+            if (!ArchipelagoClient.CheckedLocations.Contains(locationId) && locationId != -1 && ArchipelagoClient.ScoutedLocations.ContainsKey(locationId))
             {
                 // Check the location off and let the server know
-                ArchipelagoClient.CheckedLocations.Add(_locationId);
-                _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(_locationId);
+                ArchipelagoClient.CheckedLocations.Add(locationId);
+                _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(locationId);
 
-                LogUtility.Success($"Sent location check: {_locationId}");
-                NotificationUtility.ShowLocationChecked(_locationId);
+                LogUtility.Success($"Sent location check: {locationId}");
+                NotificationUtility.ShowLocationChecked(locationId);
             }
         }
 

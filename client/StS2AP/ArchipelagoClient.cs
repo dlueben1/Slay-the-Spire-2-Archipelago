@@ -242,6 +242,9 @@ namespace StS2AP
             // Pre-scout all locations so we have item info available for notifications
             ThreadPool.QueueUserWorkItem(_ => PreScoutAllLocations());
 
+            // Restore goaled characters from DataStorage so cross-session goal tracking works
+            _ = GameUtility.RestoreGoaledCharsFromStorage();
+
             // Let the game know that we've connected
             ConnectionStateChanged?.Invoke(null, new ResultEventArgs { Value = true });
         }
@@ -337,16 +340,17 @@ namespace StS2AP
         /// </summary>
         private static void OnItemReceived(ReceivedItemsHelper helper)
         {
-            // Grab the item data
-            var receivedItem = helper.DequeueItem();
-
-            // Ignore if this item is an old message
-            if (helper.Index <= Index) return;
-
             // Deal with this Item
             lock (_itemLock)
             {
-                ProcessItem(receivedItem);
+                // Grab the item data
+                var receivedItem = helper.DequeueItem();
+
+                // Ignore if this item is an old message
+                if (helper.Index <= Index) return;
+
+                // Process it
+                ProcessItem(receivedItem, helper.Index);
                 
                 // Keep track of how many messages we've had so far
                 Index++;
@@ -362,10 +366,11 @@ namespace StS2AP
         /// Determines what to do with an Item that we've received from Archipelago.
         /// </summary>
         /// <param name="item">Received Item</param>
-        private static void ProcessItem(ItemInfo item)
+        /// <param name="index">The index of the item in the Archipelago Multiworld</param>
+        private static void ProcessItem(ItemInfo item, int index)
         {
             // Log the item
-            LogUtility.Success($"Received: {item.ItemName} from {item.Player.Name} (ID: {item.ItemId})");
+            LogUtility.Success($"Received: {item.ItemName} from {item.Player.Name} (ID: {item.ItemId} / LocID: {item.LocationId} / Index: {index})");
 
             // Show Notification for the item
             NotificationUtility.ShowItemReceived(item);
@@ -381,8 +386,8 @@ namespace StS2AP
                 default:
                     {
                         // adding reward to the reward screen
-                        //ArchipelagoRewardUI.AddReward(item);
-                        ArchipelagoClient.Progress.AllReceivedItems.Add(item);
+                        Progress.AllReceivedItems.Add(new IndexedItemInfo(item, index));
+                        ArchipelagoTopBarUI.SetCount(Progress.UnusedItemCount);
                         break;
                     }
             }
@@ -411,14 +416,14 @@ namespace StS2AP
             if (slotData.ContainsKey("seeded")) settings.IsSeeded = Convert.ToBoolean(slotData["seeded"]);
             if (slotData.ContainsKey("shuffle_all_cards")) settings.ShouldShuffleAllCards = Convert.ToBoolean(slotData["shuffle_all_cards"]);
             if (slotData.ContainsKey("lock_characters")) settings.NoCharactersLocked = Convert.ToString(slotData["lock_characters"]) == "unlocked";
+            if (slotData.ContainsKey("num_chars_goal")) settings.NumCharsGoal = Convert.ToInt32(slotData["num_chars_goal"]);
+            if (slotData.ContainsKey("characters") && slotData["characters"] is System.Collections.IList charsList) settings.TotalCharacters = charsList.Count;
 
-            // Goal settings num_chars_goal of 0 means "all characters must complete"
-            if (slotData.ContainsKey("num_chars_goal"))
-                settings.NumCharsGoal = Convert.ToInt32(slotData["num_chars_goal"]);
+            if (slotData.ContainsKey("campfire_sanity"))
+                settings.CampfireSanity = Convert.ToInt32(slotData["campfire_sanity"]) != 0;
 
-            // Total characters in this slot, needed when num_chars_goal == 0
-            if (slotData.ContainsKey("characters") && slotData["characters"] is System.Collections.IList charsList)
-                settings.TotalCharacters = charsList.Count;
+            if (slotData.ContainsKey("gold_sanity"))
+                settings.GoldSanity = Convert.ToInt32(slotData["gold_sanity"]) != 0;
 
             // And return it
             return settings;

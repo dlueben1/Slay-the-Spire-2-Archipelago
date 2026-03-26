@@ -21,11 +21,21 @@ namespace StS2AP.UI
         /// </summary>
         public long ItemOriginID { get; set; }
 
+        /// <summary>
+        /// The index of the item received from the multiworld
+        /// </summary>
+        public int Index { get; set; }
+
         /// <summary>The primary item name shown in large text on the reward button.</summary>
         public string ItemName { get; set; } = string.Empty;
 
         /// <summary>The player who sent this item (shown in smaller text below the item name)</summary>
         public string SenderName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Where the item was found, shown in small text on the right side of the button.
+        /// </summary>
+        public string FoundLocation { get; set; } = string.Empty;
 
         /// <summary>Resource path to the icon shown on the left of the reward button. Empty = no icon</summary>
         public string IconPath { get; set; } = string.Empty;
@@ -122,6 +132,7 @@ namespace StS2AP.UI
         /// from the Archipelago server Thread-safe defers the UI operation to the main thread
         /// </summary>
         /// <param name="item">The item received from the Archipelago server.</param>
+        [Obsolete("I don't think this is used anywhere, and if it needs to be, we need to update this logic")]
         public static void AddReward(ItemInfo item)
         {
             var data = new ArchipelagoRewardData
@@ -136,6 +147,7 @@ namespace StS2AP.UI
             Callable.From(() => AddRewardOnMainThread(data)).CallDeferred();
         }
 
+        [Obsolete("Just used for testing, we may want to delete this soon.")]
         public static void ShowTestRewards()
         {
             var testRewards = new List<ArchipelagoRewardData>
@@ -175,22 +187,42 @@ namespace StS2AP.UI
 
             // Get Unused items from the Multiworld for our current character
             var availableItems = ArchipelagoClient.Progress.AllReceivedItems
-                                .Where(item => !ArchipelagoClient.Progress.UsedItems.Contains(item.LocationId) && item.GetStSCharID() == GameUtility.CurrentCharacterID);
+                                .Where(i => !ArchipelagoClient.Progress.UsedItems.Contains(i.Index) && i.Item.GetStSCharID() == GameUtility.CurrentCharacterID);
             
             // Prepare them for the UI
-            var rewardDataList = availableItems.Select(item => new ArchipelagoRewardData
+            var rewardDataList = availableItems.Select(i =>
             {
-                ItemOriginID = item.LocationId,
-                ItemName    = item.ItemDisplayName,
-                SenderName  = item.Player.Name,
-                IconPath    = GetIconForItem(item),
-                GrantAction = GetGrantAction(item),
+                var data = new ArchipelagoRewardData
+                {
+                    Index = i.Index,
+                    ItemOriginID = i.Item.LocationId,
+                    ItemName    = i.Item.ItemDisplayName,
+                    SenderName  = i.Item.Player.Name,
+                    FoundLocation = i.Item.LocationDisplayName,
+                    IconPath    = GetIconForItem(i.Item),
+                    GrantAction = GetGrantAction(i.Item),
+                };
+
+                // For relic items, pre-assign a specific relic so the name is stable across open/close
+                var rawId = i.Item.GetRawItemID();
+                if (rawId == APItem.Relic || rawId == APItem.BossRelic)
+                {
+                    var relic = ArchipelagoClient.Progress.GetOrAssignRelic(i.Index, GameUtility.CurrentPlayer);
+                    if (relic != null)
+                    {
+                        data.ItemName = relic.Title.GetRawText();
+                        data.IconPath = relic.IconPath;
+                        data.GrantAction = () => GameUtility.GrantRelic(relic);
+                    }
+                }
+
+                return data;
             }).ToList();
 
             rewardDataList.ForEach(item => item.OnClaimed = () =>
             {
                 // Mark the item as used in the Multiworld so it doesn't show up again if we reopen the screen
-                ArchipelagoClient.Progress.UsedItems.Add(item.ItemOriginID);
+                ArchipelagoClient.Progress.UsedItems.Add(item.Index);
             });
 
             // Show the UI with these rewards
@@ -632,7 +664,7 @@ namespace StS2AP.UI
             // Sender name label (only shown if we have a sender)
             if (!string.IsNullOrEmpty(data.SenderName))
             {
-                var senderLabel = CreateTextLabel($"from {data.SenderName}", RewardSenderFontSize, new Color(0.7f, 0.85f, 1f));
+                var senderLabel = CreateTextLabel($"from {data.SenderName} ({data.FoundLocation})", RewardSenderFontSize, new Color(0.7f, 0.85f, 1f));
                 vbox.AddChild(senderLabel);
             }
 
@@ -658,6 +690,9 @@ namespace StS2AP.UI
                 btn.QueueFree();
                 _remainingRewards--;
                 UpdateProceedButton();
+
+                // Update the unused item count on the top bar
+                ArchipelagoTopBarUI.SetCount(ArchipelagoClient.Progress.UnusedItemCount);
 
                 // Auto-hide once all rewards are dismissed
                 if (_remainingRewards <= 0)

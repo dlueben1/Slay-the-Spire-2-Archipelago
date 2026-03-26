@@ -407,3 +407,6 @@ local.props
 client/StS2AP/godot/.godot/global_script_class_cache.cfg
 /client/StS2AP/godot/.godot/exported
 /client/StS2AP/godot/.godot/editor
+/client/StS2AP/godot/.godot/imported
+/client/StS2AP/godot/**/*.import
+client/StS2AP/godot/.godot/uid_cache.bin

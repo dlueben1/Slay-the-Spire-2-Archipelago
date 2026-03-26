@@ -88,7 +88,6 @@ class IncludeFloorChecks(Toggle):
 class CampfireSanity(Toggle):
     """Whether to shuffle being able to rest and smith at each campsite per act.  Also adds
     new locations at campsites per act."""
-    visibility = Visibility.none
     display_name = "Campfire Sanity"
     default = 0
 
@@ -158,8 +157,7 @@ class ShopSanityCosts(Choice):
     default = 2
 
 class GoldSanity(Toggle):
-    """Whether to enable shuffling gold rewards into the multiworld. Adds 27 locations per character"""
-    visibility = Visibility.none
+    """Whether to enable shuffling gold rewards into the multiworld. Adds 22 locations per character"""
     display_name = "Gold Sanity"
     default = 0
 
