@@ -21,6 +21,11 @@ namespace StS2AP.UI
         /// </summary>
         public long ItemOriginID { get; set; }
 
+        /// <summary>
+        /// The index of the item received from the multiworld
+        /// </summary>
+        public int Index { get; set; }
+
         /// <summary>The primary item name shown in large text on the reward button.</summary>
         public string ItemName { get; set; } = string.Empty;
 
@@ -182,26 +187,27 @@ namespace StS2AP.UI
 
             // Get Unused items from the Multiworld for our current character
             var availableItems = ArchipelagoClient.Progress.AllReceivedItems
-                                .Where(item => !ArchipelagoClient.Progress.UsedItems.Contains(item.LocationId) && item.GetStSCharID() == GameUtility.CurrentCharacterID);
+                                .Where(i => !ArchipelagoClient.Progress.UsedItems.Contains(i.Index) && i.Item.GetStSCharID() == GameUtility.CurrentCharacterID);
             
             // Prepare them for the UI
-            var rewardDataList = availableItems.Select(item =>
+            var rewardDataList = availableItems.Select(i =>
             {
                 var data = new ArchipelagoRewardData
                 {
-                    ItemOriginID = item.LocationId,
-                    ItemName    = item.ItemDisplayName,
-                    SenderName  = item.Player.Name,
-                    FoundLocation = item.LocationDisplayName,
-                    IconPath    = GetIconForItem(item),
-                    GrantAction = GetGrantAction(item),
+                    Index = i.Index,
+                    ItemOriginID = i.Item.LocationId,
+                    ItemName    = i.Item.ItemDisplayName,
+                    SenderName  = i.Item.Player.Name,
+                    FoundLocation = i.Item.LocationDisplayName,
+                    IconPath    = GetIconForItem(i.Item),
+                    GrantAction = GetGrantAction(i.Item),
                 };
 
                 // For relic items, pre-assign a specific relic so the name is stable across open/close
-                var rawId = item.GetRawItemID();
+                var rawId = i.Item.GetRawItemID();
                 if (rawId == APItem.Relic || rawId == APItem.BossRelic)
                 {
-                    var relic = ArchipelagoClient.Progress.GetOrAssignRelic(item.LocationId, GameUtility.CurrentPlayer);
+                    var relic = ArchipelagoClient.Progress.GetOrAssignRelic(i.Index, GameUtility.CurrentPlayer);
                     if (relic != null)
                     {
                         data.ItemName = relic.Title.GetRawText();
@@ -216,7 +222,7 @@ namespace StS2AP.UI
             rewardDataList.ForEach(item => item.OnClaimed = () =>
             {
                 // Mark the item as used in the Multiworld so it doesn't show up again if we reopen the screen
-                ArchipelagoClient.Progress.UsedItems.Add(item.ItemOriginID);
+                ArchipelagoClient.Progress.UsedItems.Add(item.Index);
             });
 
             // Show the UI with these rewards

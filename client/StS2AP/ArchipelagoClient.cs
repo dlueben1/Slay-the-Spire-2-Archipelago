@@ -340,16 +340,17 @@ namespace StS2AP
         /// </summary>
         private static void OnItemReceived(ReceivedItemsHelper helper)
         {
-            // Grab the item data
-            var receivedItem = helper.DequeueItem();
-
-            // Ignore if this item is an old message
-            if (helper.Index <= Index) return;
-
             // Deal with this Item
             lock (_itemLock)
             {
-                ProcessItem(receivedItem);
+                // Grab the item data
+                var receivedItem = helper.DequeueItem();
+
+                // Ignore if this item is an old message
+                if (helper.Index <= Index) return;
+
+                // Process it
+                ProcessItem(receivedItem, helper.Index);
                 
                 // Keep track of how many messages we've had so far
                 Index++;
@@ -365,10 +366,11 @@ namespace StS2AP
         /// Determines what to do with an Item that we've received from Archipelago.
         /// </summary>
         /// <param name="item">Received Item</param>
-        private static void ProcessItem(ItemInfo item)
+        /// <param name="index">The index of the item in the Archipelago Multiworld</param>
+        private static void ProcessItem(ItemInfo item, int index)
         {
             // Log the item
-            LogUtility.Success($"Received: {item.ItemName} from {item.Player.Name} (ID: {item.ItemId})");
+            LogUtility.Success($"Received: {item.ItemName} from {item.Player.Name} (ID: {item.ItemId} / LocID: {item.LocationId} / Index: {index})");
 
             // Show Notification for the item
             NotificationUtility.ShowItemReceived(item);
@@ -384,7 +386,7 @@ namespace StS2AP
                 default:
                     {
                         // adding reward to the reward screen
-                        Progress.AllReceivedItems.Add(item);
+                        Progress.AllReceivedItems.Add(new IndexedItemInfo(item, index));
                         ArchipelagoTopBarUI.SetCount(Progress.UnusedItemCount);
                         break;
                     }

@@ -59,40 +59,40 @@ namespace StS2AP.Models
         public Dictionary<string, bool> CampfiresChecked { get; set; } = new Dictionary<string, bool>();
 
         /// <summary>
-        /// Maps an Archipelago item's LocationId to the RelicModel that was pre-pulled from the RelicFactory for it.
+        /// Maps an Archipelago item's index to the RelicModel that was pre-pulled from the RelicFactory for it.
         /// This ensures that opening/closing the reward screen always shows the same relic for each relic reward.
         /// Cleared on each new run via <see cref="ResetTrackers"/>.
         /// </summary>
-        public Dictionary<long, RelicModel> RelicAssignments { get; set; } = new Dictionary<long, RelicModel>();
+        public Dictionary<int, RelicModel> RelicAssignments { get; set; } = new Dictionary<int, RelicModel>();
 
         /// <summary>
         /// Returns the relic assigned to the given location, pulling one from the RelicFactory if it hasn't been assigned yet.
         /// This guarantees that the same relic is shown every time the reward screen is opened for the same item.
         /// </summary>
-        /// <param name="locationId">The Archipelago LocationId that identifies this specific relic reward.</param>
+        /// <param name="index">The index of the specific item sent from the Multiworld.</param>
         /// <param name="player">The current player, needed by RelicFactory.</param>
         /// <returns>The assigned RelicModel, or null if no player is provided or the factory fails.</returns>
-        public RelicModel? GetOrAssignRelic(long locationId, Player player)
+        public RelicModel? GetOrAssignRelic(int index, Player player)
         {
-            if (RelicAssignments.TryGetValue(locationId, out var existing))
+            if (RelicAssignments.TryGetValue(index, out var existing))
                 return existing;
 
             if (player == null)
             {
-                LogUtility.Warn($"Cannot assign relic for location {locationId}: no active player");
+                LogUtility.Warn($"Cannot assign relic for item w/ index {index}: no active player");
                 return null;
             }
 
             try
             {
                 var relic = RelicFactory.PullNextRelicFromFront(player);
-                RelicAssignments[locationId] = relic;
-                LogUtility.Info($"Pre-assigned relic '{relic.Id}' for location {locationId}");
+                RelicAssignments[index] = relic;
+                LogUtility.Info($"Pre-assigned relic '{relic.Id}' for item w/ index {index}");
                 return relic;
             }
             catch (Exception ex)
             {
-                LogUtility.Error($"Failed to pre-assign relic for location {locationId}: {ex.Message}");
+                LogUtility.Error($"Failed to pre-assign relic for item w/ index {index}: {ex.Message}");
                 return null;
             }
         }
@@ -130,19 +130,19 @@ namespace StS2AP.Models
         /// <summary>
         /// All items we've received from the multiworld. Gets dumped into `AvailableItems` at the start of each run.
         /// </summary>
-        public List<ItemInfo> AllReceivedItems = new List<ItemInfo>();
+        public List<IndexedItemInfo> AllReceivedItems = new List<IndexedItemInfo>();
 
         /// <summary>
         /// Any items that have been used up in the current run live here. The difference between this and `AllReceivedItems` 
         /// represents the items still available for use.
         /// </summary>
-        public List<long> UsedItems = new List<long>();
+        public List<int> UsedItems = new List<int>();
 
         /// <summary>
         /// The number of items we've received from the multiworld that we haven't used yet. 
         /// This is what gets displayed in the top bar UI.
         /// </summary>
-        public int UnusedItemCount => AllReceivedItems.Where(item => item.GetStSCharID() == GameUtility.CurrentCharacterID).Count() - UsedItems.Count;
+        public int UnusedItemCount => AllReceivedItems.Where(i => i.Item.GetStSCharID() == GameUtility.CurrentCharacterID).Count() - UsedItems.Count;
 
         #endregion
     }
