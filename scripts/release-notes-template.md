@@ -31,6 +31,19 @@
 
 5. Start the game
 
+### Additional Steps for **Hosts**
+
+6. Download `spire2.apworld`
+7. Open your Archipelago Launcher
+8. Click "Install APWorld"
+9. Select `spire2.apworld` in the file dialog that pops up
+10. **Restart the Archipelago Launcher**
+11. Now you should be able to properly host/generate an Archipelago Session with StS 2
+  - If you want to use `archipelago.gg` to host the game, generate it locally first following the steps above, then upload the `.zip` file from the `output` folder in your Archipelago installation
+
+> [!IMPORTANT]
+> You need to use Archipelago Version 0.6.7+ and CANNOT use earlier versions of Archipelago with this mod!
+
 ## Known Issues/Limitations
 
 - There is no saving.
