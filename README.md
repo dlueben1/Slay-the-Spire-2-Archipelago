@@ -2,6 +2,8 @@
 
 Archipelago Client & APWorld for STS2
 
+# Download the Latest Playable Release [Here](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest)
+
 ## Alpha Development
 
 This mod is currently in Alpha, and is unfinished. It's not feature-complete to consider it a v1, and it's not ready for playing casually. It's purely in the experimental phase right now.
