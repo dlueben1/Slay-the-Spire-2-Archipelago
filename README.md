@@ -24,47 +24,27 @@ Currently it's a simple proof-of-concept where you can only get Gold Rewards and
 
 5. Start the game
 
+# Features
+
+## What's Included
+
+- Card/Relic Rewards shuffled in the multiworld
+- Goldsanity
+- Progressive Rest/Smith
+
+## What's **NOT** Included
+
+- **Multiplayer Support**
+  - This is a popular request, but it will not be something we work on until _everything else_ is stable. You will be waiting a very long time for this, sorry.
+- Shopsanity
+- Death Link
+- Traps
+- Interesting Filler Items
+- Saving the Game
+- Polish
+
 > [!CAUTION]
 > I don't recommend having any other mods installed whatsoever, especially while this is in Alpha development. Do it at your own risk.
-
-# Building the Projects
-
-## Prerequisites
-
-You need the following installed:
-
-- Slay the Spire 2
-- Godot v4.5.1 (the .NET version, _NOT_ the standalone version)
-- Visual Studio 2022 (for the Game Client / C# part)
-- Visual Studio Code (for the AP World)
-- .NET 9
-
-You also need to:
-
-- Create a clone of Archipelago's repo should live in `../Archipelago` or Python will complain about the APWorld's `.py` files
-- Copy `client/StS2AP/local.props.template` to `client/StS2AP/local.props` and update `<STS2GamePath>` and `<GodotExePath>` to match your local installations
-  - `<STS2GamePath>` should point to the directory for the game in Steam
-  - `<GodotExePath>` should point to the Godot Directory that has `Godot_v4.5.1-stable_mono_win64.exe`
-
-> [!CAUTION]
-> For the moment this mod only supports Windows, primarily because of the way I'm handling real-time logging for the purpose of debugging the app. This should not be the case in the future.
-
-## Building the APWorld
-
-Copy the folder inside `world` into your local Archipelago Installation's `world` folder, then open the launcher and select "Build APWorlds", and you'll find it in the `build` folder
-
-> [!WARNING]
-> If you need to update `ItemTable.cs` because you've changed the items in the APWorld, run `./scripts/generate_item_enums.ps1`. This will cause many errors but can be helpful if a large change was made.
-
-## Building the Game Client
-
-Use `Ctrl+Shift+B` or `Build > Build Solution`. This will automatically place the mod in the `mods` folder of Slay the Spire
-
-> [!CAUTION]
-> Note that while this is a Godot game, and Godot is needed for _building_ the mod, I don't know how to use the Godot Engine itself to modify/view any game files. All of this is handled entirely in code in Visual Studio.
-
-> [!TIP]
-> While developing the mod, use `Ctrl+Alt+J` to view the "Object Browser", this will let you view the `sts2` namespace and all of the source code for the game
 
 # Special Thanks
 
@@ -73,9 +53,9 @@ Use `Ctrl+Shift+B` or `Build > Build Solution`. This will automatically place th
 - [lamali292](https://github.com/lamali292) for their initial guide on creating mods for Slay the Spire 2!
 - [alwaysintreble](https://github.com/alwaysintreble/ArchipelagoBepInExPluginTemplate/tree/master) for their example Archipelago C# Plugin Template
 - All of the wonderful contributors to the project!
-<a href="https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/graphs/contributors">
+  <a href="https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=dlueben1/Slay-the-Spire-2-Archipelago" />
-</a>
+  </a>
 
 # Roadmap
 
