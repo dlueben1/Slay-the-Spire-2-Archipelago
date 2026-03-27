@@ -14,7 +14,10 @@
 - **Your host MUST use Archipelago Client v0.6.7+**.
   - The current official release is v0.6.6, so you need to be able to build the `main` branch of Archipelago [from source](https://github.com/ArchipelagoMW/Archipelago) or download and use the [0.6.7 RC](https://github.com/ArchipelagoMW/Archipelago/releases/tag/0.6.7-rc1).
   - **However**, once the game has been generated, it can still be hosted on [www.archipelago.gg](www.archipelago.gg)
-- If your installation of Slay the Spire II is **higher than v0.99** this mod _may_ not work. We will do our best to keep up with game updates as they release.
+- This version of the mod is intended to be used for **v0.99.1** of Slay the Spire II
+  - **You must be on the "Default Public Version" of the game, _NOT_ the public beta branch**
+  - If your installation of Slay the Spire II is higher or lower than this, the mod _may_ not work.
+  - We will do our best to keep up with game updates as they release, so please be patient.
 - Friends that are forgiving and understanding so that if your multi-hour run breaks due to a bug, they won't mind :smile:
 
 ## Installing the Mod
