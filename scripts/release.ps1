@@ -8,6 +8,7 @@
     - StS2AP.csproj:               ModVersion property
     - world/spire2/archipelago.json: world_version field
     - client/StS2AP/Archipelago.json: version field
+    - world/spire2/world.py:       mod_compat_version field
 
 .PARAMETER Version
   Version string to use. Can include a prefix (e.g., "alpha-0.2.1").
@@ -117,6 +118,25 @@ if ($clientJsonNew -ne $clientJsonContent) {
     Write-Host "  Already up to date: client/StS2AP/Archipelago.json (version)" -ForegroundColor Yellow
 } else {
     Write-Warning "  No match found in client/StS2AP/Archipelago.json"
+}
+
+# ~ Update world/spire2/world.py mod_compat_version ~
+$worldPyPath = Join-Path $RepoRoot "world\spire2\world.py"
+if (-not (Test-Path $worldPyPath)) {
+    Write-Error "File not found: $worldPyPath"
+    exit 1
+}
+$worldPyContent = Get-Content $worldPyPath -Raw
+$worldPyPattern = '(mod_compat_version\s*=\s*")[^"]+"'
+$worldPyReplacement = "`${1}$SemVer`""
+$worldPyNew = $worldPyContent -replace $worldPyPattern, $worldPyReplacement
+if ($worldPyNew -ne $worldPyContent) {
+    Set-Content $worldPyPath -Value $worldPyNew -NoNewline
+    Write-Host "  Updated: world/spire2/world.py (mod_compat_version)" -ForegroundColor Green
+} elseif ($worldPyContent -match $worldPyPattern) {
+    Write-Host "  Already up to date: world/spire2/world.py (mod_compat_version)" -ForegroundColor Yellow
+} else {
+    Write-Warning "  No match found in world/spire2/world.py"
 }
 
 # ~ Build C# client ~

@@ -187,6 +187,28 @@ namespace StS2AP
                 SlotData = success.SlotData;
                 Seed = Session.RoomState.Seed;
 
+                // Before we tell the user everything is okay, let's make sure that the mod version is correct
+                var apWorldVersion = "v" + (SlotData["mod_compat_version"] as string);
+                LogUtility.Info($"APWorld Version: {apWorldVersion}");
+                LogUtility.Info($"Client Version: {Version}");
+                if (apWorldVersion == null || apWorldVersion != Version)
+                {
+                    // Log the issue
+                    LogUtility.Error($"Version mismatch! Server expects version {apWorldVersion}, but client is version {Version}. Please update your mod.");
+
+                    // Disconnect from the server since we can't guarantee compatibility
+                    Disconnect();
+
+                    // Re-Enable the UI
+                    ArchipelagoConnectionUI.SetConnectButtonEnabled(true);
+                    ArchipelagoConnectionUI.SetCloseButtonEnabled(true);
+
+                    // Tell the user they need to update their mod
+                    ArchipelagoConnectionUI.SetStatus($"Version mismatch! Server expects version {apWorldVersion}, but client is version {Version}. Please update your mod.");
+
+                    return;
+                }
+
                 // Complete any locations that we have
                 //Session.Locations.CompleteLocationChecksAsync(null, CheckedLocations.ToArray());
                 outText = $"Successfully connected to {ServerAddress} as {PlayerName}!";
