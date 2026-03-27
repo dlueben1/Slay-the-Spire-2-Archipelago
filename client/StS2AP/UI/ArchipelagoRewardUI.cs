@@ -190,7 +190,7 @@ namespace StS2AP.UI
                                 .Where(i => !ArchipelagoClient.Progress.UsedItems.Contains(i.Index) && i.Item.GetStSCharID() == GameUtility.CurrentCharacterID);
             
             // Prepare them for the UI
-            var rewardDataList = availableItems.Select(i =>
+            var rewardDataList = availableItems.Where(i => !i.Item.ItemDisplayName.Contains("Progressive") && !i.Item.ItemName.Contains("Progressive")).Select(i =>
             {
                 var data = new ArchipelagoRewardData
                 {

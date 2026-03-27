@@ -142,7 +142,7 @@ namespace StS2AP.Models
         /// The number of items we've received from the multiworld that we haven't used yet. 
         /// This is what gets displayed in the top bar UI.
         /// </summary>
-        public int UnusedItemCount => AllReceivedItems.Where(i => i.Item.GetStSCharID() == GameUtility.CurrentCharacterID).Count() - UsedItems.Count;
+        public int UnusedItemCount => AllReceivedItems.Where(i => i.Item.GetStSCharID() == GameUtility.CurrentCharacterID && !i.Item.ItemDisplayName.Contains("Progressive") && !i.Item.ItemName.Contains("Progressive")).Count() - UsedItems.Count;
 
         #endregion
     }
