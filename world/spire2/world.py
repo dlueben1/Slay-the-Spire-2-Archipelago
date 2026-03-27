@@ -33,7 +33,7 @@ class SlayTheSpire2World(World):
     web = SlayTheSpire2Web()
     options_dataclass = Spire2Options
     options: Spire2Options
-    mod_compat_version = "0.2.5"
+    mod_compat_version = "0.3.0"
     origin_region_name = "Neow's Room"
 
     # Build the final Item Table

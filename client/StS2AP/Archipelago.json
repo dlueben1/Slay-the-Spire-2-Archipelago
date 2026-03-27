@@ -3,7 +3,7 @@
   "name": "Archipelago Client",
   "author": "Kirbyfanner, Platano Bailando, Lyxn, MartyredG",
   "description": "Adds support for the Archipelago Randomizer. This mod is in-development and is a total conversion, so it likely won't play well with other mods.",
-  "version": "0.2.5",
+  "version": "0.3.0",
   "has_pck": true,
   "has_dll": true,
   "dependencies": [],
