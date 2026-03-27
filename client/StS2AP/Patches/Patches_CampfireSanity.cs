@@ -1,14 +1,15 @@
 ﻿
-using HarmonyLib;
 using Archipelago.MultiClient.Net.Models;
+using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.RestSite;
 using MegaCrit.Sts2.Core.Localization;
-using MegaCrit.Sts2.Core.Nodes.Vfx;
-using StS2AP.Utils;
-using StS2AP.Extensions;
-using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Nodes;
+using MegaCrit.Sts2.Core.Nodes.Vfx;
+using MegaCrit.Sts2.Core.Runs;
+using StS2AP.Extensions;
+using StS2AP.Utils;
+using System.Xml.Linq;
 
 
 namespace StS2AP.Patches
@@ -150,7 +151,13 @@ namespace StS2AP.Patches
 
             public static async Task<bool> SendCampfireCheck(long locationId)
             {
+                // Send the check to the server
                 GameUtility.SendCheck(locationId);
+
+                // Grab the proper name for the check so we can mark it as checked in the client
+                var checkName = ArchipelagoClient.Session.Locations.GetLocationNameFromId(locationId);
+                ArchipelagoClient.Progress.CampfiresChecked[checkName] = true;
+
                 return true;
             }
         }
