@@ -17,30 +17,16 @@
 - If your installation of Slay the Spire II is **higher than v0.99** this mod _may_ not work. We will do our best to keep up with game updates as they release.
 - Friends that are forgiving and understanding so that if your multi-hour run breaks due to a bug, they won't mind :smile:
 
-## What's Included
+## Installing the Mod
 
-- Locations for Card Rewards, Rare Card Rewards, Relics, and Pressing Start with a Character
-- Card Rewards, Rare Card Rewards, Character Unlocks, Relics, and Filler Gold in the Item Pool
-- Floorsanity
-- Configurable Goal for beating the game with 1-5 characters
-- Configurable Ascension Level _(Highly recommend using 1+, or you may not reach all Relic Rewards in logic)_
-- Configurable Characters to use in the Archipelago
-- Configurable: Either all Card Rewards are AP Locations, or every other card reward is an AP Location
+1. Download the "sts2-client.zip" from the [Releases](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest) section of the Repo
+2. Go to your Slay the Spire II directory (In Steam, click "Browse Local Files")
+3. If a folder called `mods` does not exist, create it
+4. Unzip the **contents** of `sts2-client.zip` into `mods`
 
-> [!IMPORTANT]
-> There's not a lot of settings but we wanted to get a playable build out as quick as possible so people can dive in. More features and stability coming very soon!
+- If you've done this step correctly, your directory structure should look like this: `/<slay-the-spire-2-local-files>/mods/Archipelago/` and the contents of that folder should be a bunch of `.dll` files and a `.pck` file (there may be more files too, please don't touch anything in this folder)
 
-## What's **NOT** Included
-
-- **Multiplayer Support**
-  - This is a popular request, but it will not be something we work on until _everything else_ is stable.
-- Shopsanity
-- Goldsanity
-- Progressive Rest/Smith
-- Death Link
-- Traps
-- Interesting Filler Items
-- Polish
+5. Start the game
 
 ## Known Issues/Limitations
 
@@ -48,8 +34,7 @@
   - If you exit the game then reboot it, you might have problems.
   - If you end a run early and find a way to resume it, you WILL have problems.
 - If you receive a Character Unlock while you're on the Character Select screen, they won't unlock until you revisit that screen after doing a run (likely an edge case for most)
-- Card Rewards, if skipped, are not returned until the next run. This is different than Slay the Spire 1's implementation. It will likely change in the future.
-- Originally, we were going to support the setting that allows all Characters unlocked from the start, but that will take some more debugging before it's ready for primetime
+- **Card Rewards, if skipped, are not returned until the next run. This is different than Slay the Spire 1's implementation. It will likely change in the future.**
 
 ## Common Q&A
 
