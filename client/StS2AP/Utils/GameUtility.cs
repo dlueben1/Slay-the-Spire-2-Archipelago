@@ -286,7 +286,7 @@ namespace StS2AP.Utils
         public static void OnCombatWin(CombatRoom room)
         {
             // LogUtility.Info($"OnCombatWin: RoomType={room.RoomType}, ActIndex={CurrentPlayer?.RunState?.CurrentActIndex}, HasSecondBoss={CurrentPlayer?.RunState?.Act.HasSecondBoss}, BossRewards={ArchipelagoClient.Progress.BossRewardsDistributed}");
-            TrySendBossDefeatCheck();
+            TrySendBossDefeatCheck(room);
 
             // If this was the Act 3 boss check whether the player has met the goal
             bool isAct3Boss = room.RoomType == RoomType.Boss
@@ -304,8 +304,11 @@ namespace StS2AP.Utils
 
         #region Sending Checks
 
-        public static void TrySendBossDefeatCheck()
+        public static void TrySendBossDefeatCheck(CombatRoom room)
         {
+            // If this isn't a boss room, back out
+            if (room.RoomType != RoomType.Boss) return;
+
             // Determine if we send a check for this
             ArchipelagoClient.Progress.BossRewardsDistributed++;
             if (ArchipelagoClient.Progress.BossRewardsDistributed <= ArchipelagoProgress._maxBossRewards)

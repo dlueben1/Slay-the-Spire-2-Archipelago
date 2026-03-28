@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Extensions;
 using StS2AP.Models;
+using StS2AP.Utils;
 using System.Reflection;
 
 namespace StS2AP.Patches
@@ -101,9 +102,12 @@ namespace StS2AP.Patches
                         // Is this a boss gold reward? (It's a different location/check)
                         if (room.RoomType == RoomType.Boss)
                         {
+                            // Grab the act number
+                            int actNumber = GameUtility.CurrentPlayer?.RunState?.CurrentActIndex + 1 ?? 0;
+
                             // Replace this reward with an AP Location reward
                             __result.Remove(goldReward);
-                            __result.Add(new ArchipelagoReward($"{name} Boss Gold {ArchipelagoClient.Progress.BossRewardsDistributed}"));
+                            __result.Add(new ArchipelagoReward($"{name} Boss Gold {actNumber}"));
                         }
                         // Otherwise, see if it's one of the first twenty gold rewards, and if so then replace it with an AP item
                         else
