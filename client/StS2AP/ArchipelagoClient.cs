@@ -237,8 +237,21 @@ namespace StS2AP
         {
             LogUtility.Success("Successfully Connected to Archipelago Server");
 
-            // Get all settings for this player
-            Settings = GetPlayerSettings();
+            try
+            {
+                // Get all settings for this player
+                Settings = GetPlayerSettings();
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Error($"Failed to load player settings: {ex.Message}");
+                Disconnect();
+                ArchipelagoConnectionUI.SetConnectButtonEnabled(true);
+                ArchipelagoConnectionUI.SetCloseButtonEnabled(true);
+                ArchipelagoConnectionUI.SetStatus($"Failed to load settings: {ex.Message}");
+                Connecting = false;
+                return;
+            }
 
             // If all characters should be unlocked, set that up
             if (Settings.NoCharactersLocked)
@@ -424,9 +437,12 @@ namespace StS2AP
         /// </summary>
         private static ArchipelagoSettings GetPlayerSettings()
         {
-            // Get the Data Store from Archipelago & Build the User Settings
-            var slotData = Session.DataStorage.GetSlotData();
-            if(slotData == null)
+            /// Use the SlotData that was already retrieved during login
+            /// instead of calling Session.DataStorage.GetSlotData() which performs
+            /// a synchronous network call that can deadlock/timeout when the websocket
+            /// thread is busy processing incoming item packets (e.g. on reconnect).
+            var slotData = SlotData;
+            if(slotData == null || slotData.Count == 0)
             {
                 LogUtility.Error("No slot data found for this player!");
                 throw new InvalidDataException("No slot data found for this player!");
