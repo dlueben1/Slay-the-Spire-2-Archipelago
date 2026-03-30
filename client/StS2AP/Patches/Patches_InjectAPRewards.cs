@@ -163,7 +163,7 @@ namespace StS2AP.Patches
                         continue;
                     }
 
-                    // Example rule: make relic rewards semi-transparent.
+                    // Make Claimed Archipelago Rewards semi-transparent
                     float targetAlpha = (reward is ArchipelagoReward && ((ArchipelagoReward)reward).IsChecked) ? _claimedAlpha : _normalAlpha;
 
                     // Immediate change:
