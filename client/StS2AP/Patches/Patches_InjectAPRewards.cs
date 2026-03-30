@@ -1,5 +1,8 @@
-﻿using HarmonyLib;
+﻿using Godot;
+using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Nodes.Rewards;
+using MegaCrit.Sts2.Core.Nodes.Screens;
 using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
@@ -122,6 +125,49 @@ namespace StS2AP.Patches
                             }
                         }
                     }
+                }
+            }
+        }
+
+        /// <summary>
+        /// When an AP Location reward has already been claimed, make it semi-transparent in the rewards screen to indicate that it's been claimed.
+        /// </summary>
+        [HarmonyPatch(typeof(NRewardsScreen), "SetRewards")]
+        public static class ClaimedAPRewardsAreSemiTransparentPatch
+        {
+            private const float _claimedAlpha = 0.5f;
+            private const float _normalAlpha = 1f;
+
+            // Postfix runs after the screen creates and adds the NRewardButton controls.
+            static void Postfix(NRewardsScreen __instance)
+            {
+                // Grab the private _rewardsContainer field (where NRewardButton instances are added).
+                FieldInfo? containerField = typeof(NRewardsScreen).GetField("_rewardsContainer", BindingFlags.Instance | BindingFlags.NonPublic);
+                if (containerField == null)
+                {
+                    return;
+                }
+
+                Control? rewardsContainer = containerField.GetValue(__instance) as Control;
+                if (rewardsContainer == null)
+                {
+                    return;
+                }
+
+                // Iterate created reward buttons and set their opacity based on reward type.
+                foreach (NRewardButton btn in rewardsContainer.GetChildren().OfType<NRewardButton>())
+                {
+                    Reward? reward = btn.Reward;
+                    if (reward == null)
+                    {
+                        continue;
+                    }
+
+                    // Example rule: make relic rewards semi-transparent.
+                    float targetAlpha = (reward is ArchipelagoReward && ((ArchipelagoReward)reward).IsChecked) ? _claimedAlpha : _normalAlpha;
+
+                    // Immediate change:
+                    btn.Modulate = new Color(1f, 1f, 1f, targetAlpha);
                 }
             }
         }
