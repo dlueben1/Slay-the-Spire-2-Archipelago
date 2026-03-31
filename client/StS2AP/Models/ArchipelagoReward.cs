@@ -13,8 +13,28 @@ namespace StS2AP.Models;
 /// </summary>
 public class ArchipelagoReward : Reward
 {
+    #region Archipelago Data
+
+    /// <summary>
+    /// The ID of the Location in the Multiworld
+    /// </summary>
     private readonly long _locationId;
+
+    /// <summary>
+    /// The Location Info for this Location, which contains the name and item received from this Location.
+    /// </summary>
     private readonly ScoutedItemInfo _location;
+
+    /// <summary>
+    /// Whether or not the item has already been checked, which controls whether or not the reward appears as "claimed"
+    /// in the UI and whether or not clicking it will do anything.
+    /// </summary>
+    public bool IsChecked => _isChecked;
+    private readonly bool _isChecked;
+
+    #endregion
+
+    #region Reward Overrides
 
     protected override RewardType RewardType => RewardType.None;
 
@@ -23,6 +43,8 @@ public class ArchipelagoReward : Reward
     public override LocString Description => GetDescription();
 
     public override bool IsPopulated => true;
+
+    #endregion
 
     protected override string? IconPath => "res://images/APIcon.png";
 
@@ -35,6 +57,15 @@ public class ArchipelagoReward : Reward
         // Try and find this location
         _locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", locationName);
         _location = ArchipelagoClient.ScoutedLocations[_locationId];
+
+        // If it's already been found, keep track of it
+        _isChecked = ArchipelagoClient.CheckedLocations.Contains(_locationId);
+        if(_isChecked)
+        {
+            // And update the name of the location
+            var key = $"AP_LOC_{_locationId}";
+            TextUtility.RegisterLocString(key, $"{_location.ItemDisplayName} (Claimed)", "ap");
+        }
     }
 
     public LocString GetDescription()
