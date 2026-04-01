@@ -1,23 +1,24 @@
 ﻿using Archipelago.MultiClient.Net.Models;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Players;
-using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Factories;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
-using MegaCrit.Sts2.Core.Rooms;
-using StS2AP.Models;
+using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Rewards;
+using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
+using MegaCrit.Sts2.Core.Saves;
+using StS2AP.Extensions;
+using StS2AP.Models;
+using StS2AP.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static StS2AP.Data.CharTable;
-using StS2AP.UI;
-using StS2AP.Extensions;
 
 namespace StS2AP.Utils
 {
@@ -45,6 +46,12 @@ namespace StS2AP.Utils
         /// Set when a run starts, cleared when a run ends.
         /// </summary>
         public static Player? CurrentPlayer { get; set; }
+        
+        /// <summary>
+        /// Dictionary that holds the current AP Saves for each character. Stored in DataStorage.
+        /// </summary>
+        public static Dictionary<string, string> APSaves { get; set; } = new Dictionary<string, string>();
+
 
         public static APItemCharID? CurrentCharacterID
         {
@@ -362,6 +369,38 @@ namespace StS2AP.Utils
             {
                 LogUtility.Warn($"Could not restore goaled characters from DataStorage: {ex.Message}. Starting with empty set.");
                 _goaledCharacters = new HashSet<string>();
+            }
+        }
+
+        /// <summary>
+        /// Sets up a watch for save files stored in datastorage.
+        /// </summary>
+        public static void SetupOnChangedSaves()
+        {
+
+            try
+            {
+                var storageKey = "StS2AP_Saves";
+
+                // Initialize the key with an empty dict if it doesn't exist yet
+                ArchipelagoClient.Session.DataStorage[
+                    Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
+                    .Initialize(new Dictionary<string, string>()); // replace inside () with `new Newtonsoft.Json.Linq.JObject()` in case it breaks not sure if this is correct
+
+                // Read back whatever is stored
+                ArchipelagoClient.Session.DataStorage[Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
+                    .OnValueChanged += (oldData, newData, additionalArguments) =>
+                    {
+                        if (newData != null)
+                        {
+                            GameUtility.APSaves = newData?.ToObject<Dictionary<string, string>>() ?? GameUtility.APSaves;
+                            LogUtility.Info($"Loaded saves from datastorage; got characters {GameUtility.APSaves?.Keys}");
+                        }
+                    };
+            }
+            catch(Exception ex)
+            {
+                LogUtility.Warn($"Failed to initialize datastorage watch for save files: {ex.Message}");
             }
         }
 

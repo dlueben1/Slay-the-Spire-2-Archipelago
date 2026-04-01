@@ -3,6 +3,9 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Factories;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.RelicPools;
+using MegaCrit.Sts2.Core.Multiplayer.Serialization;
+using MegaCrit.Sts2.Core.Saves.Runs;
 using StS2AP.Extensions;
 using StS2AP.Utils;
 
@@ -12,7 +15,7 @@ namespace StS2AP.Models
     /// <summary>
     /// Tracks the progress of how far along the player is through their Archipelago game
     /// </summary>
-    public class ArchipelagoProgress
+    public class ArchipelagoProgress : IPacketSerializable
     {
         /// <summary>
         /// The maximum possible number of Card Rewards that a player could have replaced with AP locations, regardless of settings.
@@ -100,10 +103,15 @@ namespace StS2AP.Models
         public void InitializeTrackers(Player player)
         {
             ResetTrackers();
+            InitializeFromServer(player);
+        }
+
+        public void InitializeFromServer(Player player)
+        {
             var name = player.APName();
-            for(int i = 1; i <= 3; i++)
+            for (int i = 1; i <= 3; i++)
             {
-                for(int j = 1; j <=2; j++)
+                for (int j = 1; j <= 2; j++)
                 {
                     var checkName = $"{name} Act {i} Campfire {j}";
                     var locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", checkName);
@@ -122,6 +130,8 @@ namespace StS2AP.Models
             CampfiresChecked.Clear();
             RelicAssignments.Clear();
         }
+
+
 
         #endregion
 
@@ -143,6 +153,65 @@ namespace StS2AP.Models
         /// This is what gets displayed in the top bar UI.
         /// </summary>
         public int UnusedItemCount => AllReceivedItems.Where(i => i.Item.GetStSCharID() == GameUtility.CurrentCharacterID).Count() - UsedItems.Count;
+
+        #endregion
+
+        #region StS Save
+
+        public void Serialize(PacketWriter writer)
+        {
+            writer.WriteInt(CardRewardsAttempted);
+            writer.WriteInt(RareCardRewardsAttempted);
+            writer.WriteInt(BossRewardsDistributed);
+            writer.WriteInt(RelicRewardsAttempted);
+            writer.WriteInt(GoldRewardsAttempted);
+            // TODO: maybe we just let the server sync process handle updating this?
+            //writer.WriteInt(AllReceivedItems.Count);
+            //foreach (var rec in AllReceivedItems)
+            //{
+            //    writer.WriteInt(rec.Index);
+            //}
+            writer.WriteInt(UsedItems.Count);
+            foreach (var used in UsedItems)
+            {
+                writer.WriteInt(used);
+            }
+            writer.WriteInt(RelicAssignments.Count());
+            foreach (var entry in RelicAssignments)
+            {
+                writer.WriteInt(entry.Key);
+                writer.Write<SerializableRelic>(entry.Value.ToSerializable());
+            }
+        }
+
+        public void Deserialize(PacketReader reader)
+        {
+            CardRewardsAttempted = reader.ReadInt();
+            RareCardRewardsAttempted = reader.ReadInt();
+            BossRewardsDistributed = reader.ReadInt();
+            RelicRewardsAttempted = reader.ReadInt();
+            GoldRewardsAttempted = reader.ReadInt();
+            //var recItemsCount = reader.ReadInt();
+            //for(int i = 0; i < recItemsCount; i++)
+            //{
+            //    int index = reader.ReadInt();
+            //    ItemInfo info = ArchipelagoClient.Session.Items.AllItemsReceived[index];
+            //    AllReceivedItems.Add();
+            //}
+            var usedItemsCount = reader.ReadInt();
+            for(int i = 0; i < usedItemsCount; i++)
+            {
+                UsedItems.Add(reader.ReadInt());
+            }
+            var relicAssignmentsCount = reader.ReadInt();
+            for(int i = 0; i < relicAssignmentsCount; i++)
+            {
+                var index = reader.ReadInt();
+                var relic = reader.Read<SerializableRelic>();
+                RelicAssignments[index] = RelicModel.FromSerializable(relic);
+            }
+
+        }
 
         #endregion
     }
