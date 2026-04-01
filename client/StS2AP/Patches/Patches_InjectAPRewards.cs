@@ -125,6 +125,18 @@ namespace StS2AP.Patches
                             }
                         }
                     }
+                    var potionReward = __result.FirstOrDefault(r => r is PotionReward);
+                    if (potionReward != null && ArchipelagoClient.Settings.PotionSanity)
+                    {
+                        ArchipelagoClient.Progress.PotionRewardsAttempted++;
+                        // Have we already given out enough potion rewards?
+                        if (ArchipelagoClient.Progress.PotionRewardsAttempted <= ArchipelagoProgress._maxPotionRewards)
+                        {
+                            // Replace this reward with an AP Location reward
+                            __result.Remove(potionReward);
+                            __result.Add(new ArchipelagoReward($"{name} Potion Drop {ArchipelagoClient.Progress.PotionRewardsAttempted}"));
+                        }
+                    }
                 }
             }
         }

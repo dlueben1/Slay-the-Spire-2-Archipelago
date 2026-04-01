@@ -31,6 +31,12 @@ namespace StS2AP.Models
         /// </summary>
         public const int _maxGoldRewards = 20;
 
+        /// <summary>
+        /// The maximum possible number of Potion Rewards that a player could have replaced with AP locations.
+        /// Only used if PotionSanity is on. Matches the APWorld's 9 locations per character.
+        /// </summary>
+        public const int _maxPotionRewards = 9;
+
         public const int _maxBossRewards = 3;
 
         #region Per-Run Tracker
@@ -54,6 +60,12 @@ namespace StS2AP.Models
         /// It's only used if the player has GoldSanity on.
         /// </summary>
         public int GoldRewardsAttempted { get; set; } = 0;
+
+        /// <summary>
+        /// Keeps track of the number of times the game has tried to provide a Potion Reward.
+        /// It's only used if the player has PotionSanity on.
+        /// </summary>
+        public int PotionRewardsAttempted { get; set; } = 0;
 
         public int BossRewardsDistributed { get; set; } = 0;
 
@@ -120,6 +132,7 @@ namespace StS2AP.Models
             BossRewardsDistributed = 0;
             RelicRewardsAttempted = 0;
             GoldRewardsAttempted = 0;
+            PotionRewardsAttempted = 0;
             CampfiresChecked.Clear();
             RelicAssignments.Clear();
             GoldRedeemed = 0;

@@ -161,7 +161,6 @@ class GoldSanity(Toggle):
 
 class PotionSanity(Toggle):
     """Whether to enable shuffling potion drops into the multiworld; adds 9 locations per character."""
-    visibility = Visibility.none
     display_name = "Potion Sanity"
     default = 0
 
