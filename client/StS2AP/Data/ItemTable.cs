@@ -56,5 +56,16 @@ namespace StS2AP.Data
             { 19, "Ascension Down" }
         };
 
+        /// <summary>
+        /// Maps AP Items to the amount of gold they give
+        /// </summary>
+        public static Dictionary<APItem, int> GoldItemAmounts = new Dictionary<APItem, int>
+        {
+            { APItem.OneGold, 1 },
+            { APItem.FiveGold, 5 },
+            { APItem._15Gold, 15 },
+            { APItem._30Gold, 30 },
+            { APItem.BossGold, 100 }
+        };
     }
 }

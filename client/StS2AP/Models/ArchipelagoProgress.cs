@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Factories;
 using MegaCrit.Sts2.Core.Models;
 using StS2AP.Extensions;
 using StS2AP.Utils;
+using static StS2AP.Data.CharTable;
 
 
 namespace StS2AP.Models
@@ -121,11 +122,12 @@ namespace StS2AP.Models
             GoldRewardsAttempted = 0;
             CampfiresChecked.Clear();
             RelicAssignments.Clear();
+            GoldRedeemed = 0;
         }
 
         #endregion
 
-        #region My Items
+        #region My Items (From the Multiworld)
 
         /// <summary>
         /// All items we've received from the multiworld. Gets dumped into `AvailableItems` at the start of each run.
@@ -143,6 +145,41 @@ namespace StS2AP.Models
         /// This is what gets displayed in the top bar UI.
         /// </summary>
         public int UnusedItemCount => AllReceivedItems.Where(i => i.Item.GetStSCharID() == GameUtility.CurrentCharacterID && !i.Item.ItemDisplayName.Contains("Progressive") && !i.Item.ItemName.Contains("Progressive")).Count() - UsedItems.Count;
+
+        #endregion
+
+        #region My Gold (From the Multiworld)
+
+        /// <summary>
+        /// ALL Gold received from the Multiworld
+        /// </summary>
+        public Dictionary<APItemCharID, int> GoldReceived { get; set; } = new Dictionary<APItemCharID, int>();
+
+        /// <summary>
+        /// The Gold you've redeemed so far this run
+        /// </summary>
+        public int GoldRedeemed { get; set; } = 0;
+
+        /// <summary>
+        /// The amount of Gold you have left to redeem from the Multiworld.
+        /// Returns -1 if the value could not be retrieved.
+        /// </summary>
+        public int GoldRemaining
+        {
+            get
+            {
+                try
+                {
+                    if (!GameUtility.CurrentCharacterID.HasValue) return -1;
+                    GoldReceived.TryGetValue(GameUtility.CurrentCharacterID.Value, out int gold);
+                    return gold - GoldRedeemed;
+                }
+                catch
+                {
+                    return -1;
+                }
+            }
+        }
 
         #endregion
     }

@@ -178,7 +178,8 @@ namespace StS2AP.UI
         }
 
         /// <summary>
-        /// Shows the Reward Screen and all of the unused items available to the user in their current run.
+        /// Overload of `ShowRewards()` that assumes we want to show all available items.
+        /// Ends up calling `ShowRewards()` with a pre-built list of `ArchipelagoRewardData` objects based on the player's current multiworld progress.
         /// </summary>
         public static void ShowRewards()
         {
@@ -252,6 +253,23 @@ namespace StS2AP.UI
                     child.QueueFree();
 
                 _remainingRewards = 0;
+
+                // Inject a reward for any remaining gold (if applicable)
+                int pendingGold = ArchipelagoClient.Progress.GoldRemaining;
+                if(pendingGold > 0)
+                {
+                    rewards.Insert(0, new ArchipelagoRewardData
+                    {
+                        ItemName    = $"{pendingGold} Gold",
+                        SenderName  = "",
+                        IconPath    = IconGold,
+                        GrantAction = async() => 
+                        { 
+                            await GameUtility.GrantGold(pendingGold); 
+                            ArchipelagoClient.Progress.GoldRedeemed += pendingGold; 
+                        }
+                    });
+                }
 
                 foreach (var data in rewards)
                     AppendRewardButton(data);
@@ -692,7 +710,7 @@ namespace StS2AP.UI
                 UpdateProceedButton();
 
                 // Update the unused item count on the top bar
-                ArchipelagoTopBarUI.SetCount(ArchipelagoClient.Progress.UnusedItemCount);
+                ArchipelagoTopBarUI.RefreshCount();
 
                 // Auto-hide once all rewards are dismissed
                 if (_remainingRewards <= 0)
