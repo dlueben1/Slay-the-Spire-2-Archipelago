@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
+using MegaCrit.Sts2.Core.Nodes.Screens.ScreenContext;
 using static StS2AP.Data.ItemTable;
 using ItemInfo = Archipelago.MultiClient.Net.Models.ItemInfo;
 
@@ -321,11 +323,13 @@ namespace StS2AP.UI
                         _rewardLayer.Visible = false;
                     if (_rootPanel != null && IsInstanceValid(_rootPanel))
                         _rootPanel.Modulate = new Color(1f, 1f, 1f, 1f);
+                    RestoreOverlayFocus();
                 }));
             }
             else
             {
                 _rewardLayer.Visible = false;
+                RestoreOverlayFocus();
             }
 
             OnScreenClosed?.Invoke();
@@ -341,6 +345,7 @@ namespace StS2AP.UI
                 return;
 
             _rewardLayer.Visible = false;
+            RestoreOverlayFocus();
         }
 
         /// <summary>
@@ -352,6 +357,7 @@ namespace StS2AP.UI
                 return;
 
             _rewardLayer.Visible = true;
+            RestoreOverlayFocus();
         }
 
         /// <summary>
@@ -849,7 +855,28 @@ namespace StS2AP.UI
         {
             return GodotObject.IsInstanceValid(obj);
         }
-
+        /// <summary>
+        /// Restores focus and visibility state to the game's native overlay stack.
+        /// Called when the AP reward screen is hidden or dismissed so that any underlying screen (e.g., NRewardsScreen) regains input focus and doesn't softlock.
+        /// </summary>
+        private static void RestoreOverlayFocus()
+        {
+           try
+            {
+                // Grab the top overlay's default focus control and give it focus directly
+                var topOverlay = NOverlayStack.Instance?.Peek();
+                if (topOverlay != null)
+                {
+                    topOverlay.AfterOverlayShown();
+                    var defaultControl = topOverlay.DefaultFocusedControl;
+                    defaultControl?.GrabFocus();
+                }
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Warn($"Failed to restore game UI focus: {ex.Message}");
+            }
+        }
         #endregion
     }
 }

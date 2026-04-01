@@ -494,6 +494,9 @@ namespace StS2AP
 
             if (slotData.ContainsKey("gold_sanity"))
                 settings.GoldSanity = Convert.ToInt32(slotData["gold_sanity"]) != 0;
+                
+            if (slotData.ContainsKey("potion_sanity"))
+                settings.PotionSanity = Convert.ToInt32(slotData["potion_sanity"]) != 0;
 
             if (slotData.ContainsKey("include_floor_checks"))
                 settings.Floorsanity = Convert.ToInt32(slotData["include_floor_checks"]) != 0;

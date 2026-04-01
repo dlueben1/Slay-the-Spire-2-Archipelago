@@ -47,7 +47,7 @@ namespace StS2AP.Patches
                                 {
                                     description = info.Player.Alias + "'s " + info.ItemName;
                                 }
-                                __result.Add(new APRestOption(player, locationId, info, description));
+                                __result.Add(new APRestOption(player, locationId, info, description, checkName));
                             }
                         }
 
@@ -90,11 +90,13 @@ namespace StS2AP.Patches
         {
             private readonly long locationId;
             private readonly string description;
+            private readonly string checkName;
             private readonly ScoutedItemInfo? info;
-            public APRestOption(Player owner, long locationId, ScoutedItemInfo? info, string description) : base(owner)
+            public APRestOption(Player owner, long locationId, ScoutedItemInfo? info, string description, string checkName) : base(owner)
             {
                 this.locationId = locationId;
                 this.description = description;
+                this.checkName = checkName;
                 this.info = info;
             }
 
