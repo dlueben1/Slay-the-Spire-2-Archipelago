@@ -413,19 +413,51 @@ namespace StS2AP
             // Apply the item to the game
             switch(item.GetRawItemID())
             {
+                // Characters get tracked in GameUtility
                 case APItem.Unlock:
                     {
                         GameUtility.UnlockCharacter(item);
+                        break;
+                    }
+                // Gold is condensed into a single reward pool
+                case APItem.OneGold:
+                case APItem.FiveGold:
+                case APItem._15Gold:
+                case APItem._30Gold:
+                case APItem.BossGold:
+                    {
+                        // Get the IDs for storing the item
+                        var playerId = item.GetStSCharID();
+                        var itemId = item.GetRawItemID();
+
+                        // Add the Gold to the amount we've received
+                        try
+                        {
+                            var haveKey = Progress.GoldReceived.TryGetValue(playerId, out int gold);
+                            if (!haveKey) gold = 0;
+                            Progress.GoldReceived[playerId] = gold + ItemTable.GoldItemAmounts[itemId];
+                        }
+                        catch (KeyNotFoundException e)
+                        {
+                            LogUtility.Error($"GoldItemAmounts does not have a value for this item! ({item.ItemDisplayName} from {item.Player.Name})");
+                        }
+                        catch
+                        {
+                            LogUtility.Error($"Failed to process Gold when this item was received: ({item.ItemDisplayName} from {item.Player.Name})");
+                        }
+
                         break;
                     }
                 default:
                     {
                         // adding reward to the reward screen
                         Progress.AllReceivedItems.Add(new IndexedItemInfo(item, index));
-                        ArchipelagoTopBarUI.SetCount(Progress.UnusedItemCount);
                         break;
                     }
             }
+
+            // Refresh the unused item count
+            ArchipelagoTopBarUI.RefreshCount();
         }
 
         #endregion
@@ -462,6 +494,9 @@ namespace StS2AP
 
             if (slotData.ContainsKey("gold_sanity"))
                 settings.GoldSanity = Convert.ToInt32(slotData["gold_sanity"]) != 0;
+
+            if (slotData.ContainsKey("include_floor_checks"))
+                settings.Floorsanity = Convert.ToInt32(slotData["include_floor_checks"]) != 0;
 
             // And return it
             return settings;
