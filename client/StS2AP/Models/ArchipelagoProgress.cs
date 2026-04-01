@@ -3,6 +3,7 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Factories;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Rewards;
 using StS2AP.Extensions;
 using StS2AP.Utils;
 using static StS2AP.Data.CharTable;
@@ -79,6 +80,12 @@ namespace StS2AP.Models
         public Dictionary<int, RelicModel> RelicAssignments { get; set; } = new Dictionary<int, RelicModel>();
 
         /// <summary>
+        /// Maps an Archipelago item's index to the CardReward that was pre-populated for it.
+        /// This ensures that even if you skip the Card Reward, it will still be the same if you come back to it later.
+        /// </summary>
+        public Dictionary<int, CardReward> CardAssignments { get; set; } = new Dictionary<int, CardReward>();
+
+        /// <summary>
         /// Returns the relic assigned to the given location, pulling one from the RelicFactory if it hasn't been assigned yet.
         /// This guarantees that the same relic is shown every time the reward screen is opened for the same item.
         /// </summary>
@@ -135,6 +142,7 @@ namespace StS2AP.Models
             PotionRewardsAttempted = 0;
             CampfiresChecked.Clear();
             RelicAssignments.Clear();
+            CardAssignments.Clear();
             GoldRedeemed = 0;
         }
 
