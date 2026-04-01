@@ -274,10 +274,11 @@ namespace StS2AP.UI
                         ItemName    = $"{pendingGold} Gold",
                         SenderName  = "",
                         IconPath    = IconGold,
-                        GrantAction = async() => 
+                        GrantAction = async() =>
                         { 
                             await GameUtility.GrantGold(pendingGold); 
-                            ArchipelagoClient.Progress.GoldRedeemed += pendingGold; 
+                            ArchipelagoClient.Progress.GoldRedeemed += pendingGold;
+                            return true;
                         }
                     });
                 }
