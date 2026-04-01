@@ -43,10 +43,11 @@ namespace StS2AP.UI
         public string IconPath { get; set; } = string.Empty;
 
         /// <summary>
-        /// The async action that grants this item to the player when the button is clicked
-        /// Null means the button is display-only (e.g. during a test or if not in a run)
+        /// The async action that grants this item to the player when the button is clicked.
+        /// Returns true if the reward should be removed from the menu, false if it should stay
+        /// (e.g. a card reward that was skipped). Null means the button is display-only.
         /// </summary>
-        public Func<Task>? GrantAction { get; set; }
+        public Func<Task<bool>>? GrantAction { get; set; }
 
         /// <summary>Optional sync callback invoked after the grant completes (e.g. for cleanup)</summary>
         public Action? OnClaimed { get; set; }
@@ -159,21 +160,21 @@ namespace StS2AP.UI
                     ItemName    = "Relic",
                     SenderName  = "Archipelago",
                     IconPath    = IconRelic,
-                    GrantAction = () => GameUtility.GrantRelic()
+                    GrantAction = async () => { await GameUtility.GrantRelic(); return true; }
                 },
                 new ArchipelagoRewardData
                 {
                     ItemName    = "50 Gold",
                     SenderName  = "Archipelago",
                     IconPath    = IconGold,
-                    GrantAction = () => GameUtility.GrantGold(50)
+                    GrantAction = async () => { await GameUtility.GrantGold(50); return true; }
                 },
                 new ArchipelagoRewardData
                 {
                     ItemName    = "Card Reward",
                     SenderName  = "TestPlayer",
                     IconPath    = IconCard,
-                    GrantAction = () => GameUtility.GrantCardReward(rare: false)
+                    GrantAction = () => GameUtility.GrantCardReward(index: -1, rare: false)
                 },
             };
             Callable.From(() => ShowRewards(testRewards)).CallDeferred();
@@ -215,8 +216,16 @@ namespace StS2AP.UI
                     {
                         data.ItemName = relic.Title.GetRawText();
                         data.IconPath = relic.IconPath;
-                        data.GrantAction = () => GameUtility.GrantRelic(relic);
+                        data.GrantAction = async () => { await GameUtility.GrantRelic(relic); return true; };
                     }
+                }
+
+                // For card reward items, use the cached GrantAction so skipping preserves the reward
+                if (rawId == APItem.CardReward || rawId == APItem.RareCardReward)
+                {
+                    bool isRare = rawId == APItem.RareCardReward;
+                    int itemIndex = i.Index;
+                    data.GrantAction = async () => await GameUtility.GrantCardReward(itemIndex, rare: isRare);
                 }
 
                 return data;
@@ -700,27 +709,52 @@ namespace StS2AP.UI
 
                 if (data.GrantAction != null)
                 {
-                    // Fire the async grant and log any failure — we don't await here since
-                    // btn.Pressed is a sync signal handler, but the grant runs on the main thread
                     var task = data.GrantAction.Invoke();
                     task.ContinueWith(t =>
                     {
                         if (t.Exception != null)
+                        {
                             LogUtility.Error($"Grant failed for '{data.ItemName}': {t.Exception.InnerException?.Message ?? t.Exception.Message}");
-                    }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnFaulted);
+                            // Re-enable the button on failure so the player can try again
+                            Callable.From(() => { btn.Disabled = false; }).CallDeferred();
+                            return;
+                        }
+
+                        bool shouldRemove = t.Result;
+                        Callable.From(() =>
+                        {
+                            if (shouldRemove)
+                            {
+                                // Reward was consumed — remove the button
+                                data.OnClaimed?.Invoke();
+                                btn.QueueFree();
+                                _remainingRewards--;
+                                UpdateProceedButton();
+                                ArchipelagoTopBarUI.SetCount(ArchipelagoClient.Progress.UnusedItemCount);
+                                if (_remainingRewards <= 0)
+                                    Hide();
+                            }
+                            else
+                            {
+                                // Reward was skipped — re-enable the button so the player can try again
+                                btn.Disabled = false;
+                            }
+                        }).CallDeferred();
+                    });
                 }
+                else
+                {
+                    // No grant action (display-only) — just dismiss
+                    data.OnClaimed?.Invoke();
+                    btn.QueueFree();
+                    _remainingRewards--;
+                    UpdateProceedButton();
+                    ArchipelagoTopBarUI.RefreshCount();
 
-                data.OnClaimed?.Invoke();
-                btn.QueueFree();
-                _remainingRewards--;
-                UpdateProceedButton();
-
-                // Update the unused item count on the top bar
-                ArchipelagoTopBarUI.RefreshCount();
-
-                // Auto-hide once all rewards are dismissed
-                if (_remainingRewards <= 0)
-                    Hide();
+                    // Auto-hide once all rewards are dismissed
+                    if (_remainingRewards <= 0)
+                        Hide();
+                }
             };
 
             return btn;
@@ -781,20 +815,19 @@ namespace StS2AP.UI
         /// </summary>
         /// <param name="item">The received Archipelago item.</param>
         /// <returns>An async grant action, or null if not applicable.</returns>
-        private static Func<Task>? GetGrantAction(ItemInfo item)
+        private static Func<Task<bool>>? GetGrantAction(ItemInfo item)
         {
             switch (item.GetRawItemID())
             {
-                case APItem.OneGold:      return () => GameUtility.GrantGold(1);
-                case APItem.FiveGold:     return () => GameUtility.GrantGold(5);
-                case APItem._15Gold:      return () => GameUtility.GrantGold(15);
-                case APItem._30Gold:      return () => GameUtility.GrantGold(30);
-                case APItem.BossGold:     return () => GameUtility.GrantGold(100);
-                case APItem.Relic:        return () => GameUtility.GrantRelic();
-                case APItem.Potion:       return () => GameUtility.GrantPotion();
-                case APItem.CardReward:   return () => GameUtility.GrantCardReward(rare: false);
-                case APItem.RareCardReward: return () => GameUtility.GrantCardReward(rare: true);
+                case APItem.OneGold:      return async () => { await GameUtility.GrantGold(1); return true; };
+                case APItem.FiveGold:     return async () => { await GameUtility.GrantGold(5); return true; };
+                case APItem._15Gold:      return async () => { await GameUtility.GrantGold(15); return true; };
+                case APItem._30Gold:      return async () => { await GameUtility.GrantGold(30); return true; };
+                case APItem.BossGold:     return async () => { await GameUtility.GrantGold(100); return true; };
+                case APItem.Relic:        return async () => { await GameUtility.GrantRelic(); return true; };
+                case APItem.Potion:       return async () => { await GameUtility.GrantPotion(); return true; };
                 default:
+                    // Card rewards are handled in ShowRewards() where the index is available
                     // Unlock is handled by GameUtility.UnlockCharacter in ArchipelagoClient.ProcessItem
                     // Progressive items (rest, shop slots, etc.) have not been yet implemented
                     return null;

@@ -6,14 +6,13 @@ using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Factories;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
+using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Rooms;
 using StS2AP.Models;
-using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Runs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using static StS2AP.Data.CharTable;
 using StS2AP.UI;
@@ -185,16 +184,49 @@ namespace StS2AP.Utils
         }
 
         /// <summary>
-        /// Opens the game's standard card selection screen so the player can pick a card
-        /// from a freshly generated card reward pool drawn from their character's card pools.
+        /// Returns the CardReward assigned to the given item index, creating and populating one if it hasn't been assigned yet.
+        /// This ensures that even if the player skips a Card Reward, the same three cards are shown next time.
         /// </summary>
+        private static async Task<CardReward?> GetOrAssignCardReward(int index, Player player, bool rare)
+        {
+            if (ArchipelagoClient.Progress.CardAssignments.TryGetValue(index, out var existing))
+                return existing;
+
+            try
+            {
+                var rarity = rare ? CardRarityOddsType.BossEncounter : CardRarityOddsType.RegularEncounter;
+                var options = new CardCreationOptions(
+                    new[] { player.Character.CardPool },
+                    CardCreationSource.Encounter,
+                    rarity);
+
+                var reward = new CardReward(options, 3, player);
+                await reward.Populate();
+
+                ArchipelagoClient.Progress.CardAssignments[index] = reward;
+                LogUtility.Info($"Pre-assigned card reward for item w/ index {index} (rare={rare})");
+                return reward;
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Error($"Failed to pre-assign card reward for item w/ index {index}: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Opens the game's standard card selection screen so the player can pick a card
+        /// from a pre-assigned (or freshly generated) card reward pool.
+        /// </summary>
+        /// <param name="index">The Archipelago item index, used to look up / cache the CardReward in CardAssignments.</param>
         /// <param name="rare">If true, uses boss-encounter rarity odds (higher chance of rares).</param>
-        public static async Task GrantCardReward(bool rare = false)
+        /// <returns>True if a card was actually added to the player's deck; false if the reward was skipped.</returns>
+        public static async Task<bool> GrantCardReward(int index, bool rare = false)
         {
             if (CurrentPlayer == null)
             {
                 LogUtility.Warn("Cannot grant card reward: no active player (not in a run)");
-                return;
+                return false;
             }
             // hiding the map
             var mapScreen = NMapScreen.Instance;
@@ -204,15 +236,16 @@ namespace StS2AP.Utils
 
             try
             {
-                // CardPool is singular on CharacterModel — wrap it in an array to satisfy CardCreationOptions
-                var rarity = rare ? CardRarityOddsType.BossEncounter : CardRarityOddsType.RegularEncounter;
-                var options = new CardCreationOptions(
-                    new[] { CurrentPlayer.Character.CardPool },
-                    CardCreationSource.Encounter,
-                    rarity);
+                // Get or create the cached CardReward for this item index
+                var reward = await GetOrAssignCardReward(index, CurrentPlayer, rare);
+                if (reward == null)
+                {
+                    LogUtility.Error($"Failed to get or assign card reward for index {index}");
+                    return false;
+                }
 
-                var reward = new CardReward(options, 3, CurrentPlayer);
-                await reward.Populate();
+                // Track how many cards are in the reward before selection
+                int cardCountBefore = reward.Cards.Count();
 
                 // Hide the Reward UI
                 ArchipelagoRewardUI.HideTemporarily();
@@ -225,17 +258,34 @@ namespace StS2AP.Utils
                 finally
                 {
                     ArchipelagoRewardUI.ShowAgain();
-                    LogUtility.Success("Card reward selection completed");
                 }
+
+                // If the card count decreased, a card was picked (added to deck)
+                int cardCountAfter = reward.Cards.Count();
+                bool cardWasPicked = cardCountAfter < cardCountBefore;
+
+                if (cardWasPicked)
+                {
+                    // Remove from cache so it can't be reused
+                    ArchipelagoClient.Progress.CardAssignments.Remove(index);
+                    LogUtility.Success("Card reward selection completed — card added to deck");
+                }
+                else
+                {
+                    LogUtility.Info("Card reward selection completed — reward was skipped");
+                }
+
+                return cardWasPicked;
 
             }
             catch (Exception ex)
             {
                 LogUtility.Error($"Failed to grant card reward: {ex.Message}");
+                return false;
             }
             finally
             {
-                // returning the map visibility so no issues are caused(hopefully lmao my code is ehhh)
+                // returning the map visibility so no issues are caused
                 if (mapWasVisible && mapScreen != null)
                     mapScreen.Visible = true;
             }
