@@ -25,7 +25,7 @@ namespace StS2AP.Patches
         [HarmonyPostfix]
         static void OverrideCharacters(ref IEnumerable<CharacterModel> __result)
         {
-            __result = GameUtility.UnlockedCharacters;
+            __result = ArchipelagoClient.Progress.UnlockedCharacters;
         }
     }
 }

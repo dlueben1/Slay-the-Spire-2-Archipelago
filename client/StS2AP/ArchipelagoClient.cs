@@ -270,7 +270,7 @@ namespace StS2AP
                     ModelDb.Character<Necrobinder>(),
                     ModelDb.Character<Defect>()
                 };
-                GameUtility.UnlockedCharacters.AddRange(characters);
+                Progress.UnlockedCharacters.AddRange(characters);
             }
 
             // Log all slot data
@@ -406,6 +406,7 @@ namespace StS2AP
 
         /// <summary>
         /// Determines what to do with an Item that we've received from Archipelago.
+        /// This function is controlled by a Spinlock, and can only process one item at a time.
         /// </summary>
         /// <param name="item">Received Item</param>
         /// <param name="index">The index of the item in the Archipelago Multiworld</param>
@@ -420,10 +421,40 @@ namespace StS2AP
             // Apply the item to the game
             switch(item.GetRawItemID())
             {
-                // Characters get tracked in GameUtility
+                // Character Unlocks
                 case APItem.Unlock:
                     {
                         GameUtility.UnlockCharacter(item);
+                        break;
+                    }
+                // Progressive Smiths/Rests
+                case APItem.ProgressiveSmith:
+                case APItem.ProgressiveRest:
+                    {
+                        // Get the IDs for storing the item
+                        var itemId = item.GetRawItemID();
+                        var playerId = item.GetStSCharID();
+
+                        // Add the Smith/Rest to the amount we've received for this character
+                        var source = itemId == APItem.ProgressiveSmith ? Progress.ProgressiveSmiths : Progress.ProgressiveRests;
+
+                        // Increment the reward
+                        try
+                        {
+                            var haveKey = source.TryGetValue(playerId, out int amount);
+                            if (!haveKey) amount = 0;
+                            source[playerId] = amount + 1;
+                            LogUtility.Success($"New Value for {(itemId == APItem.ProgressiveSmith ? "ProgressiveSmiths" : "ProgressiveRests")} is {source[playerId]}");
+                        }
+                        catch (KeyNotFoundException e)
+                        {
+                            LogUtility.Error($"ProgressiveSmiths/ProgressiveRests does not have a value for this character! ({item.ItemDisplayName} from {item.Player.Name})");
+                        }
+                        catch
+                        {
+                            LogUtility.Error($"Failed to process Progressive Smith/Rest when this item was received: ({item.ItemDisplayName} from {item.Player.Name})");
+                        }
+
                         break;
                     }
                 // Gold is condensed into a single reward pool
@@ -455,9 +486,9 @@ namespace StS2AP
 
                         break;
                     }
+                // Everything else ends up in the "reward pool"
                 default:
                     {
-                        // adding reward to the reward screen
                         Progress.AllReceivedItems.Add(new IndexedItemInfo(item, index));
                         break;
                     }

@@ -56,11 +56,36 @@ namespace StS2AP.Patches
                     }
                 }
 
-                bool canRest = ArchipelagoClient.Session.Items.AllItemsReceived.Where(i => $"{player.APName()} Progressive Rest".Equals(i.ItemName))
-                    .Count() >= Math.Min(player.RunState.CurrentActIndex + 1, 3);
-                bool canSmith = ArchipelagoClient.Session.Items.AllItemsReceived.Where(i => $"{player.APName()} Progressive Smith".Equals(i.ItemName))
-                   .Count() >= Math.Min(player.RunState.CurrentActIndex + 1, 3);
+                // Get what we need to determine if the player can rest/smith
+                var currentCharacterId = GameUtility.CurrentCharacterID;
+                bool canRest;
+                bool canSmith;
+
+                LogUtility.Info("~~ Campfire Reached ~~");
+                // If for some reason we can't get the current character ID or progress, default to blocking resting/smithing
+                if(!currentCharacterId.HasValue)
+                {
+                    canRest = false;
+                    canSmith = false;
+                }
+                // Otherwise, see if our max rest/smith level allows the options to be enabled
+                else
+                {
+                    int act = Math.Min(player.RunState.CurrentActIndex + 1, 3);
+                    int? maxRestLevel = ArchipelagoClient.Progress.MaxRestLevel(currentCharacterId.Value);
+                    int? maxSmithLevel = ArchipelagoClient.Progress.MaxSmithLevel(currentCharacterId.Value);
+                    canRest = maxRestLevel.HasValue && maxRestLevel.Value >= act;
+                    canSmith = maxSmithLevel.HasValue && maxSmithLevel.Value >= act;
+                
+                    LogUtility.Info($"Progressive Rests Received: {ArchipelagoClient.Progress.MaxRestLevel(currentCharacterId.Value).ToString()}, Progressive Smiths Received: {ArchipelagoClient.Progress.MaxSmithLevel(currentCharacterId.Value).ToString()}");
+                }
+
+                // Log the results for debugging
+                LogUtility.Info($"Can Rest: {canRest}, Can Smith: {canSmith}");
+
+                // Determine if any are enabled (needed for softlock prevention)
                 bool anyEnabled = canRest || canSmith;
+
                 // Removing the heal option (potentially) in favor of the fake heal option
                 if(!canRest)
                 {

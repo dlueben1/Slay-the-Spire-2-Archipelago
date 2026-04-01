@@ -51,6 +51,11 @@ namespace StS2AP.Models
         /// </summary>
         public int CardRewardsAttempted { get; set; } = 0;
 
+        /// <summary>
+        /// Keeps track of the number of times that the game has tried to provide a Rare Card Reward.
+        /// Used to keep track of when to replace a Rare Card Reward with an AP Location.
+        /// TODO: We may want to enforce this for Bosses only in the future, in case events can provide this.
+        /// </summary>
         public int RareCardRewardsAttempted { get; set; } = 0;
 
         /// <summary>
@@ -70,7 +75,10 @@ namespace StS2AP.Models
         /// It's only used if the player has PotionSanity on.
         /// </summary>
         public int PotionRewardsAttempted { get; set; } = 0;
-
+        
+        /// <summary>
+        /// Keeps track of the number of times the game has tried to provide a Boss Reward.
+        /// </summary>
         public int BossRewardsDistributed { get; set; } = 0;
 
         public Dictionary<string, bool> CampfiresChecked { get; set; } = new Dictionary<string, bool>();
@@ -120,6 +128,10 @@ namespace StS2AP.Models
             }
         }
 
+        /// <summary>
+        /// Fires when a run starts, to make sure that all progress trackers are reset and ready to go.
+        /// </summary>
+        /// <param name="player">The current player, needed to initialize trackers.</param>
         public void InitializeTrackers(Player player)
         {
             ResetTrackers();
@@ -210,6 +222,55 @@ namespace StS2AP.Models
                     return -1;
                 }
             }
+        }
+
+        #endregion
+
+        #region My Unlocks (From the Multiworld)
+
+        /// <summary>
+        /// Collection of all the characters that should be unlocked.
+        /// 
+        /// If you want to add a character to the unlocked list, you'll need to add it using the `ModelDb.Character<>()` function.
+        /// For example, to add the Necrobinder, you'd need to do:
+        /// `ArchipelagoClient.Progress.UnlockedCharacters.Add(ModelDb.Character<Characters.Necrobinder>());`
+        /// 
+        /// Instead of modifying this directly, use <see cref="GameUtility.UnlockCharacter(CharacterModel)"/>
+        /// </summary>
+        public List<CharacterModel> UnlockedCharacters { get; set; } = new List<CharacterModel>();
+
+        /// <summary>
+        /// Keeps track of the number of Progressive Smiths we've received for each character
+        /// </summary>
+        public Dictionary<APItemCharID, int> ProgressiveSmiths = new Dictionary<APItemCharID, int>();
+
+        /// <summary>
+        /// Keeps track of the number of Progressive Rests we've received for each character
+        /// </summary>
+        public Dictionary<APItemCharID, int> ProgressiveRests = new Dictionary<APItemCharID, int>();
+
+        /// <summary>
+        /// Gets the highest Act that a character can rest at
+        /// </summary>
+        /// <param name="character">The Character's encoded ItemID</param>
+        /// <returns>The highest Act (one-based) that the character can rest at</returns>
+        public int? MaxRestLevel(APItemCharID character)
+        {
+            var canRest = ProgressiveRests.TryGetValue(character, out int act);
+            if (!canRest) return null;
+            return act;
+        }
+
+        /// <summary>
+        /// Gets the highest Act that a character can smith at
+        /// </summary>
+        /// <param name="character">The Character's encoded ItemID</param>
+        /// <returns>The highest Act (one-based) that the character can smith at</returns>
+        public int? MaxSmithLevel(APItemCharID character)
+        {
+            var canSmith = ProgressiveSmiths.TryGetValue(character, out int act);
+            if (!canSmith) return null;
+            return act;
         }
 
         #endregion

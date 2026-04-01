@@ -68,19 +68,6 @@ namespace StS2AP.Utils
             }
         }
 
-        #region Lock/Unlock Content
-
-        /// <summary>
-        /// Collection of all the characters that should be unlocked.
-        /// 
-        /// If you want to add a character to the unlocked list, you'll need to add it using the `ModelDb.Character<>()` function.
-        /// For example, to add the Necrobinder, you'd need to do:
-        /// `GameUtility.UnlockedCharacters.Add(ModelDb.Character<Characters.Necrobinder>());`
-        /// </summary>
-        public static List<CharacterModel> UnlockedCharacters { get; set; } = new List<CharacterModel>();
-
-        #endregion
-
         #region Receiving Items
 
         /// <summary>
@@ -333,7 +320,7 @@ namespace StS2AP.Utils
                 return;
             }
 
-            if(!UnlockedCharacters.Contains(characterToUnlock)) UnlockedCharacters.Add(characterToUnlock);
+            if(!ArchipelagoClient.Progress.UnlockedCharacters.Contains(characterToUnlock)) ArchipelagoClient.Progress.UnlockedCharacters.Add(characterToUnlock);
         }
 
         #endregion
