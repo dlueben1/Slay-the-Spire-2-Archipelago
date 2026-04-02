@@ -12,38 +12,30 @@ using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves;
 using StS2AP.Patches;
 using StS2AP.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace StS2AP.UI
 {
-    public class ContinueSavePopupUI : NAbandonRunConfirmPopup
+    public class ContinueSaveUI : ConfirmPopup
     {
-        private NVerticalPopup _verticalPopup;
+        private NCharacterSelectScreen _charSelect;
 
-        private readonly NCharacterSelectScreen _charSelect;
-        public ContinueSavePopupUI(NCharacterSelectScreen charSelect)
+        public ContinueSaveUI(NCharacterSelectScreen charSelect)
         {
             _charSelect = charSelect;
         }
-        public override void _Ready()
+
+        protected override LocString Header => new LocString("main_menu_ui", "CONTINUE_RUN.header");
+
+        protected override LocString Body => new LocString("main_menu_ui", "CONTINUE_RUN.body");
+
+
+        protected override void OnNoButtonPressed(NButton _)
         {
-            _verticalPopup = GetNode<NVerticalPopup>("VerticalPopup");
-            _verticalPopup.SetText(new LocString("main_menu_ui", "CONTINUE_RUN.header"),
-                new LocString("main_menu_ui", "CONTINUE_RUN.body"));
-            Type parent = typeof(NAbandonRunConfirmPopup);
-            FieldInfo finfo = parent.GetField("_verticalPopup", BindingFlags.NonPublic | BindingFlags.Instance);
-            finfo.SetValue(_verticalPopup, this);
-            _verticalPopup.InitYesButton(new LocString("main_menu_ui", "GENERIC_POPUP.confirm"), OnYesButtonPressed);
-            _verticalPopup.InitNoButton(new LocString("main_menu_ui", "GENERIC_POPUP.cancel"), OnNoButtonPressed);
+            _charSelect.Lobby.SetReady(ready: true);
         }
 
-        private void OnYesButtonPressed(NButton _)
+        protected override void OnYesButtonPressed(NButton _)
         {
             TaskHelper.RunSafely(ContinueRun());
         }
@@ -82,11 +74,6 @@ namespace StS2AP.UI
             NErrorPopup modalToCreate = NErrorPopup.Create(new LocString("main_menu_ui", "INVALID_SAVE_POPUP.title"), new LocString("main_menu_ui", "INVALID_SAVE_POPUP.description_run"), new LocString("main_menu_ui", "INVALID_SAVE_POPUP.dismiss"), showReportBugButton: true);
             NModalContainer.Instance.Add(modalToCreate);
             NModalContainer.Instance.ShowBackstop();
-        }
-
-        private void OnNoButtonPressed(NButton _)
-        {
-            _charSelect.Lobby.SetReady(ready: true);
         }
     }
 }

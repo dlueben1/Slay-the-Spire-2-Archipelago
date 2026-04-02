@@ -12,13 +12,9 @@ using StS2AP.Extensions;
 using StS2AP.Models;
 using StS2AP.UI;
 using StS2AP.Utils;
-using System;
-using System.Collections.Generic;
 using System.IO.Compression;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace StS2AP.Patches
 {
@@ -37,13 +33,15 @@ namespace StS2AP.Patches
                     (preFinishedRoom.RoomType != RoomType.Boss
                     && preFinishedRoom.RoomType != RoomType.Treasure))
                 {
-                    __result = null;
-                    return true;
+                    LogUtility.Info($"Skipping save {preFinishedRoom?.RoomType}");
+                    __result = Task.CompletedTask;
+                    return false;
                 }
 
+                LogUtility.Info("Saving to AP");
                 SerializableRun saveMe = RunManager.Instance.ToSave(preFinishedRoom);
                 __result = asyncSave(saveMe);
-                return true;
+                return false;
             }
 
             public static async Task asyncSave(SerializableRun saveMe)
@@ -130,12 +128,14 @@ namespace StS2AP.Patches
 
                 if(GameUtility.APSaves.ContainsKey(charName))
                 {
+                    LogUtility.Info($"AP Save detected for character {charName}");
                     //var popup = 
-                    //NModalContainer.Instance.Add(ContinueSavePopupUI.Create(__instance))
+                    NModalContainer.Instance.Add(new ContinueSaveUI(__instance));
                     // TODO: create the popup that prompts for a save load
-                    return true;
+                    return false;
                 }
-                return false;
+                LogUtility.Info($"No AP Save detected for character {charName}");
+                return true;
             }
         }
     }
