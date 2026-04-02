@@ -1,10 +1,14 @@
-﻿using HarmonyLib;
+﻿using Godot;
+using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Nodes.Rewards;
+using MegaCrit.Sts2.Core.Nodes.Screens;
 using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Extensions;
 using StS2AP.Models;
+using StS2AP.Utils;
 using System.Reflection;
 
 namespace StS2AP.Patches
@@ -101,9 +105,12 @@ namespace StS2AP.Patches
                         // Is this a boss gold reward? (It's a different location/check)
                         if (room.RoomType == RoomType.Boss)
                         {
+                            // Grab the act number
+                            int actNumber = GameUtility.CurrentPlayer?.RunState?.CurrentActIndex + 1 ?? 0;
+
                             // Replace this reward with an AP Location reward
                             __result.Remove(goldReward);
-                            __result.Add(new ArchipelagoReward($"{name} Boss Gold {ArchipelagoClient.Progress.BossRewardsDistributed}"));
+                            __result.Add(new ArchipelagoReward($"{name} Boss Gold {actNumber}"));
                         }
                         // Otherwise, see if it's one of the first twenty gold rewards, and if so then replace it with an AP item
                         else
@@ -118,6 +125,61 @@ namespace StS2AP.Patches
                             }
                         }
                     }
+                    var potionReward = __result.FirstOrDefault(r => r is PotionReward);
+                    if (potionReward != null && ArchipelagoClient.Settings.PotionSanity)
+                    {
+                        ArchipelagoClient.Progress.PotionRewardsAttempted++;
+                        // Have we already given out enough potion rewards?
+                        if (ArchipelagoClient.Progress.PotionRewardsAttempted <= ArchipelagoProgress._maxPotionRewards)
+                        {
+                            // Replace this reward with an AP Location reward
+                            __result.Remove(potionReward);
+                            __result.Add(new ArchipelagoReward($"{name} Potion Drop {ArchipelagoClient.Progress.PotionRewardsAttempted}"));
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// When an AP Location reward has already been claimed, make it semi-transparent in the rewards screen to indicate that it's been claimed.
+        /// </summary>
+        [HarmonyPatch(typeof(NRewardsScreen), "SetRewards")]
+        public static class ClaimedAPRewardsAreSemiTransparentPatch
+        {
+            private const float _claimedAlpha = 0.5f;
+            private const float _normalAlpha = 1f;
+
+            // Postfix runs after the screen creates and adds the NRewardButton controls.
+            static void Postfix(NRewardsScreen __instance)
+            {
+                // Grab the private _rewardsContainer field (where NRewardButton instances are added).
+                FieldInfo? containerField = typeof(NRewardsScreen).GetField("_rewardsContainer", BindingFlags.Instance | BindingFlags.NonPublic);
+                if (containerField == null)
+                {
+                    return;
+                }
+
+                Control? rewardsContainer = containerField.GetValue(__instance) as Control;
+                if (rewardsContainer == null)
+                {
+                    return;
+                }
+
+                // Iterate created reward buttons and set their opacity based on reward type.
+                foreach (NRewardButton btn in rewardsContainer.GetChildren().OfType<NRewardButton>())
+                {
+                    Reward? reward = btn.Reward;
+                    if (reward == null)
+                    {
+                        continue;
+                    }
+
+                    // Make Claimed Archipelago Rewards semi-transparent
+                    float targetAlpha = (reward is ArchipelagoReward && ((ArchipelagoReward)reward).IsChecked) ? _claimedAlpha : _normalAlpha;
+
+                    // Immediate change:
+                    btn.Modulate = new Color(1f, 1f, 1f, targetAlpha);
                 }
             }
         }

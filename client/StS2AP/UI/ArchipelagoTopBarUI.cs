@@ -126,6 +126,8 @@ namespace StS2AP.UI
         /// <summary>
         /// Updates the unclaimed reward count displayed on the button badge.
         /// Hides the label when the count is zero or negative.
+        /// 
+        /// This SETS the value to whatever `count` is. If you simply want to refresh it, use `RefreshCount()`, which calculates what it SHOULD be!
         /// </summary>
         /// <param name="count">The number of unclaimed rewards. Values above <see cref="MaxDisplayCount"/> are clamped.</param>
         public static void SetCount(int count)
@@ -143,6 +145,19 @@ namespace StS2AP.UI
                 _countLabel.Visible = true;
                 RepositionCountLabel();
             }
+        }
+
+        /// <summary>
+        /// Recalculates the number of unused items, and sets the count label to it
+        /// </summary>
+        public static void RefreshCount()
+        {
+            // Get the total number of unused items from the progress tracker
+            int availableCount = ArchipelagoClient.Progress.UnusedItemCount;
+            if (ArchipelagoClient.Progress.GoldRemaining > 0) availableCount++;
+
+            // Update the label
+            SetCount(availableCount);
         }
 
         #endregion

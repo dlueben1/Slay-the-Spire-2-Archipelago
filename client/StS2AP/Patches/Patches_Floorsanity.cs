@@ -2,6 +2,8 @@
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Extensions;
+using StS2AP.Models;
+using StS2AP.UI;
 using StS2AP.Utils;
 using System;
 using System.Collections.Generic;
@@ -55,13 +57,21 @@ namespace StS2AP.Patches
 
             /// <summary>
             /// Postfix patch that sends a floor check when entering any room type.
+            /// It also forces a refresh of the Archipelago Unused Item Count, for run start sync issues.
             /// </summary>
             /// <param name="runState">The current run state.</param>
             /// <param name="isRestoringRoomStackBase">Whether the room is being restored from save.</param>
             [HarmonyPostfix]
             public static void Postfix(IRunState? runState, bool isRestoringRoomStackBase)
             {
-                TrySendFloorCheck(runState);
+                // Force a Refresh of the Archipelago Unused Item Count, for run start sync issues.
+                ArchipelagoTopBarUI.RefreshCount();
+
+                // Attempt to send a check for the current room we're on
+                if(ArchipelagoClient.Settings.Floorsanity)
+                {
+                    TrySendFloorCheck(runState);
+                }
             }
         }
 

@@ -49,7 +49,6 @@ class LockCharacters(Choice):
     locked_fixed means the unlocked_character option is used to determine which character to start with
     locked_random means which character you start with is randomized
     unlocked means you start with all characters available"""
-    visibility = Visibility.none
     display_name = "Lock Characters"
     option_unlocked = 0
     option_locked_random = 1
@@ -59,7 +58,6 @@ class LockCharacters(Choice):
 class UnlockedCharacter(TextChoice):
     """Which character to start unlocked, if lock_characters is set to locked_fixed.
     Can also enter a character name for modded characters."""
-    visibility = Visibility.none
     default = ""
     option_ironclad = 0
     option_silent = 1
@@ -163,7 +161,6 @@ class GoldSanity(Toggle):
 
 class PotionSanity(Toggle):
     """Whether to enable shuffling potion drops into the multiworld; adds 9 locations per character."""
-    visibility = Visibility.none
     display_name = "Potion Sanity"
     default = 0
 

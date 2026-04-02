@@ -226,6 +226,9 @@ namespace StS2AP.Utils
             {
                 // Fallback if location wasn't pre-scouted
                 LogUtility.Warn($"Location ID: {locationId} was not pre-scouted! Using default values!");
+
+                // And don't display the notification
+                return;
             }
 
             // Build the message

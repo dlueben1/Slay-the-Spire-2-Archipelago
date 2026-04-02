@@ -14,33 +14,35 @@
 - **Your host MUST use Archipelago Client v0.6.7+**.
   - The current official release is v0.6.6, so you need to be able to build the `main` branch of Archipelago [from source](https://github.com/ArchipelagoMW/Archipelago) or download and use the [0.6.7 RC](https://github.com/ArchipelagoMW/Archipelago/releases/tag/0.6.7-rc1).
   - **However**, once the game has been generated, it can still be hosted on [www.archipelago.gg](www.archipelago.gg)
-- If your installation of Slay the Spire II is **higher than v0.99** this mod _may_ not work. We will do our best to keep up with game updates as they release.
+- This version of the mod is intended to be used for **v0.99.1** of Slay the Spire II
+  - **You must be on the "Default Public Version" of the game, _NOT_ the public beta branch**
+  - If your installation of Slay the Spire II is higher or lower than this, the mod _may_ not work.
+  - We will do our best to keep up with game updates as they release, so please be patient.
 - Friends that are forgiving and understanding so that if your multi-hour run breaks due to a bug, they won't mind :smile:
 
-## What's Included
+## Installing the Mod
 
-- Locations for Card Rewards, Rare Card Rewards, Relics, and Pressing Start with a Character
-- Card Rewards, Rare Card Rewards, Character Unlocks, Relics, and Filler Gold in the Item Pool
-- Floorsanity
-- Configurable Goal for beating the game with 1-5 characters
-- Configurable Ascension Level _(Highly recommend using 1+, or you may not reach all Relic Rewards in logic)_
-- Configurable Characters to use in the Archipelago
-- Configurable: Either all Card Rewards are AP Locations, or every other card reward is an AP Location
+1. Download the "sts2-client.zip" from the [Releases](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest) section of the Repo
+2. Go to your Slay the Spire II directory (In Steam, click "Browse Local Files")
+3. If a folder called `mods` does not exist, create it
+4. Unzip the **contents** of `sts2-client.zip` into `mods`
+
+- If you've done this step correctly, your directory structure should look like this: `/<slay-the-spire-2-local-files>/mods/Archipelago/` and the contents of that folder should be a bunch of `.dll` files and a `.pck` file (there may be more files too, please don't touch anything in this folder)
+
+5. Start the game
+
+### Additional Steps for **Hosts**
+
+6. Download `spire2.apworld`
+7. Open your Archipelago Launcher
+8. Click "Install APWorld"
+9. Select `spire2.apworld` in the file dialog that pops up
+10. **Restart the Archipelago Launcher**
+11. Now you should be able to properly host/generate an Archipelago Session with StS 2
+  - If you want to use `archipelago.gg` to host the game, generate it locally first following the steps above, then upload the `.zip` file from the `output` folder in your Archipelago installation
 
 > [!IMPORTANT]
-> There's not a lot of settings but we wanted to get a playable build out as quick as possible so people can dive in. More features and stability coming very soon!
-
-## What's **NOT** Included
-
-- **Multiplayer Support**
-  - This is a popular request, but it will not be something we work on until _everything else_ is stable.
-- Shopsanity
-- Goldsanity
-- Progressive Rest/Smith
-- Death Link
-- Traps
-- Interesting Filler Items
-- Polish
+> You need to use Archipelago Version 0.6.7+ and CANNOT use earlier versions of Archipelago with this mod!
 
 ## Known Issues/Limitations
 
@@ -48,8 +50,7 @@
   - If you exit the game then reboot it, you might have problems.
   - If you end a run early and find a way to resume it, you WILL have problems.
 - If you receive a Character Unlock while you're on the Character Select screen, they won't unlock until you revisit that screen after doing a run (likely an edge case for most)
-- Card Rewards, if skipped, are not returned until the next run. This is different than Slay the Spire 1's implementation. It will likely change in the future.
-- Originally, we were going to support the setting that allows all Characters unlocked from the start, but that will take some more debugging before it's ready for primetime
+- **Card Rewards, if skipped, are not returned until the next run. This is different than Slay the Spire 1's implementation. It will likely change in the future.**
 
 ## Common Q&A
 

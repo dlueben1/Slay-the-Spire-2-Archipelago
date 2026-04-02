@@ -26,5 +26,7 @@ namespace StS2AP.Models
         public int TotalCharacters { get; set; }
         public bool CampfireSanity { get; set; }
         public bool GoldSanity { get; set; }
+        public bool PotionSanity { get; set; }
+        public bool Floorsanity { get; set; }
     }
 }
