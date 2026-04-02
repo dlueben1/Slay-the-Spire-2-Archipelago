@@ -94,4 +94,17 @@ public static class TextUtility
     {
         return new LocString(tableName, key);
     }
+
+    public static string GetRawTextByKey(string key, string tableName)
+    {
+        try
+        {
+            return LocManager.Instance.GetTable(tableName).GetRawText(key);
+        }
+        catch (LocException)
+        {
+            LogUtility.Error($"Loc table '{tableName}' not found. Consider pre-creating it.");
+            return $"[{tableName}:{key}]";
+        }
+    }
 }

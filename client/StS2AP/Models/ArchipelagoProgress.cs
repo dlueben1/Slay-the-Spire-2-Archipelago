@@ -6,8 +6,10 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.RelicPools;
 using MegaCrit.Sts2.Core.Multiplayer.Serialization;
 using MegaCrit.Sts2.Core.Saves.Runs;
+using MegaCrit.Sts2.Core.Rewards;
 using StS2AP.Extensions;
 using StS2AP.Utils;
+using static StS2AP.Data.CharTable;
 
 
 namespace StS2AP.Models
@@ -33,6 +35,12 @@ namespace StS2AP.Models
         /// </summary>
         public const int _maxGoldRewards = 20;
 
+        /// <summary>
+        /// The maximum possible number of Potion Rewards that a player could have replaced with AP locations.
+        /// Only used if PotionSanity is on. Matches the APWorld's 9 locations per character.
+        /// </summary>
+        public const int _maxPotionRewards = 9;
+
         public const int _maxBossRewards = 3;
 
         #region Per-Run Tracker
@@ -57,6 +65,12 @@ namespace StS2AP.Models
         /// </summary>
         public int GoldRewardsAttempted { get; set; } = 0;
 
+        /// <summary>
+        /// Keeps track of the number of times the game has tried to provide a Potion Reward.
+        /// It's only used if the player has PotionSanity on.
+        /// </summary>
+        public int PotionRewardsAttempted { get; set; } = 0;
+
         public int BossRewardsDistributed { get; set; } = 0;
 
         public Dictionary<string, bool> CampfiresChecked { get; set; } = new Dictionary<string, bool>();
@@ -67,6 +81,12 @@ namespace StS2AP.Models
         /// Cleared on each new run via <see cref="ResetTrackers"/>.
         /// </summary>
         public Dictionary<int, RelicModel> RelicAssignments { get; set; } = new Dictionary<int, RelicModel>();
+
+        /// <summary>
+        /// Maps an Archipelago item's index to the CardReward that was pre-populated for it.
+        /// This ensures that even if you skip the Card Reward, it will still be the same if you come back to it later.
+        /// </summary>
+        public Dictionary<int, CardReward> CardAssignments { get; set; } = new Dictionary<int, CardReward>();
 
         /// <summary>
         /// Returns the relic assigned to the given location, pulling one from the RelicFactory if it hasn't been assigned yet.
@@ -127,15 +147,18 @@ namespace StS2AP.Models
             BossRewardsDistributed = 0;
             RelicRewardsAttempted = 0;
             GoldRewardsAttempted = 0;
+            PotionRewardsAttempted = 0;
             CampfiresChecked.Clear();
             RelicAssignments.Clear();
+            CardAssignments.Clear();
+            GoldRedeemed = 0;
         }
 
 
 
         #endregion
 
-        #region My Items
+        #region My Items (From the Multiworld)
 
         /// <summary>
         /// All items we've received from the multiworld. Gets dumped into `AvailableItems` at the start of each run.
@@ -152,7 +175,42 @@ namespace StS2AP.Models
         /// The number of items we've received from the multiworld that we haven't used yet. 
         /// This is what gets displayed in the top bar UI.
         /// </summary>
-        public int UnusedItemCount => AllReceivedItems.Where(i => i.Item.GetStSCharID() == GameUtility.CurrentCharacterID).Count() - UsedItems.Count;
+        public int UnusedItemCount => AllReceivedItems.Where(i => i.Item.GetStSCharID() == GameUtility.CurrentCharacterID && !i.Item.ItemDisplayName.Contains("Progressive") && !i.Item.ItemName.Contains("Progressive")).Count() - UsedItems.Count;
+
+        #endregion
+
+        #region My Gold (From the Multiworld)
+
+        /// <summary>
+        /// ALL Gold received from the Multiworld
+        /// </summary>
+        public Dictionary<APItemCharID, int> GoldReceived { get; set; } = new Dictionary<APItemCharID, int>();
+
+        /// <summary>
+        /// The Gold you've redeemed so far this run
+        /// </summary>
+        public int GoldRedeemed { get; set; } = 0;
+
+        /// <summary>
+        /// The amount of Gold you have left to redeem from the Multiworld.
+        /// Returns -1 if the value could not be retrieved.
+        /// </summary>
+        public int GoldRemaining
+        {
+            get
+            {
+                try
+                {
+                    if (!GameUtility.CurrentCharacterID.HasValue) return -1;
+                    GoldReceived.TryGetValue(GameUtility.CurrentCharacterID.Value, out int gold);
+                    return gold - GoldRedeemed;
+                }
+                catch
+                {
+                    return -1;
+                }
+            }
+        }
 
         #endregion
 
@@ -165,6 +223,7 @@ namespace StS2AP.Models
             writer.WriteInt(BossRewardsDistributed);
             writer.WriteInt(RelicRewardsAttempted);
             writer.WriteInt(GoldRewardsAttempted);
+            writer.WriteInt(PotionRewardsAttempted);
             // TODO: maybe we just let the server sync process handle updating this?
             //writer.WriteInt(AllReceivedItems.Count);
             //foreach (var rec in AllReceivedItems)
@@ -182,6 +241,15 @@ namespace StS2AP.Models
                 writer.WriteInt(entry.Key);
                 writer.Write<SerializableRelic>(entry.Value.ToSerializable());
             }
+
+            writer.WriteInt(GoldReceived.Count);
+            foreach (var entry in GoldReceived)
+            {
+                writer.WriteInt(((int)entry.Key));
+                writer.WriteInt(entry.Value);
+            }
+
+            writer.WriteInt(GoldRedeemed);
         }
 
         public void Deserialize(PacketReader reader)
@@ -191,6 +259,7 @@ namespace StS2AP.Models
             BossRewardsDistributed = reader.ReadInt();
             RelicRewardsAttempted = reader.ReadInt();
             GoldRewardsAttempted = reader.ReadInt();
+            PotionRewardsAttempted = reader.ReadInt();
             //var recItemsCount = reader.ReadInt();
             //for(int i = 0; i < recItemsCount; i++)
             //{
@@ -210,7 +279,15 @@ namespace StS2AP.Models
                 var relic = reader.Read<SerializableRelic>();
                 RelicAssignments[index] = RelicModel.FromSerializable(relic);
             }
+            var goldReceivedCount = reader.ReadInt();
+            for(int i = 0; i < goldReceivedCount; i++)
+            {
+                var charId = (APItemCharID) reader.ReadInt();
+                var amount = reader.ReadInt();
+                GoldReceived[charId] = amount;
+            }
 
+            GoldRedeemed = reader.ReadInt();
         }
 
         #endregion

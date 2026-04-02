@@ -125,7 +125,10 @@ namespace StS2AP.Patches
             {
 
                 var charName = __instance.Lobby.LocalPlayer.character.GetType().Name;
-
+                foreach(var key in GameUtility.APSaves.Keys)
+                {
+                    LogUtility.Info($"Have save for {key}");
+                }
                 if(GameUtility.APSaves.ContainsKey(charName))
                 {
                     LogUtility.Info($"AP Save detected for character {charName}");
