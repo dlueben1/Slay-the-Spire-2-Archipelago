@@ -1,5 +1,6 @@
 using Godot;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
+using Newtonsoft.Json;
 using StS2AP.Utils;
 using System;
 
@@ -212,15 +213,19 @@ namespace StS2AP.UI
             separator.AddThemeConstantOverride("separation", 10);
             vbox.AddChild(separator);
 
+            var cachedData = ConnectionData.Load();
+
             // Slot Name field
             vbox.AddChild(CreateLabeledInput("Slot Name:", "Enter your slot name...", out _slotNameInput));
+            _slotNameInput!.Text = cachedData.SlotName;
 
             // URL field
             vbox.AddChild(CreateLabeledInput("Server URL:", "archipelago.gg:38281", out _urlInput));
-            _urlInput!.Text = "archipelago.gg:38281"; // Default value
+            _urlInput!.Text = cachedData.Connection; // Default value
 
             // Password field
             vbox.AddChild(CreateLabeledInput("Password:", "(optional)", out _passwordInput, isSecret: true));
+            _passwordInput!.Text = cachedData.Password;
 
             // Spacer
             var spacer = new Control();
@@ -377,6 +382,15 @@ namespace StS2AP.UI
             ArchipelagoClient.ConnectionStateChanged += OnConnectionResult;
             ArchipelagoClient.Connect();
 
+            var connectionData = new ConnectionData()
+            {
+                SlotName = slotName,
+                Connection = url,
+                Password = password,
+            };
+            connectionData.Save();
+
+
             // Fire the event for external handling
             OnConnectPressed?.Invoke(slotName, url, password);
         }
@@ -419,6 +433,52 @@ namespace StS2AP.UI
 
             // Pop the submenu stack to return to the main menu
             MenuUtility.SubmenuStack?.Pop();
+        }
+
+        private class ConnectionData
+        {
+            private static readonly string CONNECTION_FILE = "user://ap.connection";
+            public string SlotName { get; set; } = "Player1";
+            public string Connection { get; set; } = "archipelago.gg:38281";
+            public string Password { get; set; } = "";
+
+
+            public static ConnectionData Load()
+            {
+                if (!Godot.FileAccess.FileExists(CONNECTION_FILE))
+                {
+                    return new ConnectionData();
+                }
+
+                try
+                {
+                    using var data = Godot.FileAccess.Open(CONNECTION_FILE, Godot.FileAccess.ModeFlags.Read);
+
+                    var rawJson = data.GetAsText();
+                    var connectionData = JsonConvert.DeserializeObject<ConnectionData>(rawJson);
+                    return connectionData;
+                }
+                catch(Exception ex)
+                {
+                    LogUtility.Error($"Failed to read connection data from disk {ex.Message}");
+                    return new ConnectionData();
+                }
+            }
+
+            public void Save()
+            {
+                try
+                {
+                    using var handle = Godot.FileAccess.Open(CONNECTION_FILE, Godot.FileAccess.ModeFlags.Write);
+
+                    var connectionData = JsonConvert.SerializeObject(this);
+                    handle.StoreLine(connectionData);
+                }
+                catch(Exception ex)
+                {
+                    LogUtility.Error($"Failed to save connection data to disk {ex.Message}");
+                }
+            }
         }
     }
 }
