@@ -199,6 +199,7 @@ namespace StS2AP.Patches
                         NGame.Instance.ReactionContainer.InitializeNetworking(new NetSingleplayerGameService());
                         await NGame.Instance.LoadRun(runState, serializableRun.PreFinishedRoom);
                         await NGame.Instance.Transition.FadeIn();
+                        return;
                     }
                 }
                 catch (Exception ex)
