@@ -1,23 +1,14 @@
 ﻿using Archipelago.MultiClient.Net.Models;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Players;
-using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Factories;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Rewards;
-using MegaCrit.Sts2.Core.Rooms;
-using StS2AP.Models;
 using MegaCrit.Sts2.Core.Runs;
-using MegaCrit.Sts2.Core.Saves;
 using StS2AP.Extensions;
-using StS2AP.Models;
 using StS2AP.UI;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using static StS2AP.Data.CharTable;
 using Newtonsoft.Json.Linq;
 
@@ -338,64 +329,6 @@ namespace StS2AP.Utils
 
         #region Game State Event Listeners
 
-        /// <summary>
-        /// Fires when the player wins combat.
-        /// Currently used to deal with boss-related triggers.
-        /// </summary>
-        public static void OnCombatWin(CombatRoom room)
-        {
-            // LogUtility.Info($"OnCombatWin: RoomType={room.RoomType}, ActIndex={CurrentPlayer?.RunState?.CurrentActIndex}, HasSecondBoss={CurrentPlayer?.RunState?.Act.HasSecondBoss}, BossRewards={ArchipelagoClient.Progress.BossRewardsDistributed}");
-            TrySendBossDefeatCheck(room);
-
-            // If this was the Act 3 boss check whether the player has met the goal
-            bool isAct3Boss = room.RoomType == RoomType.Boss
-                && CurrentPlayer?.RunState?.CurrentActIndex == 2;
- 
-            bool isFinalBoss = isAct3Boss && (
-                !CurrentPlayer!.RunState.Act.HasSecondBoss ||
-                ArchipelagoClient.Progress.BossRewardsDistributed > ArchipelagoProgress._maxBossRewards);
- 
-            if (isFinalBoss)
-                _ = TrySetGoalAchieved();
-        }
-
-        #endregion
-
-        #region Sending Checks
-
-        public static void TrySendBossDefeatCheck(CombatRoom room)
-        {
-            // If this isn't a boss room, back out
-            if (room.RoomType != RoomType.Boss) return;
-
-            // Determine if we send a check for this
-            // ArchipelagoClient.Progress.BossRewardsDistributed++;
-            // if (ArchipelagoClient.Progress.BossRewardsDistributed <= ArchipelagoProgress._maxBossRewards)
-            // {
-            //     // Grab the Character Name
-            //     var name = CurrentPlayer.APName();
-
-            //     // Grab the check ID
-            //     var checkName = $"{name} Act {ArchipelagoClient.Progress.BossRewardsDistributed} Boss";
-            //     var _locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", checkName);
-
-            //     // Attempt to send it
-            //     if (!ArchipelagoClient.CheckedLocations.Contains(_locationId))
-            //     {
-            //         // Check the location off and let the server know
-            //         ArchipelagoClient.CheckedLocations.Add(_locationId);
-            //         _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(_locationId);
-
-            //         LogUtility.Success($"Sent location check: {checkName}");
-            //         NotificationUtility.ShowLocationChecked(_locationId);
-            //     }
-            //     else
-            //     {
-            //         LogUtility.Debug($"Failed to send already-sent {checkName}");
-            //     }
-            // }
-        }
-
         public static async Task RestoreGoaledCharsFromStorage()
         {
             if (!ArchipelagoClient.IsConnected) return;
@@ -508,6 +441,10 @@ namespace StS2AP.Utils
                 {
                     LogUtility.Info($"'{charName}' already recorded as goaled. Total goaled: {_goaledCharacters.Count}");
                 }
+
+                // Delete save from server as a good steward
+                ArchipelagoClient.Session.DataStorage[Archipelago.MultiClient.Net.Enums.Scope.Slot, "StS2AP_Saves"]
+                    += Operation.Update(new Dictionary<string, string> { { charName, "" } });
 
                 // num_chars_goal == 0 means all characters in the slot must complete
                 int required = settings.NumCharsGoal == 0

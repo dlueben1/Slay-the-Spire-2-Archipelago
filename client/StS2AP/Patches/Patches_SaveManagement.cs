@@ -39,11 +39,12 @@ namespace StS2AP.Patches
                 LogUtility.Info($"Current room type {RunManager.Instance.DebugOnlyGetState()?.CurrentRoom?.RoomType}");
                 LogUtility.Info($"Current Map node type {RunManager.Instance.DebugOnlyGetState()?.CurrentMapPoint?.PointType}");
                 LogUtility.Info($"Game thinks we should save: {RunManager.Instance.ShouldSave}");
-                // Goal is to just save on boss kills and treasure rooms
+                // Goal is to just save on boss kills, treasure rooms, and after ancient selections
                 if (!RunManager.Instance.ShouldSave ||
                     (RunManager.Instance.NetService.Type != MegaCrit.Sts2.Core.Multiplayer.Game.NetGameType.Singleplayer && RunManager.Instance.NetService.Type != MegaCrit.Sts2.Core.Multiplayer.Game.NetGameType.Host)
                     || (preFinishedRoom?.RoomType != RoomType.Boss
-                    && RunManager.Instance.DebugOnlyGetState()?.CurrentMapPoint?.PointType != MapPointType.Treasure))
+                    && RunManager.Instance.DebugOnlyGetState()?.CurrentMapPoint?.PointType != MapPointType.Treasure
+                    && !(preFinishedRoom?.RoomType == RoomType.Event && RunManager.Instance.DebugOnlyGetState()?.CurrentMapPoint?.PointType == MapPointType.Ancient)))
                 {
                     LogUtility.Info($"Skipping save {preFinishedRoom?.RoomType}");
                     __result = Task.CompletedTask;
@@ -137,11 +138,14 @@ namespace StS2AP.Patches
             {
 
                 var charName = __instance.Lobby.LocalPlayer.character.GetType().Name;
-                foreach(var key in GameUtility.APSaves.Keys)
+                foreach(var entry in GameUtility.APSaves)
                 {
-                    LogUtility.Info($"Have save for {key}");
+                    if (entry.Value.Length > 0)
+                    {
+                        LogUtility.Info($"Have save for {entry.Key}");
+                    }
                 }
-                if(GameUtility.APSaves.ContainsKey(charName))
+                if(GameUtility.APSaves.TryGetValue(charName, out var saveData) && saveData != null && saveData.Length > 0)
                 {
                     LogUtility.Info($"AP Save detected for character {charName}");
                     var popup = new ConfirmPopup();
