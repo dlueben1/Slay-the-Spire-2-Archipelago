@@ -4,6 +4,8 @@ using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.HoverTips;
+using MegaCrit.Sts2.Core.Nodes.Screens;
+using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
 using MegaCrit.Sts2.Core.Nodes.TopBar;
 using StS2AP.Utils;
 using System;
@@ -311,6 +313,26 @@ namespace StS2AP.UI
             }
 
             StopOscillation();
+        }
+
+        private static void CheckButtonDisable()
+        {
+            if (_button == null) return;
+            //var screen = ActiveScreenContext.Instance.GetCurrentScreen();
+            LogUtility.Info($"Screen count: {NOverlayStack.Instance?.ScreenCount}");
+            IOverlayScreen screen = NOverlayStack.Instance?.Peek();
+            LogUtility.Info($"Current overlay screen: {screen?.GetType()}");
+            bool disableMe = false;
+            if (screen != null)
+            {
+                disableMe = true;
+                if(screen is NRewardsScreen)
+                {
+                    disableMe = false;
+                }
+            }
+            _button.Disabled = disableMe;
+
         }
 
         #endregion
