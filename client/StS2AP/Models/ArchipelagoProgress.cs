@@ -3,6 +3,9 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Factories;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.RelicPools;
+using MegaCrit.Sts2.Core.Multiplayer.Serialization;
+using MegaCrit.Sts2.Core.Saves.Runs;
 using MegaCrit.Sts2.Core.Rewards;
 using StS2AP.Extensions;
 using StS2AP.Utils;
@@ -14,7 +17,7 @@ namespace StS2AP.Models
     /// <summary>
     /// Tracks the progress of how far along the player is through their Archipelago game
     /// </summary>
-    public class ArchipelagoProgress
+    public class ArchipelagoProgress : IPacketSerializable
     {
         /// <summary>
         /// The maximum possible number of Card Rewards that a player could have replaced with AP locations, regardless of settings.
@@ -120,10 +123,15 @@ namespace StS2AP.Models
         public void InitializeTrackers(Player player)
         {
             ResetTrackers();
+            InitializeFromServer(player);
+        }
+
+        public void InitializeFromServer(Player player)
+        {
             var name = player.APName();
-            for(int i = 1; i <= 3; i++)
+            for (int i = 1; i <= 3; i++)
             {
-                for(int j = 1; j <=2; j++)
+                for (int j = 1; j <= 2; j++)
                 {
                     var checkName = $"{name} Act {i} Campfire {j}";
                     var locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", checkName);
@@ -145,6 +153,8 @@ namespace StS2AP.Models
             CardAssignments.Clear();
             GoldRedeemed = 0;
         }
+
+
 
         #endregion
 
@@ -199,6 +209,101 @@ namespace StS2AP.Models
                 {
                     return -1;
                 }
+            }
+        }
+
+        #endregion
+
+        #region StS Save
+
+        /// <summary>
+        /// Saves the progress into a JSON object; called as part of saving a SerializableRun
+        /// </summary>
+        /// <param name="writer"></param>
+        public void Serialize(PacketWriter writer)
+        {
+            writer.WriteInt(CardRewardsAttempted);
+            writer.WriteInt(RareCardRewardsAttempted);
+            writer.WriteInt(BossRewardsDistributed);
+            writer.WriteInt(RelicRewardsAttempted);
+            writer.WriteInt(GoldRewardsAttempted);
+            writer.WriteInt(PotionRewardsAttempted);
+            // TODO: maybe we just let the server sync process handle updating this?
+            //writer.WriteInt(AllReceivedItems.Count);
+            //foreach (var rec in AllReceivedItems)
+            //{
+            //    writer.WriteInt(rec.Index);
+            //}
+            writer.WriteInt(UsedItems.Count);
+            foreach (var used in UsedItems)
+            {
+                writer.WriteInt(used);
+            }
+            writer.WriteInt(RelicAssignments.Count());
+            foreach (var entry in RelicAssignments)
+            {
+                writer.WriteInt(entry.Key);
+                // Relics are weird, needs to be made mutable in order to serialize
+                writer.Write<SerializableRelic>(entry.Value.ToMutable().ToSerializable());
+            }
+
+            writer.WriteInt(GoldReceived.Count);
+            foreach (var entry in GoldReceived)
+            {
+                writer.WriteInt(((int)entry.Key));
+                writer.WriteInt(entry.Value);
+            }
+
+            writer.WriteInt(GoldRedeemed);
+        }
+
+        /// <summary>
+        /// Reads the AP data from a JSON object; called as part of loading a SerializableRun
+        /// </summary>
+        /// <param name="reader"></param>
+        public void Deserialize(PacketReader reader)
+        {
+            try
+            {
+                CardRewardsAttempted = reader.ReadInt();
+                RareCardRewardsAttempted = reader.ReadInt();
+                BossRewardsDistributed = reader.ReadInt();
+                RelicRewardsAttempted = reader.ReadInt();
+                GoldRewardsAttempted = reader.ReadInt();
+                PotionRewardsAttempted = reader.ReadInt();
+                //var recItemsCount = reader.ReadInt();
+                //for(int i = 0; i < recItemsCount; i++)
+                //{
+                //    int index = reader.ReadInt();
+                //    ItemInfo info = ArchipelagoClient.Session.Items.AllItemsReceived[index];
+                //    AllReceivedItems.Add();
+                //}
+                var usedItemsCount = reader.ReadInt();
+                for (int i = 0; i < usedItemsCount; i++)
+                {
+                    UsedItems.Add(reader.ReadInt());
+                }
+                var relicAssignmentsCount = reader.ReadInt();
+                for (int i = 0; i < relicAssignmentsCount; i++)
+                {
+                    var index = reader.ReadInt();
+                    var relic = reader.Read<SerializableRelic>();
+                    RelicAssignments[index] = RelicModel.FromSerializable(relic).CanonicalInstance;
+                }
+                var goldReceivedCount = reader.ReadInt();
+                for (int i = 0; i < goldReceivedCount; i++)
+                {
+                    var charId = (APItemCharID)reader.ReadInt();
+                    var amount = reader.ReadInt();
+                    GoldReceived[charId] = amount;
+                }
+
+                GoldRedeemed = reader.ReadInt();
+            }
+            catch(Exception ex)
+            {
+                LogUtility.Error($"Failed to laod AP save data {ex.Message}");
+                throw;
             }
         }
 

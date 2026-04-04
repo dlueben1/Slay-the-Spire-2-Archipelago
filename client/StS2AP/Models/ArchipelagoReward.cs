@@ -23,7 +23,7 @@ public class ArchipelagoReward : Reward
     /// <summary>
     /// The Location Info for this Location, which contains the name and item received from this Location.
     /// </summary>
-    private readonly ScoutedItemInfo _location;
+    private readonly ScoutedItemInfo? _location;
 
     /// <summary>
     /// Whether or not the item has already been checked, which controls whether or not the reward appears as "claimed"
@@ -56,7 +56,10 @@ public class ArchipelagoReward : Reward
     {
         // Try and find this location
         _locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", locationName);
-        _location = ArchipelagoClient.ScoutedLocations[_locationId];
+        if(!ArchipelagoClient.ScoutedLocations.TryGetValue(_locationId, out _location))
+        {
+            LogUtility.Warn($"Could not find scouted info for {locationName}");
+        }
 
         // If it's already been found, keep track of it
         _isChecked = ArchipelagoClient.CheckedLocations.Contains(_locationId);
@@ -64,7 +67,7 @@ public class ArchipelagoReward : Reward
         {
             // And update the name of the location
             var key = $"AP_LOC_{_locationId}";
-            TextUtility.RegisterLocString(key, $"{_location.ItemDisplayName} (Claimed)", "ap");
+            TextUtility.RegisterLocString(key, $"{_location?.ItemDisplayName ?? locationName} (Claimed)", "ap");
         }
     }
 

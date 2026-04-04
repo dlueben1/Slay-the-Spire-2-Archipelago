@@ -32,8 +32,8 @@ namespace StS2AP.Patches
                 ArchipelagoClient.Progress.InitializeTrackers(__result);
 
                 // At start of game, listen to Combat Manager
-                CombatManager.Instance.CombatWon -= GameUtility.OnCombatWin;
-                CombatManager.Instance.CombatWon += GameUtility.OnCombatWin;
+                //CombatManager.Instance.CombatWon -= GameUtility.OnCombatWin;
+                //CombatManager.Instance.CombatWon += GameUtility.OnCombatWin;
 
                 // Send "Press Start" check
                 GameUtility.TrySendPressStartCheck();
