@@ -9,6 +9,7 @@ using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
+using MegaCrit.Sts2.Core.Saves;
 using StS2AP.Data;
 using StS2AP.Models;
 using StS2AP.UI;
@@ -84,6 +85,7 @@ namespace StS2AP
         /// Some of this data resets every run.
         /// </summary>
         public static ArchipelagoProgress Progress { get; set; } = new();
+
 
         /// <summary>
         /// Represents how caught up we are with Archipelago's sent items
@@ -280,6 +282,7 @@ namespace StS2AP
             // Restore goaled characters from DataStorage so cross-session goal tracking works
             _ = GameUtility.RestoreGoaledCharsFromStorage();
 
+            _ = GameUtility.SetupOnChangedSaves();
             // Let the game know that we've connected
             ConnectionStateChanged?.Invoke(null, new ResultEventArgs { Value = true });
         }
