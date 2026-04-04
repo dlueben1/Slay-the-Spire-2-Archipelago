@@ -181,10 +181,10 @@ namespace StS2AP.Patches
                     {
                         var unzipped = Patches_RunSaveManager.SaveRun.Unzip(saveStr);
                         ReadSaveResult<SerializableRun> result = JsonSerializationUtility.FromJson<SerializableRun>(unzipped);
-                        if(!result.Success)
+                        if (!result.Success)
                         {
                             LogUtility.Error($"Failed to load save {result.ErrorMessage}");
-                            _charSelect. Lobby.SetReady(ready: true);
+                            _charSelect.Lobby.SetReady(ready: true);
                             return;
                         }
                         SerializableRun serializableRun = result.SaveData;
@@ -200,17 +200,13 @@ namespace StS2AP.Patches
                         await NGame.Instance.LoadRun(runState, serializableRun.PreFinishedRoom);
                         await NGame.Instance.Transition.FadeIn();
                     }
-                    else
-                    {
-                        LogUtility.Error("Somehow got here, but we don't have a save, starting the run");
-                        _charSelect. Lobby.SetReady(ready: true);
-                    }
                 }
                 catch (Exception ex)
                 {
                     LogUtility.Error($"Failed to load AP save: {ex.Message}");
-                    throw;
                 }
+                LogUtility.Error("Somehow got here, but we don't have a save, starting the run");
+                _charSelect.Lobby.SetReady(ready: true);
             }
         }
     }
