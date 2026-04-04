@@ -1,49 +1,43 @@
 ﻿using Godot;
+using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
+using MegaCrit.Sts2.Core.Nodes.Multiplayer;
 using MegaCrit.Sts2.Core.Nodes.Screens.ScreenContext;
+using System.Runtime.InteropServices;
 
 namespace StS2AP.UI
 {
-    public abstract class ConfirmPopup : Control, IScreenContext
+    
+    public class ConfirmPopup
     {
 
-        public Control? DefaultFocusedControl => null;
+        public LocString Header { get; set; }
+        public LocString Body { get; set; }
+        public LocString YesString { get; set; } = new LocString("main_menu_ui", "GENERIC_POPUP.confirm");
 
-        protected NVerticalPopup _verticalPopup;
+        public LocString NoString { get; set; } = new LocString("main_menu_ui", "GENERIC_POPUP.cancel");
 
-        protected abstract LocString Header { get; }
-        protected abstract LocString Body { get; }
-        protected virtual LocString YesString => new LocString("main_menu_ui", "GENERIC_POPUP.confirm");
+        public Action<bool> ButtonPressed;
 
-        protected virtual LocString NoString => new LocString("main_menu_ui", "GENERIC_POPUP.cancel");
 
-        
-        public override void _Ready()
+        public NGenericPopup Popup { get; } = NGenericPopup.Create();
+
+        public void Show()
         {
-            _verticalPopup = new NVerticalPopup();
-            _verticalPopup.SetText(Header, Body);
-            _verticalPopup.InitYesButton(YesString, OnYesButtonPressed);
-            _verticalPopup.InitNoButton(NoString, OnNoButtonPressed);
+            if(Header == null || Body == null)
+            {
+                LogUtility.Warn("Someone didn't set stuff");
+            }
+            ToCallback(Popup);
         }
 
-        private void OnYesTemplate(NButton button)
+        private async void ToCallback(NGenericPopup popup)
         {
-            OnYesButtonPressed(button);
-            this.QueueFreeSafely();
+            var result = await popup.WaitForConfirmation(Body, Header, NoString, YesString);
+            ButtonPressed(result);
         }
-
-        protected abstract void OnYesButtonPressed(NButton button);
-
-
-        private void OnNoTemplate(NButton button)
-        {
-            OnNoButtonPressed(button);
-            this.QueueFreeSafely();
-        }
-
-        protected abstract void OnNoButtonPressed(NButton button);
     }
 }

@@ -282,7 +282,7 @@ namespace StS2AP
             // Restore goaled characters from DataStorage so cross-session goal tracking works
             _ = GameUtility.RestoreGoaledCharsFromStorage();
 
-            GameUtility.SetupOnChangedSaves();
+            _ = GameUtility.SetupOnChangedSaves();
             // Let the game know that we've connected
             ConnectionStateChanged?.Invoke(null, new ResultEventArgs { Value = true });
         }

@@ -1,8 +1,16 @@
 ﻿using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Models;
 using HarmonyLib;
+using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Localization;
+using MegaCrit.Sts2.Core.Logging;
+using MegaCrit.Sts2.Core.Map;
+using MegaCrit.Sts2.Core.Multiplayer;
 using MegaCrit.Sts2.Core.Multiplayer.Serialization;
+using MegaCrit.Sts2.Core.Nodes;
+using MegaCrit.Sts2.Core.Nodes.Audio;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
+using MegaCrit.Sts2.Core.Nodes.Multiplayer;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
@@ -27,11 +35,15 @@ namespace StS2AP.Patches
             [HarmonyPrefix]
             public static bool replaceSave(AbstractRoom? preFinishedRoom, ref Task __result)
             {
-                if(!RunManager.Instance.ShouldSave || 
+                LogUtility.Info($"Game attempted to save in room of type '{preFinishedRoom?.RoomType}'");
+                LogUtility.Info($"Current room type {RunManager.Instance.DebugOnlyGetState()?.CurrentRoom?.RoomType}");
+                LogUtility.Info($"Current Map node type {RunManager.Instance.DebugOnlyGetState()?.CurrentMapPoint?.PointType}");
+                LogUtility.Info($"Game thinks we should save: {RunManager.Instance.ShouldSave}");
+                // Goal is to just save on boss kills and treasure rooms
+                if (!RunManager.Instance.ShouldSave ||
                     (RunManager.Instance.NetService.Type != MegaCrit.Sts2.Core.Multiplayer.Game.NetGameType.Singleplayer && RunManager.Instance.NetService.Type != MegaCrit.Sts2.Core.Multiplayer.Game.NetGameType.Host)
-                    || preFinishedRoom == null ||
-                    (preFinishedRoom.RoomType != RoomType.Boss
-                    && preFinishedRoom.RoomType != RoomType.Treasure))
+                    || (preFinishedRoom?.RoomType != RoomType.Boss
+                    && RunManager.Instance.DebugOnlyGetState()?.CurrentMapPoint?.PointType != MapPointType.Treasure))
                 {
                     LogUtility.Info($"Skipping save {preFinishedRoom?.RoomType}");
                     __result = Task.CompletedTask;
@@ -132,13 +144,69 @@ namespace StS2AP.Patches
                 if(GameUtility.APSaves.ContainsKey(charName))
                 {
                     LogUtility.Info($"AP Save detected for character {charName}");
-                    //var popup = 
-                    NModalContainer.Instance.Add(new ContinueSaveUI(__instance));
-                    // TODO: create the popup that prompts for a save load
+                    var popup = new ConfirmPopup();
+                    popup.Header = new LocString("main_menu_ui", "CONTINUE_RUN.header");
+                    popup.Body = new LocString("main_menu_ui", "CONTINUE_RUN.body");
+                    popup.ButtonPressed = (yesPressed) =>
+                    {
+                        if(yesPressed)
+                        {
+                            _ = ContinueRun(__instance);
+                        }
+                        else
+                        {
+                            __instance.Lobby.SetReady(ready: true);
+                        }
+                    };
+                    NModalContainer.Instance.Add(popup.Popup);
+                    popup.Show();
                     return false;
                 }
                 LogUtility.Info($"No AP Save detected for character {charName}");
                 return true;
+            }
+
+            private static async Task ContinueRun(NCharacterSelectScreen _charSelect)
+            {
+                try
+                {
+                    NAudioManager.Instance?.StopMusic();
+                    string saveStr;
+                    var charName = _charSelect.Lobby.LocalPlayer.character.GetType().Name;
+                    if (GameUtility.APSaves.TryGetValue(charName, out saveStr))
+                    {
+                        var unzipped = Patches_RunSaveManager.SaveRun.Unzip(saveStr);
+                        ReadSaveResult<SerializableRun> result = JsonSerializationUtility.FromJson<SerializableRun>(unzipped);
+                        if(!result.Success)
+                        {
+                            LogUtility.Error($"Failed to load save {result.ErrorMessage}");
+                            _charSelect. Lobby.SetReady(ready: true);
+                            return;
+                        }
+                        SerializableRun serializableRun = result.SaveData;
+                        RunState runState = RunState.FromSerializable(serializableRun);
+                        RunManager.Instance.SetUpSavedSinglePlayer(runState, serializableRun);
+                        Log.Info($"Continuing run with character: {serializableRun.Players[0].CharacterId}");
+                        SfxCmd.Play(runState.Players[0].Character.CharacterTransitionSfx);
+
+                        GameUtility.CurrentPlayer = runState.Players[0];
+
+                        await NGame.Instance.Transition.FadeOut(0.8f, runState.Players[0].Character.CharacterSelectTransitionPath);
+                        NGame.Instance.ReactionContainer.InitializeNetworking(new NetSingleplayerGameService());
+                        await NGame.Instance.LoadRun(runState, serializableRun.PreFinishedRoom);
+                        await NGame.Instance.Transition.FadeIn();
+                    }
+                    else
+                    {
+                        LogUtility.Error("Somehow got here, but we don't have a save, starting the run");
+                        _charSelect. Lobby.SetReady(ready: true);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogUtility.Error($"Failed to load AP save: {ex.Message}");
+                    throw;
+                }
             }
         }
     }

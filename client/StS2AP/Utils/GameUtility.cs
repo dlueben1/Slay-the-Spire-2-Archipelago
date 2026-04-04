@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using static StS2AP.Data.CharTable;
+using Newtonsoft.Json.Linq;
 
 namespace StS2AP.Utils
 {
@@ -368,31 +369,31 @@ namespace StS2AP.Utils
             if (room.RoomType != RoomType.Boss) return;
 
             // Determine if we send a check for this
-            ArchipelagoClient.Progress.BossRewardsDistributed++;
-            if (ArchipelagoClient.Progress.BossRewardsDistributed <= ArchipelagoProgress._maxBossRewards)
-            {
-                // Grab the Character Name
-                var name = CurrentPlayer.APName();
+            // ArchipelagoClient.Progress.BossRewardsDistributed++;
+            // if (ArchipelagoClient.Progress.BossRewardsDistributed <= ArchipelagoProgress._maxBossRewards)
+            // {
+            //     // Grab the Character Name
+            //     var name = CurrentPlayer.APName();
 
-                // Grab the check ID
-                var checkName = $"{name} Act {ArchipelagoClient.Progress.BossRewardsDistributed} Boss";
-                var _locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", checkName);
+            //     // Grab the check ID
+            //     var checkName = $"{name} Act {ArchipelagoClient.Progress.BossRewardsDistributed} Boss";
+            //     var _locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", checkName);
 
-                // Attempt to send it
-                if (!ArchipelagoClient.CheckedLocations.Contains(_locationId))
-                {
-                    // Check the location off and let the server know
-                    ArchipelagoClient.CheckedLocations.Add(_locationId);
-                    _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(_locationId);
+            //     // Attempt to send it
+            //     if (!ArchipelagoClient.CheckedLocations.Contains(_locationId))
+            //     {
+            //         // Check the location off and let the server know
+            //         ArchipelagoClient.CheckedLocations.Add(_locationId);
+            //         _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(_locationId);
 
-                    LogUtility.Success($"Sent location check: {checkName}");
-                    NotificationUtility.ShowLocationChecked(_locationId);
-                }
-                else
-                {
-                    LogUtility.Debug($"Failed to send already-sent {checkName}");
-                }
-            }
+            //         LogUtility.Success($"Sent location check: {checkName}");
+            //         NotificationUtility.ShowLocationChecked(_locationId);
+            //     }
+            //     else
+            //     {
+            //         LogUtility.Debug($"Failed to send already-sent {checkName}");
+            //     }
+            // }
         }
 
         public static async Task RestoreGoaledCharsFromStorage()
@@ -429,17 +430,19 @@ namespace StS2AP.Utils
         /// <summary>
         /// Sets up a watch for save files stored in datastorage.
         /// </summary>
-        public static void SetupOnChangedSaves()
+        public static async Task SetupOnChangedSaves()
         {
 
             try
             {
+                LogUtility.Info("Setting up StS Saves on the server");
                 var storageKey = "StS2AP_Saves";
 
                 // Initialize the key with an empty dict if it doesn't exist yet
                 ArchipelagoClient.Session.DataStorage[
                     Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
-                    .Initialize(new Dictionary<string, string>()); // replace inside () with `new Newtonsoft.Json.Linq.JObject()` in case it breaks not sure if this is correct
+                    .Initialize(new JObject()); 
+                // replace inside () with `new Newtonsoft.Json.Linq.JObject()` in case it breaks not sure if this is correct
 
                 // Read back whatever is stored
                 ArchipelagoClient.Session.DataStorage[Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
@@ -451,6 +454,8 @@ namespace StS2AP.Utils
                             LogUtility.Info($"Loaded saves from datastorage; got characters {GameUtility.APSaves?.Keys}");
                         }
                     };
+                GameUtility.APSaves = await ArchipelagoClient.Session.DataStorage[Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
+                    .GetAsync<Dictionary<string, string>>();
             }
             catch(Exception ex)
             {

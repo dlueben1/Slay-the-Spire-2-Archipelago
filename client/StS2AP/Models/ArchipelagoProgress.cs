@@ -216,6 +216,10 @@ namespace StS2AP.Models
 
         #region StS Save
 
+        /// <summary>
+        /// Saves the progress into a JSON object; called as part of saving a SerializableRun
+        /// </summary>
+        /// <param name="writer"></param>
         public void Serialize(PacketWriter writer)
         {
             writer.WriteInt(CardRewardsAttempted);
@@ -239,7 +243,8 @@ namespace StS2AP.Models
             foreach (var entry in RelicAssignments)
             {
                 writer.WriteInt(entry.Key);
-                writer.Write<SerializableRelic>(entry.Value.ToSerializable());
+                // Relics are weird, needs to be made mutable in order to serialize
+                writer.Write<SerializableRelic>(entry.Value.ToMutable().ToSerializable());
             }
 
             writer.WriteInt(GoldReceived.Count);
@@ -252,42 +257,54 @@ namespace StS2AP.Models
             writer.WriteInt(GoldRedeemed);
         }
 
+        /// <summary>
+        /// Reads the AP data from a JSON object; called as part of loading a SerializableRun
+        /// </summary>
+        /// <param name="reader"></param>
         public void Deserialize(PacketReader reader)
         {
-            CardRewardsAttempted = reader.ReadInt();
-            RareCardRewardsAttempted = reader.ReadInt();
-            BossRewardsDistributed = reader.ReadInt();
-            RelicRewardsAttempted = reader.ReadInt();
-            GoldRewardsAttempted = reader.ReadInt();
-            PotionRewardsAttempted = reader.ReadInt();
-            //var recItemsCount = reader.ReadInt();
-            //for(int i = 0; i < recItemsCount; i++)
-            //{
-            //    int index = reader.ReadInt();
-            //    ItemInfo info = ArchipelagoClient.Session.Items.AllItemsReceived[index];
-            //    AllReceivedItems.Add();
-            //}
-            var usedItemsCount = reader.ReadInt();
-            for(int i = 0; i < usedItemsCount; i++)
+            try
             {
-                UsedItems.Add(reader.ReadInt());
-            }
-            var relicAssignmentsCount = reader.ReadInt();
-            for(int i = 0; i < relicAssignmentsCount; i++)
-            {
-                var index = reader.ReadInt();
-                var relic = reader.Read<SerializableRelic>();
-                RelicAssignments[index] = RelicModel.FromSerializable(relic);
-            }
-            var goldReceivedCount = reader.ReadInt();
-            for(int i = 0; i < goldReceivedCount; i++)
-            {
-                var charId = (APItemCharID) reader.ReadInt();
-                var amount = reader.ReadInt();
-                GoldReceived[charId] = amount;
-            }
+                CardRewardsAttempted = reader.ReadInt();
+                RareCardRewardsAttempted = reader.ReadInt();
+                BossRewardsDistributed = reader.ReadInt();
+                RelicRewardsAttempted = reader.ReadInt();
+                GoldRewardsAttempted = reader.ReadInt();
+                PotionRewardsAttempted = reader.ReadInt();
+                //var recItemsCount = reader.ReadInt();
+                //for(int i = 0; i < recItemsCount; i++)
+                //{
+                //    int index = reader.ReadInt();
+                //    ItemInfo info = ArchipelagoClient.Session.Items.AllItemsReceived[index];
+                //    AllReceivedItems.Add();
+                //}
+                var usedItemsCount = reader.ReadInt();
+                for (int i = 0; i < usedItemsCount; i++)
+                {
+                    UsedItems.Add(reader.ReadInt());
+                }
+                var relicAssignmentsCount = reader.ReadInt();
+                for (int i = 0; i < relicAssignmentsCount; i++)
+                {
+                    var index = reader.ReadInt();
+                    var relic = reader.Read<SerializableRelic>();
+                    RelicAssignments[index] = RelicModel.FromSerializable(relic).CanonicalInstance;
+                }
+                var goldReceivedCount = reader.ReadInt();
+                for (int i = 0; i < goldReceivedCount; i++)
+                {
+                    var charId = (APItemCharID)reader.ReadInt();
+                    var amount = reader.ReadInt();
+                    GoldReceived[charId] = amount;
+                }
 
-            GoldRedeemed = reader.ReadInt();
+                GoldRedeemed = reader.ReadInt();
+            }
+            catch(Exception ex)
+            {
+                LogUtility.Error($"Failed to laod AP save data {ex.Message}");
+                throw;
+            }
         }
 
         #endregion
