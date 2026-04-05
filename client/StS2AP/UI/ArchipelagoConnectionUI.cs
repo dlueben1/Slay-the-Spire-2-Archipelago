@@ -456,7 +456,8 @@ namespace StS2AP.UI
 
                     var rawJson = data.GetAsText();
                     var connectionData = JsonConvert.DeserializeObject<ConnectionData>(rawJson);
-                    return connectionData;
+                    return connectionData ?? new ConnectionData();
+
                 }
                 catch(Exception ex)
                 {

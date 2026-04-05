@@ -1,10 +1,12 @@
 ﻿
 using Archipelago.MultiClient.Net.Models;
+using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.RestSite;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Nodes;
+using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Nodes.Vfx;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Extensions;
@@ -188,6 +190,36 @@ namespace StS2AP.Patches
             public static async Task<bool> DoNothing()
             {
                 return true;
+            }
+        }
+    }
+
+    public static class Patches_NRestSiteRoom
+    {
+
+        [HarmonyPatch(typeof(NRestSiteRoom), nameof(NRestSiteRoom._Ready))]
+        public static class _Ready
+        {
+
+            [HarmonyPrefix]
+            public static void addScrollBar(NRestSiteRoom __instance)
+            {
+                HBoxContainer choicesContainer = __instance.GetNode<HBoxContainer>("%ChoicesContainer");
+                Control choicesScreen = __instance.GetNode<Control>("%ChoicesScreen");
+
+                ScrollContainer wrapper = new ScrollContainer();
+                wrapper.SetAnchorsPreset(Control.LayoutPreset.VcenterWide);
+                wrapper.SetAnchorAndOffset(Side.Left, 0.5f, -__instance.Size.X/2 + 50.0f);
+                wrapper.SetAnchorAndOffset(Side.Top, 0.5f, -285.0f);
+                wrapper.SetAnchorAndOffset(Side.Right, 0.5f, __instance.Size.X/2 - 50.0f);
+                wrapper.SetAnchorAndOffset(Side.Bottom, 0.5f, -50.0f);
+                wrapper.GrowHorizontal = Control.GrowDirection.Both;
+                wrapper.GrowVertical = Control.GrowDirection.Both;
+                wrapper.MouseFilter = Control.MouseFilterEnum.Ignore;
+
+                choicesContainer.SizeFlagsHorizontal = Control.SizeFlags.Expand;
+                choicesScreen.AddChild(wrapper);
+                choicesContainer.Reparent(wrapper);
             }
         }
     }
