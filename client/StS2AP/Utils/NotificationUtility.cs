@@ -87,6 +87,7 @@ namespace StS2AP.Utils
         {
             lock (_lock)
             {
+                if (_queue.Count == 0) return null;
                 var notification = _queue.Dequeue();
                 LogUtility.Info($"Notification dequeued: {notification.Message}");
                 return notification;

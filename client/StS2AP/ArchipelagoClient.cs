@@ -239,6 +239,10 @@ namespace StS2AP
         {
             LogUtility.Success("Successfully Connected to Archipelago Server");
 
+            // Restore checked locations from server so "Claimed" state survives restarts
+            CheckedLocations = new List<long>(Session.Locations.AllLocationsChecked);
+            LogUtility.Info($"Restored {CheckedLocations.Count} previously checked location(s) from server.");
+
             try
             {
                 // Get all settings for this player
