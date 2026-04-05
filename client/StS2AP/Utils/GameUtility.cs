@@ -6,6 +6,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Rewards;
+using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Extensions;
 using StS2AP.UI;
@@ -247,6 +248,10 @@ namespace StS2AP.Utils
                 // Track how many cards are in the reward before selection
                 int cardCountBefore = reward.Cards.Count();
 
+                var paelsWing = CurrentPlayer.Relics.OfType<PaelsWing>().FirstOrDefault();
+                int sacrificesBefore = paelsWing?.RewardsSacrificed ?? 0;
+                LogUtility.Info($"[Debug] PaelsWing found: {paelsWing != null}, RewardsSacrificed: {sacrificesBefore}");
+
                 // Hide the Reward UI
                 ArchipelagoRewardUI.HideTemporarily();
 
@@ -260,22 +265,28 @@ namespace StS2AP.Utils
                     ArchipelagoRewardUI.ShowAgain();
                 }
 
+                // hopefully this fixes it, it took me a while to figure out
+                await Task.Yield();
+
                 // If the card count decreased, a card was picked (added to deck)
                 int cardCountAfter = reward.Cards.Count();
                 bool cardWasPicked = cardCountAfter < cardCountBefore;
+                bool wasSacrificed = (paelsWing?.RewardsSacrificed ?? 0) > sacrificesBefore;
+                bool rewardConsumed = cardWasPicked || wasSacrificed;
 
-                if (cardWasPicked)
+                if (rewardConsumed)
                 {
-                    // Remove from cache so it can't be reused
                     ArchipelagoClient.Progress.CardAssignments.Remove(index);
-                    LogUtility.Success("Card reward selection completed — card added to deck");
+                    LogUtility.Success(cardWasPicked
+                        ? "Card reward selection completed — card added to deck"
+                        : "Card reward selection completed — sacrificed via Pael's Wing");
                 }
                 else
                 {
                     LogUtility.Info("Card reward selection completed — reward was skipped");
                 }
 
-                return cardWasPicked;
+                return rewardConsumed;
 
             }
             catch (Exception ex)
