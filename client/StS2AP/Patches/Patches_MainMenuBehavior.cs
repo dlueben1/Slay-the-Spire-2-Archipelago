@@ -79,7 +79,7 @@ namespace StS2AP.Patches
                 _backButton.Visible = false;
 
                 // If we are connected, dive directly into the game
-                if (ArchipelagoClient.Authenticated && ArchipelagoClient.Session != null && ArchipelagoClient.Session.Socket != null && ArchipelagoClient.Session.Socket.Connected)
+                if (ArchipelagoClient.IsConnected)
                 {
                     var _charSelectScreen = MenuUtility.SubmenuStack.GetSubmenuType<NCharacterSelectScreen>();
                     _charSelectScreen?.InitializeSingleplayer();

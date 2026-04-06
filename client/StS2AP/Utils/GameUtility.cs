@@ -401,9 +401,9 @@ namespace StS2AP.Utils
         /// </summary>
         public static async Task TrySetGoalAchieved()
         {
-            if (CurrentPlayer == null || !ArchipelagoClient.IsConnected)
+            if (CurrentPlayer == null || ArchipelagoClient.State == ConnectionState.Disconnected)
             {
-                LogUtility.Warn("TrySetGoalAchieved: no active player or not connected");
+                LogUtility.Warn("TrySetGoalAchieved: no active player or fully disconnected");
                 return;
             }
 
@@ -425,13 +425,16 @@ namespace StS2AP.Utils
                 if (wasNew)
                 {
                     // Persist to DataStorage atomically
-                    ArchipelagoClient.Session.DataStorage[
-                        Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
-                        .Initialize(new Newtonsoft.Json.Linq.JObject());
- 
-                    ArchipelagoClient.Session.DataStorage[
-                        Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
-                        += Operation.Update(new Dictionary<string, bool> { { charName, true } });
+                    ArchipelagoClient.EnqueueDataStorageWrite(session =>
+                    {
+                        session.DataStorage[
+                            Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
+                            .Initialize(new Newtonsoft.Json.Linq.JObject());
+
+                        session.DataStorage[
+                            Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
+                            += Operation.Update(new Dictionary<string, bool> { { charName, true } });
+                    });
 
                     LogUtility.Success($"Recorded goal for '{charName}'. Total goaled: {_goaledCharacters.Count}");
                 }
@@ -441,8 +444,10 @@ namespace StS2AP.Utils
                 }
 
                 // Delete save from server as a good steward
-                ArchipelagoClient.Session.DataStorage[Archipelago.MultiClient.Net.Enums.Scope.Slot, "StS2AP_Saves"]
-                    += Operation.Update(new Dictionary<string, string> { { charName, "" } });
+                ArchipelagoClient.EnqueueDataStorageWrite(session =>
+                    session.DataStorage[Archipelago.MultiClient.Net.Enums.Scope.Slot, "StS2AP_Saves"]
+                        += Operation.Update(new Dictionary<string, string> { { charName, "" } })
+                );
 
                 // num_chars_goal == 0 means all characters in the slot must complete
                 int required = settings.NumCharsGoal == 0
@@ -453,8 +458,10 @@ namespace StS2AP.Utils
 
                 if (_goaledCharacters.Count >= required)
                 {
-                    ArchipelagoClient.Session.SetGoalAchieved();
-                    LogUtility.Success("Goal achieved! SetGoalAchieved sent to Archipelago server.");
+                    ArchipelagoClient.EnqueueDataStorageWrite(session =>
+                        session.SetGoalAchieved()
+                    );
+                    LogUtility.Success("Goal achieved! SetGoalAchieved sent (or queued) to Archipelago server.");
                     NotificationUtility.ShowRawText("Goal Complete! You have won....?");
                 }
             }
@@ -486,8 +493,7 @@ namespace StS2AP.Utils
             if (!ArchipelagoClient.CheckedLocations.Contains(locationId) && locationId != -1 && ArchipelagoClient.ScoutedLocations.ContainsKey(locationId))
             {
                 // Check the location off and let the server know
-                ArchipelagoClient.CheckedLocations.Add(locationId);
-                _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(locationId);
+                ArchipelagoClient.SendLocationCheck(locationId);
 
                 LogUtility.Success($"Sent location check: {locationId}");
                 NotificationUtility.ShowLocationChecked(locationId);

@@ -67,8 +67,10 @@ namespace StS2AP.Patches
                 }
                 var saveDict = new Dictionary<string, string>();
                 saveDict[GameUtility.CurrentPlayer.APName()] = zipped;
-                ArchipelagoClient.Session.DataStorage[Scope.Slot, $"StS2AP_Saves"]
-                    += Operation.Update(saveDict);
+                ArchipelagoClient.EnqueueSaveWrite(session =>
+                    session.DataStorage[Scope.Slot, $"StS2AP_Saves"]
+                        += Operation.Update(saveDict)
+                );
             }
 
             public static string Zip(string str)

@@ -87,8 +87,7 @@ public class ArchipelagoReward : Reward
         if (!ArchipelagoClient.CheckedLocations.Contains(_locationId))
         {
             // Check the location off and let the server know
-            ArchipelagoClient.CheckedLocations.Add(_locationId);
-            _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(_locationId);
+            ArchipelagoClient.SendLocationCheck(_locationId);
 
             LogUtility.Success($"Sent location check: {_locationId}");
         }

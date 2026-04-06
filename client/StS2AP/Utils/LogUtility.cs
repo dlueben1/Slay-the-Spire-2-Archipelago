@@ -37,9 +37,6 @@ public static class LogUtility
 
     private static void WriteColored(string message, ConsoleColor color)
     {
-        var previousColor = Console.ForegroundColor;
-        Console.ForegroundColor = color;
-        Console.WriteLine($"[AP] [{DateTime.Now:HH:mm:ss}] {message}");
-        Console.ForegroundColor = previousColor;
+        StS2AP.Utils.ConsoleLogger.WriteLine(color, $"[AP] [{DateTime.Now:HH:mm:ss}] {message}");
     }
 }

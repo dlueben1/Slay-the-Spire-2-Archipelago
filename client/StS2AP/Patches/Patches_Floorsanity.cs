@@ -111,8 +111,7 @@ namespace StS2AP.Patches
                 if (!ArchipelagoClient.CheckedLocations.Contains(locationId))
                 {
                     // Check the location off and let the server know
-                    ArchipelagoClient.CheckedLocations.Add(locationId);
-                    _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(locationId);
+                    ArchipelagoClient.SendLocationCheck(locationId);
 
                     // Log it and notify the user (uses pre-scouted data)
                     LogUtility.Success($"Sent location check: {locationName}");
