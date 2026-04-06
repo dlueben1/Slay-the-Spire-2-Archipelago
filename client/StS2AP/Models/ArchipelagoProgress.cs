@@ -278,9 +278,11 @@ namespace StS2AP.Models
         #region StS Save
 
         /// <summary>
-        /// Saves the progress into a JSON object; called as part of saving a SerializableRun
+        /// Saves the progress into a JSON object; called as part of saving a SerializableRun.
+        /// 
+        /// Note: Unlocks (like Characters, Progressive Smith/Rest levels, etc.) should NOT be serialized, as they are already synced at the start of each run. 
+        /// Only progress on the current run (like how many rewards have been attempted, what items have been used, etc.) should be serialized here.
         /// </summary>
-        /// <param name="writer"></param>
         public void Serialize(PacketWriter writer)
         {
             writer.WriteInt(CardRewardsAttempted);
@@ -289,12 +291,7 @@ namespace StS2AP.Models
             writer.WriteInt(RelicRewardsAttempted);
             writer.WriteInt(GoldRewardsAttempted);
             writer.WriteInt(PotionRewardsAttempted);
-            // TODO: maybe we just let the server sync process handle updating this?
-            //writer.WriteInt(AllReceivedItems.Count);
-            //foreach (var rec in AllReceivedItems)
-            //{
-            //    writer.WriteInt(rec.Index);
-            //}
+
             writer.WriteInt(UsedItems.Count);
             foreach (var used in UsedItems)
             {
@@ -321,7 +318,6 @@ namespace StS2AP.Models
         /// <summary>
         /// Reads the AP data from a JSON object; called as part of loading a SerializableRun
         /// </summary>
-        /// <param name="reader"></param>
         public void Deserialize(PacketReader reader)
         {
             try
@@ -332,13 +328,6 @@ namespace StS2AP.Models
                 RelicRewardsAttempted = reader.ReadInt();
                 GoldRewardsAttempted = reader.ReadInt();
                 PotionRewardsAttempted = reader.ReadInt();
-                //var recItemsCount = reader.ReadInt();
-                //for(int i = 0; i < recItemsCount; i++)
-                //{
-                //    int index = reader.ReadInt();
-                //    ItemInfo info = ArchipelagoClient.Session.Items.AllItemsReceived[index];
-                //    AllReceivedItems.Add();
-                //}
                 var usedItemsCount = reader.ReadInt();
                 for (int i = 0; i < usedItemsCount; i++)
                 {
