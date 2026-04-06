@@ -15,6 +15,7 @@ using StS2AP.Models;
 using StS2AP.UI;
 using StS2AP.Utils;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -25,9 +26,15 @@ using static System.Collections.Specialized.BitVector32;
 
 namespace StS2AP
 {
-    public class ResultEventArgs : EventArgs
+    /// <summary>
+    /// Represents the connection lifecycle of the Archipelago client.
+    /// </summary>
+    public enum ConnectionState
     {
-        public bool Value;
+        Disconnected,
+        Connecting,
+        Connected,
+        Reconnecting
     }
 
     /// <summary>
@@ -65,9 +72,15 @@ namespace StS2AP
         /// </summary>
         public const string APVersion = "0.6.6";
 
-        public static bool Authenticated { get; set; }
-        public static bool Connecting { get; set; }
-        public static bool IsConnected => Authenticated && Session?.Socket?.Connected == true;
+        /// <summary>
+        /// The current connection state of the client.
+        /// </summary>
+        public static ConnectionState State { get; private set; } = ConnectionState.Disconnected;
+
+        /// <summary>
+        /// Convenience property: `true` when fully connected to the Archipelago server.
+        /// </summary>
+        public static bool IsConnected => State == ConnectionState.Connected && Session?.Socket?.Connected == true;
 
         #endregion
 
@@ -94,6 +107,9 @@ namespace StS2AP
 
         public static Dictionary<string, object> SlotData { get; set; }
 
+        /// <summary>
+        /// Archipelago Item Locations that we've already found so far, collected by their Location ID
+        /// </summary>
         public static List<long> CheckedLocations { get; set; }
 
         #endregion
@@ -106,7 +122,7 @@ namespace StS2AP
         /// <summary>
         /// Fires when the connection state changes
         /// </summary>
-        public static event EventHandler<ResultEventArgs> ConnectionStateChanged;
+        public static event Action<ConnectionState> ConnectionStateChanged;
 
 
         /// <summary>
@@ -122,9 +138,9 @@ namespace StS2AP
         /// </summary>
         public static void Connect()
         {
-            // Ignore if we're already authenticated
-            if (Authenticated || Connecting) return;
-            Connecting = true;
+            // Ignore if we're already connected or connecting
+            if (State == ConnectionState.Connected || State == ConnectionState.Connecting) return;
+            State = ConnectionState.Connecting;
 
             // Setup Data
             SlotData?.Clear();
@@ -183,7 +199,7 @@ namespace StS2AP
             {
                 // We are now connected!
                 var success = (LoginSuccessful)result;
-                Authenticated = true;
+                State = ConnectionState.Connected;
 
                 // Store Session information
                 SlotData = success.SlotData;
@@ -225,11 +241,9 @@ namespace StS2AP
                 outText = $"Failed to connect to {ServerAddress} as {PlayerName}.";
                 outText = failure.Errors.Aggregate(outText, (current, error) => current + $"\n    {error}");
 
-                // Mark us as un-authenticated and disconnect
-                Authenticated = false;
+                // End the connection
                 Disconnect();
             }
-            Connecting = false;
         }
 
         /// <summary>
@@ -255,7 +269,6 @@ namespace StS2AP
                 ArchipelagoConnectionUI.SetConnectButtonEnabled(true);
                 ArchipelagoConnectionUI.SetCloseButtonEnabled(true);
                 ArchipelagoConnectionUI.SetStatus($"Failed to load settings: {ex.Message}");
-                Connecting = false;
                 return;
             }
 
@@ -288,7 +301,7 @@ namespace StS2AP
 
             _ = GameUtility.SetupOnChangedSaves();
             // Let the game know that we've connected
-            ConnectionStateChanged?.Invoke(null, new ResultEventArgs { Value = true });
+            ConnectionStateChanged?.Invoke(ConnectionState.Connected);
         }
 
         /// <summary>
@@ -350,10 +363,10 @@ namespace StS2AP
             LogUtility.Debug("Disconnecting from Archipelago...");
             Task.Run(() => Session?.Socket.DisconnectAsync());
             Session = null;
-            Authenticated = false;
+            State = ConnectionState.Disconnected;
 
             // Let the game know that we've disconnected
-            ConnectionStateChanged?.Invoke(null, new ResultEventArgs { Value = false });
+            ConnectionStateChanged?.Invoke(ConnectionState.Disconnected);
         }
 
         /// <summary>
