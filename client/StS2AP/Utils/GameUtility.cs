@@ -619,7 +619,6 @@ namespace StS2AP.Utils
 
         /// <summary>
         /// Deletes the local emergency recovery save file.
-        /// Should be called after the save has been successfully uploaded to DataStorage.
         /// </summary>
         public static void DeleteRecoverySave()
         {
