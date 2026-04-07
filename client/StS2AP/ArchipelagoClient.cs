@@ -6,15 +6,18 @@ using Archipelago.MultiClient.Net.Models;
 using Godot;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Powers;
+using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
+using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Saves;
 using StS2AP.Data;
 using StS2AP.Models;
 using StS2AP.UI;
 using StS2AP.Utils;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -25,9 +28,15 @@ using static System.Collections.Specialized.BitVector32;
 
 namespace StS2AP
 {
-    public class ResultEventArgs : EventArgs
+    /// <summary>
+    /// Represents the connection lifecycle of the Archipelago client.
+    /// </summary>
+    public enum ConnectionState
     {
-        public bool Value;
+        Disconnected,
+        Connecting,
+        Connected,
+        Reconnecting
     }
 
     /// <summary>
@@ -65,9 +74,15 @@ namespace StS2AP
         /// </summary>
         public const string APVersion = "0.6.6";
 
-        public static bool Authenticated { get; set; }
-        public static bool Connecting { get; set; }
-        public static bool IsConnected => Authenticated && Session?.Socket?.Connected == true;
+        /// <summary>
+        /// The current connection state of the client.
+        /// </summary>
+        public static ConnectionState State { get; private set; } = ConnectionState.Disconnected;
+
+        /// <summary>
+        /// Convenience property: `true` when fully connected to the Archipelago server.
+        /// </summary>
+        public static bool IsConnected => State == ConnectionState.Connected && Session?.Socket?.Connected == true;
 
         #endregion
 
@@ -94,6 +109,9 @@ namespace StS2AP
 
         public static Dictionary<string, object> SlotData { get; set; }
 
+        /// <summary>
+        /// Archipelago Item Locations that we've already found so far, collected by their Location ID
+        /// </summary>
         public static List<long> CheckedLocations { get; set; }
 
         #endregion
@@ -106,7 +124,7 @@ namespace StS2AP
         /// <summary>
         /// Fires when the connection state changes
         /// </summary>
-        public static event EventHandler<ResultEventArgs> ConnectionStateChanged;
+        public static event Action<ConnectionState> ConnectionStateChanged;
 
 
         /// <summary>
@@ -122,9 +140,9 @@ namespace StS2AP
         /// </summary>
         public static void Connect()
         {
-            // Ignore if we're already authenticated
-            if (Authenticated || Connecting) return;
-            Connecting = true;
+            // Ignore if we're already connected or connecting
+            if (State == ConnectionState.Connected || State == ConnectionState.Connecting) return;
+            State = ConnectionState.Connecting;
 
             // Setup Data
             SlotData?.Clear();
@@ -183,7 +201,7 @@ namespace StS2AP
             {
                 // We are now connected!
                 var success = (LoginSuccessful)result;
-                Authenticated = true;
+                State = ConnectionState.Connected;
 
                 // Store Session information
                 SlotData = success.SlotData;
@@ -225,11 +243,9 @@ namespace StS2AP
                 outText = $"Failed to connect to {ServerAddress} as {PlayerName}.";
                 outText = failure.Errors.Aggregate(outText, (current, error) => current + $"\n    {error}");
 
-                // Mark us as un-authenticated and disconnect
-                Authenticated = false;
+                // End the connection
                 Disconnect();
             }
-            Connecting = false;
         }
 
         /// <summary>
@@ -255,7 +271,6 @@ namespace StS2AP
                 ArchipelagoConnectionUI.SetConnectButtonEnabled(true);
                 ArchipelagoConnectionUI.SetCloseButtonEnabled(true);
                 ArchipelagoConnectionUI.SetStatus($"Failed to load settings: {ex.Message}");
-                Connecting = false;
                 return;
             }
 
@@ -270,7 +285,7 @@ namespace StS2AP
                     ModelDb.Character<Necrobinder>(),
                     ModelDb.Character<Defect>()
                 };
-                GameUtility.UnlockedCharacters.AddRange(characters);
+                Progress.UnlockedCharacters.AddRange(characters);
             }
 
             // Log all slot data
@@ -288,7 +303,7 @@ namespace StS2AP
 
             _ = GameUtility.SetupOnChangedSaves();
             // Let the game know that we've connected
-            ConnectionStateChanged?.Invoke(null, new ResultEventArgs { Value = true });
+            Callable.From(() => ConnectionStateChanged?.Invoke(ConnectionState.Connected)).CallDeferred();
         }
 
         /// <summary>
@@ -350,14 +365,17 @@ namespace StS2AP
             LogUtility.Debug("Disconnecting from Archipelago...");
             Task.Run(() => Session?.Socket.DisconnectAsync());
             Session = null;
-            Authenticated = false;
+            State = ConnectionState.Disconnected;
 
             // Let the game know that we've disconnected
-            ConnectionStateChanged?.Invoke(null, new ResultEventArgs { Value = false });
+            Callable.From(() => ConnectionStateChanged?.Invoke(ConnectionState.Disconnected)).CallDeferred();
+
+            // If we were in-game when we disconnected, we have to back out to the main menu. Before doing so, we prompt the user on how they want to quit.
+            Callable.From(GameUtility.ShowOptionsOnLostConnection).CallDeferred();
         }
 
         /// <summary>
-        /// Log errors to the console
+        /// Log errors to the console and handle connection-terminating errors
         /// </summary>
         private static void OnErrorReceived(Exception e, string message)
         {
@@ -366,6 +384,42 @@ namespace StS2AP
             {
                 LogUtility.Error($"Exception: {e.Message}");
             }
+
+            // Check if this is a connection-terminating error that requires manual cleanup
+            if (IsConnectionTerminatingError(e, message))
+            {
+                LogUtility.Warn("Connection-terminating error detected. Initiating disconnect...");
+                Disconnect();
+            }
+        }
+
+        /// <summary>
+        /// Determines if an error represents a connection-terminating condition.
+        /// These errors indicate the WebSocket connection is irreversibly broken and requires cleanup.
+        /// 
+        /// I wrote this function because apparently, if the AP Server *abruptly* disconnects (e.g. server crash, force quit, network loss),
+        /// only `OnErrorReceived` gets called and not `OnSocketSessionEnd`. 
+        /// This check allows us to know if we need to trigger the disconnection workflow or not.
+        /// 
+        /// And yeah, there are probably more elegant ways to check this - feel free to refactor in the future :)
+        /// </summary>
+        private static bool IsConnectionTerminatingError(Exception e, string message)
+        {
+            if (e == null || string.IsNullOrEmpty(message))
+                return false;
+
+            // Only disconnect if we're actually connected
+            if (State != ConnectionState.Connected)
+                return false;
+
+            // Check for WebSocket protocol errors that indicate connection loss
+            string errorLower = message.ToLower();
+            
+            return errorLower.Contains("closed the websocket connection") ||
+                   errorLower.Contains("connection closed") ||
+                   errorLower.Contains("connection reset") ||
+                   e.GetType().Name == "WebSocketException" ||
+                   e.GetType().Name == "OperationCanceledException" && message.Contains("WebSocket");
         }
 
         /// <summary>
@@ -406,6 +460,7 @@ namespace StS2AP
 
         /// <summary>
         /// Determines what to do with an Item that we've received from Archipelago.
+        /// This function is controlled by a Spinlock, and can only process one item at a time.
         /// </summary>
         /// <param name="item">Received Item</param>
         /// <param name="index">The index of the item in the Archipelago Multiworld</param>
@@ -420,10 +475,40 @@ namespace StS2AP
             // Apply the item to the game
             switch(item.GetRawItemID())
             {
-                // Characters get tracked in GameUtility
+                // Character Unlocks
                 case APItem.Unlock:
                     {
                         GameUtility.UnlockCharacter(item);
+                        break;
+                    }
+                // Progressive Smiths/Rests
+                case APItem.ProgressiveSmith:
+                case APItem.ProgressiveRest:
+                    {
+                        // Get the IDs for storing the item
+                        var itemId = item.GetRawItemID();
+                        var playerId = item.GetStSCharID();
+
+                        // Add the Smith/Rest to the amount we've received for this character
+                        var source = itemId == APItem.ProgressiveSmith ? Progress.ProgressiveSmiths : Progress.ProgressiveRests;
+
+                        // Increment the reward
+                        try
+                        {
+                            var haveKey = source.TryGetValue(playerId, out int amount);
+                            if (!haveKey) amount = 0;
+                            source[playerId] = amount + 1;
+                            LogUtility.Success($"New Value for {(itemId == APItem.ProgressiveSmith ? "ProgressiveSmiths" : "ProgressiveRests")} is {source[playerId]}");
+                        }
+                        catch (KeyNotFoundException e)
+                        {
+                            LogUtility.Error($"ProgressiveSmiths/ProgressiveRests does not have a value for this character! ({item.ItemDisplayName} from {item.Player.Name})");
+                        }
+                        catch
+                        {
+                            LogUtility.Error($"Failed to process Progressive Smith/Rest when this item was received: ({item.ItemDisplayName} from {item.Player.Name})");
+                        }
+
                         break;
                     }
                 // Gold is condensed into a single reward pool
@@ -455,9 +540,9 @@ namespace StS2AP
 
                         break;
                     }
+                // Everything else ends up in the "reward pool"
                 default:
                     {
-                        // adding reward to the reward screen
                         Progress.AllReceivedItems.Add(new IndexedItemInfo(item, index));
                         break;
                     }

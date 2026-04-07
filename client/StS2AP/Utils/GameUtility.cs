@@ -2,16 +2,22 @@
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Factories;
+using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
+using MegaCrit.Sts2.Core.Models.Relics;
+using MegaCrit.Sts2.Core.Nodes;
+using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Rewards;
-using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Runs;
-using StS2AP.Extensions;
-using StS2AP.UI;
-using static StS2AP.Data.CharTable;
+using MegaCrit.Sts2.Core.Saves;
 using Newtonsoft.Json.Linq;
+using StS2AP.Extensions;
+using StS2AP.Patches;
+using StS2AP.UI;
+using System.Text.Json;
+using static StS2AP.Data.CharTable;
 
 namespace StS2AP.Utils
 {
@@ -67,19 +73,6 @@ namespace StS2AP.Utils
                 };
             }
         }
-
-        #region Lock/Unlock Content
-
-        /// <summary>
-        /// Collection of all the characters that should be unlocked.
-        /// 
-        /// If you want to add a character to the unlocked list, you'll need to add it using the `ModelDb.Character<>()` function.
-        /// For example, to add the Necrobinder, you'd need to do:
-        /// `GameUtility.UnlockedCharacters.Add(ModelDb.Character<Characters.Necrobinder>());`
-        /// </summary>
-        public static List<CharacterModel> UnlockedCharacters { get; set; } = new List<CharacterModel>();
-
-        #endregion
 
         #region Receiving Items
 
@@ -333,7 +326,7 @@ namespace StS2AP.Utils
                 return;
             }
 
-            if(!UnlockedCharacters.Contains(characterToUnlock)) UnlockedCharacters.Add(characterToUnlock);
+            if(!ArchipelagoClient.Progress.UnlockedCharacters.Contains(characterToUnlock)) ArchipelagoClient.Progress.UnlockedCharacters.Add(characterToUnlock);
         }
 
         #endregion
@@ -504,6 +497,142 @@ namespace StS2AP.Utils
 
                 LogUtility.Success($"Sent location check: {locationId}");
                 NotificationUtility.ShowLocationChecked(locationId);
+            }
+        }
+
+        /// <summary>
+        /// Builds a Godot user:// path for the emergency recovery save file
+        /// that is uniquely identifiable to the current Archipelago session.
+        /// Uses the Slot Name and the room Seed so the file persists across
+        /// connection/disconnection cycles.
+        /// </summary>
+        public static string GetRecoverySavePath()
+        {
+            var slotName = ArchipelagoClient.PlayerName ?? "unknown";
+            var seed = ArchipelagoClient.Seed ?? "unknown";
+            // Sanitise so no illegal path characters sneak in
+            var safeName = string.Join("_", slotName.Split(System.IO.Path.GetInvalidFileNameChars()));
+            var safeSeed = string.Join("_", seed.Split(System.IO.Path.GetInvalidFileNameChars()));
+            return $"user://sts_ap_recovery_{safeName}_{safeSeed}.save";
+        }
+
+        /// <summary>
+        /// When the connection to the Archipelago server is lost during a run, show a popup giving the player the option 
+        /// to create an emergency recovery save file so they don't lose progress.
+        /// 
+        /// Unlike usual, this save file will be stored locally, rather than in the Archipelago Server's DataStorage
+        /// </summary>
+        public static void ShowOptionsOnLostConnection()
+        {
+            // Ignore if we're not in a run
+            if (!IsInRun) return;
+
+            // Build a popup for the player to choose whether to create a save file or return to main menu
+            var popup = new ConfirmPopup();
+            popup.Header = new LocString("gameplay_ui", "AP_LOST_CONNECTION.header");
+            popup.Body = new LocString("gameplay_ui", "AP_LOST_CONNECTION.body");
+            popup.ButtonPressed = (savePressed) =>
+            {
+                if (savePressed)
+                {
+                    LogUtility.Info("Attempting to create an Emergency Save");
+                    CreateEmergencyRecoverySave();
+                }
+                else
+                {
+                    LogUtility.Info("No Emergency Save will be created, returning to menu");
+                }
+
+                NGame.Instance?.ReturnToMainMenuAfterRun();
+            };
+            NModalContainer.Instance.Add(popup.Popup);
+            popup.Show();
+        }
+
+        /// <summary>
+        /// Creates an emergency recovery save file locally.
+        /// Serializes the current run (via RunManager.ToSave) using the same format as the normal DataStorage save,
+        /// then writes the compressed data to a local file so it can be restored when the server comes back.
+        /// </summary>
+        private static void CreateEmergencyRecoverySave()
+        {
+            try
+            {
+                /// Serialize the run the same way the normal save path does.
+                /// RunManager.ToSave triggers the Harmony postfix on SerializableRun.Serialize,
+                /// which appends the ArchipelagoProgress data to the stream.
+                SerializableRun saveMe = RunManager.Instance.ToSave(preFinishedRoom: null);
+                var json = JsonSerializer.Serialize(saveMe, JsonSerializationUtility.GetTypeInfo<SerializableRun>());
+                var zipped = Patches_RunSaveManager.SaveRun.Zip(json);
+
+                // Write to a local file using Godot's FileAccess (respects user:// virtual path)
+                var savePath = GetRecoverySavePath();
+                using var file = Godot.FileAccess.Open(savePath, Godot.FileAccess.ModeFlags.Write);
+                if (file == null)
+                {
+                    LogUtility.Error($"Failed to open recovery save file for writing: {Godot.FileAccess.GetOpenError()}");
+                    return;
+                }
+
+                file.StoreString(zipped);
+                LogUtility.Success($"Emergency recovery save written to {savePath}");
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Error($"Failed to create emergency recovery save: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Checks whether a local emergency recovery save file exists for the current Archipelago session.
+        /// </summary>
+        public static bool HasRecoverySave()
+        {
+            return Godot.FileAccess.FileExists(GetRecoverySavePath());
+        }
+
+        /// <summary>
+        /// Loads the emergency recovery save data as a compressed string, or null if the file doesn't exist.
+        /// </summary>
+        public static string? LoadRecoverySaveData()
+        {
+            if (!HasRecoverySave()) return null;
+
+            try
+            {
+                var savePath = GetRecoverySavePath();
+                using var file = Godot.FileAccess.Open(savePath, Godot.FileAccess.ModeFlags.Read);
+                if (file == null)
+                {
+                    LogUtility.Error($"Failed to open recovery save file for reading: {Godot.FileAccess.GetOpenError()}");
+                    return null;
+                }
+
+                return file.GetAsText();
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Error($"Failed to load recovery save: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Deletes the local emergency recovery save file.
+        /// </summary>
+        public static void DeleteRecoverySave()
+        {
+            try
+            {
+                if (HasRecoverySave())
+                {
+                    Godot.DirAccess.RemoveAbsolute(GetRecoverySavePath());
+                    LogUtility.Info("Emergency recovery save file deleted.");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Warn($"Failed to delete recovery save file: {ex.Message}");
             }
         }
 

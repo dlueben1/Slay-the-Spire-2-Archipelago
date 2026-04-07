@@ -31,7 +31,14 @@ namespace StS2AP.UI
             {
                 LogUtility.Warn("Someone didn't set stuff");
             }
-            ToCallback(Popup);
+            NModalContainer.Instance.Add(Popup);
+            var activePopup = NModalContainer.Instance.OpenModal as NGenericPopup;
+            if (activePopup == null)
+            {
+                LogUtility.Warn("Failed to get active popup from NModalContainer");
+                return;
+            }
+            ToCallback(activePopup);
         }
 
         private async void ToCallback(NGenericPopup popup)
