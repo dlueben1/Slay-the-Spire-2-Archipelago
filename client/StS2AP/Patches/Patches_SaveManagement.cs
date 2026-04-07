@@ -9,8 +9,6 @@ using MegaCrit.Sts2.Core.Multiplayer;
 using MegaCrit.Sts2.Core.Multiplayer.Serialization;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.Audio;
-using MegaCrit.Sts2.Core.Nodes.CommonUi;
-using MegaCrit.Sts2.Core.Nodes.Multiplayer;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
@@ -162,7 +160,6 @@ namespace StS2AP.Patches
                             __instance.Lobby.SetReady(ready: true);
                         }
                     };
-                    NModalContainer.Instance.Add(popup.Popup);
                     popup.Show();
                     return false;
                 }
@@ -240,7 +237,6 @@ namespace StS2AP.Patches
                         GameUtility.DeleteRecoverySave();
                     }
                 };
-                NModalContainer.Instance.Add(popup.Popup);
                 popup.Show();
             }
 
