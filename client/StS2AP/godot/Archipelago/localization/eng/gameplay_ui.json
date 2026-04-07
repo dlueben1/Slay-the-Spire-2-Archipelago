@@ -1,4 +1,6 @@
 {
+  "AP_LOAD_RECOVERY.header": "Load Recovery Save",
+  "AP_LOAD_RECOVERY.body": "You had a run in-progress before losing connection.\n\n Would you like to continue it? (If not, the file will be deleted)",
   "AP_LOST_CONNECTION.header": "Lost Connection",
   "AP_LOST_CONNECTION.body": "Connection to the Archipelago Server has been lost. You will be returned to the Main Menu now.\n\n Would you like to make a recovery save file?"
 }

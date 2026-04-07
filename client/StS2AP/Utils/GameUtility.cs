@@ -501,9 +501,20 @@ namespace StS2AP.Utils
         }
 
         /// <summary>
-        /// The Godot user:// path for the emergency recovery save file.
+        /// Builds a Godot user:// path for the emergency recovery save file
+        /// that is uniquely identifiable to the current Archipelago session.
+        /// Uses the Slot Name and the room Seed so the file persists across
+        /// connection/disconnection cycles.
         /// </summary>
-        private const string RecoverySavePath = "user://sts_ap_recovery.save";
+        public static string GetRecoverySavePath()
+        {
+            var slotName = ArchipelagoClient.PlayerName ?? "unknown";
+            var seed = ArchipelagoClient.Seed ?? "unknown";
+            // Sanitise so no illegal path characters sneak in
+            var safeName = string.Join("_", slotName.Split(System.IO.Path.GetInvalidFileNameChars()));
+            var safeSeed = string.Join("_", seed.Split(System.IO.Path.GetInvalidFileNameChars()));
+            return $"user://sts_ap_recovery_{safeName}_{safeSeed}.save";
+        }
 
         /// <summary>
         /// When the connection to the Archipelago server is lost during a run, show a popup giving the player the option 
@@ -547,15 +558,16 @@ namespace StS2AP.Utils
         {
             try
             {
-                // Serialize the run the same way the normal save path does.
-                // RunManager.ToSave triggers the Harmony postfix on SerializableRun.Serialize,
-                // which appends the ArchipelagoProgress data to the stream.
+                /// Serialize the run the same way the normal save path does.
+                /// RunManager.ToSave triggers the Harmony postfix on SerializableRun.Serialize,
+                /// which appends the ArchipelagoProgress data to the stream.
                 SerializableRun saveMe = RunManager.Instance.ToSave(preFinishedRoom: null);
                 var json = JsonSerializer.Serialize(saveMe, JsonSerializationUtility.GetTypeInfo<SerializableRun>());
                 var zipped = Patches_RunSaveManager.SaveRun.Zip(json);
 
                 // Write to a local file using Godot's FileAccess (respects user:// virtual path)
-                using var file = Godot.FileAccess.Open(RecoverySavePath, Godot.FileAccess.ModeFlags.Write);
+                var savePath = GetRecoverySavePath();
+                using var file = Godot.FileAccess.Open(savePath, Godot.FileAccess.ModeFlags.Write);
                 if (file == null)
                 {
                     LogUtility.Error($"Failed to open recovery save file for writing: {Godot.FileAccess.GetOpenError()}");
@@ -563,7 +575,7 @@ namespace StS2AP.Utils
                 }
 
                 file.StoreString(zipped);
-                LogUtility.Success($"Emergency recovery save written to {RecoverySavePath}");
+                LogUtility.Success($"Emergency recovery save written to {savePath}");
             }
             catch (Exception ex)
             {
@@ -572,11 +584,11 @@ namespace StS2AP.Utils
         }
 
         /// <summary>
-        /// Checks whether a local emergency recovery save file exists for the given character.
+        /// Checks whether a local emergency recovery save file exists for the current Archipelago session.
         /// </summary>
         public static bool HasRecoverySave()
         {
-            return Godot.FileAccess.FileExists(RecoverySavePath);
+            return Godot.FileAccess.FileExists(GetRecoverySavePath());
         }
 
         /// <summary>
@@ -588,7 +600,8 @@ namespace StS2AP.Utils
 
             try
             {
-                using var file = Godot.FileAccess.Open(RecoverySavePath, Godot.FileAccess.ModeFlags.Read);
+                var savePath = GetRecoverySavePath();
+                using var file = Godot.FileAccess.Open(savePath, Godot.FileAccess.ModeFlags.Read);
                 if (file == null)
                 {
                     LogUtility.Error($"Failed to open recovery save file for reading: {Godot.FileAccess.GetOpenError()}");
@@ -614,7 +627,7 @@ namespace StS2AP.Utils
             {
                 if (HasRecoverySave())
                 {
-                    Godot.DirAccess.RemoveAbsolute(RecoverySavePath);
+                    Godot.DirAccess.RemoveAbsolute(GetRecoverySavePath());
                     LogUtility.Info("Emergency recovery save file deleted.");
                 }
             }

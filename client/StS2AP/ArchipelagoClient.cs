@@ -303,7 +303,7 @@ namespace StS2AP
 
             _ = GameUtility.SetupOnChangedSaves();
             // Let the game know that we've connected
-            ConnectionStateChanged?.Invoke(ConnectionState.Connected);
+            Callable.From(() => ConnectionStateChanged?.Invoke(ConnectionState.Connected)).CallDeferred();
         }
 
         /// <summary>
@@ -368,7 +368,7 @@ namespace StS2AP
             State = ConnectionState.Disconnected;
 
             // Let the game know that we've disconnected
-            ConnectionStateChanged?.Invoke(ConnectionState.Disconnected);
+            Callable.From(() => ConnectionStateChanged?.Invoke(ConnectionState.Disconnected)).CallDeferred();
 
             // If we were in-game when we disconnected, we have to back out to the main menu. Before doing so, we prompt the user on how they want to quit.
             Callable.From(GameUtility.ShowOptionsOnLostConnection).CallDeferred();
