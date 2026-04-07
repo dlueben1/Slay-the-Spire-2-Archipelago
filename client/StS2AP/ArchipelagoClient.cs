@@ -6,9 +6,11 @@ using Archipelago.MultiClient.Net.Models;
 using Godot;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Powers;
+using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
+using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Saves;
 using StS2AP.Data;
 using StS2AP.Models;
@@ -367,10 +369,13 @@ namespace StS2AP
 
             // Let the game know that we've disconnected
             ConnectionStateChanged?.Invoke(ConnectionState.Disconnected);
+
+            // If we were in-game when we disconnected, we have to back out to the main menu. Before doing so, we prompt the user on how they want to quit.
+            Callable.From(GameUtility.ShowOptionsOnLostConnection).CallDeferred();
         }
 
         /// <summary>
-        /// Log errors to the console
+        /// Log errors to the console and handle connection-terminating errors
         /// </summary>
         private static void OnErrorReceived(Exception e, string message)
         {
@@ -379,6 +384,42 @@ namespace StS2AP
             {
                 LogUtility.Error($"Exception: {e.Message}");
             }
+
+            // Check if this is a connection-terminating error that requires manual cleanup
+            if (IsConnectionTerminatingError(e, message))
+            {
+                LogUtility.Warn("Connection-terminating error detected. Initiating disconnect...");
+                Disconnect();
+            }
+        }
+
+        /// <summary>
+        /// Determines if an error represents a connection-terminating condition.
+        /// These errors indicate the WebSocket connection is irreversibly broken and requires cleanup.
+        /// 
+        /// I wrote this function because apparently, if the AP Server *abruptly* disconnects (e.g. server crash, force quit, network loss),
+        /// only `OnErrorReceived` gets called and not `OnSocketSessionEnd`. 
+        /// This check allows us to know if we need to trigger the disconnection workflow or not.
+        /// 
+        /// And yeah, there are probably more elegant ways to check this - feel free to refactor in the future :)
+        /// </summary>
+        private static bool IsConnectionTerminatingError(Exception e, string message)
+        {
+            if (e == null || string.IsNullOrEmpty(message))
+                return false;
+
+            // Only disconnect if we're actually connected
+            if (State != ConnectionState.Connected)
+                return false;
+
+            // Check for WebSocket protocol errors that indicate connection loss
+            string errorLower = message.ToLower();
+            
+            return errorLower.Contains("closed the websocket connection") ||
+                   errorLower.Contains("connection closed") ||
+                   errorLower.Contains("connection reset") ||
+                   e.GetType().Name == "WebSocketException" ||
+                   e.GetType().Name == "OperationCanceledException" && message.Contains("WebSocket");
         }
 
         /// <summary>

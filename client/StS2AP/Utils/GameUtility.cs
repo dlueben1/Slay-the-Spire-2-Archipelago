@@ -2,16 +2,19 @@
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Factories;
+using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
+using MegaCrit.Sts2.Core.Models.Relics;
+using MegaCrit.Sts2.Core.Nodes;
+using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Rewards;
-using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Runs;
+using Newtonsoft.Json.Linq;
 using StS2AP.Extensions;
 using StS2AP.UI;
 using static StS2AP.Data.CharTable;
-using Newtonsoft.Json.Linq;
 
 namespace StS2AP.Utils
 {
@@ -492,6 +495,37 @@ namespace StS2AP.Utils
                 LogUtility.Success($"Sent location check: {locationId}");
                 NotificationUtility.ShowLocationChecked(locationId);
             }
+        }
+
+        /// <summary>
+        /// When the connection to the Archipelago server is lost during a run, show a popup giving the player the option 
+        /// to create an emergency recovery save file so they don't lose progress.
+        /// 
+        /// Unlike usual, this save file will be stored locally, rather than in the Archipelago Server's DataStorage
+        /// </summary>
+        public static void ShowOptionsOnLostConnection()
+        {
+            // Ignore if we're not in a run
+            if (!IsInRun) return;
+
+            // Build a popup for the player to choose whether to create a save file or return to main menu
+            var popup = new ConfirmPopup();
+            popup.Header = new LocString("gameplay_ui", "AP_LOST_CONNECTION.header");
+            popup.Body = new LocString("gameplay_ui", "AP_LOST_CONNECTION.body");
+            popup.ButtonPressed = (savePressed) =>
+            {
+                if (savePressed)
+                {
+                    LogUtility.Info("Attempting to create an Emergency Save");
+                }
+                else
+                {
+                    LogUtility.Info("No Emergency Save will be created, returning to menu");
+                    NGame.Instance?.ReturnToMainMenuAfterRun();
+                }
+            };
+            NModalContainer.Instance.Add(popup.Popup);
+            popup.Show();
         }
 
         #endregion
