@@ -11,9 +11,12 @@ using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Runs;
+using MegaCrit.Sts2.Core.Saves;
 using Newtonsoft.Json.Linq;
 using StS2AP.Extensions;
+using StS2AP.Patches;
 using StS2AP.UI;
+using System.Text.Json;
 using static StS2AP.Data.CharTable;
 
 namespace StS2AP.Utils
@@ -498,6 +501,11 @@ namespace StS2AP.Utils
         }
 
         /// <summary>
+        /// The Godot user:// path for the emergency recovery save file.
+        /// </summary>
+        private const string RecoverySavePath = "user://sts_ap_recovery.save";
+
+        /// <summary>
         /// When the connection to the Archipelago server is lost during a run, show a popup giving the player the option 
         /// to create an emergency recovery save file so they don't lose progress.
         /// 
@@ -517,15 +525,103 @@ namespace StS2AP.Utils
                 if (savePressed)
                 {
                     LogUtility.Info("Attempting to create an Emergency Save");
+                    CreateEmergencyRecoverySave();
                 }
                 else
                 {
                     LogUtility.Info("No Emergency Save will be created, returning to menu");
-                    NGame.Instance?.ReturnToMainMenuAfterRun();
                 }
+
+                NGame.Instance?.ReturnToMainMenuAfterRun();
             };
             NModalContainer.Instance.Add(popup.Popup);
             popup.Show();
+        }
+
+        /// <summary>
+        /// Creates an emergency recovery save file locally.
+        /// Serializes the current run (via RunManager.ToSave) using the same format as the normal DataStorage save,
+        /// then writes the compressed data to a local file so it can be restored when the server comes back.
+        /// </summary>
+        private static void CreateEmergencyRecoverySave()
+        {
+            try
+            {
+                // Serialize the run the same way the normal save path does.
+                // RunManager.ToSave triggers the Harmony postfix on SerializableRun.Serialize,
+                // which appends the ArchipelagoProgress data to the stream.
+                SerializableRun saveMe = RunManager.Instance.ToSave(preFinishedRoom: null);
+                var json = JsonSerializer.Serialize(saveMe, JsonSerializationUtility.GetTypeInfo<SerializableRun>());
+                var zipped = Patches_RunSaveManager.SaveRun.Zip(json);
+
+                // Write to a local file using Godot's FileAccess (respects user:// virtual path)
+                using var file = Godot.FileAccess.Open(RecoverySavePath, Godot.FileAccess.ModeFlags.Write);
+                if (file == null)
+                {
+                    LogUtility.Error($"Failed to open recovery save file for writing: {Godot.FileAccess.GetOpenError()}");
+                    return;
+                }
+
+                file.StoreString(zipped);
+                LogUtility.Success($"Emergency recovery save written to {RecoverySavePath}");
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Error($"Failed to create emergency recovery save: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Checks whether a local emergency recovery save file exists for the given character.
+        /// </summary>
+        public static bool HasRecoverySave()
+        {
+            return Godot.FileAccess.FileExists(RecoverySavePath);
+        }
+
+        /// <summary>
+        /// Loads the emergency recovery save data as a compressed string, or null if the file doesn't exist.
+        /// </summary>
+        public static string? LoadRecoverySaveData()
+        {
+            if (!HasRecoverySave()) return null;
+
+            try
+            {
+                using var file = Godot.FileAccess.Open(RecoverySavePath, Godot.FileAccess.ModeFlags.Read);
+                if (file == null)
+                {
+                    LogUtility.Error($"Failed to open recovery save file for reading: {Godot.FileAccess.GetOpenError()}");
+                    return null;
+                }
+
+                return file.GetAsText();
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Error($"Failed to load recovery save: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Deletes the local emergency recovery save file.
+        /// Should be called after the save has been successfully uploaded to DataStorage.
+        /// </summary>
+        public static void DeleteRecoverySave()
+        {
+            try
+            {
+                if (HasRecoverySave())
+                {
+                    Godot.DirAccess.RemoveAbsolute(RecoverySavePath);
+                    LogUtility.Info("Emergency recovery save file deleted.");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Warn($"Failed to delete recovery save file: {ex.Message}");
+            }
         }
 
         #endregion
