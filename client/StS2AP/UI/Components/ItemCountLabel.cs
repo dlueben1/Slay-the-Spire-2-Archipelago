@@ -1,5 +1,8 @@
 ﻿using Godot;
 using MegaCrit.Sts2.addons.mega_text;
+using MegaCrit.Sts2.Core.HoverTips;
+using MegaCrit.Sts2.Core.Localization;
+using MegaCrit.Sts2.Core.Nodes.HoverTips;
 using StS2AP.Utils;
 using System;
 
@@ -37,6 +40,12 @@ namespace StS2AP.UI.Components
         /// <summary>The text label displayed on the right side of the row.</summary>
         private readonly MegaRichTextLabel _label;
 
+        /// <summary>
+        /// The hover tooltip shown when the player mouses over this row.
+        /// Null if no tooltip was provided — in that case mouse events pass through.
+        /// </summary>
+        private readonly HoverTip? _hoverTip;
+
         #endregion
 
         #region Constants
@@ -72,14 +81,73 @@ namespace StS2AP.UI.Components
         /// <param name="fontSize">
         ///   Optional font size override.  Defaults to <see cref="DefaultFontSize"/>.
         /// </param>
-        public ItemCountLabel(string iconPath, string text, int fontSize = DefaultFontSize)
+        /// <param name="tooltipTitle">
+        ///   Optional tooltip title shown on hover. Pass <c>null</c> to disable the tooltip entirely.
+        /// </param>
+        /// <param name="tooltipDescription">
+        ///   Optional tooltip description shown on hover. Pass <c>null</c> to disable the tooltip entirely.
+        /// </param>
+        public ItemCountLabel(string iconPath, string text, int fontSize = DefaultFontSize, string? tooltipTitle = null, string? tooltipDescription = null)
         {
             // ── Root row container ────────────────────────────────────────────────────
             Root = new HBoxContainer();
             Root.Name = "ItemCountLabel";
             Root.AddThemeConstantOverride("separation", IconTextSpacing);
-            // Pass mouse events through — this is a display-only component
-            Root.MouseFilter = Control.MouseFilterEnum.Ignore;
+
+            // If a tooltip is provided we need to receive mouse events; otherwise pass through.
+            if (tooltipTitle != null && tooltipDescription != null)
+            {
+                Root.MouseFilter = Control.MouseFilterEnum.Stop;
+
+                // Register the plain strings into a runtime loc table so HoverTip can look them up.
+                // The key is made unique per instance so multiple rows don't collide.
+                string tableKey = $"item_count_label_{tooltipTitle.GetHashCode():x}";
+                TextUtility.RegisterLocTableAtRuntime(tableKey, new System.Collections.Generic.Dictionary<string, string>
+                {
+                    { "title",       tooltipTitle       },
+                    { "description", tooltipDescription }
+                });
+
+                _hoverTip = new HoverTip(
+                    new LocString(tableKey, "title"),
+                    new LocString(tableKey, "description"));
+
+                // Show the tooltip when the mouse enters the row.
+                // Position it centered horizontally above the row — matching the
+                // manual positioning pattern used in ArchipelagoTopBarUI.
+                Root.MouseEntered += () =>
+                {
+                    try
+                    {
+                        var tipSet = NHoverTipSet.CreateAndShow(Root, _hoverTip);
+                        tipSet.GlobalPosition = Root.GlobalPosition + new Vector2(
+                            (Root.Size.X - tipSet.Size.X) / 2f,
+                            -tipSet.Size.Y);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogUtility.Warn($"[ItemCountLabel] Failed to show tooltip: {ex.Message}");
+                    }
+                };
+
+                // Remove the tooltip when the mouse leaves the row
+                Root.MouseExited += () =>
+                {
+                    try
+                    {
+                        NHoverTipSet.Remove(Root);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogUtility.Warn($"[ItemCountLabel] Failed to hide tooltip: {ex.Message}");
+                    }
+                };
+            }
+            else
+            {
+                // Pass mouse events through — this is a display-only component with no tooltip
+                Root.MouseFilter = Control.MouseFilterEnum.Ignore;
+            }
 
             // ── Icon ─────────────────────────────────────────────────────────────────
             _icon = new TextureRect();
