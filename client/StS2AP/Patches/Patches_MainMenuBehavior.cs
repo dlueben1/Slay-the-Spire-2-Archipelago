@@ -123,5 +123,30 @@ namespace StS2AP.Patches
                 __instance.GetNode<NBackButton>("BackButton").Visible = false;
             }
         }
+
+        /// <summary>
+        /// Injects the Archipelago Progress Tracker panel when the Character Select screen opens,
+        /// and removes it when the screen closes. Keeping injection in OnSubmenuOpened (rather than
+        /// _Ready) ensures the CanvasLayer is created after the scene tree is fully set up.
+        /// </summary>
+        [HarmonyPatch(typeof(NCharacterSelectScreen))]
+        public static class CharTrackerPanelPatches
+        {
+            /// <summary>Show the tracker panel as soon as the screen becomes active.</summary>
+            [HarmonyPatch(nameof(NCharacterSelectScreen.OnSubmenuOpened))]
+            [HarmonyPostfix]
+            static void OnOpened(NCharacterSelectScreen __instance)
+            {
+                ArchipelagoCharTrackerUI.InjectUI();
+            }
+
+            /// <summary>Remove the tracker panel when the player leaves the Character Select screen.</summary>
+            [HarmonyPatch(nameof(NCharacterSelectScreen.OnSubmenuClosed))]
+            [HarmonyPostfix]
+            static void OnClosed(NCharacterSelectScreen __instance)
+            {
+                ArchipelagoCharTrackerUI.RemoveUI();
+            }
+        }
     }
 }
