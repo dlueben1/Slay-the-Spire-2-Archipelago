@@ -42,6 +42,19 @@ if ($Version -match '(\d+\.\d+\.\d+)') {
     exit 1
 }
 
+# ~ Verify we are on the main branch ~
+Write-Host "`nChecking current branch..." -ForegroundColor Cyan
+$currentBranch = git -C $RepoRoot rev-parse --abbrev-ref HEAD 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Failed to determine current branch. Is this a git repository?"
+    exit 1
+}
+if ($currentBranch -ne 'main') {
+    Write-Error "You must be on the 'main' branch to create a release. Current branch: '$currentBranch'"
+    exit 1
+}
+Write-Host "  On branch: main" -ForegroundColor Green
+
 Write-Host "`nUpdating files..." -ForegroundColor Cyan
 
 # ~ Update StS2AP.csproj ModVersion ~
@@ -138,6 +151,28 @@ if ($worldPyNew -ne $worldPyContent) {
 } else {
     Write-Warning "  No match found in world/spire2/world.py"
 }
+
+# ~ Commit version bump ~
+# Stage only the files we just modified and create a commit titled with the version.
+# This commit will be used as the tagged commit for the release.
+Write-Host "`nCommitting version bump..." -ForegroundColor Cyan
+git -C $RepoRoot add `
+    "client/StS2AP/StS2AP.csproj" `
+    "client/StS2AP/Archipelago.json" `
+    "world/spire2/archipelago.json" `
+    "world/spire2/world.py"
+$gitAddExit = $LASTEXITCODE
+if ($gitAddExit -ne 0) {
+    Write-Error "git add failed (exit code $gitAddExit)."
+    exit 1
+}
+git -C $RepoRoot commit --message $Version
+$gitCommitExit = $LASTEXITCODE
+if ($gitCommitExit -ne 0) {
+    Write-Error "git commit failed (exit code $gitCommitExit). Are there changes to commit?"
+    exit 1
+}
+Write-Host "  Committed: $Version" -ForegroundColor Green
 
 # ~ Build C# client ~
 Write-Host "`nBuilding C# client (Release)..." -ForegroundColor Cyan
@@ -267,9 +302,39 @@ if (Test-Path $apworldSource) {
     Write-Warning "  spire2.apworld not found at $apworldSource"
 }
 
+# ~ Tag the version commit ~
+# Tag HEAD (the version-bump commit we just created) with the release version.
+git -C $RepoRoot tag $Version HEAD
+$gitTagExit = $LASTEXITCODE
+if ($gitTagExit -ne 0) {
+    Write-Error "git tag failed (exit code $gitTagExit). Does the tag '$Version' already exist?"
+    exit 1
+}
+Write-Host "  Tagged HEAD as: $Version" -ForegroundColor Green
+
 if ($skipGitHub) {
-    Write-Host "`nSkipping GitHub release (-skipGitHub specified)." -ForegroundColor Yellow
+    Write-Host "`nSkipping GitHub push and release (-skipGitHub specified)." -ForegroundColor Yellow
+    Write-Host "  Commit and tag '$Version' created locally only." -ForegroundColor Yellow
 } else {
+    # ~ Push commit and tag, then create GitHub Release ~
+    Write-Host "`nPushing commit and tag to GitHub..." -ForegroundColor Cyan
+
+    git -C $RepoRoot push origin main
+    $gitPushExit = $LASTEXITCODE
+    if ($gitPushExit -ne 0) {
+        Write-Error "git push failed (exit code $gitPushExit)."
+        exit 1
+    }
+    Write-Host "  Pushed: main" -ForegroundColor Green
+
+    git -C $RepoRoot push origin $Version
+    $gitPushTagExit = $LASTEXITCODE
+    if ($gitPushTagExit -ne 0) {
+        Write-Error "git push tag failed (exit code $gitPushTagExit)."
+        exit 1
+    }
+    Write-Host "  Pushed: tag $Version" -ForegroundColor Green
+
     # ~ Create GitHub Release ~
     Write-Host "`nCreating GitHub release..." -ForegroundColor Cyan
 
@@ -290,10 +355,6 @@ if ($skipGitHub) {
     Set-Content $releaseNotesFile -Value $releaseNotes -NoNewline
 
     try {
-        # Tag the latest commit on main with the version name
-        git tag $Version main
-        git push origin $Version
-
         # Collect all files in dist to upload
         $distFiles = Get-ChildItem -Path $distDir -File
         $assetArgs = @()

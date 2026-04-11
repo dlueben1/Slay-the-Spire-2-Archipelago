@@ -9,8 +9,6 @@ using MegaCrit.Sts2.Core.Multiplayer;
 using MegaCrit.Sts2.Core.Multiplayer.Serialization;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.Audio;
-using MegaCrit.Sts2.Core.Nodes.CommonUi;
-using MegaCrit.Sts2.Core.Nodes.Multiplayer;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
@@ -162,7 +160,6 @@ namespace StS2AP.Patches
                             __instance.Lobby.SetReady(ready: true);
                         }
                     };
-                    NModalContainer.Instance.Add(popup.Popup);
                     popup.Show();
                     return false;
                 }
@@ -208,6 +205,85 @@ namespace StS2AP.Patches
                 }
                 LogUtility.Error("Somehow got here, but we don't have a save, starting the run");
                 _charSelect.Lobby.SetReady(ready: true);
+            }
+        }
+
+        /// <summary>
+        /// When the Character Select screen opens, check for a local emergency
+        /// recovery save and prompt the user to load it.
+        /// </summary>
+        [HarmonyPatch(typeof(NCharacterSelectScreen), "OnSubmenuOpened")]
+        public static class CheckRecoverySaveOnOpen
+        {
+            [HarmonyPostfix]
+            public static void Postfix(NCharacterSelectScreen __instance)
+            {
+                if (!ArchipelagoClient.IsConnected) return;
+                if (!GameUtility.HasRecoverySave()) return;
+
+                LogUtility.Info("Recovery save file detected, prompting user...");
+
+                var popup = new ConfirmPopup();
+                popup.Header = new LocString("gameplay_ui", "AP_LOAD_RECOVERY.header");
+                popup.Body = new LocString("gameplay_ui", "AP_LOAD_RECOVERY.body");
+                popup.ButtonPressed = (yesPressed) =>
+                {
+                    if (yesPressed)
+                    {
+                        _ = LoadRecoverySave(__instance);
+                    }
+                    else
+                    {
+                        GameUtility.DeleteRecoverySave();
+                    }
+                };
+                popup.Show();
+            }
+
+            private static async Task LoadRecoverySave(NCharacterSelectScreen charSelect)
+            {
+                try
+                {
+                    var saveStr = GameUtility.LoadRecoverySaveData();
+                    if (string.IsNullOrEmpty(saveStr))
+                    {
+                        LogUtility.Error("Recovery save data was empty or null");
+                        GameUtility.DeleteRecoverySave();
+                        return;
+                    }
+
+                    NAudioManager.Instance?.StopMusic();
+
+                    var unzipped = Patches_RunSaveManager.SaveRun.Unzip(saveStr);
+                    ReadSaveResult<SerializableRun> result = JsonSerializationUtility.FromJson<SerializableRun>(unzipped);
+                    if (!result.Success)
+                    {
+                        LogUtility.Error($"Failed to deserialize recovery save: {result.ErrorMessage}");
+                        GameUtility.DeleteRecoverySave();
+                        return;
+                    }
+
+                    SerializableRun serializableRun = result.SaveData;
+                    RunState runState = RunState.FromSerializable(serializableRun);
+                    RunManager.Instance.SetUpSavedSinglePlayer(runState, serializableRun);
+                    Log.Info($"Continuing run from recovery save with character: {serializableRun.Players[0].CharacterId}");
+                    SfxCmd.Play(runState.Players[0].Character.CharacterTransitionSfx);
+
+                    GameUtility.CurrentPlayer = runState.Players[0];
+
+                    await NGame.Instance.Transition.FadeOut(0.8f, runState.Players[0].Character.CharacterSelectTransitionPath);
+                    NGame.Instance.ReactionContainer.InitializeNetworking(new NetSingleplayerGameService());
+                    await NGame.Instance.LoadRun(runState, serializableRun.PreFinishedRoom);
+                    await NGame.Instance.Transition.FadeIn();
+                }
+                catch (Exception ex)
+                {
+                    LogUtility.Error($"Failed to load recovery save: {ex.Message}");
+                }
+                finally
+                {
+                    GameUtility.DeleteRecoverySave();
+                }
             }
         }
     }

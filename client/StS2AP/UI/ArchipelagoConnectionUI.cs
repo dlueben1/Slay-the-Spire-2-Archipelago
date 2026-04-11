@@ -398,10 +398,10 @@ namespace StS2AP.UI
         /// <summary>
         /// Fires on when a connection attempt to Archipelago completes
         /// </summary>
-        private static void OnConnectionResult(object? sender, ResultEventArgs e)
+        private static void OnConnectionResult(ConnectionState state)
         {
             // Did we connect?
-            if (e.Value)
+            if (state == ConnectionState.Connected)
             {
                 // Set status
                 SetStatus("Connected successfully!");
@@ -415,7 +415,7 @@ namespace StS2AP.UI
                 Hide();
             }
             // We failed to connect
-            else
+            else if (state == ConnectionState.Disconnected)
             {
                 SetStatus("Failed to connect. Please check your details and try again.");
                 SetConnectButtonEnabled(true);

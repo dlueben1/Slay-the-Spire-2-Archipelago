@@ -60,7 +60,6 @@ namespace StS2AP.UI
                 // Don't build the UI if it's already present
                 if (_rootPanel != null && IsInstanceValid(_rootPanel))
                 {
-                    _rootPanel.Visible = true;
                     return;
                 }
 
