@@ -51,7 +51,9 @@ namespace StS2AP.Utils
         /// </summary>
         public static Dictionary<string, string> APSaves { get; set; } = new Dictionary<string, string>();
 
-
+        /// <summary>
+        /// Returns the Current Player's `APItemCharID`
+        /// </summary>
         public static APItemCharID? CurrentCharacterID
         {
             get
@@ -62,16 +64,26 @@ namespace StS2AP.Utils
                     return null;
                 }
                 var charName = CurrentPlayer.APName();
-                return charName switch
-                {
-                    "Ironclad" => APItemCharID.Ironclad,
-                    "Silent" => APItemCharID.Silent,
-                    "Defect" => APItemCharID.Defect,
-                    "Regent" => APItemCharID.Regent,
-                    "Necrobinder" => APItemCharID.Necrobinder,
-                    _ => null
-                };
+                return GetCharacterIDByName(charName);
             }
+        }
+
+        /// <summary>
+        /// Gets the `APItemCharID` for a character by their AP Name.
+        /// </summary>
+        /// <param name="name">The name of a character, as recognized by the Archipelago World. Usually found by calling `.APName()` on a `CharacterModel` or `Player`.</param>
+        /// <returns>The `APItemCharID` for a given character, by it's name. Returns `null` if the character name is invalid or unknown.</returns>
+        public static APItemCharID? GetCharacterIDByName(string name)
+        {
+            return name switch
+            {
+                "Ironclad" => APItemCharID.Ironclad,
+                "Silent" => APItemCharID.Silent,
+                "Defect" => APItemCharID.Defect,
+                "Regent" => APItemCharID.Regent,
+                "Necrobinder" => APItemCharID.Necrobinder,
+                _ => null
+            };
         }
 
         #region Receiving Items

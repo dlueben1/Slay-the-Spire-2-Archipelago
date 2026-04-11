@@ -57,6 +57,64 @@ namespace StS2AP.UI
 
         #endregion
 
+        #region ItemCountLabel References
+
+        // ── AP Check labels (left list) ───────────────────────────────────────────
+        // Each label can be updated at runtime via its SetText() method, e.g.:
+        //   ArchipelagoCharTrackerUI.CardChecks?.SetText("(15 / 45)");
+
+        /// <summary>Tracks how many Card Reward AP Checks have been found.</summary>
+        public static ItemCountLabel? CardChecks { get; private set; }
+
+        /// <summary>Tracks how many Rare Card Reward AP Checks have been found.</summary>
+        public static ItemCountLabel? RareCardChecks { get; private set; }
+
+        /// <summary>Tracks how many Relic Reward AP Checks have been found.</summary>
+        public static ItemCountLabel? RelicChecks { get; private set; }
+
+        /// <summary>Tracks how many Floorsanity AP Checks have been sent.</summary>
+        public static ItemCountLabel? FloorsanityChecks { get; private set; }
+
+        /// <summary>Tracks how many Potionsanity AP Checks have been found.</summary>
+        public static ItemCountLabel? PotionsanityChecks { get; private set; }
+
+        /// <summary>Tracks how many Goldsanity AP Checks have been found.</summary>
+        public static ItemCountLabel? GoldsanityChecks { get; private set; }
+
+        /// <summary>Tracks how many Campfiresanity AP Checks have been found.</summary>
+        public static ItemCountLabel? CampfiresanityChecks { get; private set; }
+
+        /// <summary>Tracks whether the "Press Start" check has been earned.</summary>
+        public static ItemCountLabel? PressStartChecks { get; private set; }
+
+        /// <summary>Tracks whether the "Slayed the Spire" check has been earned.</summary>
+        public static ItemCountLabel? ClearedChecks { get; private set; }
+
+        // ── AP Item labels (right list) ───────────────────────────────────────────
+
+        /// <summary>Tracks the number of Card Rewards received from the multiworld.</summary>
+        public static ItemCountLabel? CardRewards { get; private set; }
+
+        /// <summary>Tracks the number of Rare Card Rewards received from the multiworld.</summary>
+        public static ItemCountLabel? RareCardRewards { get; private set; }
+
+        /// <summary>Tracks the number of Relic Rewards received from the multiworld.</summary>
+        public static ItemCountLabel? RelicRewards { get; private set; }
+
+        /// <summary>Tracks the number of Potion Rewards received from the multiworld.</summary>
+        public static ItemCountLabel? PotionRewards { get; private set; }
+
+        /// <summary>Tracks the total Gold received from the multiworld.</summary>
+        public static ItemCountLabel? GoldRewards { get; private set; }
+
+        /// <summary>Tracks the number of Progressive Rest rewards received.</summary>
+        public static ItemCountLabel? ProgressiveRestLabel { get; private set; }
+
+        /// <summary>Tracks the number of Progressive Smith rewards received.</summary>
+        public static ItemCountLabel? ProgressiveSmithLabel { get; private set; }
+
+        #endregion
+
         #region Constants
 
         // The game font used throughout the mod for consistency
@@ -169,6 +227,24 @@ namespace StS2AP.UI
                 _leftColumnRowCount  = 0;
                 _rightCurrentColumn  = null;
                 _rightColumnRowCount = 0;
+
+                // Reset all ItemCountLabel references — their Godot nodes are freed with the canvas layer
+                CardChecks           = null;
+                RareCardChecks       = null;
+                RelicChecks          = null;
+                FloorsanityChecks    = null;
+                PotionsanityChecks   = null;
+                GoldsanityChecks     = null;
+                CampfiresanityChecks = null;
+                PressStartChecks     = null;
+                ClearedChecks        = null;
+                CardRewards          = null;
+                RareCardRewards      = null;
+                RelicRewards         = null;
+                PotionRewards        = null;
+                GoldRewards          = null;
+                ProgressiveRestLabel = null;
+                ProgressiveSmithLabel = null;
             }
         }
 
@@ -396,72 +472,74 @@ namespace StS2AP.UI
             listsRow.AddChild(_rightListContainer);
 
             // ── AP Checks ───────────────────────────────────────────────────────
+            // Each label is stored as a static property so patches can update its text
+            // at runtime via SetText(), e.g. CardChecks?.SetText("(15 / 45)").
 
             // Card Checks Counter
-            var cardChecks = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_card.png", "(12 / 45)", tooltipTitle: "Card Checks", tooltipDescription: "The number of AP Checks found that replaced Card Rewards");
-            AddCheckRow(cardChecks);
+            CardChecks = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_card.png", "(0 / 0)", tooltipTitle: "Card Checks", tooltipDescription: "The number of AP Checks found that replaced Card Rewards");
+            AddCheckRow(CardChecks);
 
             // Rare Card Checks Counter
-            var rareCardChecks = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_rare.png", "(2 / 2)", tooltipTitle: "Rare Card Checks", tooltipDescription: "The number of AP Checks found that replaced Rare Card Rewards");
-            AddCheckRow(rareCardChecks);
+            RareCardChecks = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_rare.png", "(0 / 0)", tooltipTitle: "Rare Card Checks", tooltipDescription: "The number of AP Checks found that replaced Rare Card Rewards");
+            AddCheckRow(RareCardChecks);
 
             // Relic Checks Counter
-            var relicChecks = new ItemCountLabel("res://images/relics/calling_bell.png", "(4 / 10)", tooltipTitle: "Relic Checks", tooltipDescription: "The number of AP Checks found that replaced Relic Rewards");
-            AddCheckRow(relicChecks);
+            RelicChecks = new ItemCountLabel("res://images/relics/calling_bell.png", "(0 / 0)", tooltipTitle: "Relic Checks", tooltipDescription: "The number of AP Checks found that replaced Relic Rewards");
+            AddCheckRow(RelicChecks);
 
             // Floorsanity Checks Counter (Note: When the Winged Boots are in main, we should use that relic here instead)
-            var floorsanityChecks = new ItemCountLabel("res://images/relics/planisphere.png", "(18 / 45)", tooltipTitle: "Floorsanity Checks", tooltipDescription: "The number of AP Checks sent for each floor reached");
-            AddCheckRow(floorsanityChecks);
+            FloorsanityChecks = new ItemCountLabel("res://images/relics/planisphere.png", "(0 / 0)", tooltipTitle: "Floorsanity Checks", tooltipDescription: "The number of AP Checks sent for each floor reached");
+            AddCheckRow(FloorsanityChecks);
 
             // Potionsanity Checks Counter
-            var potionsanityChecks = new ItemCountLabel("res://images/potions/skill_potion.png", "(5 / 10)", tooltipTitle: "Potionsanity Checks", tooltipDescription: "The number of AP Checks found that replaced Potion Rewards");
-            AddCheckRow(potionsanityChecks);
+            PotionsanityChecks = new ItemCountLabel("res://images/potions/skill_potion.png", "(0 / 0)", tooltipTitle: "Potionsanity Checks", tooltipDescription: "The number of AP Checks found that replaced Potion Rewards");
+            AddCheckRow(PotionsanityChecks);
 
             // Goldsanity Checks Counter
-            var goldsanityChecks = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_money.png", "(28 / 45)", tooltipTitle: "Goldsanity Checks", tooltipDescription: "The number of AP Checks found that replaced Gold Rewards");
-            AddCheckRow(goldsanityChecks);
+            GoldsanityChecks = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_money.png", "(0 / 0)", tooltipTitle: "Goldsanity Checks", tooltipDescription: "The number of AP Checks found that replaced Gold Rewards");
+            AddCheckRow(GoldsanityChecks);
 
             // Campfiresanity Checks Counter
-            var campfiresanityChecks = new ItemCountLabel("res://images/ui/run_history/rest_site.png", "(3 / 6)", tooltipTitle: "Campfiresanity Checks", tooltipDescription: "The number of AP Checks found from Rest Sites");
-            AddCheckRow(campfiresanityChecks);
+            CampfiresanityChecks = new ItemCountLabel("res://images/ui/run_history/rest_site.png", "(0 / 0)", tooltipTitle: "Campfiresanity Checks", tooltipDescription: "The number of AP Checks found from Rest Sites");
+            AddCheckRow(CampfiresanityChecks);
 
             // Press Start Counter
-            var pressStartChecks = new ItemCountLabel("res://images/ui/run_history/neow.png", "✔", tooltipTitle: "Pressed Start", tooltipDescription: "Whether this character has earned a check by starting a run.");
-            AddCheckRow(pressStartChecks);
+            PressStartChecks = new ItemCountLabel("res://images/ui/run_history/neow.png", "—", tooltipTitle: "Pressed Start", tooltipDescription: "Whether this character has earned a check by starting a run.");
+            AddCheckRow(PressStartChecks);
 
             // Slayed the Spire Counter
-            var clearedChecks = new ItemCountLabel("res://images/relics/pantograph.png", "✔", tooltipTitle: "Slayed the Spire", tooltipDescription: "Whether this character has earned a check by completing a run.");
-            AddCheckRow(clearedChecks);
+            ClearedChecks = new ItemCountLabel("res://images/relics/pantograph.png", "—", tooltipTitle: "Slayed the Spire", tooltipDescription: "Whether this character has earned a check by completing a run.");
+            AddCheckRow(ClearedChecks);
 
             // ── AP Items ──────────────────────────────────────────────────────
 
             // Card Rewards Counter
-            var cardRewards = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_card.png", "25", tooltipTitle: "Card Rewards", tooltipDescription: "The number of Card Rewards received for this character. You can redeem these at the start of each run.");
-            AddItemRow(cardRewards);
+            CardRewards = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_card.png", "0", tooltipTitle: "Card Rewards", tooltipDescription: "The number of Card Rewards received for this character. You can redeem these at the start of each run.");
+            AddItemRow(CardRewards);
 
             // Rare Card Rewards Counter
-            var rareCardRewards = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_rare.png", "3", tooltipTitle: "Rare Card Rewards", tooltipDescription: "The number of Rare Card Rewards received for this character. You can redeem these at the start of each run.");
-            AddItemRow(rareCardRewards);
+            RareCardRewards = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_rare.png", "0", tooltipTitle: "Rare Card Rewards", tooltipDescription: "The number of Rare Card Rewards received for this character. You can redeem these at the start of each run.");
+            AddItemRow(RareCardRewards);
 
             // Relics Counter
-            var relicRewards = new ItemCountLabel("res://images/relics/circlet.png", "7", tooltipTitle: "Relic Rewards", tooltipDescription: "The number of Relic Rewards received for this character. You can redeem these at the start of each run.");
-            AddItemRow(relicRewards);
+            RelicRewards = new ItemCountLabel("res://images/relics/circlet.png", "0", tooltipTitle: "Relic Rewards", tooltipDescription: "The number of Relic Rewards received for this character. You can redeem these at the start of each run.");
+            AddItemRow(RelicRewards);
 
             // Potions Counter
-            var potionRewards = new ItemCountLabel("res://images/potions/glowwater_potion.png", "12", tooltipTitle: "Potion Rewards", tooltipDescription: "The number of Potion Rewards received for this character. You can redeem these at the start of each run.");
-            AddItemRow(potionRewards);
+            PotionRewards = new ItemCountLabel("res://images/potions/glowwater_potion.png", "0", tooltipTitle: "Potion Rewards", tooltipDescription: "The number of Potion Rewards received for this character. You can redeem these at the start of each run.");
+            AddItemRow(PotionRewards);
 
             // Gold Rewards Total
-            var goldRewards = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_money.png", "", tooltipTitle: "Gold", tooltipDescription: "The total amount of Gold received for this character. You can redeem this at the start of each run.");
-            AddItemRow(goldRewards);
+            GoldRewards = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_money.png", "0", tooltipTitle: "Gold", tooltipDescription: "The total amount of Gold received for this character. You can redeem this at the start of each run.");
+            AddItemRow(GoldRewards);
 
             // Progressive Rest Total
-            var progressiveRest = new ItemCountLabel("res://images/relics/regal_pillow.png", "(0 / 3)", tooltipTitle: "Progressive Rests", tooltipDescription: "The number of Progressive Rest rewards received for this character. The number of these represents the highest Act you can Heal at.");
-            AddItemRow(progressiveRest);
+            ProgressiveRestLabel = new ItemCountLabel("res://images/relics/regal_pillow.png", "(0 / 3)", tooltipTitle: "Progressive Rests", tooltipDescription: "The number of Progressive Rest rewards received for this character. The number of these represents the highest Act you can Heal at.");
+            AddItemRow(ProgressiveRestLabel);
 
             // Progressive Smith Total
-            var progressiveSmith = new ItemCountLabel("res://images/relics/whetstone.png", "(2 / 3)", tooltipTitle: "Progressive Smiths", tooltipDescription: "The number of Progressive Smith rewards received for this character. The number of these represents the highest Act you can Upgrade at.");
-            AddItemRow(progressiveSmith);
+            ProgressiveSmithLabel = new ItemCountLabel("res://images/relics/whetstone.png", "(0 / 3)", tooltipTitle: "Progressive Smiths", tooltipDescription: "The number of Progressive Smith rewards received for this character. The number of these represents the highest Act you can Upgrade at.");
+            AddItemRow(ProgressiveSmithLabel);
 
             // Start visible — it will be shown/hidden by the patch hooks
             root.Visible = true;
