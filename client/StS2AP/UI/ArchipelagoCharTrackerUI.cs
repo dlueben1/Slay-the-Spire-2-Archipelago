@@ -1,6 +1,7 @@
 ﻿using Godot;
 using MegaCrit.Sts2.addons.mega_text;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
+using StS2AP.Models;
 using StS2AP.UI.Components;
 using StS2AP.Utils;
 using System;
@@ -85,10 +86,10 @@ namespace StS2AP.UI
         public static ItemCountLabel? CampfiresanityChecks { get; private set; }
 
         /// <summary>Tracks whether the "Press Start" check has been earned.</summary>
-        public static ItemCountLabel? PressStartChecks { get; private set; }
+        public static ItemCountLabel? PressStartCheck { get; private set; }
 
         /// <summary>Tracks whether the "Slayed the Spire" check has been earned.</summary>
-        public static ItemCountLabel? ClearedChecks { get; private set; }
+        public static ItemCountLabel? ClearedCheck { get; private set; }
 
         // ── AP Item labels (right list) ───────────────────────────────────────────
 
@@ -138,9 +139,7 @@ namespace StS2AP.UI
         private static readonly Color PanelBgColor = new Color(0.10f, 0.10f, 0.13f, 0.5f);
 
         // CanvasLayer rendering order.
-        // Kept low (below 100) so the game's own UI layers — connection UI (100), notification UI (101),
-        // reward UI (110), and the tooltip system — all render on top of this panel.
-        private const int CanvasLayerIndex = 10;
+        private const int CanvasLayerIndex = 0;
 
         // Maximum rows per sub-column before wrapping to a new column
         private const int MaxRowsPerColumn = 6;
@@ -236,8 +235,8 @@ namespace StS2AP.UI
                 PotionsanityChecks   = null;
                 GoldsanityChecks     = null;
                 CampfiresanityChecks = null;
-                PressStartChecks     = null;
-                ClearedChecks        = null;
+                PressStartCheck     = null;
+                ClearedCheck        = null;
                 CardRewards          = null;
                 RareCardRewards      = null;
                 RelicRewards         = null;
@@ -488,28 +487,40 @@ namespace StS2AP.UI
             AddCheckRow(RelicChecks);
 
             // Floorsanity Checks Counter (Note: When the Winged Boots are in main, we should use that relic here instead)
-            FloorsanityChecks = new ItemCountLabel("res://images/relics/planisphere.png", "(0 / 0)", tooltipTitle: "Floorsanity Checks", tooltipDescription: "The number of AP Checks sent for each floor reached");
-            AddCheckRow(FloorsanityChecks);
+            if(ArchipelagoClient.Settings.Floorsanity)
+            {
+                FloorsanityChecks = new ItemCountLabel("res://images/relics/planisphere.png", "(0 / 0)", tooltipTitle: "Floorsanity Checks", tooltipDescription: "The number of AP Checks sent for each floor reached");
+                AddCheckRow(FloorsanityChecks);
+            }
 
             // Potionsanity Checks Counter
-            PotionsanityChecks = new ItemCountLabel("res://images/potions/skill_potion.png", "(0 / 0)", tooltipTitle: "Potionsanity Checks", tooltipDescription: "The number of AP Checks found that replaced Potion Rewards");
-            AddCheckRow(PotionsanityChecks);
+            if(ArchipelagoClient.Settings.PotionSanity)
+            {
+                PotionsanityChecks = new ItemCountLabel("res://images/potions/skill_potion.png", "(0 / 0)", tooltipTitle: "Potionsanity Checks", tooltipDescription: "The number of AP Checks found that replaced Potion Rewards");
+                AddCheckRow(PotionsanityChecks);
+            }
 
             // Goldsanity Checks Counter
-            GoldsanityChecks = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_money.png", "(0 / 0)", tooltipTitle: "Goldsanity Checks", tooltipDescription: "The number of AP Checks found that replaced Gold Rewards");
-            AddCheckRow(GoldsanityChecks);
+            if(ArchipelagoClient.Settings.GoldSanity)
+            {
+                GoldsanityChecks = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_money.png", "(0 / 0)", tooltipTitle: "Goldsanity Checks", tooltipDescription: "The number of AP Checks found that replaced Gold Rewards");
+                AddCheckRow(GoldsanityChecks);
+            }
 
             // Campfiresanity Checks Counter
-            CampfiresanityChecks = new ItemCountLabel("res://images/ui/run_history/rest_site.png", "(0 / 0)", tooltipTitle: "Campfiresanity Checks", tooltipDescription: "The number of AP Checks found from Rest Sites");
-            AddCheckRow(CampfiresanityChecks);
+            if(ArchipelagoClient.Settings.CampfireSanity)
+            {
+                CampfiresanityChecks = new ItemCountLabel("res://images/ui/run_history/rest_site.png", "(0 / 0)", tooltipTitle: "Campfiresanity Checks", tooltipDescription: "The number of AP Checks found from Rest Sites");
+                AddCheckRow(CampfiresanityChecks);
+            }
 
             // Press Start Counter
-            PressStartChecks = new ItemCountLabel("res://images/ui/run_history/neow.png", "—", tooltipTitle: "Pressed Start", tooltipDescription: "Whether this character has earned a check by starting a run.");
-            AddCheckRow(PressStartChecks);
+            PressStartCheck = new ItemCountLabel("res://images/ui/run_history/neow.png", "—", tooltipTitle: "Pressed Start", tooltipDescription: "Whether this character has earned a check by starting a run.");
+            AddCheckRow(PressStartCheck);
 
             // Slayed the Spire Counter
-            ClearedChecks = new ItemCountLabel("res://images/relics/pantograph.png", "—", tooltipTitle: "Slayed the Spire", tooltipDescription: "Whether this character has earned a check by completing a run.");
-            AddCheckRow(ClearedChecks);
+            ClearedCheck = new ItemCountLabel("res://images/relics/pantograph.png", "—", tooltipTitle: "Slayed the Spire", tooltipDescription: "Whether this character has earned a check by completing a run.");
+            AddCheckRow(ClearedCheck);
 
             // ── AP Items ──────────────────────────────────────────────────────
 

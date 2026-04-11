@@ -28,5 +28,13 @@ namespace StS2AP.Extensions
         {
             return GameUtility.GetCharacterIDByName(character.APName());
         }
+
+        /// <summary>
+        /// Whether or not this character has cleared the game at least once.
+        /// </summary>
+        public static bool HasCleared(this CharacterModel character)
+        {
+            return GameUtility.HasCharacterGoaled(character.APName());
+        }
     }
 }

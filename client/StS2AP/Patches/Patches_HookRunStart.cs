@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Unlocks;
+using StS2AP.UI;
 using StS2AP.Utils;
 using System;
 using System.Linq;
@@ -25,6 +26,9 @@ namespace StS2AP.Patches
             [HarmonyPostfix]
             public static void Postfix(Player __result)
             {
+                // Get rid of the tracker UI
+                ArchipelagoCharTrackerUI.RemoveUI();
+
                 // Grab a reference to the current player
                 GameUtility.CurrentPlayer = __result;
 

@@ -3,13 +3,9 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using StS2AP.Data;
 using StS2AP.Extensions;
+using StS2AP.Models;
 using StS2AP.UI;
-using StS2AP.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using StS2AP.UI.Components;
 
 namespace StS2AP.Patches
 {
@@ -24,6 +20,91 @@ namespace StS2AP.Patches
             [HarmonyPatch("SelectCharacter")]
             [HarmonyPostfix]
             public static void Postfix(NCharacterSelectScreen __instance, NCharacterSelectButton charSelectButton, CharacterModel characterModel)
+            {
+                UpdateReceivedItems(characterModel);
+                UpdateCheckedLocations(characterModel);
+            }
+
+            /// <summary>
+            /// Updates the Found/Checked Locations in the UI for the currently selected character.
+            /// Shows/Hides items based on what settings you are using for this run.
+            /// </summary>
+            private static void UpdateCheckedLocations(CharacterModel character)
+            {
+                // Update Card Locations
+                var cardLocations = LocationData.GetCardRewardLocations(character);
+                SetCheckedLocation(ArchipelagoCharTrackerUI.CardChecks, cardLocations, ArchipelagoProgress._maxCardRewards / (ArchipelagoClient.Settings.ShouldShuffleAllCards ? 1 : 2));
+
+                // Update Rare Card Locations
+                var rareCardLocations = LocationData.GetRareCardRewardLocations(character);
+                SetCheckedLocation(ArchipelagoCharTrackerUI.RareCardChecks, rareCardLocations, ArchipelagoProgress._maxRareCardRewards);
+
+                // Update Relic Locations
+                var relicLocations = LocationData.GetRelicRewardLocations(character);
+                SetCheckedLocation(ArchipelagoCharTrackerUI.RelicChecks, relicLocations, ArchipelagoProgress._maxRelicRewards);
+
+                // Update Floorsanity Locations
+                if(ArchipelagoClient.Settings.Floorsanity)
+                {
+                    var floorLocations = LocationData.GetFloorsanityLocations(character);
+                    SetCheckedLocation(ArchipelagoCharTrackerUI.FloorsanityChecks, floorLocations, ArchipelagoProgress._maxFloorRewards);
+                }
+
+                // Update Campfiresanity Locations
+                if(ArchipelagoClient.Settings.CampfireSanity)
+                {
+                    var campfireLocations = LocationData.GetCampfiresanityLocations(character);
+                    SetCheckedLocation(ArchipelagoCharTrackerUI.CampfiresanityChecks, campfireLocations, ArchipelagoProgress._maxCampfireChecks);
+                }
+
+                // Update Goldsanity Locations
+                if(ArchipelagoClient.Settings.GoldSanity)
+                {
+                    var goldLocations = LocationData.GetGoldsanityLocations(character);
+                    SetCheckedLocation(ArchipelagoCharTrackerUI.GoldsanityChecks, goldLocations, ArchipelagoProgress._maxGoldRewards);
+                }
+
+                // Update Potionsanity Locations
+                if(ArchipelagoClient.Settings.PotionSanity)
+                {
+                    var potionLocations = LocationData.GetPotionsanityLocations(character);
+                    SetCheckedLocation(ArchipelagoCharTrackerUI.PotionsanityChecks, potionLocations, ArchipelagoProgress._maxPotionRewards);
+                }
+
+                // Update Press Start State
+                var hasStarted = ArchipelagoClient.CheckedLocations.Contains(LocationData.GetPressStartLocation(character));
+                ArchipelagoCharTrackerUI.PressStartCheck?.SetText(hasStarted ? "[green][sine]✓[/sine][/green]" : "—");
+
+                // Update Goal State
+                ArchipelagoCharTrackerUI.ClearedCheck?.SetText(character.HasCleared() ? "[green][sine]✓[/sine][/green]" : "—");
+            }
+
+            /// <summary>
+            /// Updates the text of the given ItemCountLabel to show how many of the given locations have
+            /// been checked off by the player, out of the total number of those locations for this character.
+            /// </summary>
+            /// <param name="component">The UI component to update.</param>
+            /// <param name="locations">The list of locations to check against what we've found so far.</param>
+            /// <param name="totalCount">The total number of locations for this character.</param>
+            private static void SetCheckedLocation(ItemCountLabel? component, List<long> locations, int totalCount)
+            {
+                var checkedLocations = ArchipelagoClient.CheckedLocations.Intersect(locations).ToList();
+                var label = $"({checkedLocations.Count} / {totalCount})";
+
+                // If the user has found all of the checks, mark the label as green/sine to celebrate!
+                if (checkedLocations.Count >= totalCount)
+                {
+                    label = $"[green][sine]{label}[/sine][/green]";
+                }
+
+                component?.SetText(label);
+            }
+
+            /// <summary>
+            /// Updates the Received Items in the UI for the currently selected character, 
+            /// including gold rewards, card/relic/potion rewards, and progressive smith/rest levels.
+            /// </summary>
+            private static void UpdateReceivedItems(CharacterModel characterModel)
             {
                 // Get Character ID
                 var id = characterModel.GetAPItemCharID();

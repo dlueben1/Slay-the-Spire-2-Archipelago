@@ -41,6 +41,16 @@ namespace StS2AP.Utils
         private static HashSet<string> _goaledCharacters = new HashSet<string>();
 
         /// <summary>
+        /// Whether or not the character has completed the run at least once, based on the local cache of goaled characters.
+        /// </summary>
+        /// <param name="charName">The name of the character to check. Please use `.APName()` from the `Player` or the `CharacterModel`</param>
+        /// <returns>True if the character has completed the run at least once, false otherwise.</returns>
+        public static bool HasCharacterGoaled(string charName)
+        {
+            return _goaledCharacters.Contains(charName);
+        }
+
+        /// <summary>
         /// Reference to the Current Player character.
         /// Set when a run starts, cleared when a run ends.
         /// </summary>
