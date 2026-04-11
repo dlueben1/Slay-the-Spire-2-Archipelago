@@ -1,6 +1,13 @@
-﻿using Archipelago.MultiClient.Net.Models;
+﻿using Archipelago.MultiClient.Net.MessageLog.Messages;
+using Archipelago.MultiClient.Net.Models;
 using Godot;
+using MegaCrit.Sts2.Core.DevConsole;
+using MegaCrit.Sts2.Core.Nodes.Debug;
+using MegaCrit.Sts2.Core.RichTextTags;
 using StS2AP.UI;
+using System.Drawing;
+using System.Reflection;
+using System.Text;
 using static StS2AP.Data.CharTable;
 using static StS2AP.Data.ItemTable;
 
@@ -65,6 +72,7 @@ namespace StS2AP.Utils
         /// </summary>
         private static void EnqueueNotification(string message, NotificationType type = NotificationType.Info)
         {
+            LogUtility.Info($"Attempting to enqueue notification {message} {type}");
             lock (_lock)
             {
                 // Enqueue the notification
@@ -73,7 +81,20 @@ namespace StS2AP.Utils
                 LogUtility.Info($"Notification queued ({type}): {message}");
 
                 // Show the Notification UI if it isn't already visible
-                if(!ArchipelagoNotificationUI.IsVisible) Callable.From(ArchipelagoNotificationUI.ShowMessage).CallDeferred(); // FIX WILL DO A BETTER COMMENT LATER
+                if (!ArchipelagoNotificationUI.IsVisible)
+                {
+                    // I'm concerned about a race condition with the dev console, hence this safeguard, but it doesn't seem
+                    // to work and I don't know why.
+                    if (DevConsoleVisible())
+                    {
+                        ArchipelagoNotificationUI.ResetTimer(3.0);
+                    }
+                    else
+                    {
+                        Callable.From(ArchipelagoNotificationUI.ShowMessage).CallDeferred(); // FIX WILL DO A BETTER COMMENT LATER
+                    }
+                }
+
             }
 
             // Fire event outside of lock to avoid potential deadlocks
@@ -201,6 +222,175 @@ namespace StS2AP.Utils
             EnqueueNotification(
                 msg,
                 NotificationType.ItemReceived);
+        }
+
+        private static string? GetItemIcon(ItemInfo item)
+        {
+            switch (item.GetRawItemID())
+            {
+                case APItem.OneGold:
+                case APItem.FiveGold:
+                case APItem.BossGold:
+                case APItem._15Gold:
+                case APItem._30Gold:
+                        return @"[img]res://images/packed/sprite_fonts/gold_icon.png[/img]";
+                case APItem.CardReward:
+                case APItem.RareCardReward:
+                        return @"[img]res://images/packed/sprite_fonts/card_icon.png[/img]";
+                case APItem.Potion:
+                        return @"[img]res://images/packed/sprite_fonts/potion_icon.png[/img]";
+                case APItem.Unlock:
+                        switch (item.GetStSCharID())
+                        {
+                            case APItemCharID.Ironclad:
+                                    return @"[img]res://images/packed/sprite_fonts/ironclad_energy_icon.png[/img]";
+                            case APItemCharID.Silent:
+                                    return @"[img]res://images/packed/sprite_fonts/silent_energy_icon.png[/img]";
+                            case APItemCharID.Defect:
+                                    return @"[img]res://images/packed/sprite_fonts/defect_energy_icon.png[/img]";
+                            case APItemCharID.Necrobinder:
+                                    return @"[img]res://images/packed/sprite_fonts/necrobinder_energy_icon.png[/img]";
+                            case APItemCharID.Regent:
+                                    return @"[img]res://images/packed/sprite_fonts/regent_energy_icon.png[/img]";
+                        }
+                    return null;
+            }
+            return null;
+        }
+
+        public static void HandleItemSend(ItemSendLogMessage msg)
+        {
+            if(!msg.IsRelatedToActivePlayer)
+            {
+                return;
+            }
+            if(msg.GetType() == typeof(HintItemSendLogMessage))
+            {
+                if(((HintItemSendLogMessage) msg).IsFound)
+                {
+                    return;
+                }
+            }
+            var result = ToColoredString(msg, true);
+            NotificationType type = NotificationType.Info;
+            if(msg.GetType() != typeof(HintItemSendLogMessage))
+            {
+                if(msg.IsReceiverTheActivePlayer)
+                {
+                    type = NotificationType.ItemReceived;
+                }
+                else if(msg.IsSenderTheActivePlayer)
+                {
+                    type = NotificationType.LocationCheck;
+                }
+            }
+            EnqueueNotification(result, type);
+        }
+
+        public static bool DevConsoleVisible()
+        {
+            // This doesn't seem to work, and I don't know why?
+            return NDevConsole.Instance?.Visible ?? false;
+        }
+
+        private static RichTextLabel? GetDevConsoleBuffer()
+        {
+            var console = NDevConsole.Instance;
+            if(console == null)
+            {
+                return null;
+            }
+
+            var outputBufferInfo = console.GetType().GetField("_outputBuffer", BindingFlags.Instance | BindingFlags.NonPublic);
+            if(outputBufferInfo == null)
+            {
+                return null;
+            }
+            return (RichTextLabel?) outputBufferInfo.GetValue(console);
+        }
+
+        public static void WriteToDevConsole(string msg)
+        {
+            RichTextLabel? outputBuffer = GetDevConsoleBuffer();
+            if(outputBuffer != null)
+            {
+                outputBuffer.Text = outputBuffer.Text + msg + "\n";
+            }
+        }
+
+        private static String ToColoredString(ItemSendLogMessage msg, bool includeItemIcon)
+        {
+            
+            StringBuilder sb = new StringBuilder();
+            ItemInfo info = msg.Item;
+            LogUtility.Info($"ItemInfo: Item Game: {info.ItemGame} Location Game: {info.LocationGame}");
+            string? itemIcon = null;
+
+            if(info.ItemGame == ArchipelagoClient.Game)
+            {
+                itemIcon = GetItemIcon(info);
+            }
+            LogUtility.Info($"Got item icon: {itemIcon}");
+            
+            foreach(var part in msg.Parts)
+            {
+                var colorWord = ToColorWord(part.Color);
+                if(part.Type == Archipelago.MultiClient.Net.MessageLog.Parts.MessagePartType.Item)
+                {
+                    if(itemIcon != null && includeItemIcon)
+                    {
+                        sb.Append(itemIcon.Replace("  ", " "))
+                            .Append(' ');
+                    }
+                    sb.Append("[sine]");
+                }
+                if(colorWord != null)
+                {
+                    sb.Append($"[color={colorWord}]");
+                }
+                sb.Append(part.Text?.Replace("[", "[lb]"));
+                if(colorWord != null)
+                {
+                    sb.Append($"[/color]");
+                }
+                if(part.Type == Archipelago.MultiClient.Net.MessageLog.Parts.MessagePartType.Item)
+                {
+                    sb.Append("[/sine]");
+                }
+            }
+            return sb.ToString();
+        }
+
+        private static string? ToColorWord(Archipelago.MultiClient.Net.Models.Color? color)
+        {
+            if(color == null)
+            {
+                return null; 
+            }
+            if (Archipelago.MultiClient.Net.Models.Color.Red == color)
+                return "red";
+            else if (Archipelago.MultiClient.Net.Models.Color.Green == color)
+                return "green";
+            else if (Archipelago.MultiClient.Net.Models.Color.Yellow == color)
+                return "yellow";
+            else if (Archipelago.MultiClient.Net.Models.Color.Blue == color)
+                return "blue";
+            else if (Archipelago.MultiClient.Net.Models.Color.Magenta == color)
+                return "magenta";
+            else if (Archipelago.MultiClient.Net.Models.Color.Cyan == color)
+                return "cyan";
+            else if (Archipelago.MultiClient.Net.Models.Color.Black == color)
+                return "black";
+            // No one likes the color white
+            //else if (Archipelago.MultiClient.Net.Models.Color.White == color)
+            //    return "white";
+            else if (Archipelago.MultiClient.Net.Models.Color.SlateBlue == color)
+                return "slateblue";
+            else if (Archipelago.MultiClient.Net.Models.Color.Salmon == color)
+                return "salmon";
+            else if (Archipelago.MultiClient.Net.Models.Color.Plum == color)
+                return "plum";
+            return null;
         }
 
         /// <summary>

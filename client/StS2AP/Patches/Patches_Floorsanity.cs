@@ -116,7 +116,7 @@ namespace StS2AP.Patches
 
                     // Log it and notify the user (uses pre-scouted data)
                     LogUtility.Success($"Sent location check: {locationName}");
-                    NotificationUtility.ShowLocationChecked(locationId, fallbackLocationName: locationName);
+                    //NotificationUtility.ShowLocationChecked(locationId, fallbackLocationName: locationName);
                 }
                 else
                 {

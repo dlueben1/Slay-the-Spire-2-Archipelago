@@ -1,5 +1,6 @@
 using Godot;
 using MegaCrit.Sts2.addons.mega_text;
+using MegaCrit.Sts2.Core.Nodes.Debug;
 using StS2AP.Utils;
 using System;
 using System.Threading;
@@ -124,6 +125,7 @@ namespace StS2AP.UI
 
             // Set the message text
             SetMessage(notification.Message);
+            NotificationUtility.WriteToDevConsole(notification.Message);
 
             // Cancel any existing fade tween
             if (_fadeTween != null)
@@ -137,6 +139,12 @@ namespace StS2AP.UI
             _fadeTween = _rootPanel.CreateTween();
             _fadeTween.TweenProperty(_rootPanel, "modulate", new Color(1, 1, 1, 1), 0.3);
 
+            ResetTimer(notification.DisplayDuration);
+
+        }
+
+        public static void ResetTimer(double timeout)
+        {
             // Dispose of previous timer if it exists
             _displayTimer?.Dispose();
 
@@ -144,7 +152,7 @@ namespace StS2AP.UI
             _displayTimer = new System.Threading.Timer(
                 OnDisplayTimerTimeout,
                 null,
-                TimeSpan.FromSeconds(notification.DisplayDuration),
+                TimeSpan.FromSeconds(timeout),
                 Timeout.InfiniteTimeSpan);
         }
 
@@ -156,6 +164,12 @@ namespace StS2AP.UI
             // Check if there are more notifications to display
             if (NotificationUtility.GetQueueCount() > 0)
             {
+                if(NotificationUtility.DevConsoleVisible())
+                {
+                    // Don't want to render messages while the dev console is open
+                    ResetTimer(3.0);
+                    return;
+                }
                 // Show the next notification
                 Callable.From(ShowMessage).CallDeferred(); // FIX WILL DO A BETTER COMMENT LATER
             }
