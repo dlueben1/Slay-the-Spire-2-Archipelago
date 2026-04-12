@@ -9,11 +9,12 @@ using System.Threading.Tasks;
 
 namespace StS2AP.Utils
 {
+    // StS 2 picks up these reflectively out of the mods without problem.
     public class APDevCommand : AbstractConsoleCmd
     {
         public override string CmdName => "ap";
 
-        public override string Args => "";
+        public override string Args => ""; // dunno what this is for
 
         public override string Description => "Sends an AP command (such as !hint) to the server";
 
@@ -28,7 +29,7 @@ namespace StS2AP.Utils
             }
             if(!ArchipelagoClient.IsConnected)
             {
-                return new CmdResult(false, "Not connected");
+                return new CmdResult(false, "Not connected to AP");
             }
             ArchipelagoClient.Session.Say(sendMe);
             return new CmdResult(true);
