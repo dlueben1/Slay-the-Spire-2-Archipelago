@@ -464,6 +464,17 @@ namespace StS2AP
                 case ItemSendLogMessage itemSend:
                     NotificationUtility.HandleItemSend(itemSend);
                     break;
+                case CountdownLogMessage:
+                    NotificationUtility.HandleOtherAPMessages(message, false, 0.5);
+                    break;
+                    // This caused the result messages to not come through, probably because the say packets get echoed
+                //case PlayerSpecificLogMessage:
+                //    NotificationUtility.HandleOtherAPMessages(message, true);
+                //    break;
+                case CommandResultLogMessage:
+                case AdminCommandResultLogMessage:
+                    NotificationUtility.HandleOtherAPMessages(message, true, 3.0, true);
+                    break;
                 default:
                     return;
             }

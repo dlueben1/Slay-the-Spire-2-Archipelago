@@ -3,7 +3,9 @@ using MegaCrit.Sts2.addons.mega_text;
 using MegaCrit.Sts2.Core.Nodes.Debug;
 using StS2AP.Utils;
 using System;
+using System.Reflection;
 using System.Threading;
+using static StS2AP.Utils.NotificationUtility;
 
 namespace StS2AP.UI
 {
@@ -82,6 +84,7 @@ namespace StS2AP.UI
             }
         }
 
+
         /// <summary>
         /// Removes the UI from the scene tree
         /// </summary>
@@ -114,18 +117,11 @@ namespace StS2AP.UI
         /// <summary>
         /// Shows the notification UI by dequeuing the next message and displaying it with a fade-in animation
         /// </summary>
-        public static void ShowMessage()
+        public static void ShowMessage(ArchipelagoNotification notification)
         {
-            if (_rootPanel == null || !IsInstanceValid(_rootPanel))
-                return;
-
-            // Dequeue and display the next notification
-            var notification = NotificationUtility.DequeueNotification();
-            if (notification == null) return;
 
             // Set the message text
             SetMessage(notification.Message);
-            NotificationUtility.WriteToDevConsole(notification.Message);
 
             // Cancel any existing fade tween
             if (_fadeTween != null)
@@ -161,23 +157,90 @@ namespace StS2AP.UI
         /// </summary>
         private static void OnDisplayTimerTimeout(object? state)
         {
-            // Check if there are more notifications to display
-            if (NotificationUtility.GetQueueCount() > 0)
+            Callable.From(Hide).CallDeferred(); // FIX WILL DO A BETTER COMMENT LATER
+        }
+
+        public static bool DevConsoleVisible()
+        {
+            try
             {
-                if(NotificationUtility.DevConsoleVisible())
+                return NDevConsole.Instance?.Visible ?? false;
+            }
+            catch(Exception)
+            {
+                // can throw if the dev console is not created
+                return false;
+            }
+        }
+
+
+
+        /// <summary>
+        /// Checks for notifications to process from the queues.
+        /// </summary>
+        public static void CheckAndHandleNotification()
+        {
+            if (_rootPanel == null || !IsInstanceValid(_rootPanel))
+                return;
+            if (!IsVisible)
+            {
+                var notif = NotificationUtility.DequeueNotification();
+                if (notif != null)
                 {
-                    // Don't want to render messages while the dev console is open
-                    ResetTimer(3.0);
-                    return;
+                    ShowMessage(notif);
                 }
-                // Show the next notification
-                Callable.From(ShowMessage).CallDeferred(); // FIX WILL DO A BETTER COMMENT LATER
             }
-            else
+
+            if((NotificationUtility.PeekDevNotification()?.ForceIntoDevConsole ?? false) || !DevConsoleVisible())
             {
-                // No more notifications, hide the UI
-                Callable.From(Hide).CallDeferred(); // FIX WILL DO A BETTER COMMENT LATER
+                var notif = NotificationUtility.DequeueDevNotification();
+                if(notif != null)
+                {
+                    WriteToDevConsole(notif.Message);
+                }
             }
+        }
+
+        /// <summary>
+        /// Writes to the dev console; a bit concerned about race conditions, so use with care
+        /// </summary>
+        /// <param name="msg"></param>
+        private static void WriteToDevConsole(string msg)
+        {
+            RichTextLabel? outputBuffer = GetDevConsoleBuffer();
+            if(outputBuffer != null)
+            {
+                outputBuffer.Text = outputBuffer.Text + msg + "\n";
+            }
+        }
+
+        /// <summary>
+        /// Obtains the output buffer in the dev console using reflection, if the dev console exists.
+        /// </summary>
+        /// <returns></returns>
+        private static RichTextLabel? GetDevConsoleBuffer()
+        {
+            try
+            {
+                var console = NDevConsole.Instance;
+                if(console == null)
+                {
+                    return null;
+                }
+
+                var outputBufferInfo = console.GetType().GetField("_outputBuffer", BindingFlags.Instance | BindingFlags.NonPublic);
+                if(outputBufferInfo == null)
+                {
+                    return null;
+                }
+                return (RichTextLabel?) outputBufferInfo.GetValue(console);
+            }
+            catch(Exception ex)
+            {
+                // Can throw if the dev console isn't instantiated.
+                LogUtility.Debug("No dev console" + ex.Message);
+            }
+            return null;
         }
 
         /// <summary>
