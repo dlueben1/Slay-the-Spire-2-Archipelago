@@ -113,16 +113,22 @@ namespace StS2AP.UI.Components
                     new LocString(tableKey, "description"));
 
                 // Show the tooltip when the mouse enters the row.
-                // Position it centered horizontally above the row — matching the
-                // manual positioning pattern used in ArchipelagoTopBarUI.
+                // Position it at the top center of the screen in a fixed position.
                 Root.MouseEntered += () =>
                 {
                     try
                     {
                         var tipSet = NHoverTipSet.CreateAndShow(Root, _hoverTip);
-                        tipSet.GlobalPosition = Root.GlobalPosition + new Vector2(
-                            (Root.Size.X - tipSet.Size.X) / 2f,
-                            -tipSet.Size.Y);
+                        
+                        // Get the viewport size to calculate screen center
+                        var viewportSize = Root.GetViewportRect().Size;
+                        
+                        // Position at top center of screen with a small margin from the top
+                        const float topMargin = 50f;
+                        const float offsetFromPanel = 140f;
+                        tipSet.GlobalPosition = new Vector2(
+                            offsetFromPanel + ((viewportSize.X - tipSet.Size.X) / 2f),  // Centered horizontally, then shifted from the progress panel
+                            topMargin);                              // Fixed distance from top
                     }
                     catch (Exception ex)
                     {
