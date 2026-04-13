@@ -72,8 +72,11 @@ namespace StS2AP.Patches
                 }
 
                 // Update Press Start State
-                var hasStarted = ArchipelagoClient.CheckedLocations.Contains(LocationData.GetPressStartLocation(character));
-                ArchipelagoCharTrackerUI.PressStartCheck?.SetText(hasStarted ? "[green][sine]✓[/sine][/green]" : "—");
+                if(!ArchipelagoClient.Settings.NoCharactersLocked)
+                {
+                    var hasStarted = ArchipelagoClient.CheckedLocations.Contains(LocationData.GetPressStartLocation(character));
+                    ArchipelagoCharTrackerUI.PressStartCheck?.SetText(hasStarted ? "[green][sine]✓[/sine][/green]" : "—");
+                }
 
                 // Update Goal State
                 ArchipelagoCharTrackerUI.ClearedCheck?.SetText(character.HasCleared() ? "[green][sine]✓[/sine][/green]" : "—");

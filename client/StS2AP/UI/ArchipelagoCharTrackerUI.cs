@@ -515,8 +515,11 @@ namespace StS2AP.UI
             }
 
             // Press Start Counter
-            PressStartCheck = new ItemCountLabel("res://images/ui/run_history/neow.png", "—", tooltipTitle: "Pressed Start", tooltipDescription: "Whether this character has earned a check by starting a run.");
-            AddCheckRow(PressStartCheck);
+            if(!ArchipelagoClient.Settings.NoCharactersLocked)
+            {
+                PressStartCheck = new ItemCountLabel("res://images/ui/run_history/neow.png", "—", tooltipTitle: "Pressed Start", tooltipDescription: "Whether this character has earned a check by starting a run.");
+                AddCheckRow(PressStartCheck);
+            }
 
             // Slayed the Spire Counter
             ClearedCheck = new ItemCountLabel("res://images/relics/pantograph.png", "—", tooltipTitle: "Slayed the Spire", tooltipDescription: "Whether this character has earned a check by completing a run.");

@@ -21,7 +21,8 @@ namespace StS2AP.Data
             try
             {
                 return ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", $"{character.APName()} Press Start");
-            } catch
+            } 
+            catch
             {
                 LogUtility.Error($"Could not find Press Start location for {character.APName()}");
                 return -1;
