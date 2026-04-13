@@ -88,7 +88,7 @@ namespace StS2AP.Utils
         {
             if(_queue.TryDequeue(out var result))
             {
-                LogUtility.Info($"Notification dequeued: {result.Message}");
+                //LogUtility.Info($"Notification dequeued: {result.Message}");
                 return result;
             }
             return null;
@@ -101,7 +101,7 @@ namespace StS2AP.Utils
         {
             if(_devQueue.TryDequeue(out var result))
             {
-                LogUtility.Info($"Notification dequeued: {result.Message}");
+                //LogUtility.Info($"Notification dequeued: {result.Message}");
                 return result;
             }
             return null;
@@ -111,7 +111,6 @@ namespace StS2AP.Utils
         {
             if(_devQueue.TryPeek(out var result))
             {
-                //LogUtility.Info($"Notification dequeued: {result.Message}");
                 return result;
             }
             return null;

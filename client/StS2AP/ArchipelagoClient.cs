@@ -496,9 +496,6 @@ namespace StS2AP
             // Log the item
             LogUtility.Success($"Received: {item.ItemName} from {item.Player.Name} (ID: {item.ItemId} / LocID: {item.LocationId} / Index: {index})");
 
-            // Show Notification for the item
-            //NotificationUtility.ShowItemReceived(item);
-
             // Apply the item to the game
             switch(item.GetRawItemID())
             {
