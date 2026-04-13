@@ -1,4 +1,6 @@
-﻿using HarmonyLib;
+﻿using Godot;
+using HarmonyLib;
+using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
@@ -137,7 +139,13 @@ namespace StS2AP.Patches
             [HarmonyPostfix]
             static void OnOpened(NCharacterSelectScreen __instance)
             {
-                ArchipelagoCharTrackerUI.InjectUI();
+                // Find the first character on the screen
+                Control charButtonContainer = __instance.GetNode<Control>("CharSelectButtons/ButtonContainer");
+                NCharacterSelectButton firstButton = charButtonContainer.GetChild<NCharacterSelectButton>(0);
+                CharacterModel character = firstButton.Character;
+
+                // Setup the UI
+                ArchipelagoCharTrackerUI.InjectUI(character);
             }
 
             /// <summary>Remove the tracker panel when the player leaves the Character Select screen.</summary>

@@ -1,5 +1,6 @@
 ﻿using Godot;
 using MegaCrit.Sts2.addons.mega_text;
+using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using StS2AP.Data;
 using StS2AP.Models;
@@ -164,7 +165,7 @@ namespace StS2AP.UI
         /// Injects the tracker panel into the scene tree, creating it if it does not yet exist.
         /// Safe to call multiple times — duplicate injection is ignored.
         /// </summary>
-        public static void InjectUI()
+        public static void InjectUI(CharacterModel character)
         {
             try
             {
@@ -190,7 +191,7 @@ namespace StS2AP.UI
                 }
 
                 // Build and attach
-                _rootPanel = CreateUI();
+                _rootPanel = CreateUI(character);
 
                 _canvasLayer = new CanvasLayer();
                 _canvasLayer.Name = "ArchipelagoCharTrackerLayer";
@@ -339,7 +340,8 @@ namespace StS2AP.UI
         ///                         └─ VBoxContainer columns (max MaxRowsPerColumn rows each)
         /// </code>
         /// </summary>
-        private static Control CreateUI()
+        /// <param name="character">The initial character to display information for</param>
+        private static Control CreateUI(CharacterModel character)
         {
             // ── Root ──────────────────────────────────────────────────────────────────
             // Full-rect so anchors/offsets work relative to the full viewport.
@@ -553,6 +555,10 @@ namespace StS2AP.UI
             // Progressive Smith Total
             ProgressiveSmithLabel = new ItemCountLabel("res://images/relics/whetstone.png", "(0 / 3)", tooltipTitle: "Progressive Smiths", tooltipDescription: "The number of Progressive Smith rewards received for this character. The number of these represents the highest Act you can Upgrade at.");
             AddItemRow(ProgressiveSmithLabel);
+
+            // Set initial values based on the first character from the select screen
+            UpdateCharTrackerUI.UpdateCheckedLocations(character);
+            UpdateCharTrackerUI.UpdateReceivedItems(character);
 
             return root;
         }

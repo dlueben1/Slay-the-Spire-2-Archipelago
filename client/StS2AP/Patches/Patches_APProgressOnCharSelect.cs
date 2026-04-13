@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using Godot;
+using HarmonyLib;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using StS2AP.Data;
@@ -11,22 +12,6 @@ namespace StS2AP.Patches
 {
     public static class Patches_APProgressOnCharSelect
     {
-        /// <summary>
-        /// Hides the Archipelago Progress Tracker UI when the player leaves the Character Select screen
-        /// </summary>
-        [HarmonyPatch(typeof(NCharacterSelectScreen))]
-        public static class RemoveCharTrackerOnRunStart
-        {
-            [HarmonyPatch("OnSubmenuClosed")]
-            [HarmonyPostfix]
-            public static void Postfix()
-            {
-                LogUtility.Info("MADE IT TO SUBMENU POSTFIX");
-                // Get rid of the tracker UI
-                ArchipelagoCharTrackerUI.RemoveUI();
-            }
-        }
-
         /// <summary>
         /// When the Player selects a character, update the Archipelago Progres panel with information on that character
         /// </summary>
@@ -61,28 +46,28 @@ namespace StS2AP.Patches
                 SetCheckedLocation(ArchipelagoCharTrackerUI.RelicChecks, relicLocations, ArchipelagoProgress._maxRelicRewards);
 
                 // Update Floorsanity Locations
-                if(ArchipelagoClient.Settings.Floorsanity)
+                if (ArchipelagoClient.Settings.Floorsanity)
                 {
                     var floorLocations = LocationData.GetFloorsanityLocations(character);
                     SetCheckedLocation(ArchipelagoCharTrackerUI.FloorsanityChecks, floorLocations, ArchipelagoProgress._maxFloorRewards);
                 }
 
                 // Update Campfiresanity Locations
-                if(ArchipelagoClient.Settings.CampfireSanity)
+                if (ArchipelagoClient.Settings.CampfireSanity)
                 {
                     var campfireLocations = LocationData.GetCampfiresanityLocations(character);
                     SetCheckedLocation(ArchipelagoCharTrackerUI.CampfiresanityChecks, campfireLocations, ArchipelagoProgress._maxCampfireChecks);
                 }
 
                 // Update Goldsanity Locations
-                if(ArchipelagoClient.Settings.GoldSanity)
+                if (ArchipelagoClient.Settings.GoldSanity)
                 {
                     var goldLocations = LocationData.GetGoldsanityLocations(character);
                     SetCheckedLocation(ArchipelagoCharTrackerUI.GoldsanityChecks, goldLocations, ArchipelagoProgress._maxGoldRewards);
                 }
 
                 // Update Potionsanity Locations
-                if(ArchipelagoClient.Settings.PotionSanity)
+                if (ArchipelagoClient.Settings.PotionSanity)
                 {
                     var potionLocations = LocationData.GetPotionsanityLocations(character);
                     SetCheckedLocation(ArchipelagoCharTrackerUI.PotionsanityChecks, potionLocations, ArchipelagoProgress._maxPotionRewards);
