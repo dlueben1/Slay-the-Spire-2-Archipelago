@@ -12,6 +12,22 @@ namespace StS2AP.Patches
     public static class Patches_APProgressOnCharSelect
     {
         /// <summary>
+        /// Hides the Archipelago Progress Tracker UI when the player leaves the Character Select screen
+        /// </summary>
+        [HarmonyPatch(typeof(NCharacterSelectScreen))]
+        public static class RemoveCharTrackerOnRunStart
+        {
+            [HarmonyPatch("OnSubmenuClosed")]
+            [HarmonyPostfix]
+            public static void Postfix()
+            {
+                LogUtility.Info("MADE IT TO SUBMENU POSTFIX");
+                // Get rid of the tracker UI
+                ArchipelagoCharTrackerUI.RemoveUI();
+            }
+        }
+
+        /// <summary>
         /// When the Player selects a character, update the Archipelago Progres panel with information on that character
         /// </summary>
         [HarmonyPatch(typeof(NCharacterSelectScreen))]
@@ -21,6 +37,7 @@ namespace StS2AP.Patches
             [HarmonyPostfix]
             public static void Postfix(NCharacterSelectScreen __instance, NCharacterSelectButton charSelectButton, CharacterModel characterModel)
             {
+                ArchipelagoCharTrackerUI.Show();
                 UpdateReceivedItems(characterModel);
                 UpdateCheckedLocations(characterModel);
             }
@@ -29,7 +46,7 @@ namespace StS2AP.Patches
             /// Updates the Found/Checked Locations in the UI for the currently selected character.
             /// Shows/Hides items based on what settings you are using for this run.
             /// </summary>
-            private static void UpdateCheckedLocations(CharacterModel character)
+            public static void UpdateCheckedLocations(CharacterModel character)
             {
                 // Update Card Locations
                 var cardLocations = LocationData.GetCardRewardLocations(character);
@@ -72,14 +89,13 @@ namespace StS2AP.Patches
                 }
 
                 // Update Press Start State
-                if(!ArchipelagoClient.Settings.NoCharactersLocked)
-                {
-                    var hasStarted = ArchipelagoClient.CheckedLocations.Contains(LocationData.GetPressStartLocation(character));
-                    ArchipelagoCharTrackerUI.PressStartCheck?.SetText(hasStarted ? "[green][sine]✓[/sine][/green]" : "—");
-                }
+                var hasPressStart = LocationData.DoesThisCharacterHavePressStartLocation(character);
+                var hasStarted = ArchipelagoClient.CheckedLocations.Contains(LocationData.GetPressStartLocation(character));
+                var pressStartText = hasPressStart ? (hasStarted ? "[green][sine]✓[/sine][/green]" : "[red]—[/red]") : "N/A";
+                ArchipelagoCharTrackerUI.PressStartCheck?.SetText(pressStartText);
 
                 // Update Goal State
-                ArchipelagoCharTrackerUI.ClearedCheck?.SetText(character.HasCleared() ? "[green][sine]✓[/sine][/green]" : "—");
+                ArchipelagoCharTrackerUI.ClearedCheck?.SetText(character.HasCleared() ? "[green][sine]✓[/sine][/green]" : "[red]—[/red]");
             }
 
             /// <summary>
@@ -107,7 +123,7 @@ namespace StS2AP.Patches
             /// Updates the Received Items in the UI for the currently selected character, 
             /// including gold rewards, card/relic/potion rewards, and progressive smith/rest levels.
             /// </summary>
-            private static void UpdateReceivedItems(CharacterModel characterModel)
+            public static void UpdateReceivedItems(CharacterModel characterModel)
             {
                 // Get Character ID
                 var id = characterModel.GetAPItemCharID();

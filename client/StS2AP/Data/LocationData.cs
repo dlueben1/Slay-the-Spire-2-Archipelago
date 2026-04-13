@@ -28,6 +28,22 @@ namespace StS2AP.Data
                 return -1;
             }
         }
+        
+        /// <summary>
+        /// Returns whether or not the character has a "Press Start" location.
+        /// Locked characters have this location.
+        /// </summary>
+        public static bool DoesThisCharacterHavePressStartLocation(CharacterModel character)
+        {
+            // Get the location ID
+            long id = GetPressStartLocation(character);
+
+            // If the ID isn't valid, assume the location doesn't exist
+            if (id == -1) return false;
+
+            // If it's valid, see if it's in our Scouted Locations
+            return ArchipelagoClient.ScoutedLocations.ContainsKey(id);
+        }
 
         /// <summary>
         /// Returns all location IDs for Card Rewards for a given character, based on user settings.

@@ -1,10 +1,12 @@
 ﻿using Godot;
 using MegaCrit.Sts2.addons.mega_text;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
+using StS2AP.Data;
 using StS2AP.Models;
 using StS2AP.UI.Components;
 using StS2AP.Utils;
 using System;
+using static StS2AP.Patches.Patches_APProgressOnCharSelect;
 
 namespace StS2AP.UI
 {
@@ -515,11 +517,8 @@ namespace StS2AP.UI
             }
 
             // Press Start Counter
-            if(!ArchipelagoClient.Settings.NoCharactersLocked)
-            {
-                PressStartCheck = new ItemCountLabel("res://images/ui/run_history/neow.png", "—", tooltipTitle: "Pressed Start", tooltipDescription: "Whether this character has earned a check by starting a run.");
-                AddCheckRow(PressStartCheck);
-            }
+            PressStartCheck = new ItemCountLabel("res://images/ui/run_history/neow.png", "—", tooltipTitle: "Pressed Start", tooltipDescription: "Whether this character has earned a check by starting a run.");
+            AddCheckRow(PressStartCheck);
 
             // Slayed the Spire Counter
             ClearedCheck = new ItemCountLabel("res://images/relics/pantograph.png", "—", tooltipTitle: "Slayed the Spire", tooltipDescription: "Whether this character has earned a check by completing a run.");
@@ -554,9 +553,6 @@ namespace StS2AP.UI
             // Progressive Smith Total
             ProgressiveSmithLabel = new ItemCountLabel("res://images/relics/whetstone.png", "(0 / 3)", tooltipTitle: "Progressive Smiths", tooltipDescription: "The number of Progressive Smith rewards received for this character. The number of these represents the highest Act you can Upgrade at.");
             AddItemRow(ProgressiveSmithLabel);
-
-            // Start visible — it will be shown/hidden by the patch hooks
-            root.Visible = true;
 
             return root;
         }
