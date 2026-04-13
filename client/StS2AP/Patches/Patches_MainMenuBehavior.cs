@@ -134,7 +134,7 @@ namespace StS2AP.Patches
         [HarmonyPatch(typeof(NCharacterSelectScreen))]
         public static class CharTrackerPanelPatches
         {
-            /// <summary>Show the tracker panel as soon as the screen becomes active.</summary>
+            /// <summary>Show the tracker panels as soon as the screen becomes active.</summary>
             [HarmonyPatch(nameof(NCharacterSelectScreen.OnSubmenuOpened))]
             [HarmonyPostfix]
             static void OnOpened(NCharacterSelectScreen __instance)
@@ -144,16 +144,20 @@ namespace StS2AP.Patches
                 NCharacterSelectButton firstButton = charButtonContainer.GetChild<NCharacterSelectButton>(0);
                 CharacterModel character = firstButton.Character;
 
-                // Setup the UI
+                // Setup the character tracker UI (top-left)
                 ArchipelagoCharTrackerUI.InjectUI(character);
+
+                // Setup the goal tracker UI (bottom-left)
+                ArchipelagoGoalTrackerUI.InjectUI();
             }
 
-            /// <summary>Remove the tracker panel when the player leaves the Character Select screen.</summary>
+            /// <summary>Remove the tracker panels when the player leaves the Character Select screen.</summary>
             [HarmonyPatch(nameof(NCharacterSelectScreen.OnSubmenuClosed))]
             [HarmonyPostfix]
             static void OnClosed(NCharacterSelectScreen __instance)
             {
                 ArchipelagoCharTrackerUI.RemoveUI();
+                ArchipelagoGoalTrackerUI.RemoveUI();
             }
         }
     }
