@@ -30,6 +30,7 @@ namespace StS2AP.Patches
             {
                 // Get rid of the tracker UI
                 ArchipelagoCharTrackerUI.RemoveUI();
+                ArchipelagoGoalTrackerUI.RemoveUI();
 
                 // Grab a reference to the current player
                 GameUtility.CurrentPlayer = __result;
@@ -60,6 +61,7 @@ namespace StS2AP.Patches
             {
                 // Get rid of the tracker UI
                 ArchipelagoCharTrackerUI.RemoveUI();
+                ArchipelagoGoalTrackerUI.RemoveUI();
             }
         }
 

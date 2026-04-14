@@ -39,18 +39,18 @@ namespace StS2AP.UI
         private const string FontPath = "res://fonts/kreon_regular.ttf";
 
         // Font size for the goal text
-        private const int FontSize = 32;
+        private const int FontSize = 24;
 
         // Padding inside the panel
         private const float PanelPadding = 16f;
 
         // Panel offsets — positioned in the bottom-left corner of the screen
         private const float PanelLeftOffset   = 220f;
-        private const float PanelBottomOffset = 250f;
+        private const float PanelBottomOffset = 268f;
 
         // Panel size — kept compact since it only holds a single label
         private const float PanelWidth  = 400f;
-        private const float PanelHeight = 80f;
+        private const float PanelHeight = 70f;
 
         // Semi-transparent dark background matching ArchipelagoCharTrackerUI
         private static readonly Color PanelBgColor = new Color(0.10f, 0.10f, 0.13f, 0.5f);
@@ -155,7 +155,7 @@ namespace StS2AP.UI
         /// Supports full BBCode (including the game's custom [sine], [rainbow], etc. effects).
         /// </summary>
         /// <param name="bbcodeText">BBCode-formatted string to display.</param>
-        public static void SetContent(string bbcodeText)
+        private static void SetContent(string bbcodeText)
         {
             if (_contentLabel != null && IsInstanceValid(_contentLabel))
             {
@@ -165,6 +165,11 @@ namespace StS2AP.UI
 
                 _contentLabel.Text = bbcodeText;
             }
+        }
+
+        public static void UpdateGoalProgress()
+        {
+            SetContent($"[gold]Goal: Slay the Spire with {ArchipelagoClient.Settings.NumCharsGoal} Characters[/gold]\nProgress: {GameUtility.GoaledCharactersCount} / {ArchipelagoClient.Settings.NumCharsGoal}");
         }
 
         #endregion
@@ -255,8 +260,10 @@ namespace StS2AP.UI
                 LogUtility.Warn($"[GoalTracker] Failed to load label font: {ex.Message}");
             }
 
-            // Placeholder text — will be replaced by SetContent() after injection
-            _contentLabel.Text = "[gold]Goal: Slay the Spire with X Characters\nProgress: 0 / 3";
+            // Font size is intentionally NOT set here — MegaRichTextLabel._Ready() fires when the
+            // node enters the tree and resets font size overrides. SetContent() applies it at runtime
+            // after _Ready() has already fired, matching the pattern in ArchipelagoCharTrackerUI.
+            _contentLabel.Text = "";
 
             panel.AddChild(_contentLabel);
 

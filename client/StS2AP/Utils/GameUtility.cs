@@ -41,6 +41,11 @@ namespace StS2AP.Utils
         private static HashSet<string> _goaledCharacters = new HashSet<string>();
 
         /// <summary>
+        /// The number of the characters that have reached their goal
+        /// </summary>
+        public static int GoaledCharactersCount => _goaledCharacters.Count;
+
+        /// <summary>
         /// Whether or not the character has completed the run at least once, based on the local cache of goaled characters.
         /// </summary>
         /// <param name="charName">The name of the character to check. Please use `.APName()` from the `Player` or the `CharacterModel`</param>

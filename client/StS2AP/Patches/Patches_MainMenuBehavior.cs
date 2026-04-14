@@ -144,11 +144,19 @@ namespace StS2AP.Patches
                 NCharacterSelectButton firstButton = charButtonContainer.GetChild<NCharacterSelectButton>(0);
                 CharacterModel character = firstButton.Character;
 
-                // Setup the character tracker UI (top-left)
+                // Setup the character tracker UI
                 ArchipelagoCharTrackerUI.InjectUI(character);
 
-                // Setup the goal tracker UI (bottom-left)
+                // Setup the goal tracker UI (initial goal text needs to be ever-so-slightly delayed or the text is TINY)
                 ArchipelagoGoalTrackerUI.InjectUI();
+                var sceneTree = Engine.GetMainLoop() as SceneTree;
+                if (sceneTree != null)
+                {
+                    sceneTree.CreateTimer(0.2f).Timeout += () =>
+                    {
+                        ArchipelagoGoalTrackerUI.UpdateGoalProgress();
+                    };
+                }
             }
 
             /// <summary>Remove the tracker panels when the player leaves the Character Select screen.</summary>
