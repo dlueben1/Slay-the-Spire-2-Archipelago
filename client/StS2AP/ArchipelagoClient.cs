@@ -2,6 +2,7 @@
 using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Helpers;
+using Archipelago.MultiClient.Net.MessageLog.Messages;
 using Archipelago.MultiClient.Net.Models;
 using Godot;
 using MegaCrit.Sts2.Core.Commands;
@@ -67,7 +68,7 @@ namespace StS2AP
         /// <summary>
         /// The name of the Game
         /// </summary>
-        private const string Game = "Slay the Spire II";
+        public const string Game = "Slay the Spire II";
 
         /// <summary>
         /// Minimum Archipelago Version that's supported by the mod.
@@ -169,6 +170,7 @@ namespace StS2AP
 
             // Listen for connection termination
             Session.Socket.SocketClosed += OnSocketSessionEnd;
+            Session.MessageLog.OnMessageReceived += OnMessageReceived;
 
             // Attempt to connect to the server
             try
@@ -454,6 +456,31 @@ namespace StS2AP
 
         }
 
+        private static void OnMessageReceived(LogMessage message)
+        {
+            LogUtility.Info($"Got PrintJson packet {message.GetType().Name} {message.ToString()}");
+            switch(message)
+            {
+                case ItemSendLogMessage itemSend:
+                    NotificationUtility.HandleItemSend(itemSend);
+                    break;
+                case CountdownLogMessage:
+                    NotificationUtility.HandleOtherAPMessages(message, false, 0.5);
+                    break;
+                    // This caused the result messages to not come through, probably because the say packets get echoed
+                //case PlayerSpecificLogMessage:
+                //    NotificationUtility.HandleOtherAPMessages(message, true);
+                //    break;
+                case CommandResultLogMessage:
+                case AdminCommandResultLogMessage:
+                    NotificationUtility.HandleOtherAPMessages(message, true, 3.0, true);
+                    break;
+                default:
+                    return;
+            }
+
+        }
+
         #endregion
 
         #region Item Processing
@@ -468,9 +495,6 @@ namespace StS2AP
         {
             // Log the item
             LogUtility.Success($"Received: {item.ItemName} from {item.Player.Name} (ID: {item.ItemId} / LocID: {item.LocationId} / Index: {index})");
-
-            // Show Notification for the item
-            NotificationUtility.ShowItemReceived(item);
 
             // Apply the item to the game
             switch(item.GetRawItemID())
