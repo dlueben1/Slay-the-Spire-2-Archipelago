@@ -9,9 +9,6 @@ namespace StS2AP.UI
     /// Static class that creates and manages the Archipelago Goal Tracker panel
     /// on the Character Select screen.
     ///
-    /// The panel is positioned in the bottom-left corner of the screen and contains
-    /// a single <see cref="MegaRichTextLabel"/> for displaying goal progress text.
-    ///
     /// Injected and removed alongside <see cref="ArchipelagoCharTrackerUI"/> via the
     /// <c>CharTrackerPanelPatches</c> in <c>Patches_MainMenuBehavior</c>.
     /// </summary>
@@ -44,7 +41,7 @@ namespace StS2AP.UI
         // Padding inside the panel
         private const float PanelPadding = 16f;
 
-        // Panel offsets — positioned in the bottom-left corner of the screen
+        // Panel offsets — positioned in the bottom(ish)-left corner of the screen
         private const float PanelLeftOffset   = 220f;
         private const float PanelBottomOffset = 268f;
 
@@ -167,6 +164,9 @@ namespace StS2AP.UI
             }
         }
 
+        /// <summary>
+        /// Refreshes the goal progress text based on the current number of goal-achieved characters.
+        /// </summary>
         public static void UpdateGoalProgress()
         {
             SetContent($"[gold]Goal: Slay the Spire with {ArchipelagoClient.Settings.NumCharsGoal} Characters[/gold]\nProgress: {GameUtility.GoaledCharactersCount} / {ArchipelagoClient.Settings.NumCharsGoal}");
@@ -179,7 +179,7 @@ namespace StS2AP.UI
         /// <summary>
         /// Builds the entire panel hierarchy from scratch.
         ///
-        /// Layout (bottom-left anchored):
+        /// Layout:
         /// <code>
         ///   Control (root, FullRect)
         ///     └─ PanelContainer  ← semi-transparent background, fixed size, bottom-left anchor
@@ -188,26 +188,25 @@ namespace StS2AP.UI
         /// </summary>
         private static Control CreateUI()
         {
-            // ── Root ──────────────────────────────────────────────────────────────────
-            // Full-rect so anchors/offsets work relative to the full viewport.
+            // Root
             var root = new Control();
             root.Name = "ArchipelagoGoalTrackerUI";
             root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
             // Pass all mouse events through so we don't block game input
             root.MouseFilter = Control.MouseFilterEnum.Ignore;
 
-            // ── Panel ─────────────────────────────────────────────────────────────────
-            // Anchored to the bottom-left corner of the screen.
+            // Panel
             var panel = new PanelContainer();
             panel.Name = "GoalTrackerPanel";
             panel.CustomMinimumSize = new Vector2(PanelWidth, PanelHeight);
 
-            // Position: anchor bottom-left, then shift right by PanelLeftOffset and up by PanelBottomOffset.
+            // Anchor Positions
             panel.AnchorLeft   = 0f;
             panel.AnchorRight  = 0f;
             panel.AnchorTop    = 1f;
             panel.AnchorBottom = 1f;
 
+            // Offset Positions
             panel.OffsetLeft   = PanelLeftOffset;
             panel.OffsetRight  = PanelLeftOffset + PanelWidth;
             panel.OffsetTop    = -(PanelBottomOffset + PanelHeight);
@@ -216,9 +215,7 @@ namespace StS2AP.UI
             // Mouse passthrough — we don't need interaction on the goal tracker panel itself
             panel.MouseFilter = Control.MouseFilterEnum.Ignore;
 
-            // ── Background style ──────────────────────────────────────────────────────
-            // Matches the look of ArchipelagoCharTrackerUI: semi-transparent, slightly
-            // rounded corners, no visible border.
+            // Setup Background
             var panelStyle = new StyleBoxFlat();
             panelStyle.BgColor = PanelBgColor;
             panelStyle.SetBorderWidthAll(0);
@@ -231,8 +228,7 @@ namespace StS2AP.UI
 
             root.AddChild(panel);
 
-            // ── Content label ─────────────────────────────────────────────────────────
-            // Single MegaRichTextLabel for goal progress text with BBCode support.
+            // Content label
             _contentLabel = new MegaRichTextLabel();
             _contentLabel.Name = "GoalTrackerLabel";
             _contentLabel.SizeFlagsHorizontal = Control.SizeFlags.Fill;
@@ -260,9 +256,9 @@ namespace StS2AP.UI
                 LogUtility.Warn($"[GoalTracker] Failed to load label font: {ex.Message}");
             }
 
-            // Font size is intentionally NOT set here — MegaRichTextLabel._Ready() fires when the
-            // node enters the tree and resets font size overrides. SetContent() applies it at runtime
-            // after _Ready() has already fired, matching the pattern in ArchipelagoCharTrackerUI.
+            /// Font size is intentionally NOT set here — MegaRichTextLabel._Ready() fires when the
+            /// node enters the tree and resets font size overrides. SetContent() applies it at runtime
+            /// after _Ready() has already fired, matching the pattern in ArchipelagoCharTrackerUI.
             _contentLabel.Text = "";
 
             panel.AddChild(_contentLabel);

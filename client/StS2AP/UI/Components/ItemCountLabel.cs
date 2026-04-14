@@ -99,8 +99,8 @@ namespace StS2AP.UI.Components
             {
                 Root.MouseFilter = Control.MouseFilterEnum.Stop;
 
-                // Register the plain strings into a runtime loc table so HoverTip can look them up.
-                // The key is made unique per instance so multiple rows don't collide.
+                /// Register the plain strings into a runtime loc table so HoverTip can look them up.
+                /// The key is made unique per instance so multiple rows don't collide.
                 string tableKey = $"item_count_label_{tooltipTitle.GetHashCode():x}";
                 TextUtility.RegisterLocTableAtRuntime(tableKey, new System.Collections.Generic.Dictionary<string, string>
                 {
@@ -112,8 +112,8 @@ namespace StS2AP.UI.Components
                     new LocString(tableKey, "title"),
                     new LocString(tableKey, "description"));
 
-                // Show the tooltip when the mouse enters the row.
-                // Position it at the top center of the screen in a fixed position.
+                /// Show the tooltip when the mouse enters the row.
+                /// Position it at the top center of the screen in a fixed position.
                 Root.MouseEntered += () =>
                 {
                     try
@@ -184,9 +184,9 @@ namespace StS2AP.UI.Components
 
             Root.AddChild(_icon);
 
-            // ── Label ─────────────────────────────────────────────────────────────────
-            // FitContent = true so the row height is driven by the text rather than
-            // collapsing to zero (same fix applied in ArchipelagoCharTrackerUI).
+            /// ── Label ─────────────────────────────────────────────────────────────────
+            /// FitContent = true so the row height is driven by the text rather than
+            /// collapsing to zero (same fix applied in ArchipelagoCharTrackerUI).
             _label = new MegaRichTextLabel();
             _label.Name = "ItemCountText";
             _label.FitContent = true;

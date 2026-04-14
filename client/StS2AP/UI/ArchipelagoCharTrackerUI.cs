@@ -2,11 +2,7 @@
 using MegaCrit.Sts2.addons.mega_text;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
-using StS2AP.Data;
-using StS2AP.Models;
 using StS2AP.UI.Components;
-using StS2AP.Utils;
-using System;
 using static StS2AP.Patches.Patches_APProgressOnCharSelect;
 
 namespace StS2AP.UI
@@ -14,11 +10,6 @@ namespace StS2AP.UI
     /// <summary>
     /// Static class that creates and manages the Archipelago Progress Tracker panel
     /// on the Character Select screen.
-    ///
-    /// The panel is positioned on the left side of the screen, offset ~200 logical
-    /// pixels from the left edge and near the top of the viewport — intentionally
-    /// mirroring the vertical position and size of the game's own InfoPanel
-    /// (<see cref="NCharacterSelectScreen"/> node: "InfoPanel").
     ///
     /// Injected via <see cref="CharTrackerInjectionPatch"/> which postfixes
     /// <see cref="NCharacterSelectScreen.OnSubmenuOpened"/> and
@@ -61,11 +52,7 @@ namespace StS2AP.UI
 
         #endregion
 
-        #region ItemCountLabel References
-
-        // ── AP Check labels (left list) ───────────────────────────────────────────
-        // Each label can be updated at runtime via its SetText() method, e.g.:
-        //   ArchipelagoCharTrackerUI.CardChecks?.SetText("(15 / 45)");
+        #region AP Location Labels
 
         /// <summary>Tracks how many Card Reward AP Checks have been found.</summary>
         public static ItemCountLabel? CardChecks { get; private set; }
@@ -94,7 +81,9 @@ namespace StS2AP.UI
         /// <summary>Tracks whether the "Slayed the Spire" check has been earned.</summary>
         public static ItemCountLabel? ClearedCheck { get; private set; }
 
-        // ── AP Item labels (right list) ───────────────────────────────────────────
+        #endregion
+
+        #region AP Item Labels
 
         /// <summary>Tracks the number of Card Rewards received from the multiworld.</summary>
         public static ItemCountLabel? CardRewards { get; private set; }
@@ -199,8 +188,8 @@ namespace StS2AP.UI
                 _canvasLayer.AddChild(_rootPanel);
                 root.AddChild(_canvasLayer);
 
-                // SetContent() must be called after the node is in the tree — MegaRichTextLabel._Ready()
-                // resets font size overrides on tree entry, so we apply ours immediately after.
+                /// SetContent() must be called after the node is in the tree — MegaRichTextLabel._Ready()
+                /// resets font size overrides on tree entry, so we apply ours immediately after.
                 SetContent("[gold]Checks Found[/gold]                                 [gold]Received Items[/gold]");
 
                 LogUtility.Success("[CharTracker] Archipelago char-tracker UI injected successfully");
@@ -325,9 +314,9 @@ namespace StS2AP.UI
         #region UI Construction
 
         /// <summary>
-        /// Builds the entire panel hierarchy from scratch (no Godot editor scenes available).
+        /// Builds the entire panel hierarchy from scratch.
         ///
-        /// Layout (left-anchored):
+        /// Layout:
         /// <code>
         ///   Control (root, FullRect)
         ///     └─ PanelContainer  ← semi-transparent background, fixed size, top-left anchor
@@ -343,30 +332,25 @@ namespace StS2AP.UI
         /// <param name="character">The initial character to display information for</param>
         private static Control CreateUI(CharacterModel character)
         {
-            // ── Root ──────────────────────────────────────────────────────────────────
-            // Full-rect so anchors/offsets work relative to the full viewport.
+            // Create the Root
             var root = new Control();
             root.Name = "ArchipelagoCharTrackerUI";
             root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
             // Pass all mouse events through so we don't block game input
             root.MouseFilter = Control.MouseFilterEnum.Ignore;
 
-            // ── Panel ─────────────────────────────────────────────────────────────────
-            // Anchored to the top-left corner to sit alongside the game's InfoPanel.
-            // PanelLeftOffset pushes us ~200 px from the left edge so the panel doesn't
-            // overlap the character buttons, mirroring the InfoPanel's horizontal position.
+            // Setup the Panel
             var panel = new PanelContainer();
             panel.Name = "CharTrackerPanel";
             panel.CustomMinimumSize = new Vector2(PanelWidth, PanelHeight);
 
-            // Position: anchor top-left, then shift right by PanelLeftOffset.
+            // Panel Anchors
             panel.AnchorLeft   = 0f;
             panel.AnchorRight  = 0f;
             panel.AnchorTop    = 0f;
             panel.AnchorBottom = 0f;
 
-            // OffsetLeft = PanelLeftOffset places the left edge PanelLeftOffset px from the screen's left.
-            // OffsetRight = PanelLeftOffset + PanelWidth places the right edge accordingly.
+            // Panel Offsets
             panel.OffsetLeft   = PanelLeftOffset;
             panel.OffsetRight  = PanelLeftOffset + PanelWidth;
             panel.OffsetTop    = PanelTopOffset;
@@ -375,9 +359,7 @@ namespace StS2AP.UI
             // Mouse passthrough — we don't need interaction on the tracker panel itself
             panel.MouseFilter = Control.MouseFilterEnum.Ignore;
 
-            // ── Background style ──────────────────────────────────────────────────────
-            // Matches the look of the character info panel: semi-transparent, slightly
-            // rounded corners, no visible border.
+            // Background Panel
             var panelStyle = new StyleBoxFlat();
             panelStyle.BgColor = PanelBgColor;
             panelStyle.SetBorderWidthAll(0);
@@ -390,7 +372,7 @@ namespace StS2AP.UI
 
             root.AddChild(panel);
 
-            // ── Main content layout ────────────────────────────────────────────────────
+            // Main content layout
             var mainVbox = new VBoxContainer();
             mainVbox.Name = "MainContentVBox";
             mainVbox.AddThemeConstantOverride("separation", 8);
@@ -398,21 +380,16 @@ namespace StS2AP.UI
             mainVbox.SizeFlagsVertical   = Control.SizeFlags.Fill;
             panel.AddChild(mainVbox);
 
-            // ── Header label ───────────────────────────────────────────────────────────
-            // We use MegaRichTextLabel so BBCode and game text effects work out of the box,
-            // consistent with how ArchipelagoNotificationUI renders its messages.
+            // Header label
             _contentLabel = new MegaRichTextLabel();
             _contentLabel.Name = "CharTrackerHeaderLabel";
             _contentLabel.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
-            // SizeFlagsVertical = 0 means don't expand; let FitContent size it to text height
             _contentLabel.SizeFlagsVertical   = 0;
             _contentLabel.FitContent          = true; // Fit to actual text height
             _contentLabel.AutowrapMode        = TextServer.AutowrapMode.Word;
             _contentLabel.BbcodeEnabled       = true; // Required for MegaRichTextLabel effects
             _contentLabel.MouseFilter         = Control.MouseFilterEnum.Ignore;
             _contentLabel.CustomMinimumSize   = new Vector2(PanelWidth - (PanelPadding * 2), 0);
-
-            // Placeholder text — this will be replaced by SetContent() if needed
             _contentLabel.Text = "[gold]Checks Found[/gold]                                 [gold]Received Items[/gold]";
 
             // Apply the game font so the text matches the rest of the UI
@@ -438,11 +415,7 @@ namespace StS2AP.UI
             /// after _Ready() has already fired, matching the pattern in ArchipelagoNotificationUI.
             mainVbox.AddChild(_contentLabel);
 
-            // ── Two-list layout (absolute positioning) ────────────────────────────────
-            // We use a plain Control as a full-width row and anchor each list at a fixed
-            // OffsetLeft so the right list's position is completely independent of how
-            // wide the left list grows. Each list is an HBoxContainer that spawns new
-            // VBoxContainer sub-columns automatically once MaxRowsPerColumn is reached.
+            // Two-list layout for checks + items
             var listsRow = new Control();
             listsRow.Name = "ListsRow";
             listsRow.SizeFlagsHorizontal = Control.SizeFlags.Fill;
@@ -450,7 +423,7 @@ namespace StS2AP.UI
             listsRow.MouseFilter         = Control.MouseFilterEnum.Ignore;
             mainVbox.AddChild(listsRow);
 
-            // LEFT list — AP Checks, anchored at the left edge of the panel interior
+            // List for AP Checks, anchored at the left edge of the panel interior
             _leftListContainer = new HBoxContainer();
             _leftListContainer.Name        = "LeftListContainer";
             _leftListContainer.AnchorLeft  = 0f;
@@ -462,7 +435,7 @@ namespace StS2AP.UI
             _leftListContainer.MouseFilter       = Control.MouseFilterEnum.Ignore;
             listsRow.AddChild(_leftListContainer);
 
-            // RIGHT list — AP Items, anchored at the panel midpoint regardless of left list width
+            // List for AP Items, anchored at the panel midpoint regardless of left list width
             _rightListContainer = new HBoxContainer();
             _rightListContainer.Name        = "RightListContainer";
             _rightListContainer.AnchorLeft  = 0f;
@@ -475,8 +448,6 @@ namespace StS2AP.UI
             listsRow.AddChild(_rightListContainer);
 
             // ── AP Checks ───────────────────────────────────────────────────────
-            // Each label is stored as a static property so patches can update its text
-            // at runtime via SetText(), e.g. CardChecks?.SetText("(15 / 45)").
 
             // Card Checks Counter
             CardChecks = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_card.png", "(0 / 0)", tooltipTitle: "Card Checks", tooltipDescription: "The number of AP Checks found that replaced Card Rewards");
