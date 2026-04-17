@@ -22,11 +22,31 @@ namespace StS2AP.Extensions
         }
 
         /// <summary>
-        /// Gets the `APItemCharID` for this character
+        /// Gets the `APItemCharID` for this character.
+        /// For Items, this is one-based.
         /// </summary>
         public static APItemCharID? GetAPItemCharID(this CharacterModel character)
         {
             return GameUtility.GetCharacterIDByName(character.APName());
+        }
+
+        /// <summary>
+        /// Gets the Location ID offset used for this character.
+        /// For Locations, this is zero-based.
+        /// </summary>
+        public static long GetAPLocationCharID(this CharacterModel character)
+        {
+            var charId = character.GetAPItemCharID();
+            if (charId.HasValue)
+            {
+                return (long)charId.Value - 1;
+            }
+            else
+            {
+                var msg = $"Character {character.APName()} does not have a valid APItemCharID. It's likely that a new character was added that we aren't handling properly.";
+                LogUtility.Error(msg);
+                throw new NullReferenceException(msg);
+            }
         }
 
         /// <summary>

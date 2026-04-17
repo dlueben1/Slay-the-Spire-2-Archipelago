@@ -12,21 +12,30 @@ namespace StS2AP.Data
     public static class LocationData
     {
         /// <summary>
+        /// Combines a base Location ID with a character's offset ID
+        /// </summary>
+        /// <param name="locationId">The base ID of a location</param>
+        /// <param name="character">The character to offset the location by</param>
+        /// <returns>The combined location ID.</returns>
+        /// <example>If characterOffset=1 and locationId=88, then we'd return 10088</example>
+        private static long CombineLocationAndCharacterIds(long locationId, CharacterModel character)
+        {
+            // Character offset (for locations this is zero-based, so it needs to be shifted)
+            long _characterOffset = character.GetAPLocationCharID();
+
+            // Place the character offset in the leftmost position and location ID in the rightmost 4 digits (zero-padded)
+            return (_characterOffset * 10000) + locationId;
+        }
+
+        /// <summary>
         /// Get the "Press Start" Location for a given character.
-        /// 
-        /// Note: I can't seem to figure out what the location ID is for this, so it isn't used right now.
         /// </summary>
         public static long GetPressStartLocation(CharacterModel character)
         {
-            try
-            {
-                return ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", $"{character.APName()} Press Start");
-            } 
-            catch
-            {
-                LogUtility.Error($"Could not find Press Start location for {character.APName()}");
-                return -1;
-            }
+            // The location ID, to be combined with the character offset
+            const long _baseLocationId = 88;
+
+            return CombineLocationAndCharacterIds(_baseLocationId, character);
         }
         
         /// <summary>
@@ -125,7 +134,11 @@ namespace StS2AP.Data
                     {
                         var id = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", $"{character.APName()} Act {a} Campfire {c}");
                         ids.Add(id);
-                    } catch { }
+                    } 
+                    catch 
+                    {
+                        LogUtility.Error($"Failed to get location ID for {character.APName()} Act {a} Campfire {c}. This location will be skipped.");
+                    }
                 }
             }
             return ids;

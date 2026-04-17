@@ -13,7 +13,7 @@ namespace StS2AP.Patches
     public static class Patches_APProgressOnCharSelect
     {
         /// <summary>
-        /// When the Player selects a character, update the Archipelago Progres panels with information on that character
+        /// When the Player selects a character, update the Archipelago Progress panels with information on that character
         /// </summary>
         [HarmonyPatch(typeof(NCharacterSelectScreen))]
         public static class UpdateCharTrackerUI

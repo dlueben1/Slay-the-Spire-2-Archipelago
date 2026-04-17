@@ -101,8 +101,8 @@ namespace StS2AP.UI.Components
 
                 /// Register the plain strings into a runtime loc table so HoverTip can look them up.
                 /// The key is made unique per instance so multiple rows don't collide.
-                string tableKey = $"item_count_label_{tooltipTitle.GetHashCode():x}";
-                TextUtility.RegisterLocTableAtRuntime(tableKey, new System.Collections.Generic.Dictionary<string, string>
+                string tableKey = $"item_count_label_{Guid.NewGuid():N}";
+                TextUtility.RegisterLocTableAtRuntime(tableKey, new Dictionary<string, string>
                 {
                     { "title",       tooltipTitle       },
                     { "description", tooltipDescription }
