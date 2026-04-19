@@ -1,4 +1,6 @@
-﻿using HarmonyLib;
+﻿using Godot;
+using HarmonyLib;
+using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
@@ -121,6 +123,49 @@ namespace StS2AP.Patches
             static void HideBackButtonOnCharSelectScreen(NCharacterSelectScreen __instance)
             {
                 __instance.GetNode<NBackButton>("BackButton").Visible = false;
+            }
+        }
+
+        /// <summary>
+        /// Injects the Archipelago Progress Tracker panel when the Character Select screen opens,
+        /// and removes it when the screen closes. Keeping injection in OnSubmenuOpened (rather than
+        /// _Ready) ensures the CanvasLayer is created after the scene tree is fully set up.
+        /// </summary>
+        [HarmonyPatch(typeof(NCharacterSelectScreen))]
+        public static class CharTrackerPanelPatches
+        {
+            /// <summary>Show the tracker panels as soon as the screen becomes active.</summary>
+            [HarmonyPatch(nameof(NCharacterSelectScreen.OnSubmenuOpened))]
+            [HarmonyPostfix]
+            static void OnOpened(NCharacterSelectScreen __instance)
+            {
+                // Find the first character on the screen
+                Control charButtonContainer = __instance.GetNode<Control>("CharSelectButtons/ButtonContainer");
+                NCharacterSelectButton firstButton = charButtonContainer.GetChild<NCharacterSelectButton>(0);
+                CharacterModel character = firstButton.Character;
+
+                // Setup the character tracker UI
+                ArchipelagoCharTrackerUI.InjectUI(character);
+
+                // Setup the goal tracker UI (initial goal text needs to be ever-so-slightly delayed or the text is TINY)
+                ArchipelagoGoalTrackerUI.InjectUI();
+                var sceneTree = Engine.GetMainLoop() as SceneTree;
+                if (sceneTree != null)
+                {
+                    sceneTree.CreateTimer(0.2f).Timeout += () =>
+                    {
+                        ArchipelagoGoalTrackerUI.UpdateGoalProgress();
+                    };
+                }
+            }
+
+            /// <summary>Remove the tracker panels when the player leaves the Character Select screen.</summary>
+            [HarmonyPatch(nameof(NCharacterSelectScreen.OnSubmenuClosed))]
+            [HarmonyPostfix]
+            static void OnClosed(NCharacterSelectScreen __instance)
+            {
+                ArchipelagoCharTrackerUI.RemoveUI();
+                ArchipelagoGoalTrackerUI.RemoveUI();
             }
         }
     }

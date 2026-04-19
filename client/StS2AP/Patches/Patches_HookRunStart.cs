@@ -4,10 +4,13 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Runs;
+using MegaCrit.Sts2.Core.Saves.Runs;
 using MegaCrit.Sts2.Core.Unlocks;
+using StS2AP.UI;
 using StS2AP.Utils;
 using System;
 using System.Linq;
+using static Godot.HttpRequest;
 
 namespace StS2AP.Patches
 {
@@ -25,6 +28,10 @@ namespace StS2AP.Patches
             [HarmonyPostfix]
             public static void Postfix(Player __result)
             {
+                // Get rid of the tracker UI
+                ArchipelagoCharTrackerUI.RemoveUI();
+                ArchipelagoGoalTrackerUI.RemoveUI();
+
                 // Grab a reference to the current player
                 GameUtility.CurrentPlayer = __result;
 
@@ -40,6 +47,21 @@ namespace StS2AP.Patches
 
                 // Clear buffers
                 ArchipelagoClient.Progress.UsedItems.Clear();
+            }
+        }
+
+        /// <summary>
+        /// Similar to `OnRunStart` but only happens on loading a run. We don't have to initialize anything, but we still need to do some work.
+        /// </summary>
+        [HarmonyPatch(typeof(Player), nameof(Player.FromSerializable), new Type[] { typeof(SerializablePlayer) })]
+        public static class OnRunLoad
+        {
+            [HarmonyPostfix]
+            public static void Postfix()
+            {
+                // Get rid of the tracker UI
+                ArchipelagoCharTrackerUI.RemoveUI();
+                ArchipelagoGoalTrackerUI.RemoveUI();
             }
         }
 

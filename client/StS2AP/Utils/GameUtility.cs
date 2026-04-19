@@ -41,6 +41,21 @@ namespace StS2AP.Utils
         private static HashSet<string> _goaledCharacters = new HashSet<string>();
 
         /// <summary>
+        /// The number of the characters that have reached their goal
+        /// </summary>
+        public static int GoaledCharactersCount => _goaledCharacters.Count;
+
+        /// <summary>
+        /// Whether or not the character has completed the run at least once, based on the local cache of goaled characters.
+        /// </summary>
+        /// <param name="charName">The name of the character to check. Please use `.APName()` from the `Player` or the `CharacterModel`</param>
+        /// <returns>True if the character has completed the run at least once, false otherwise.</returns>
+        public static bool HasCharacterGoaled(string charName)
+        {
+            return _goaledCharacters.Contains(charName);
+        }
+
+        /// <summary>
         /// Reference to the Current Player character.
         /// Set when a run starts, cleared when a run ends.
         /// </summary>
@@ -51,7 +66,9 @@ namespace StS2AP.Utils
         /// </summary>
         public static Dictionary<string, string> APSaves { get; set; } = new Dictionary<string, string>();
 
-
+        /// <summary>
+        /// Returns the Current Player's `APItemCharID`
+        /// </summary>
         public static APItemCharID? CurrentCharacterID
         {
             get
@@ -62,16 +79,26 @@ namespace StS2AP.Utils
                     return null;
                 }
                 var charName = CurrentPlayer.APName();
-                return charName switch
-                {
-                    "Ironclad" => APItemCharID.Ironclad,
-                    "Silent" => APItemCharID.Silent,
-                    "Defect" => APItemCharID.Defect,
-                    "Regent" => APItemCharID.Regent,
-                    "Necrobinder" => APItemCharID.Necrobinder,
-                    _ => null
-                };
+                return GetCharacterIDByName(charName);
             }
+        }
+
+        /// <summary>
+        /// Gets the `APItemCharID` for a character by their AP Name.
+        /// </summary>
+        /// <param name="name">The name of a character, as recognized by the Archipelago World. Usually found by calling `.APName()` on a `CharacterModel` or `Player`.</param>
+        /// <returns>The `APItemCharID` for a given character, by it's name. Returns `null` if the character name is invalid or unknown.</returns>
+        public static APItemCharID? GetCharacterIDByName(string name)
+        {
+            return name switch
+            {
+                "Ironclad" => APItemCharID.Ironclad,
+                "Silent" => APItemCharID.Silent,
+                "Defect" => APItemCharID.Defect,
+                "Regent" => APItemCharID.Regent,
+                "Necrobinder" => APItemCharID.Necrobinder,
+                _ => null
+            };
         }
 
         #region Receiving Items
@@ -496,7 +523,6 @@ namespace StS2AP.Utils
                 _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(locationId);
 
                 LogUtility.Success($"Sent location check: {locationId}");
-                NotificationUtility.ShowLocationChecked(locationId);
             }
         }
 

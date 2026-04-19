@@ -25,6 +25,11 @@ namespace StS2AP.Models
         public const int _maxCardRewards = 20;
 
         /// <summary>
+        /// The maximum possible number of Rare Card Rewards. One for each Boss w/ Rewards.
+        /// </summary>
+        public const int _maxRareCardRewards = 2;
+
+        /// <summary>
         /// The maximum possible number of Relic Rewards that a player could have replaced with AP locations, regardless of settings.
         /// </summary>
         public const int _maxRelicRewards = 10;
@@ -42,6 +47,16 @@ namespace StS2AP.Models
         public const int _maxPotionRewards = 9;
 
         public const int _maxBossRewards = 3;
+
+        /// <summary>
+        /// The number of floor rewards in floorsanity
+        /// </summary>
+        public const int _maxFloorRewards = 47;
+
+        /// <summary>
+        /// Maximum possible number of Campfire Rewards that a player could find.
+        /// </summary>
+        public const int _maxCampfireChecks = 6;
 
         #region Per-Run Tracker
 
