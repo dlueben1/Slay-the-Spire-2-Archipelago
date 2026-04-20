@@ -476,7 +476,7 @@ namespace StS2AP
         /// </summary>
         /// <param name="item">Received Item</param>
         /// <param name="index">The index of the item in the Archipelago Multiworld</param>
-        private static void ProcessItem(ItemInfo item, int index)
+        private static void ProcessItem(ItemInfo item, int index, bool refresh = true)
         {
             // Log the item
             LogUtility.Success($"Received: {item.ItemName} from {item.Player.Name} (ID: {item.ItemId} / LocID: {item.LocationId} / Index: {index})");
@@ -557,8 +557,21 @@ namespace StS2AP
                     }
             }
 
-            // Refresh the unused item count
-            ArchipelagoTopBarUI.RefreshCount();
+            if (refresh)
+            {
+                // Refresh the unused item count
+                ArchipelagoTopBarUI.RefreshCount();
+            }
+        }
+
+        public static void ReprocessItems()
+        {
+            for (global::System.Int32 i = 0;  i < ArchipelagoClient.Session.Items.AllItemsReceived.Count;  i++)
+            {
+                ItemInfo info = ArchipelagoClient.Session.Items.AllItemsReceived[i];
+
+                ProcessItem(info, i, false);
+            }
         }
 
         #endregion

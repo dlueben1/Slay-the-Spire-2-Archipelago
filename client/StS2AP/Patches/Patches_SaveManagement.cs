@@ -6,7 +6,6 @@ using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Multiplayer;
-using MegaCrit.Sts2.Core.Multiplayer.Serialization;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.Audio;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
@@ -55,9 +54,10 @@ namespace StS2AP.Patches
                 return false;
             }
 
-            public static async Task asyncSave(SerializableRun saveMe)
+            public static async Task asyncSave(SerializableRun vanillaSave)
             {
-                var result = JsonSerializer.Serialize(saveMe, JsonSerializationUtility.GetTypeInfo<SerializableRun>());
+                var saveMe = ArchipelagoClient.Progress.ToSerializable(vanillaSave);
+                var result = JsonSerializer.Serialize(saveMe, SerializationUtility.CombinedOptions.GetTypeInfo(typeof(SerializableAP)));
                 var zipped = Zip(result);
                 if(GameUtility.CurrentPlayer == null)
                 {
@@ -98,29 +98,6 @@ namespace StS2AP.Patches
 
                     return Encoding.UTF8.GetString(mso.ToArray());
                 }
-            }
-        }
-    }
-
-    public static class Patches_SerializableRun
-    {
-        [HarmonyPatch(typeof(SerializableRun), "Serialize")]
-        public static class SaveAP
-        {
-            [HarmonyPostfix]
-            public static void APSave(PacketWriter writer)
-            {
-                ArchipelagoClient.Progress.Serialize(writer);
-            }
-        }
-
-        [HarmonyPatch(typeof(SerializableRun), "Deserialize")]
-        public static class LoadAP
-        {
-            [HarmonyPostfix]
-            public static void APLoad(PacketReader reader)
-            {
-                ArchipelagoClient.Progress = reader.Read<ArchipelagoProgress>();
             }
         }
     }
@@ -177,10 +154,10 @@ namespace StS2AP.Patches
                     if (GameUtility.APSaves.TryGetValue(charName, out saveStr))
                     {
                         var unzipped = Patches_RunSaveManager.SaveRun.Unzip(saveStr);
-                        ReadSaveResult<SerializableRun> result = JsonSerializationUtility.FromJson<SerializableRun>(unzipped);
-                        if (!result.Success)
+                        SerializableAP? result = JsonSerializer.Deserialize<SerializableAP>(unzipped, SerializationUtility.CombinedOptions);
+                        if (result == null)
                         {
-                            LogUtility.Error($"Failed to load save {result.ErrorMessage}");
+                            LogUtility.Error($"Failed to load save");
                             _charSelect.Lobby.SetReady(ready: true);
                             return;
                         }
@@ -191,7 +168,8 @@ namespace StS2AP.Patches
                         SfxCmd.Play(runState.Players[0].Character.CharacterTransitionSfx);
 
                         GameUtility.CurrentPlayer = runState.Players[0];
-
+                        ArchipelagoClient.Progress = ArchipelagoProgress.FromSerializable(result, GameUtility.CurrentPlayer);
+                        ArchipelagoClient.ReprocessItems();
                         await NGame.Instance.Transition.FadeOut(0.8f, runState.Players[0].Character.CharacterSelectTransitionPath);
                         NGame.Instance.ReactionContainer.InitializeNetworking(new NetSingleplayerGameService());
                         await NGame.Instance.LoadRun(runState, serializableRun.PreFinishedRoom);
