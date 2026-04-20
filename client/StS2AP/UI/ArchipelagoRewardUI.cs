@@ -228,6 +228,17 @@ namespace StS2AP.UI
                     data.GrantAction = async () => await GameUtility.GrantCardReward(itemIndex, rare: isRare);
                 }
 
+                if(rawId == APItem.Potion)
+                {
+                    var potion = ArchipelagoClient.Progress.GetOrAssignPotion(i.Index, GameUtility.CurrentPlayer);
+                    if(potion != null)
+                    {
+                        data.ItemName = potion.Title.GetRawText();
+                        data.IconPath = potion.ImagePath;
+                        data.GrantAction = async () => { return await GameUtility.GrantPotion(potion); };
+                    }
+                }
+
                 return data;
             }).ToList();
 
@@ -826,7 +837,8 @@ namespace StS2AP.UI
                 case APItem._30Gold:      return async () => { await GameUtility.GrantGold(30); return true; };
                 case APItem.BossGold:     return async () => { await GameUtility.GrantGold(100); return true; };
                 case APItem.Relic:        return async () => { await GameUtility.GrantRelic(); return true; };
-                case APItem.Potion:       return async () => { await GameUtility.GrantPotion(); return true; };
+                    // Need to do potion lookup before granting; see ShowRewards
+                case APItem.Potion:       return async () => {  return false; };
                 default:
                     // Card rewards are handled in ShowRewards() where the index is available
                     // Unlock is handled by GameUtility.UnlockCharacter in ArchipelagoClient.ProcessItem
@@ -859,6 +871,7 @@ namespace StS2AP.UI
                 case APItem.Relic:
                 case APItem.BossRelic:
                     return IconRelic;
+
 
                 default:
                     return string.Empty;

@@ -1,23 +1,22 @@
-﻿using Archipelago.MultiClient.Net.Models;
-using MegaCrit.Sts2.Core.Entities.Players;
-using MegaCrit.Sts2.Core.Entities.Relics;
+﻿using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Factories;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.RelicPools;
-using MegaCrit.Sts2.Core.Multiplayer.Serialization;
 using MegaCrit.Sts2.Core.Saves.Runs;
 using MegaCrit.Sts2.Core.Rewards;
 using StS2AP.Extensions;
 using StS2AP.Utils;
 using static StS2AP.Data.CharTable;
+using MegaCrit.Sts2.Core.Saves;
 
 
 namespace StS2AP.Models
 {
     /// <summary>
     /// Tracks the progress of how far along the player is through their Archipelago game
+    /// PLEASE NOTE IF YOU CHANGE THIS DATASTRUCTURE, YOU NEED TO UPDATE THE SAVE DATA STRUCTURE
+    /// AS WELL. SEE SerializableAP
     /// </summary>
-    public class ArchipelagoProgress : IPacketSerializable
+    public class ArchipelagoProgress
     {
         /// <summary>
         /// The maximum possible number of Card Rewards that a player could have replaced with AP locations, regardless of settings.
@@ -112,6 +111,13 @@ namespace StS2AP.Models
         public Dictionary<int, CardReward> CardAssignments { get; set; } = new Dictionary<int, CardReward>();
 
         /// <summary>
+        /// Maps an Archipelago item's index to the PotionModel that was pre-pulled from the PotionFactory for it.
+        /// This ensures that opening/closing the reward screen always shows the same potion for each potion reward.
+        /// Cleared on each new run via <see cref="ResetTrackers"/>.
+        /// </summary>
+        public Dictionary<int, PotionModel> PotionAssignments { get; set; } = new Dictionary<int, PotionModel>();
+
+        /// <summary>
         /// Returns the relic assigned to the given location, pulling one from the RelicFactory if it hasn't been assigned yet.
         /// This guarantees that the same relic is shown every time the reward screen is opened for the same item.
         /// </summary>
@@ -137,6 +143,39 @@ namespace StS2AP.Models
                 return relic;
             }
             catch (Exception ex)
+            {
+                LogUtility.Error($"Failed to pre-assign relic for item w/ index {index}: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Returns the potion assigned to the given location, pulling one from the PotionFactory if it hasn't been assigned yet.
+        /// This guarantees that the same potion is shown every time the reward screen is opened for the same item.
+        /// </summary>
+        /// <param name="index">The index of the specific item sent from the Multiworld.</param>
+        /// <param name="player">The current player, needed by PotionFactory.</param>
+        /// <returns>The assigned PotionModel, or null if no player is provided or the factory fails.</returns>
+        public PotionModel? GetOrAssignPotion(int index, Player player)
+        {
+            if( PotionAssignments.TryGetValue(index,out var existing))
+            {
+                return existing;
+            }
+
+            if(player == null)
+            {
+                LogUtility.Warn($"Cannot assign potion for item w/ index {index}; no active player");
+            }
+
+            try
+            {
+                var potion = PotionFactory.CreateRandomPotionOutOfCombat(player, player.PlayerRng.Rewards);
+                PotionAssignments[index] = potion;
+                LogUtility.Info($"Pre-assigned potion '{potion.Id}' for item w/ index {index}");
+                return potion;
+            }
+            catch(Exception ex)
             {
                 LogUtility.Error($"Failed to pre-assign relic for item w/ index {index}: {ex.Message}");
                 return null;
@@ -178,6 +217,7 @@ namespace StS2AP.Models
             CampfiresChecked.Clear();
             RelicAssignments.Clear();
             CardAssignments.Clear();
+            PotionAssignments.Clear();
             GoldRedeemed = 0;
         }
 
@@ -292,84 +332,42 @@ namespace StS2AP.Models
 
         #region StS Save
 
-        /// <summary>
-        /// Saves the progress into a JSON object; called as part of saving a SerializableRun.
-        /// 
-        /// Note: Unlocks (like Characters, Progressive Smith/Rest levels, etc.) should NOT be serialized, as they are already synced at the start of each run. 
-        /// Only progress on the current run (like how many rewards have been attempted, what items have been used, etc.) should be serialized here.
-        /// </summary>
-        public void Serialize(PacketWriter writer)
+        public SerializableAP ToSerializable(SerializableRun run)
         {
-            writer.WriteInt(CardRewardsAttempted);
-            writer.WriteInt(RareCardRewardsAttempted);
-            writer.WriteInt(BossRewardsDistributed);
-            writer.WriteInt(RelicRewardsAttempted);
-            writer.WriteInt(GoldRewardsAttempted);
-            writer.WriteInt(PotionRewardsAttempted);
-
-            writer.WriteInt(UsedItems.Count);
-            foreach (var used in UsedItems)
+            return new SerializableAP()
             {
-                writer.WriteInt(used);
-            }
-            writer.WriteInt(RelicAssignments.Count());
-            foreach (var entry in RelicAssignments)
-            {
-                writer.WriteInt(entry.Key);
-                // Relics are weird, needs to be made mutable in order to serialize
-                writer.Write<SerializableRelic>(entry.Value.ToMutable().ToSerializable());
-            }
-
-            writer.WriteInt(GoldReceived.Count);
-            foreach (var entry in GoldReceived)
-            {
-                writer.WriteInt(((int)entry.Key));
-                writer.WriteInt(entry.Value);
-            }
-
-            writer.WriteInt(GoldRedeemed);
+                SaveData = run,
+                CardRewardsAttempted = CardRewardsAttempted,
+                RareCardRewardsAttempted = RareCardRewardsAttempted,
+                RelicRewardsAttempted = RelicRewardsAttempted,
+                GoldRewardsAttempted = GoldRewardsAttempted,
+                PotionRewardsAttempted = PotionRewardsAttempted,
+                BossRewardsDistributed = BossRewardsDistributed,
+                UsedItems = UsedItems,
+                GoldRedeemed = GoldRedeemed,
+                RelicAssignments = RelicAssignments.Select((KeyValuePair<int,RelicModel> kv) => new KeyValuePair<int, SerializableRelic>(kv.Key, kv.Value.ToMutable().ToSerializable())).ToDictionary(),
+                CardAssignments = CardAssignments.Select((KeyValuePair<int,CardReward> kv) => new KeyValuePair<int, SerializableReward>(kv.Key, kv.Value.ToSerializable())).ToDictionary(),
+                PotionAssignments = PotionAssignments.Select((KeyValuePair<int,PotionModel> kv) => new KeyValuePair<int, SerializablePotion>(kv.Key, kv.Value.ToMutable().ToSerializable(-1))).ToDictionary(),
+            };
         }
 
-        /// <summary>
-        /// Reads the AP data from a JSON object; called as part of loading a SerializableRun
-        /// </summary>
-        public void Deserialize(PacketReader reader)
+        public static ArchipelagoProgress FromSerializable(SerializableAP saveData, Player player)
         {
-            try
-            {
-                CardRewardsAttempted = reader.ReadInt();
-                RareCardRewardsAttempted = reader.ReadInt();
-                BossRewardsDistributed = reader.ReadInt();
-                RelicRewardsAttempted = reader.ReadInt();
-                GoldRewardsAttempted = reader.ReadInt();
-                PotionRewardsAttempted = reader.ReadInt();
-                var usedItemsCount = reader.ReadInt();
-                for (int i = 0; i < usedItemsCount; i++)
-                {
-                    UsedItems.Add(reader.ReadInt());
-                }
-                var relicAssignmentsCount = reader.ReadInt();
-                for (int i = 0; i < relicAssignmentsCount; i++)
-                {
-                    var index = reader.ReadInt();
-                    var relic = reader.Read<SerializableRelic>();
-                    RelicAssignments[index] = RelicModel.FromSerializable(relic).CanonicalInstance;
-                }
-                var goldReceivedCount = reader.ReadInt();
-                for (int i = 0; i < goldReceivedCount; i++)
-                {
-                    var charId = (APItemCharID)reader.ReadInt();
-                    var amount = reader.ReadInt();
-                    GoldReceived[charId] = amount;
-                }
 
-                GoldRedeemed = reader.ReadInt();
-            }
-            catch(Exception ex)
+            return new ArchipelagoProgress()
             {
-                LogUtility.Error($"Failed to laod AP save data {ex.Message}");
-                throw;
-            }
+                CardRewardsAttempted = saveData.CardRewardsAttempted,
+                RareCardRewardsAttempted = saveData.RareCardRewardsAttempted,
+                RelicRewardsAttempted = saveData.RelicRewardsAttempted,
+                GoldRewardsAttempted = saveData.GoldRewardsAttempted,
+                PotionRewardsAttempted = saveData.PotionRewardsAttempted,
+                BossRewardsDistributed = saveData.BossRewardsDistributed,
+                UsedItems = new List<int>(saveData.UsedItems),
+                GoldRedeemed = saveData.GoldRedeemed,
+                RelicAssignments = saveData.RelicAssignments.Select((KeyValuePair<int, SerializableRelic> kv) => new KeyValuePair<int, RelicModel>(kv.Key, RelicModel.FromSerializable(kv.Value).CanonicalInstance)).ToDictionary(),
+                CardAssignments = saveData.CardAssignments.Select((KeyValuePair<int, SerializableReward> kv) => new KeyValuePair<int, CardReward>(kv.Key, (CardReward) CardReward.FromSerializable(kv.Value, player))).ToDictionary(),
+                PotionAssignments = saveData.PotionAssignments.Select((KeyValuePair<int, SerializablePotion> kv) => new KeyValuePair<int, PotionModel>(kv.Key, PotionModel.FromSerializable(kv.Value).CanonicalInstance)).ToDictionary(),
+            };
         }
 
         #endregion

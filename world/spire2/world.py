@@ -397,6 +397,7 @@ class SlayTheSpire2World(World):
             "num_chars_goal",
             "shuffle_all_cards",
             "include_floor_checks",
+            "shop_sanity",
             "potion_sanity",
             "gold_sanity",
             "campfire_sanity",

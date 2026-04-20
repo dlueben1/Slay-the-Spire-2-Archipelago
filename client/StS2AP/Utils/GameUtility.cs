@@ -181,27 +181,29 @@ namespace StS2AP.Utils
         /// Grants a random potion to the current player.
         /// Will fail silently if the player's potion slots are full so it matches the behaviour of the game's own PotionReward.
         /// </summary>
-        public static async Task GrantPotion()
+        public static async Task<bool> GrantPotion(PotionModel potion)
         {
             if (CurrentPlayer == null)
             {
                 LogUtility.Warn("Cannot grant potion: no active player (not in a run)");
-                return;
+                return false;
             }
 
             try
             {
-                var potion = PotionFactory.CreateRandomPotionOutOfCombat(CurrentPlayer, CurrentPlayer.PlayerRng.Rewards).ToMutable();
-                var result = await PotionCmd.TryToProcure(potion, CurrentPlayer);
+                //var potion = PotionFactory.CreateRandomPotionOutOfCombat(CurrentPlayer, CurrentPlayer.PlayerRng.Rewards).ToMutable();
+                var result = await PotionCmd.TryToProcure(potion.ToMutable(), CurrentPlayer);
                 if (result.success)
                     LogUtility.Success($"Granted potion '{potion.Id}' to player");
                 else
                     LogUtility.Warn($"Could not grant potion '{potion.Id}': potion slots may be full");
+                return result.success;
             }
             catch (Exception ex)
             {
                 LogUtility.Error($"Failed to grant potion: {ex.Message}");
             }
+            return false;
         }
 
         /// <summary>
