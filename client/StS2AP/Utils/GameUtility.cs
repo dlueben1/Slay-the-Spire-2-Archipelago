@@ -370,12 +370,13 @@ namespace StS2AP.Utils
             {
                 const string storageKey = "StS2AP_GoaledChars";
 
-                // Initialize the key with an empty dict if it doesn't exist yet
+                /// Initialize the key with an empty JObject (JSON object) if it doesn't exist yet.
+                /// Must use JObject, not Dictionary, to match the JSON structure stored on the server.
                 ArchipelagoClient.Session.DataStorage[
                     Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
-                    .Initialize(new Dictionary<string, bool>()); // replace inside () with `new Newtonsoft.Json.Linq.JObject()` in case it breaks not sure if this is correct
+                    .Initialize(new JObject());
 
-                // Read back whatever is stored
+                // Read back whatever is stored and deserialize it as a Dictionary<string, bool>
                 var stored = await ArchipelagoClient.Session.DataStorage[
                     Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
                     .GetAsync<Dictionary<string, bool>>();
