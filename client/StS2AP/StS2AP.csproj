@@ -20,7 +20,7 @@
 		<ModName Condition="'$(ModName)' == ''">ExampleMod</ModName>
 		<ModDisplayName Condition="'$(ModDisplayName)' == ''">Example Mod</ModDisplayName>
 		<ModAuthor Condition="'$(ModAuthor)' == ''">Unknown</ModAuthor>
-		<ModVersion Condition="'$(ModVersion)' == ''">0.4.0</ModVersion>
+		<ModVersion Condition="'$(ModVersion)' == ''">0.4.1</ModVersion>
 
 		<AssemblyName>$(ModName)</AssemblyName>
 		<Version>$(ModVersion)</Version>

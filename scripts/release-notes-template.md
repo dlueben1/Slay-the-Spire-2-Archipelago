@@ -12,13 +12,10 @@
 - **Your Slay the Spire II client must be running on Windows**. The debug terminal we use uses Win32 APIs.
   - This will not be a requirement long-term, but for early Alpha development it's necessary.
 - **Your host MUST use Archipelago Client v0.6.7+**.
-  - The current official release is v0.6.6, so you need to be able to build the `main` branch of Archipelago [from source](https://github.com/ArchipelagoMW/Archipelago) or download and use the [0.6.7 RC](https://github.com/ArchipelagoMW/Archipelago/releases/tag/0.6.7-rc1).
-  - **However**, once the game has been generated, it can still be hosted on [www.archipelago.gg](www.archipelago.gg)
-- This version of the mod is intended to be used for **v0.99.1** of Slay the Spire II
+- This version of the mod is intended to be used for **v0.103.2** of Slay the Spire II
   - **You must be on the "Default Public Version" of the game, _NOT_ the public beta branch**
   - If your installation of Slay the Spire II is higher or lower than this, the mod _may_ not work.
   - We will do our best to keep up with game updates as they release, so please be patient.
-- Friends that are forgiving and understanding so that if your multi-hour run breaks due to a bug, they won't mind :smile:
 
 ## Installing the Mod
 
@@ -39,32 +36,25 @@
 9. Select `spire2.apworld` in the file dialog that pops up
 10. **Restart the Archipelago Launcher**
 11. Now you should be able to properly host/generate an Archipelago Session with StS 2
-  - If you want to use `archipelago.gg` to host the game, generate it locally first following the steps above, then upload the `.zip` file from the `output` folder in your Archipelago installation
+
+- If you want to use `archipelago.gg` to host the game, generate it locally first following the steps above, then upload the `.zip` file from the `output` folder in your Archipelago installation
 
 > [!IMPORTANT]
 > You need to use Archipelago Version 0.6.7+ and CANNOT use earlier versions of Archipelago with this mod!
 
 ## Known Issues/Limitations
 
-- There is no saving.
-  - If you exit the game then reboot it, you might have problems.
-  - If you end a run early and find a way to resume it, you WILL have problems.
 - If you receive a Character Unlock while you're on the Character Select screen, they won't unlock until you revisit that screen after doing a run (likely an edge case for most)
-- **Card Rewards, if skipped, are not returned until the next run. This is different than Slay the Spire 1's implementation. It will likely change in the future.**
 
 ## Common Q&A
 
-### Will this mess with my Save File?
+### Will this mess with my unmodded Save File?
 
-My understanding is that when StS runs modded, it uses a different set of Save Files. So your _vanilla_ save files should be totally unbothered by this mod.
+No.
 
 ### I installed the AP World but it's not working
 
-Is your Archipelago Launcher v0.6.7 or later? If not it **won't work**. You either need an official build, or if none is out yet, you need to build it from the source code!
-
-### I closed out of the game and it's behaving weird when I re-open it
-
-This is very early development, we expect it not to work right and not to save progress when you close the game.
+Is your Archipelago Launcher v0.6.7 or later? If not it **won't work**.
 
 ### (Your-Feature-Here) looks really ugly or isn't polished
 
