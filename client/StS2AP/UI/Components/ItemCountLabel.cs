@@ -42,14 +42,8 @@ namespace StS2AP.UI.Components
 
         /// <summary>
         /// The hover tooltip shown when the player mouses over this row.
-        /// Null if no tooltip was provided — in that case mouse events pass through.
         /// </summary>
-        private readonly HoverTip? _hoverTip;
-
-        /// <summary>
-        /// The prefix for the tooltip.
-        /// </summary>
-        private string _tooltipKey = string.Empty;
+        private readonly HoverTip _hoverTip;
 
         #endregion
 
@@ -88,11 +82,11 @@ namespace StS2AP.UI.Components
         ///   Initial BBCode text for the count label, e.g. <c>"(10 / 700)"</c> or
         ///   <c>"[gold]50 Gold[/gold]"</c>.  May be changed later via <see cref="SetText"/>.
         /// </param>
-        /// <param name="key">The key for the tooltip to use.</param>
+        /// <param name="localizationKey">The localization key for the tooltip to use (i.e. the prefix for the localized string, such as `AP_ITEM`.</param>
         /// <param name="fontSize">
         ///   Optional font size override.  Defaults to <see cref="DefaultFontSize"/>.
         /// </param>
-        public ItemCountLabel(string iconPath, string text, string key, int fontSize = DefaultFontSize)
+        public ItemCountLabel(string iconPath, string text, string localizationKey, int fontSize = DefaultFontSize)
         {
             // ── Root row container ────────────────────────────────────────────────────
             Root = new HBoxContainer();
@@ -102,11 +96,10 @@ namespace StS2AP.UI.Components
             // Ensure we receive the hover mouse event
             Root.MouseFilter = Control.MouseFilterEnum.Stop;
 
-            /// Register the plain strings into a runtime loc table so HoverTip can look them up.
-            /// The key is made unique per instance so multiple rows don't collide.
+            // Build the tooltip, using the pre-cached localization title and description strings.
             _hoverTip = new HoverTip(
-                new LocString(TableKey, $"{key}.title"),
-                new LocString(TableKey, $"{key}.description"));
+                new LocString(TableKey, $"{localizationKey}.title"),
+                new LocString(TableKey, $"{localizationKey}.description"));
 
             /// Show the tooltip when the mouse enters the row.
             /// Position it at the top center of the screen in a fixed position.
