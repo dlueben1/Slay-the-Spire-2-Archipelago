@@ -42,13 +42,17 @@ namespace StS2AP.UI.Components
 
         /// <summary>
         /// The hover tooltip shown when the player mouses over this row.
-        /// Null if no tooltip was provided — in that case mouse events pass through.
         /// </summary>
-        private readonly HoverTip? _hoverTip;
+        private readonly HoverTip _hoverTip;
 
         #endregion
 
         #region Constants
+
+        /// <summary>
+        /// The prefix for the localization table key used for tooltips.
+        /// </summary>
+        private const string TableKey = "static_hover_tips";
 
         // Square size of the icon — kept small so rows stack tightly in a list
         private const float IconSize = 30f;
@@ -78,82 +82,61 @@ namespace StS2AP.UI.Components
         ///   Initial BBCode text for the count label, e.g. <c>"(10 / 700)"</c> or
         ///   <c>"[gold]50 Gold[/gold]"</c>.  May be changed later via <see cref="SetText"/>.
         /// </param>
+        /// <param name="localizationKey">The localization key for the tooltip to use (i.e. the prefix for the localized string, such as `AP_ITEM`.</param>
         /// <param name="fontSize">
         ///   Optional font size override.  Defaults to <see cref="DefaultFontSize"/>.
         /// </param>
-        /// <param name="tooltipTitle">
-        ///   Optional tooltip title shown on hover. Pass <c>null</c> to disable the tooltip entirely.
-        /// </param>
-        /// <param name="tooltipDescription">
-        ///   Optional tooltip description shown on hover. Pass <c>null</c> to disable the tooltip entirely.
-        /// </param>
-        public ItemCountLabel(string iconPath, string text, int fontSize = DefaultFontSize, string? tooltipTitle = null, string? tooltipDescription = null)
+        public ItemCountLabel(string iconPath, string text, string localizationKey, int fontSize = DefaultFontSize)
         {
             // ── Root row container ────────────────────────────────────────────────────
             Root = new HBoxContainer();
             Root.Name = "ItemCountLabel";
             Root.AddThemeConstantOverride("separation", IconTextSpacing);
 
-            // If a tooltip is provided we need to receive mouse events; otherwise pass through.
-            if (tooltipTitle != null && tooltipDescription != null)
+            // Ensure we receive the hover mouse event
+            Root.MouseFilter = Control.MouseFilterEnum.Stop;
+
+            // Build the tooltip, using the pre-cached localization title and description strings.
+            _hoverTip = new HoverTip(
+                new LocString(TableKey, $"{localizationKey}.title"),
+                new LocString(TableKey, $"{localizationKey}.description"));
+
+            /// Show the tooltip when the mouse enters the row.
+            /// Position it at the top center of the screen in a fixed position.
+            Root.MouseEntered += () =>
             {
-                Root.MouseFilter = Control.MouseFilterEnum.Stop;
-
-                /// Register the plain strings into a runtime loc table so HoverTip can look them up.
-                /// The key is made unique per instance so multiple rows don't collide.
-                string tableKey = $"item_count_label_{Guid.NewGuid():N}";
-                TextUtility.RegisterLocTableAtRuntime(tableKey, new Dictionary<string, string>
+                try
                 {
-                    { "title",       tooltipTitle       },
-                    { "description", tooltipDescription }
-                });
+                    var tipSet = NHoverTipSet.CreateAndShow(Root, _hoverTip);
 
-                _hoverTip = new HoverTip(
-                    new LocString(tableKey, "title"),
-                    new LocString(tableKey, "description"));
+                    // Get the viewport size to calculate screen center
+                    var viewportSize = Root.GetViewportRect().Size;
 
-                /// Show the tooltip when the mouse enters the row.
-                /// Position it at the top center of the screen in a fixed position.
-                Root.MouseEntered += () =>
+                    // Position at top center of screen with a small margin from the top
+                    const float topMargin = 50f;
+                    const float offsetFromPanel = 140f;
+                    tipSet.GlobalPosition = new Vector2(
+                        offsetFromPanel + ((viewportSize.X - tipSet.Size.X) / 2f),  // Centered horizontally, then shifted from the progress panel
+                        topMargin);                              // Fixed distance from top
+                }
+                catch (Exception ex)
                 {
-                    try
-                    {
-                        var tipSet = NHoverTipSet.CreateAndShow(Root, _hoverTip);
-                        
-                        // Get the viewport size to calculate screen center
-                        var viewportSize = Root.GetViewportRect().Size;
-                        
-                        // Position at top center of screen with a small margin from the top
-                        const float topMargin = 50f;
-                        const float offsetFromPanel = 140f;
-                        tipSet.GlobalPosition = new Vector2(
-                            offsetFromPanel + ((viewportSize.X - tipSet.Size.X) / 2f),  // Centered horizontally, then shifted from the progress panel
-                            topMargin);                              // Fixed distance from top
-                    }
-                    catch (Exception ex)
-                    {
-                        LogUtility.Warn($"[ItemCountLabel] Failed to show tooltip: {ex.Message}");
-                    }
-                };
+                    LogUtility.Warn($"[ItemCountLabel] Failed to show tooltip: {ex.Message}");
+                }
+            };
 
-                // Remove the tooltip when the mouse leaves the row
-                Root.MouseExited += () =>
-                {
-                    try
-                    {
-                        NHoverTipSet.Remove(Root);
-                    }
-                    catch (Exception ex)
-                    {
-                        LogUtility.Warn($"[ItemCountLabel] Failed to hide tooltip: {ex.Message}");
-                    }
-                };
-            }
-            else
+            // Remove the tooltip when the mouse leaves the row
+            Root.MouseExited += () =>
             {
-                // Pass mouse events through — this is a display-only component with no tooltip
-                Root.MouseFilter = Control.MouseFilterEnum.Ignore;
-            }
+                try
+                {
+                    NHoverTipSet.Remove(Root);
+                }
+                catch (Exception ex)
+                {
+                    LogUtility.Warn($"[ItemCountLabel] Failed to hide tooltip: {ex.Message}");
+                }
+            };
 
             // ── Icon ─────────────────────────────────────────────────────────────────
             _icon = new TextureRect();
