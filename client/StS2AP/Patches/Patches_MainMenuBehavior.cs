@@ -127,6 +127,33 @@ namespace StS2AP.Patches
         }
 
         /// <summary>
+        /// TEST: Example of how to intercept the Back Button behavior on the Character Select screen. 
+        /// </summary>
+        [HarmonyPatch(typeof(NSubmenuStack), nameof(NSubmenuStack.Pop))]
+        public static class BackOutFromCharSelectToMainMenu
+        {
+            public static void Postfix(NSubmenuStack __instance)
+            {
+                // Only pop again if NCharacterSelectScreen was on top
+                if (__instance.Peek() is NSingleplayerSubmenu)
+                {
+                    // Go back to the main menu
+                    __instance.Pop();
+
+                    // And force the UI to hide on the next main-thread frame
+                    var sceneTree = Engine.GetMainLoop() as SceneTree;
+                    if (sceneTree != null)
+                    {
+                        sceneTree.CreateTimer(0f).Timeout += () =>
+                         {
+                             ArchipelagoConnectionUI.Hide();
+                         };
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Injects the Archipelago Progress Tracker panel when the Character Select screen opens,
         /// and removes it when the screen closes. Keeping injection in OnSubmenuOpened (rather than
         /// _Ready) ensures the CanvasLayer is created after the scene tree is fully set up.

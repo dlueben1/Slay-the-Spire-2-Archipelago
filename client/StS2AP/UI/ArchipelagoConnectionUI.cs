@@ -432,7 +432,14 @@ namespace StS2AP.UI
             Hide();
 
             // Pop the submenu stack to return to the main menu
-            MenuUtility.SubmenuStack?.Pop();
+            try
+            {
+                MenuUtility.SubmenuStack?.Pop();
+            }
+            catch(InvalidOperationException ex)
+            {
+                LogUtility.Error($"Failed to pop submenu stack: {ex.Message}");
+            }
         }
 
         private class ConnectionData
