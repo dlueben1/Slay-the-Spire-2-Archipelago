@@ -563,12 +563,24 @@ namespace StS2AP.UI
                 catch (Exception ex) { LogUtility.Warn($"Could not load reward mask texture: {ex.Message}"); }
                 rewardsWindow.AddChild(mask);
 
-                // Rewards container 
+                // ScrollContainer fills the mask area so rewards can be scrolled when there are too many to display at once
+                var scrollContainer = new ScrollContainer { Name = "APRewardsScroll" };
+                scrollContainer.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+                // Small inset so the scroll content doesn't sit flush against the mask edge
+                scrollContainer.OffsetLeft   = ContainerLeft;
+                scrollContainer.OffsetTop    = ContainerTop;
+                scrollContainer.OffsetRight  = -ContainerLeft;
+                scrollContainer.OffsetBottom = -ContainerLeft;
+                scrollContainer.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
+                scrollContainer.VerticalScrollMode   = ScrollContainer.ScrollMode.Auto;
+                mask.AddChild(scrollContainer);
+
+                // Rewards container sits inside the scroll container
                 _itemContainer = new VBoxContainer { Name = "APRewardsContainer" };
-                _itemContainer.Position          = new Vector2(ContainerLeft, ContainerTop);
                 _itemContainer.CustomMinimumSize = new Vector2(ContainerWidth, 0);
+                _itemContainer.SizeFlagsHorizontal = Control.SizeFlags.Fill;
                 _itemContainer.AddThemeConstantOverride("separation", 10);
-                mask.AddChild(_itemContainer);
+                scrollContainer.AddChild(_itemContainer);
 
                 // Proceed / Skip button
                 _proceedButton = CreateProceedButton();
