@@ -52,6 +52,7 @@ namespace StS2AP.Utils
         /// <returns>True if the character has completed the run at least once, false otherwise.</returns>
         public static bool HasCharacterGoaled(string charName)
         {
+            LogUtility.Debug($"HasCharacterGoaled({charName}): {_goaledCharacters.Contains(charName)}");
             return _goaledCharacters.Contains(charName);
         }
 
@@ -366,6 +367,29 @@ namespace StS2AP.Utils
         {
             if (!ArchipelagoClient.IsConnected) return;
 
+            // Debug: Let's see the goal progress before we try to restore it
+            try
+            {
+                // Debug: Dump all values in the DataStorage
+                var ds = await ArchipelagoClient.Session.DataStorage[
+                    Archipelago.MultiClient.Net.Enums.Scope.Slot, "StS2AP_GoaledChars"].GetAsync<Dictionary<string, bool>>();
+                if(ds == null)
+                {
+                    LogUtility.Debug("RestoreGoaledCharsFromStorage: No goaled chars found in DataStorage");
+                }
+                else
+                {
+                    foreach (var x in ds)
+                    {
+                        LogUtility.Debug($"RestoreGoaledCharsFromStorage: Goaled DataStorage (Before Restore Attempt) - Key: {x.Key} / Value: {x.Value.ToString()}");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                LogUtility.Error($"RestoreGoaledCharsFromStorage: Failed to dump pre-restore debug - {e.Message}");
+            }
+
             try
             {
                 const string storageKey = "StS2AP_GoaledChars";
@@ -381,9 +405,22 @@ namespace StS2AP.Utils
                     Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
                     .GetAsync<Dictionary<string, bool>>();
 
+                // Debug: Dump all values in the DataStorage
+                foreach (var x in stored)
+                {
+                    LogUtility.Debug($"RestoreGoaledCharsFromStorage: Goaled DataStorage (After Restore Attempt) - Key: {x.Key} / Value: {x.Value.ToString()}");
+                }
+
+                LogUtility.Debug($"RestoreGoaledCharsFromStorage: stored is null? {stored == null}");
                 _goaledCharacters = stored != null
                     ? new HashSet<string>(stored.Keys)
                     : new HashSet<string>();
+
+                // Debug: Dump local cache of goaled chars
+                foreach (var x in _goaledCharacters)
+                {
+                    LogUtility.Debug($"RestoreGoaledCharsFromStorage: Local Cache Goaled Char - {x}");
+                }
 
                 LogUtility.Info($"Restored {_goaledCharacters.Count} goaled character(s) from DataStorage: {string.Join(", ", _goaledCharacters)}");
             }
@@ -399,7 +436,6 @@ namespace StS2AP.Utils
         /// </summary>
         public static async Task SetupOnChangedSaves()
         {
-
             try
             {
                 LogUtility.Info("Setting up StS Saves on the server");
@@ -437,6 +473,8 @@ namespace StS2AP.Utils
         /// </summary>
         public static async Task TrySetGoalAchieved()
         {
+            LogUtility.Debug("TrySetGoalAchieved() Called");
+
             if (CurrentPlayer == null || !ArchipelagoClient.IsConnected)
             {
                 LogUtility.Warn("TrySetGoalAchieved: no active player or not connected");
@@ -454,12 +492,22 @@ namespace StS2AP.Utils
 
                 var charName = CurrentPlayer.APName();
                 const string storageKey = "StS2AP_GoaledChars";
+                LogUtility.Debug($"TrySetGoalAchieved: charName - {charName}");
 
                 // Add to local cache HashSet.Add returns false if already present
                 bool wasNew = _goaledCharacters.Add(charName);
+                LogUtility.Debug($"TrySetGoalAchieved: wasNew - {wasNew.ToString()}");
 
                 if (wasNew)
                 {
+                    // Debug: Dump all values in the DataStorage
+                    var ds = await ArchipelagoClient.Session.DataStorage[
+                        Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey].GetAsync<Dictionary<string, bool>>();
+                    foreach(var x in ds)
+                    {
+                        LogUtility.Debug($"TrySetGoalAchieved: Goaled DataStorage (Before Update) - Key: {x.Key} / Value: {x.Value.ToString()}");
+                    }
+
                     // Persist to DataStorage atomically
                     ArchipelagoClient.Session.DataStorage[
                         Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
@@ -469,11 +517,19 @@ namespace StS2AP.Utils
                         Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
                         += Operation.Update(new Dictionary<string, bool> { { charName, true } });
 
-                    LogUtility.Success($"Recorded goal for '{charName}'. Total goaled: {_goaledCharacters.Count}");
+                    // Debug: Dump all values in the DataStorage
+                    var ds2 = await ArchipelagoClient.Session.DataStorage[
+                        Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey].GetAsync<Dictionary<string, bool>>();
+                    foreach (var x in ds2)
+                    {
+                        LogUtility.Debug($"TrySetGoalAchieved: Goaled DataStorage (After Update) - Key: {x.Key} / Value: {x.Value.ToString()}");
+                    }
+
+                    LogUtility.Success($"TrySetGoalAchieved: Recorded goal for '{charName}'. Total goaled: {_goaledCharacters.Count}");
                 }
                 else
                 {
-                    LogUtility.Info($"'{charName}' already recorded as goaled. Total goaled: {_goaledCharacters.Count}");
+                    LogUtility.Info($"TrySetGoalAchieved: '{charName}' already recorded as goaled. Total goaled: {_goaledCharacters.Count}");
                 }
 
                 // Delete save from server as a good steward
@@ -484,6 +540,7 @@ namespace StS2AP.Utils
                 int required = settings.NumCharsGoal == 0
                     ? settings.TotalCharacters
                     : settings.NumCharsGoal;
+                LogUtility.Debug($"TrySetGoalAchieved: required - {required.ToString()}");
 
                 LogUtility.Info($"Goal check: {_goaledCharacters.Count}/{required} characters have completed the run");
 
