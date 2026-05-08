@@ -181,7 +181,7 @@ namespace StS2AP.Patches
                 {
                     sceneTree.CreateTimer(0.2f).Timeout += () =>
                     {
-                        ArchipelagoGoalTrackerUI.UpdateGoalProgress();
+                        Callable.From(() => ArchipelagoGoalTrackerUI.UpdateGoalProgress()).CallDeferred();
                     };
                 }
             }

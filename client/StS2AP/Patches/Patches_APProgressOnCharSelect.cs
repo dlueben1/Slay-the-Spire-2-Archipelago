@@ -26,7 +26,7 @@ namespace StS2AP.Patches
                 ArchipelagoGoalTrackerUI.Show();
                 UpdateReceivedItems(characterModel);
                 UpdateCheckedLocations(characterModel);
-                ArchipelagoGoalTrackerUI.UpdateGoalProgress();
+                Callable.From(() => ArchipelagoGoalTrackerUI.UpdateGoalProgress()).CallDeferred();
             }
 
             /// <summary>
