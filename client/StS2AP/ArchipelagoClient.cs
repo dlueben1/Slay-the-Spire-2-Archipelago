@@ -601,7 +601,27 @@ namespace StS2AP
             if (slotData.ContainsKey("shuffle_all_cards")) settings.ShouldShuffleAllCards = Convert.ToBoolean(slotData["shuffle_all_cards"]);
             if (slotData.ContainsKey("lock_characters")) settings.NoCharactersLocked = Convert.ToInt32(slotData["lock_characters"]) == 0;
             if (slotData.ContainsKey("num_chars_goal")) settings.NumCharsGoal = Convert.ToInt32(slotData["num_chars_goal"]);
-            if (slotData.ContainsKey("characters") && slotData["characters"] is System.Collections.IList charsList) settings.TotalCharacters = charsList.Count;
+            if (slotData.ContainsKey("characters") && slotData["characters"] is System.Collections.IList charsList)
+            {
+                // Grab the total number of characters
+                settings.TotalCharacters = charsList.Count;
+
+                // Go through each character and add it to the list of Characters in our settings.
+                // Slot data from Archipelago.MultiClient.Net is deserialized via Newtonsoft.Json,
+                // so each entry arrives as a JObject, NOT a Dictionary<string, object>.
+                var charBuffer = new List<string>();
+                foreach (var charData in charsList)
+                {
+                    // Cast to JObject to safely read the "name" field
+                    if (charData is Newtonsoft.Json.Linq.JObject charObj && charObj.TryGetValue("name", out var nameToken))
+                    {
+                        charBuffer.Add(nameToken.ToString());
+                    }
+                }
+
+                // Store the characters locally
+                settings.AvailableCharacters = charBuffer.ToArray();
+            }
 
             if (slotData.ContainsKey("campfire_sanity"))
                 settings.CampfireSanity = Convert.ToInt32(slotData["campfire_sanity"]) != 0;

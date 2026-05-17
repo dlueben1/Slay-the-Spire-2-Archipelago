@@ -24,6 +24,13 @@ namespace StS2AP.Models
 
         public int NumCharsGoal { get; set; }
         public int TotalCharacters { get; set; }
+
+        /// <summary>
+        /// A collection of characters that are available in the Multiworld (i.e. have checks for this Slot)
+        /// 
+        /// This is *not* a collection of which characters are unlocked, just which characters *can* be unlocked for this slot.
+        /// </summary>
+        public string[] AvailableCharacters { get; set; }
         public bool CampfireSanity { get; set; }
         public bool GoldSanity { get; set; }
         public bool PotionSanity { get; set; }
