@@ -614,9 +614,9 @@ namespace StS2AP
                 // Grab the total number of characters
                 settings.TotalCharacters = charsList.Count;
 
-                // Go through each character and add it to the list of Characters in our settings.
-                // Slot data from Archipelago.MultiClient.Net is deserialized via Newtonsoft.Json,
-                // so each entry arrives as a JObject, NOT a Dictionary<string, object>.
+                /// Go through each character and add it to the list of Characters in our settings.
+                /// Slot data from Archipelago.MultiClient.Net is deserialized via Newtonsoft.Json,
+                /// so each entry arrives as a JObject, NOT a Dictionary<string, object>.
                 var charBuffer = new List<string>();
                 foreach (var charData in charsList)
                 {

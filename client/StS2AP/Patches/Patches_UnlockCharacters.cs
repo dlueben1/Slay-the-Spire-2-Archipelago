@@ -70,20 +70,17 @@ namespace StS2AP.Patches
 
                 foreach (NCharacterSelectButton button in container.GetChildren().OfType<NCharacterSelectButton>())
                 {
-                    // Button names are set as "{characterId.Entry}_button" during Init — Entry is lowercase (e.g. "silent_button")
-                    // We .Capitalize() after stripping the suffix to get the AP-style name (e.g. "Silent")
+                    /// Button names are set as "{characterId.Entry}_button" during Init — Entry is lowercase (e.g. "silent_button")
+                    /// We .Capitalize() after stripping the suffix to get the AP-style name (e.g. "Silent")
                     string rawName = button.Name.ToString();
                     string characterEntry = rawName.Replace("_button", "").Capitalize();
                     LogUtility.Debug($"OverrideCharacterSelectMenuOptions: Checking button '{rawName}' → characterEntry '{characterEntry}'");
 
                     // Hide any character that isn't in the available characters list for this Archipelago slot
-                    //bool isUnlocked = ArchipelagoClient.Progress.UnlockedCharacters
-                    //    .Any(c => c.Id.Entry == characterEntry);
+                    bool isVisible = ArchipelagoClient.Settings.AvailableCharacters.Contains(characterEntry);
+                    LogUtility.Debug($"OverrideCharacterSelectMenuOptions: '{characterEntry}' isVisible={isVisible}");
 
-                    bool isUnlocked = ArchipelagoClient.Settings.AvailableCharacters.Contains(characterEntry);
-                    LogUtility.Debug($"OverrideCharacterSelectMenuOptions: '{characterEntry}' isUnlocked={isUnlocked}");
-
-                    if (!isUnlocked)
+                    if (!isVisible)
                     {
                         LogUtility.Debug($"OverrideCharacterSelectMenuOptions: Hiding button '{rawName}' (character '{characterEntry}' not in slot)");
                         button.Visible = false;
@@ -124,8 +121,8 @@ namespace StS2AP.Patches
                     return;
                 }
 
-                // If there's already a handler registered for this instance, remove the old one first
-                // (guards against double-open without a matching close, which shouldn't happen but is defensive)
+                /// If there's already a handler registered for this instance, remove the old one first
+                /// (guards against double-open without a matching close, which shouldn't happen but is defensive)
                 if (Handlers.TryGetValue(__instance, out var existing))
                 {
                     LogUtility.Debug("SubscribeToUnlockEventOnOpen: Found stale handler for this instance — removing before re-subscribing");
@@ -143,12 +140,6 @@ namespace StS2AP.Patches
             /// <summary>
             /// Called when a character unlock item arrives while this screen is open.
             /// Finds the corresponding button by its raw game name and calls UnlockIfPossible() on it.
-            ///
-            /// IMPORTANT — button name casing:
-            /// `NCharacterSelectScreen.InitCharacterButtons` sets `button.Name = character.Id.Entry + "_button"`.
-            /// `Id.Entry` is lowercase (e.g. "silent"), so the full button name is "silent_button".
-            /// `APItemCharID` enum values are PascalCase (e.g. APItemCharID.Silent → "Silent").
-            /// We therefore use `.ToLower()` to convert the enum name before appending "_button".
             /// </summary>
             public static void HandleCharacterUnlocked(NCharacterSelectScreen screen, APItemCharID charId)
             {
@@ -166,16 +157,9 @@ namespace StS2AP.Patches
                     return;
                 }
 
-                // Dump all visible button names to help diagnose any future name-mismatch issues
-                var allButtonNames = container.GetChildren()
-                    .OfType<NCharacterSelectButton>()
-                    .Select(b => b.Name.ToString())
-                    .ToList();
-                LogUtility.Debug($"HandleCharacterUnlocked: All buttons in container: [{string.Join(", ", allButtonNames)}]");
-
-                // Build the expected button name from the APItemCharID (e.g. APItemCharID.Silent → "silent_button").
-                // We use case-insensitive comparison as a safety net, since the game's Id.Entry casing
-                // could vary (the node dump above will confirm the real casing in the logs).
+                /// Build the expected button name from the APItemCharID (e.g. APItemCharID.Silent → "silent_button").
+                /// We use case-insensitive comparison as a safety net, since the game's Id.Entry casing
+                /// could vary (the node dump above will confirm the real casing in the logs).
                 string buttonName = charId.ToString().ToLower() + "_button";
                 LogUtility.Debug($"HandleCharacterUnlocked: Looking for button matching '{buttonName}' (case-insensitive)");
 
