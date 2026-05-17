@@ -10,6 +10,7 @@ using StS2AP.Data;
 using StS2AP.Models;
 using StS2AP.UI;
 using StS2AP.Utils;
+using static StS2AP.Data.CharTable;
 using static StS2AP.Data.ItemTable;
 
 namespace StS2AP
@@ -488,6 +489,13 @@ namespace StS2AP
                 case APItem.Unlock:
                     {
                         GameUtility.UnlockCharacter(item);
+
+                        // Fire the CharacterUnlocked event on the Godot main thread.
+                        // This allows the character select screen (if open) to immediately
+                        // refresh the appropriate button without waiting for OnSubmenuOpened.
+                        var charId = item.GetStSCharID();
+                        Callable.From(() => CharacterUnlocked?.Invoke(charId)).CallDeferred();
+
                         break;
                     }
                 // Progressive Smiths/Rests
@@ -601,7 +609,27 @@ namespace StS2AP
             if (slotData.ContainsKey("shuffle_all_cards")) settings.ShouldShuffleAllCards = Convert.ToBoolean(slotData["shuffle_all_cards"]);
             if (slotData.ContainsKey("lock_characters")) settings.NoCharactersLocked = Convert.ToInt32(slotData["lock_characters"]) == 0;
             if (slotData.ContainsKey("num_chars_goal")) settings.NumCharsGoal = Convert.ToInt32(slotData["num_chars_goal"]);
-            if (slotData.ContainsKey("characters") && slotData["characters"] is System.Collections.IList charsList) settings.TotalCharacters = charsList.Count;
+            if (slotData.ContainsKey("characters") && slotData["characters"] is System.Collections.IList charsList)
+            {
+                // Grab the total number of characters
+                settings.TotalCharacters = charsList.Count;
+
+                /// Go through each character and add it to the list of Characters in our settings.
+                /// Slot data from Archipelago.MultiClient.Net is deserialized via Newtonsoft.Json,
+                /// so each entry arrives as a JObject, NOT a Dictionary<string, object>.
+                var charBuffer = new List<string>();
+                foreach (var charData in charsList)
+                {
+                    // Cast to JObject to safely read the "name" field
+                    if (charData is Newtonsoft.Json.Linq.JObject charObj && charObj.TryGetValue("name", out var nameToken))
+                    {
+                        charBuffer.Add(nameToken.ToString());
+                    }
+                }
+
+                // Store the characters locally
+                settings.AvailableCharacters = charBuffer.ToArray();
+            }
 
             if (slotData.ContainsKey("campfire_sanity"))
                 settings.CampfireSanity = Convert.ToInt32(slotData["campfire_sanity"]) != 0;
@@ -620,5 +648,12 @@ namespace StS2AP
         }
 
         #endregion
+
+        /// <summary>
+        /// Fires when a character unlock item is received and processed.
+        /// Passes the <see cref="APItemCharID"/> of the character that was just unlocked.
+        /// Always dispatched on the Godot main thread via CallDeferred so UI can safely respond.
+        /// </summary>
+        public static event Action<APItemCharID> CharacterUnlocked;
     }
 }
