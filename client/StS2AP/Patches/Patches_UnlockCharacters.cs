@@ -52,6 +52,7 @@ namespace StS2AP.Patches
             [HarmonyPostfix]
             public static void Postfix(NCharacterSelectScreen __instance)
             {
+                LogUtility.Debug($"DUMP OF AVAILABLE CHARACTERS: {string.Join(", ", ArchipelagoClient.Settings.AvailableCharacters)}");
                 LogUtility.Debug("Postfix for NCharacterSelectScreen.OnSubmenuOpened called. Checking for buttons to hide...");
                 if (CharButtonContainerField.GetValue(__instance) is not Control container)
                     return;
@@ -61,12 +62,14 @@ namespace StS2AP.Patches
                 foreach (NCharacterSelectButton button in container.GetChildren().OfType<NCharacterSelectButton>())
                 {
                     // Button names are set as "{characterId.Entry}_button" during Init
-                    string characterEntry = button.Name.ToString().Replace("_button", "");
+                    string characterEntry = button.Name.ToString().Replace("_button", "").Capitalize();
                     LogUtility.Debug($"Checking button for character entry: {characterEntry}");
 
                     // Hide any character that isn't in the unlocked character list for this Archipelago slot
-                    bool isUnlocked = ArchipelagoClient.Progress.UnlockedCharacters
-                        .Any(c => c.Id.Entry == characterEntry);
+                    //bool isUnlocked = ArchipelagoClient.Progress.UnlockedCharacters
+                    //    .Any(c => c.Id.Entry == characterEntry);
+
+                    bool isUnlocked = ArchipelagoClient.Settings.AvailableCharacters.Contains(characterEntry);
 
                     if (!isUnlocked)
                     {
