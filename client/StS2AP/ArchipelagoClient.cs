@@ -10,6 +10,7 @@ using StS2AP.Data;
 using StS2AP.Models;
 using StS2AP.UI;
 using StS2AP.Utils;
+using static StS2AP.Data.CharTable;
 using static StS2AP.Data.ItemTable;
 
 namespace StS2AP
@@ -488,6 +489,13 @@ namespace StS2AP
                 case APItem.Unlock:
                     {
                         GameUtility.UnlockCharacter(item);
+
+                        // Fire the CharacterUnlocked event on the Godot main thread.
+                        // This allows the character select screen (if open) to immediately
+                        // refresh the appropriate button without waiting for OnSubmenuOpened.
+                        var charId = item.GetStSCharID();
+                        Callable.From(() => CharacterUnlocked?.Invoke(charId)).CallDeferred();
+
                         break;
                     }
                 // Progressive Smiths/Rests
@@ -640,5 +648,12 @@ namespace StS2AP
         }
 
         #endregion
+
+        /// <summary>
+        /// Fires when a character unlock item is received and processed.
+        /// Passes the <see cref="APItemCharID"/> of the character that was just unlocked.
+        /// Always dispatched on the Godot main thread via CallDeferred so UI can safely respond.
+        /// </summary>
+        public static event Action<APItemCharID> CharacterUnlocked;
     }
 }
