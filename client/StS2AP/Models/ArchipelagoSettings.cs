@@ -30,7 +30,7 @@ namespace StS2AP.Models
         /// 
         /// This is *not* a collection of which characters are unlocked, just which characters *can* be unlocked for this slot.
         /// </summary>
-        public string[] AvailableCharacters { get; set; }
+        public string[] AvailableCharacters { get; set; } = Array.Empty<string>();
         public bool CampfireSanity { get; set; }
         public bool GoldSanity { get; set; }
         public bool PotionSanity { get; set; }
