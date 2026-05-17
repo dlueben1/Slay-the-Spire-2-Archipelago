@@ -127,7 +127,8 @@ namespace StS2AP.Patches
         }
 
         /// <summary>
-        /// TEST: Example of how to intercept the Back Button behavior on the Character Select screen. 
+        /// Ensures the player backs out to the main menu (and thus hides the connection UI)
+        /// when they press the back button from the character select screen.
         /// </summary>
         [HarmonyPatch(typeof(NSubmenuStack), nameof(NSubmenuStack.Pop))]
         public static class BackOutFromCharSelectToMainMenu
