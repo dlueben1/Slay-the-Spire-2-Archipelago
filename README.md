@@ -4,11 +4,12 @@ Archipelago Client & APWorld for STS2
 
 # Download the Latest Playable Release [Here](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest)
 
+> [!IMPORTANT]
+> We do **not** support the Beta Branch, only the Public Branch of the game! There can be breaking changes to the underlying game's code that makes supporting beta branches unrealistic.
+
 ## Alpha Development
 
-This mod is currently in Alpha, and is unfinished. It's not feature-complete to consider it a v1, and it's not ready for playing casually. It's purely in the experimental phase right now.
-
-Currently it's a simple proof-of-concept where you can only get Gold Rewards and you only send checks as you climb the Spire. Everything else will be coming soon!
+This mod is currently in Alpha, and is unfinished. It's not feature-complete to consider it a v1, but it's perfectly playable! While there are some edge case bugs, most people have successfully played an Archipelago with this world and had no issues.
 
 > [!WARNING]
 > The mod only supports English at the moment, but as we understand localization better, we can work with the community to support more languages
@@ -30,7 +31,9 @@ Currently it's a simple proof-of-concept where you can only get Gold Rewards and
 
 - Card/Relic Rewards shuffled in the multiworld
 - Goldsanity
-- Progressive Rest/Smith
+- Campfiresanity (Progressive Rest/Smith)
+- Potionsanity
+- Saving to the AP Server, and Saving when Connection is Lost
 
 ## What's **NOT** Included
 
@@ -40,7 +43,6 @@ Currently it's a simple proof-of-concept where you can only get Gold Rewards and
 - Death Link
 - Traps
 - Interesting Filler Items
-- Saving the Game
 - Polish
 
 > [!CAUTION]
