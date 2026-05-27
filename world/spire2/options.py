@@ -1,7 +1,8 @@
 from dataclasses import dataclass
+from typing import List
 
 from Options import OptionSet, Range, Toggle, Visibility, Choice, TextChoice, OptionDict, OptionCounter, \
-    PerGameCommonOptions
+    PerGameCommonOptions, OptionGroup
 
 from schema import Schema, Optional, And
 
@@ -314,29 +315,3 @@ class Spire2Options(PerGameCommonOptions):
     shop_remove_slots: ShopRemoveSlots
     shop_sanity_costs: ShopSanityCosts
     seeded: SeededRun
-
-# option_groups: List[OptionGroup] = [
-#     OptionGroup("Sanities", [
-#         IncludeFloorChecks,
-#         CampfireSanity,
-#         GoldSanity,
-#         PotionSanity,
-#         KeySanity,
-#         ShopSanity,
-#         ShopCardSlots,
-#         ShopNeutralSlots,
-#         ShopRelicSlots,
-#         ShopPotionSlots,
-#         ShopRemoveSlots,
-#         ShopSanityCosts,
-#     ]),
-#     OptionGroup("Traps", [
-#         TrapChance,
-#         TrapWeights
-#     ]),
-#     OptionGroup("Misc", [
-#         ChattyMC,
-#         FillerWeights,
-#         SeededRun,
-#     ]),
-# ]
