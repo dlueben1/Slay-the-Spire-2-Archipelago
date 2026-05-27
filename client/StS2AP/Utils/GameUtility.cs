@@ -469,7 +469,7 @@ namespace StS2AP.Utils
         /// <summary>
         /// Checks whether the player has met the goal condition and sends SetGoalAchieved if so.
         /// Uses a local HashSet for deduplication to avoid DataStorage deserialization issues
-        /// and then writes to DataStorage with Operation.Update for cross-session persistence
+        /// and then writes to DataStorage with Operation.Update for cross-session persistence.
         /// </summary>
         public static async Task TrySetGoalAchieved()
         {
@@ -526,6 +526,9 @@ namespace StS2AP.Utils
                     }
 
                     LogUtility.Success($"TrySetGoalAchieved: Recorded goal for '{charName}'. Total goaled: {_goaledCharacters.Count}");
+
+                    // Now that the character has cleared, we should release all of their checks
+                    await TryReleaseAllCharacterChecks(charName);
                 }
                 else
                 {
@@ -555,6 +558,42 @@ namespace StS2AP.Utils
             {
                 LogUtility.Error($"TrySetGoalAchieved failed: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Releases all checks for a given Character. 
+        /// This function should be called upon clearing a run with that character.
+        /// </summary>
+
+        public static async Task TryReleaseAllCharacterChecks(string charName)
+        {
+            // Grab all locations whose name contains the character's name (e.g. "Ironclad")
+            var characterLocations = ArchipelagoClient.ScoutedLocations
+                .Where(kvp => kvp.Value.LocationName.Contains(charName, StringComparison.OrdinalIgnoreCase))
+                .Select(kvp => kvp.Key)
+                .ToList();
+
+            // It shouldn't be possible, but if somehow we get here, write this problem to the log.
+            if (characterLocations.Count == 0)
+            {
+                LogUtility.Warn($"TryReleaseAllCharacterChecks(): No locations found containing '{charName}'");
+                return;
+            }
+
+            LogUtility.Info($"TryReleaseAllCharacterChecks: Releasing {characterLocations.Count} checks for '{charName}'");
+
+            // Send every unchecked location for this character
+            foreach (var locationId in characterLocations)
+            {
+                if (!ArchipelagoClient.CheckedLocations.Contains(locationId) && locationId != -1 && ArchipelagoClient.ScoutedLocations.ContainsKey(locationId))
+                {
+                    // Check the location off and let the server know
+                    ArchipelagoClient.CheckedLocations.Add(locationId);
+                    await ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(locationId);
+                }
+            }
+
+            await Task.CompletedTask;
         }
 
         public static void TrySendPressStartCheck()
