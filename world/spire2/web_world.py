@@ -1,6 +1,12 @@
 from BaseClasses import Tutorial
 from worlds.AutoWorld import WebWorld
-
+from Options import OptionGroup
+from .options import (
+    Characters, PickNumberCharacters, GoalNumChar,
+    LockCharacters, UnlockedCharacter, Ascension,
+    IncludeFloorChecks, CampfireSanity, GoldSanity, PotionSanity,
+    CardReward,
+)
 
 # The info needed for the Archipelago Website, not the actual `apworld`
 class SlayTheSpire2Web(WebWorld):
@@ -13,4 +19,21 @@ class SlayTheSpire2Web(WebWorld):
             "setup/en",
             ["Kirbyfanner"]
         )
+    ]
+
+    option_groups = [
+        OptionGroup("Character Options", [
+            Characters,
+            PickNumberCharacters,
+            GoalNumChar,
+            LockCharacters,
+            UnlockedCharacter,
+        ]),
+        OptionGroup("Sanities", [
+            IncludeFloorChecks,
+            CampfireSanity,
+            GoldSanity,
+            PotionSanity,
+            CardReward,
+        ]),
     ]
