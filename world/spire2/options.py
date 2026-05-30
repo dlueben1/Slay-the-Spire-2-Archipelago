@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import List
 
 from Options import OptionSet, Range, Toggle, Visibility, Choice, TextChoice, OptionDict, OptionCounter, \
-    PerGameCommonOptions, OptionGroup
+    PerGameCommonOptions, OptionGroup, DeathLink
 
 from schema import Schema, Optional, And
 
@@ -289,6 +289,7 @@ class FillerWeights(OptionCounter):
 
 @dataclass
 class Spire2Options(PerGameCommonOptions):
+    death_link: DeathLink
     characters: Characters
     pick_num_characters: PickNumberCharacters
     num_chars_goal: GoalNumChar
