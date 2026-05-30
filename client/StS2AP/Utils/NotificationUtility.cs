@@ -1,4 +1,5 @@
-﻿using Archipelago.MultiClient.Net.MessageLog.Messages;
+﻿using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
+using Archipelago.MultiClient.Net.MessageLog.Messages;
 using Archipelago.MultiClient.Net.Models;
 using Godot;
 using MegaCrit.Sts2.Core.DevConsole;
@@ -315,6 +316,15 @@ namespace StS2AP.Utils
             EnqueueNotification(
                 msg,
                 NotificationType.Info);
+        }
+
+        /// <summary>
+        /// Displays a notification about a death link trigger in the multiworld
+        /// </summary>
+        /// <param name="death"></param>
+        public static void ShowDeathLink(DeathLink death)
+        {
+            // TODO: Show notification, but also don't show this unless the service is enabled
         }
 
         #endregion

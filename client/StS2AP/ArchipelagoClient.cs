@@ -1,4 +1,5 @@
 ﻿using Archipelago.MultiClient.Net;
+using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Helpers;
 using Archipelago.MultiClient.Net.MessageLog.Messages;
@@ -88,6 +89,10 @@ namespace StS2AP
         /// </summary>
         public static ArchipelagoProgress Progress { get; set; } = new();
 
+        /// <summary>
+        /// Handles Death Link functionality, which allows players to share deaths across the multiworld.
+        /// </summary>
+        public static DeathLinkService DeathLinkController { get; set; }
 
         /// <summary>
         /// Represents how caught up we are with Archipelago's sent items
@@ -157,6 +162,13 @@ namespace StS2AP
             // Listen for connection termination
             Session.Socket.SocketClosed += OnSocketSessionEnd;
             Session.MessageLog.OnMessageReceived += OnMessageReceived;
+
+            // Setup the Death Link Service (even if the player isn't using Death Link)
+            DeathLinkController = Session.CreateDeathLinkService();
+            DeathLinkController.OnDeathLinkReceived += deathLinkInfo =>
+            {
+                Callable.From(() => GameUtility.OnDeathLinkReceived(deathLinkInfo)).CallDeferred();
+            };
 
             // Attempt to connect to the server
             try
@@ -251,6 +263,17 @@ namespace StS2AP
             {
                 // Get all settings for this player
                 Settings = GetPlayerSettings();
+
+                // Enable/Disable the Death Link Service based on user settings
+                LogUtility.Info($"Is Death Link Enabled: {Settings.IsDeathLinkEnabled.ToString()}");
+                if (Settings.IsDeathLinkEnabled)
+                {
+                    DeathLinkController.EnableDeathLink();
+                }
+                else
+                {
+                    DeathLinkController.DisableDeathLink();
+                }
             }
             catch (Exception ex)
             {
@@ -290,6 +313,7 @@ namespace StS2AP
             _ = GameUtility.RestoreGoaledCharsFromStorage();
 
             _ = GameUtility.SetupOnChangedSaves();
+
             // Let the game know that we've connected
             Callable.From(() => ConnectionStateChanged?.Invoke(ConnectionState.Connected)).CallDeferred();
         }
@@ -606,6 +630,7 @@ namespace StS2AP
             // Apply all found settings
             if (slotData.ContainsKey("ascension")) settings.AscensionLevel = Convert.ToInt32(slotData["ascension"]);
             if (slotData.ContainsKey("seeded")) settings.IsSeeded = Convert.ToBoolean(slotData["seeded"]);
+            if (slotData.ContainsKey("death_link")) settings.IsDeathLinkEnabled = Convert.ToBoolean(slotData["death_link"]);
             if (slotData.ContainsKey("shuffle_all_cards")) settings.ShouldShuffleAllCards = Convert.ToBoolean(slotData["shuffle_all_cards"]);
             if (slotData.ContainsKey("lock_characters")) settings.NoCharactersLocked = Convert.ToInt32(slotData["lock_characters"]) == 0;
             if (slotData.ContainsKey("num_chars_goal")) settings.NumCharsGoal = Convert.ToInt32(slotData["num_chars_goal"]);

@@ -35,5 +35,14 @@ namespace StS2AP.Models
         public bool GoldSanity { get; set; }
         public bool PotionSanity { get; set; }
         public bool Floorsanity { get; set; }
+
+        #region Death Link Settings
+
+        /// <summary>
+        /// Whether this slot is participating in Death Link
+        /// </summary>
+        public bool IsDeathLinkEnabled { get; set; }
+
+        #endregion
     }
 }

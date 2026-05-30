@@ -408,6 +408,7 @@ class SlayTheSpire2World(World):
             "potion_sanity",
             "gold_sanity",
             "campfire_sanity",
+            "death_link",
         ))
         return slot_data
 

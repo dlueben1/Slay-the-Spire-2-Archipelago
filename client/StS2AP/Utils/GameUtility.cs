@@ -1,5 +1,7 @@
-﻿using Archipelago.MultiClient.Net.Models;
+﻿using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
+using Archipelago.MultiClient.Net.Models;
 using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.DevConsole.ConsoleCommands;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Factories;
 using MegaCrit.Sts2.Core.Localization;
@@ -758,6 +760,24 @@ namespace StS2AP.Utils
             catch (Exception ex)
             {
                 LogUtility.Warn($"Failed to delete recovery save file: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+        #region Death Link
+
+        /// <summary>
+        /// Processes a received Death Link from the Multiworld.
+        /// </summary>
+        public static void OnDeathLinkReceived(DeathLink info)
+        {
+            LogUtility.Info($"Received Death Link from {info.Source}");
+            // TODO: Improve this with it's own func
+            NotificationUtility.ShowRawText($"{info.Source} has died!");
+            if(CurrentPlayer != null)
+            {
+                _ = CreatureCmd.Kill(CurrentPlayer.Creature, true);
             }
         }
 
