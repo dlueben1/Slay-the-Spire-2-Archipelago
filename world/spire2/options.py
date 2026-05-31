@@ -235,6 +235,19 @@ class AscensionDown(Range):
     range_end = 10
     default = 0
 
+# Death Link Options
+
+class DeathLinkType(Choice):
+    """If Death Link is enabled, this setting determines what happens when another player in the Multiworld dies.
+    kill: When you receive a Death Link, you die.
+    damage: When you receive a Death Link, you take a fixed amount of damage. This amount can be configured with the ??? option.
+    curse: When you receive a Death Link, you gain a curse card in your deck."""
+    display_name = "On Death Link Received"
+    option_Kill = 0
+    option_Damage = 1
+    option_Curse = 2
+    default = 2
+
 # class TrapChance(Range):
 #     """Chance that a filler item is replaced with a trap.  Requires `include_floor_checks`
 #     for any traps to be added.
@@ -290,6 +303,7 @@ class FillerWeights(OptionCounter):
 @dataclass
 class Spire2Options(PerGameCommonOptions):
     death_link: DeathLink
+    death_link_type: DeathLinkType
     characters: Characters
     pick_num_characters: PickNumberCharacters
     num_chars_goal: GoalNumChar
