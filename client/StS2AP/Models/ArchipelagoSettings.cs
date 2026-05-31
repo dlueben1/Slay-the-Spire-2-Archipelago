@@ -52,7 +52,7 @@ namespace StS2AP.Models
         #region Death Link Settings
 
         /// <summary>
-        /// Whether this slot is participating in Death Link
+        /// Whether this slot is participating in Death Link.
         /// </summary>
         public bool IsDeathLinkEnabled { get; set; }
 
@@ -60,6 +60,17 @@ namespace StS2AP.Models
         /// Controls what should happen when a Death Link is received.
         /// </summary>
         public DeathLinkEffect DeathLinkType { get; set; }
+
+        /// <summary>
+        /// The percentage of max health that should be lost when a Death Link is received.
+        /// Only applies if the Death Link Type is set to Damage.
+        /// 
+        /// Normally something like this would be a float, but based on how the YAMLs work,
+        /// I think it's easier if the user types in a percentage.
+        /// 
+        /// This value should be between 1 and 100, inclusive.
+        /// </summary>
+        public int DeathLinkDamagePercent { get; set; }
 
         #endregion
     }
