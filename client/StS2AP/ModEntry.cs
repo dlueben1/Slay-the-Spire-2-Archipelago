@@ -2,6 +2,8 @@
 using MegaCrit.Sts2.Core.Modding;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
+using MegaCrit.Sts2.Core.Saves.Runs;
+using StS2AP.Models;
 using StS2AP.Utils;
 using System;
 using System.IO;
@@ -17,8 +19,8 @@ namespace StS2AP
 
         public static void Initialize()
         {
-            // Register assembly resolver FIRST, before any other code runs
-            // This ensures dependencies like Archipelago.MultiClient.Net can be found
+            /// Register assembly resolver FIRST, before any other code runs
+            /// This ensures dependencies like Archipelago.MultiClient.Net can be found
             RegisterAssemblyResolver();
 
             // Initialize debug console first so we can see log output
@@ -29,6 +31,17 @@ namespace StS2AP
 
             LogUtility.Info("Archipelago mod initializing...");
 
+            /// Inject custom Death Link Curse into the game, whether the player is a part of DeathLink used or not.
+            /// My understanding (which we may learn better later) is that we need to inject cards like this very early on in the mod's
+            /// initialization process.
+            /// 
+            /// We also need to let StS know that there's a property on the Death Link Curse that needs to be saved/loaded with the save system. 
+            /// This is done by injecting the type into the SavedPropertiesTypeCache.
+            /// 
+            /// This also might change when we start using BaseLib. It probably makes this part easier.
+            SavedPropertiesTypeCache.InjectTypeIntoCache(typeof(DeathLinkCurse));
+
+            // Apply all Harmony Patches
             try
             {
                 var harmony = new Harmony("archipelago.patch");

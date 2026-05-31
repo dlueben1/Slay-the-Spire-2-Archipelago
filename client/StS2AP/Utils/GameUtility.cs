@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.DevConsole.ConsoleCommands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Factories;
+using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
@@ -18,6 +19,7 @@ using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves;
 using Newtonsoft.Json.Linq;
 using StS2AP.Extensions;
+using StS2AP.Models;
 using StS2AP.Patches;
 using StS2AP.UI;
 using System.Text.Json;
@@ -781,7 +783,8 @@ namespace StS2AP.Utils
             // If we're not in the run, there's nothing to do other than log it
             if (!GameUtility.IsInRun || CurrentPlayer == null) return;
 
-            _ = AddCurseToDeck();
+            // Runs the Async Function in such a way that errors are not silently consumed
+            TaskHelper.RunSafely(AddCurseToDeck(info.Cause ?? $"{info.Source} died"));
         }
 
         /// <summary>
@@ -795,16 +798,31 @@ namespace StS2AP.Utils
         }
 
         /// <summary>
-        /// Adds the Curse to the deck.
-        /// NOTE: For some reason I seem to need both of these functions. If one of them isn't present, the curse is not added properly.
+        /// Adds the Death Link Curse to the deck.
         /// </summary>
-        private async static Task AddCurseToDeck()
+        private async static Task AddCurseToDeck(string deathMessage)
         {
-            // Permanently adds to the deck (future combats)
-            await CardPileCmd.AddCurseToDeck<Injury>(CurrentPlayer!);
+            // Cache the death message, so that the Curse can store it after it's been properly cloned
+            ArchipelagoClient.LastDeathLinkMessage = deathMessage;
 
-            // Adds to the current combat's draw pile (this combat, will fail silently if not in combat)
-            await CardPileCmd.AddToCombatAndPreview<Injury>(CurrentPlayer!.Creature, PileType.Draw, count: 1, addedByPlayer: false);
+            try
+            {
+                // Permanently adds a clone (with the SavedProperty stamped) to the deck
+                await CardPileCmd.AddCursesToDeck(new[] { ModelDb.Card<DeathLinkCurse>() }, CurrentPlayer!);
+
+                // Also add to the current combat draw pile, if in combat
+                if (CurrentPlayer!.Creature.CombatState != null)
+                {
+                    var combatCard = (DeathLinkCurse)CurrentPlayer.Creature.CombatState.CreateCard(
+                        ModelDb.Card<DeathLinkCurse>(), CurrentPlayer);
+                    await CardPileCmd.AddGeneratedCardToCombat(combatCard, PileType.Draw, addedByPlayer: false);
+                }
+            }
+            finally
+            {
+                // Flush the buffer death message (good stewardship but honestly probably unnecessary)
+                ArchipelagoClient.LastDeathLinkMessage = null;
+            }
         }
 
         #endregion
