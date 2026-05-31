@@ -2,10 +2,12 @@
 using Archipelago.MultiClient.Net.Models;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.DevConsole.ConsoleCommands;
+using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Factories;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Characters;
 using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Nodes;
@@ -775,10 +777,34 @@ namespace StS2AP.Utils
             LogUtility.Info($"Received Death Link from {info.Source}");
             // TODO: Improve this with it's own func
             NotificationUtility.ShowRawText($"{info.Source} has died!");
-            if(CurrentPlayer != null)
-            {
-                _ = CreatureCmd.Kill(CurrentPlayer.Creature, true);
-            }
+
+            // If we're not in the run, there's nothing to do other than log it
+            if (!GameUtility.IsInRun || CurrentPlayer == null) return;
+
+            _ = AddCurseToDeck();
+        }
+
+        /// <summary>
+        /// Kills the Player
+        /// 
+        /// TODO: Don't make this a function
+        /// </summary>
+        private static void DeathLink_Kill()
+        {
+            _ = CreatureCmd.Kill(CurrentPlayer!.Creature, true);
+        }
+
+        /// <summary>
+        /// Adds the Curse to the deck.
+        /// NOTE: For some reason I seem to need both of these functions. If one of them isn't present, the curse is not added properly.
+        /// </summary>
+        private async static Task AddCurseToDeck()
+        {
+            // Permanently adds to the deck (future combats)
+            await CardPileCmd.AddCurseToDeck<Injury>(CurrentPlayer!);
+
+            // Adds to the current combat's draw pile (this combat, will fail silently if not in combat)
+            await CardPileCmd.AddToCombatAndPreview<Injury>(CurrentPlayer!.Creature, PileType.Draw, count: 1, addedByPlayer: false);
         }
 
         #endregion
