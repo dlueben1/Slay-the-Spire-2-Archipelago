@@ -321,10 +321,18 @@ namespace StS2AP.Utils
         /// <summary>
         /// Displays a notification about a death link trigger in the multiworld
         /// </summary>
-        /// <param name="death"></param>
+        /// <param name="death">Information about the Death Link event</param>
         public static void ShowDeathLink(DeathLink death)
         {
-            // TODO: Show notification, but also don't show this unless the service is enabled
+            // If somehow we got here and Death Link is disabled, then back out
+            if (!ArchipelagoClient.Settings.IsDeathLinkEnabled) return;
+
+            // If the cause is valid, display that, otherwise use a generic message
+            string cause = string.IsNullOrEmpty(death.Cause) ? $"{death.Source} has died!" : death.Cause;
+
+            // Wrap the entire message in red color and sine animation BBcode tags
+            string message = $"[sine][color=red]{cause}[/color][/sine]";
+            EnqueueNotification(message, NotificationType.Info);
         }
 
         #endregion

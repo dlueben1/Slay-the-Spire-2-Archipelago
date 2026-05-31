@@ -7,6 +7,19 @@ using System.Threading.Tasks;
 namespace StS2AP.Models
 {
     /// <summary>
+    /// What should happen when a Death Link is received
+    /// Kill = The player is killed immediately
+    /// Damage = The player receives a percentage of their max health as damage
+    /// Curse = The player receives a curse in their deck
+    /// </summary>
+    public enum DeathLinkEffect: int
+    {
+        Kill = 0,
+        Damage = 1,
+        Curse = 2
+    }
+
+    /// <summary>
     /// The settings that a player has configured for their Archipelago Slot
     /// </summary>
     public class ArchipelagoSettings
@@ -42,6 +55,11 @@ namespace StS2AP.Models
         /// Whether this slot is participating in Death Link
         /// </summary>
         public bool IsDeathLinkEnabled { get; set; }
+
+        /// <summary>
+        /// Controls what should happen when a Death Link is received.
+        /// </summary>
+        public DeathLinkEffect DeathLinkType { get; set; }
 
         #endregion
     }

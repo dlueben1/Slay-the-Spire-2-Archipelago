@@ -773,28 +773,38 @@ namespace StS2AP.Utils
 
         /// <summary>
         /// Processes a received Death Link from the Multiworld.
+        /// 
+        /// BTW, I'm using `TaskHelper.RunSafely()` because that seems to be a way that MegaCrit runs Async tasks from sync functions,
+        /// and it's helpful because it won't silently consume any exceptions like the `_ = func()` syntax does.
         /// </summary>
         public static void OnDeathLinkReceived(DeathLink info)
         {
+            // It shouldn't be possible, but to be defensive, ignore this function if Death Link is disabled and somehow we got here
+            if (!ArchipelagoClient.Settings.IsDeathLinkEnabled) return;
+
+            // Log/Notify
             LogUtility.Info($"Received Death Link from {info.Source}");
-            // TODO: Improve this with it's own func
-            NotificationUtility.ShowRawText($"{info.Source} has died!");
+            NotificationUtility.ShowDeathLink(info);
 
             // If we're not in the run, there's nothing to do other than log it
             if (!GameUtility.IsInRun || CurrentPlayer == null) return;
 
-            // Runs the Async Function in such a way that errors are not silently consumed
-            TaskHelper.RunSafely(AddCurseToDeck(info.Cause ?? $"{info.Source} died"));
-        }
-
-        /// <summary>
-        /// Kills the Player
-        /// 
-        /// TODO: Don't make this a function
-        /// </summary>
-        private static void DeathLink_Kill()
-        {
-            _ = CreatureCmd.Kill(CurrentPlayer!.Creature, true);
+            // Handle the Death Link based on the intended effect
+            switch(ArchipelagoClient.Settings.DeathLinkType)
+            {
+                case DeathLinkEffect.Kill:
+                    {
+                        // Kill the player immediately.
+                        TaskHelper.RunSafely(CreatureCmd.Kill(CurrentPlayer!.Creature, true));
+                        break;
+                    }
+                case DeathLinkEffect.Curse:
+                    {
+                        // Add a "Death Fragment" curse to the player's deck
+                        TaskHelper.RunSafely(AddCurseToDeck(info.Cause ?? $"{info.Source} died"));
+                        break;
+                    }
+            }
         }
 
         /// <summary>
