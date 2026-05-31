@@ -90,11 +90,6 @@ namespace StS2AP
         public static ArchipelagoProgress Progress { get; set; } = new();
 
         /// <summary>
-        /// Handles Death Link functionality, which allows players to share deaths across the multiworld.
-        /// </summary>
-        public static DeathLinkService DeathLinkController { get; set; }
-
-        /// <summary>
         /// Represents how caught up we are with Archipelago's sent items
         /// </summary>
         private static int Index;
@@ -124,6 +119,21 @@ namespace StS2AP
         /// Populated on connection to avoid async calls during gameplay.
         /// </summary>
         public static Dictionary<long, ScoutedItemInfo> ScoutedLocations { get; set; } = new();
+
+        #region Death Link Information
+
+        /// <summary>
+        /// Handles Death Link functionality, which allows players to share deaths across the multiworld.
+        /// </summary>
+        public static DeathLinkService DeathLinkController { get; set; }
+
+        /// <summary>
+        /// A cache of the last Death Link message received, which will be loaded into a clone of the Death Link Curse after it
+        /// goes from "canonical" to "mutable" (i.e. instanced)
+        /// </summary>
+        public static string? LastDeathLinkMessage { get; set; }
+
+        #endregion
 
         #region Networking
 
