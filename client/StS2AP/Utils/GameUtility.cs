@@ -1,5 +1,6 @@
 ﻿using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
 using Archipelago.MultiClient.Net.Models;
+using Godot;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.DevConsole.ConsoleCommands;
 using MegaCrit.Sts2.Core.Entities.Cards;
@@ -17,6 +18,7 @@ using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves;
+using MegaCrit.Sts2.Core.ValueProps;
 using Newtonsoft.Json.Linq;
 using StS2AP.Extensions;
 using StS2AP.Models;
@@ -794,8 +796,24 @@ namespace StS2AP.Utils
             {
                 case DeathLinkEffect.Kill:
                     {
+                        /// Record the timestamp so the send patch can suppress re-triggering a Death Link
+                        /// if we hit the Game Over screen as a direct result of this kill.
+                        ArchipelagoClient.LastDeathLinkReceivedAt = DateTime.UtcNow;
+
                         // Kill the player immediately.
-                        TaskHelper.RunSafely(CreatureCmd.Kill(CurrentPlayer!.Creature, true));
+                        TaskHelper.RunSafely(CreatureCmd.Kill(CurrentPlayer.Creature, true));
+                        break;
+                    }
+                case DeathLinkEffect.Damage:
+                    {
+                        /// Record the timestamp so the send patch can suppress re-triggering a Death Link
+                        /// if the incoming damage is lethal and we hit the Game Over screen.
+                        ArchipelagoClient.LastDeathLinkReceivedAt = DateTime.UtcNow;
+
+                        /// Deal a percentage of the player's max health, as damage
+                        int damage = Mathf.RoundToInt(CurrentPlayer.Creature.MaxHp * (ArchipelagoClient.Settings.DeathLinkDamagePercent / 100.0f));
+                        int newHp = Math.Max(0, CurrentPlayer.Creature.CurrentHp - damage);
+                        TaskHelper.RunSafely(CreatureCmd.SetCurrentHp(CurrentPlayer.Creature, newHp));
                         break;
                     }
                 case DeathLinkEffect.Curse:

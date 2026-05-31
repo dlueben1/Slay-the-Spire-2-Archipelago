@@ -410,6 +410,7 @@ class SlayTheSpire2World(World):
             "campfire_sanity",
             "death_link",
             "death_link_type",
+            "death_link_damage_percent",
         ))
         return slot_data
 

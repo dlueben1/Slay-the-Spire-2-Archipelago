@@ -248,6 +248,15 @@ class DeathLinkType(Choice):
     option_Curse = 2
     default = 2
 
+class DeathLinkDamagePercent(Range):
+    """If Death Link is enabled and the Death Link Type is set to Damage, this 
+    setting determines how much damage you take when you receive a Death Link, 
+    as a percentage of your max health."""
+    display_name = "Death Link Damage Percent"
+    range_start = 1
+    range_end = 100
+    default = 25
+
 # class TrapChance(Range):
 #     """Chance that a filler item is replaced with a trap.  Requires `include_floor_checks`
 #     for any traps to be added.
@@ -304,6 +313,7 @@ class FillerWeights(OptionCounter):
 class Spire2Options(PerGameCommonOptions):
     death_link: DeathLink
     death_link_type: DeathLinkType
+    death_link_damage_percent: DeathLinkDamagePercent
     characters: Characters
     pick_num_characters: PickNumberCharacters
     num_chars_goal: GoalNumChar

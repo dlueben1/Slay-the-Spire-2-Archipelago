@@ -18,6 +18,13 @@ namespace StS2AP.Patches
     public static class Patches_DeathLink
     {
         /// <summary>
+        /// How many seconds after receiving a Death Link that we'll suppress sending one back out.
+        /// This prevents the infinite feedback loop where receiving a Death Link kill triggers us to send
+        /// another one back, which kills the sender again, and so on.
+        /// </summary>
+        private const double DeathLinkSuppressionWindowSeconds = 3.0;
+
+        /// <summary>
         /// Fires when the player sees the "Game Over" screen.
         /// If Death Link is enabled, this is how we'll send our Death Link Event.
         /// </summary>
@@ -28,6 +35,30 @@ namespace StS2AP.Patches
             {
                 // If Death Link isn't enabled, there's nothing to do
                 if (!ArchipelagoClient.Settings.IsDeathLinkEnabled) return true;
+
+                /// If the timestamp is within the suppression window, this death was caused by an
+                /// incoming Death Link — don't echo it back out or we'll create an infinite loop.
+                /// 
+                /// We only care about this if the Death Link Type is Kill or Damage. If it's Curse,
+                /// `LastDeathLinkReceivedAt` will never have a value, so this suppression check won't
+                /// fire.
+                if (ArchipelagoClient.LastDeathLinkReceivedAt.HasValue)
+                {
+                    double secondsSinceReceived = (DateTime.UtcNow - ArchipelagoClient.LastDeathLinkReceivedAt.Value).TotalSeconds;
+                    if (secondsSinceReceived <= DeathLinkSuppressionWindowSeconds)
+                    {
+                        LogUtility.Info($"Suppressing outgoing Death Link — this death was caused by a received Death Link ({secondsSinceReceived:F2}s ago, within {DeathLinkSuppressionWindowSeconds}s window).");
+
+                        // Clear the timestamp so future deaths are not incorrectly suppressed
+                        ArchipelagoClient.LastDeathLinkReceivedAt = null;
+
+                        // Still return true so the Game Over screen shows normally
+                        return true;
+                    }
+
+                    // Outside the window — clear the stale timestamp and fall through to send
+                    ArchipelagoClient.LastDeathLinkReceivedAt = null;
+                }
 
                 // Grab the state of the Run
                 RunState? runState = Traverse.Create(__instance).Field<RunState>("_state").Value;

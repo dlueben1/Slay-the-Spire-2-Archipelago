@@ -60,7 +60,7 @@ namespace StS2AP
         /// <summary>
         /// Minimum Archipelago Version that's supported by the mod.
         /// </summary>
-        public const string APVersion = "0.6.6";
+        public const string APVersion = "0.6.7";
 
         /// <summary>
         /// The current connection state of the client.
@@ -132,6 +132,17 @@ namespace StS2AP
         /// goes from "canonical" to "mutable" (i.e. instanced)
         /// </summary>
         public static string? LastDeathLinkMessage { get; set; }
+
+        /// <summary>
+        /// The UTC timestamp of the most recently received Death Link.
+        /// 
+        /// Used to suppress re-triggering a Death Link when the player dies
+        /// as a direct result of receiving one. 
+        /// 
+        /// Null if no Death Link has been received this session,
+        /// or if we're in Curse mode (which doesn't warrant suppression).
+        /// </summary>
+        public static DateTime? LastDeathLinkReceivedAt { get; set; }
 
         #endregion
 
@@ -646,6 +657,7 @@ namespace StS2AP
             if (slotData.ContainsKey("shuffle_all_cards")) settings.ShouldShuffleAllCards = Convert.ToBoolean(slotData["shuffle_all_cards"]);
             if (slotData.ContainsKey("lock_characters")) settings.NoCharactersLocked = Convert.ToInt32(slotData["lock_characters"]) == 0;
             if (slotData.ContainsKey("death_link_type")) settings.DeathLinkType = (DeathLinkEffect)Convert.ToInt32(slotData["death_link_type"]);
+            if (slotData.ContainsKey("death_link_damage_percent")) settings.DeathLinkDamagePercent = Convert.ToInt32(slotData["death_link_damage_percent"]);
             if (slotData.ContainsKey("num_chars_goal")) settings.NumCharsGoal = Convert.ToInt32(slotData["num_chars_goal"]);
             if (slotData.ContainsKey("characters") && slotData["characters"] is System.Collections.IList charsList)
             {
