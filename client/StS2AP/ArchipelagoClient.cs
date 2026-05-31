@@ -276,6 +276,7 @@ namespace StS2AP
 
                 // Enable/Disable the Death Link Service based on user settings
                 LogUtility.Info($"Is Death Link Enabled: {Settings.IsDeathLinkEnabled.ToString()}");
+                LogUtility.Info($"Death Link Type: {Settings.DeathLinkType.ToString()}");
                 if (Settings.IsDeathLinkEnabled)
                 {
                     DeathLinkController.EnableDeathLink();
@@ -310,10 +311,11 @@ namespace StS2AP
             }
 
             // Log all slot data
+            LogUtility.Info("Dumping Slot Data:");
             foreach (var kvp in SlotData)
             {
-                LogUtility.Debug($"KEY: {kvp.Key}");
-                LogUtility.Debug($"VAL: {kvp.Value.ToString()}");
+                LogUtility.Info($"KEY: {kvp.Key}");
+                LogUtility.Info($"VAL: {kvp.Value.ToString()}");
             }
 
             // Pre-scout all locations so we have item info available for notifications
@@ -643,6 +645,7 @@ namespace StS2AP
             if (slotData.ContainsKey("death_link")) settings.IsDeathLinkEnabled = Convert.ToBoolean(slotData["death_link"]);
             if (slotData.ContainsKey("shuffle_all_cards")) settings.ShouldShuffleAllCards = Convert.ToBoolean(slotData["shuffle_all_cards"]);
             if (slotData.ContainsKey("lock_characters")) settings.NoCharactersLocked = Convert.ToInt32(slotData["lock_characters"]) == 0;
+            if (slotData.ContainsKey("death_link_type")) settings.DeathLinkType = (DeathLinkEffect)Convert.ToInt32(slotData["death_link_type"]);
             if (slotData.ContainsKey("num_chars_goal")) settings.NumCharsGoal = Convert.ToInt32(slotData["num_chars_goal"]);
             if (slotData.ContainsKey("characters") && slotData["characters"] is System.Collections.IList charsList)
             {
