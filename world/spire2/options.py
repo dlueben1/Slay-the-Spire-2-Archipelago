@@ -237,25 +237,21 @@ class AscensionDown(Range):
 
 # Death Link Options
 
-class DeathLinkType(Choice):
-    """If Death Link is enabled, this setting determines what happens when another player in the Multiworld dies.
-    kill: When you receive a Death Link, you die.
-    damage: When you receive a Death Link, you take a fixed amount of damage. This amount can be configured with the ??? option.
-    curse: When you receive a Death Link, you gain a curse card in your deck."""
-    display_name = "On Death Link Received"
-    option_Kill = 0
-    option_Damage = 1
-    option_Curse = 2
-    default = 2
+class EnableDeathFragments(Toggle):
+    """If Death Link is enabled, turning this setting on gives you a Curse Card whenever
+    you receive a Death Link."""
+    display_name = "Enable Death Fragments"
+    default = 1
 
 class DeathLinkDamagePercent(Range):
-    """If Death Link is enabled and the Death Link Type is set to Damage, this 
-    setting determines how much damage you take when you receive a Death Link, 
-    as a percentage of your max health."""
+    """If Death Link is enabled, this setting determines how much damage you take when you receive a Death Link, 
+    as a percentage of your max health. 
+    If you do not want to take any damage, set this to 0. 
+    If you want to be killed whenever you receive a Death Link, set this to 100."""
     display_name = "Death Link Damage Percent"
-    range_start = 1
+    range_start = 0
     range_end = 100
-    default = 25
+    default = 0
 
 # class TrapChance(Range):
 #     """Chance that a filler item is replaced with a trap.  Requires `include_floor_checks`
@@ -312,7 +308,7 @@ class FillerWeights(OptionCounter):
 @dataclass
 class Spire2Options(PerGameCommonOptions):
     death_link: DeathLink
-    death_link_type: DeathLinkType
+    enable_death_fragments: EnableDeathFragments
     death_link_damage_percent: DeathLinkDamagePercent
     characters: Characters
     pick_num_characters: PickNumberCharacters

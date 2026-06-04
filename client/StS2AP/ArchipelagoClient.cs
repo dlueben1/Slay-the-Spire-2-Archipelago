@@ -287,7 +287,8 @@ namespace StS2AP
 
                 // Enable/Disable the Death Link Service based on user settings
                 LogUtility.Info($"Is Death Link Enabled: {Settings.IsDeathLinkEnabled.ToString()}");
-                LogUtility.Info($"Death Link Type: {Settings.DeathLinkType.ToString()}");
+                LogUtility.Info($"Death Link Damage Percentage: {Settings.DeathLinkDamagePercent.ToString()}%");
+                LogUtility.Info($"Death Link Curse Enabled: {Settings.EnableDeathFragments.ToString()}");
                 if (Settings.IsDeathLinkEnabled)
                 {
                     DeathLinkController.EnableDeathLink();
@@ -656,7 +657,7 @@ namespace StS2AP
             if (slotData.ContainsKey("death_link")) settings.IsDeathLinkEnabled = Convert.ToBoolean(slotData["death_link"]);
             if (slotData.ContainsKey("shuffle_all_cards")) settings.ShouldShuffleAllCards = Convert.ToBoolean(slotData["shuffle_all_cards"]);
             if (slotData.ContainsKey("lock_characters")) settings.NoCharactersLocked = Convert.ToInt32(slotData["lock_characters"]) == 0;
-            if (slotData.ContainsKey("death_link_type")) settings.DeathLinkType = (DeathLinkEffect)Convert.ToInt32(slotData["death_link_type"]);
+            if (slotData.ContainsKey("enable_death_fragments")) settings.EnableDeathFragments = Convert.ToInt32(slotData["enable_death_fragments"]) == 1;
             if (slotData.ContainsKey("death_link_damage_percent")) settings.DeathLinkDamagePercent = Convert.ToInt32(slotData["death_link_damage_percent"]);
             if (slotData.ContainsKey("num_chars_goal")) settings.NumCharsGoal = Convert.ToInt32(slotData["num_chars_goal"]);
             if (slotData.ContainsKey("characters") && slotData["characters"] is System.Collections.IList charsList)
