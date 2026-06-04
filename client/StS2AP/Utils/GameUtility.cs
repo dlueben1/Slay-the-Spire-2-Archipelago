@@ -791,37 +791,25 @@ namespace StS2AP.Utils
             // If we're not in the run, there's nothing to do other than log it
             if (!GameUtility.IsInRun || CurrentPlayer == null) return;
 
-            // Handle the Death Link based on the intended effect
-            switch(ArchipelagoClient.Settings.DeathLinkType)
+            // If Damage is to be dealt to the player, calculate it and apply it
+            int newHp = CurrentPlayer.Creature.CurrentHp;
+            if(ArchipelagoClient.Settings.DeathLinkDamagePercent > 0)
             {
-                case DeathLinkEffect.Kill:
-                    {
-                        /// Record the timestamp so the send patch can suppress re-triggering a Death Link
-                        /// if we hit the Game Over screen as a direct result of this kill.
-                        ArchipelagoClient.LastDeathLinkReceivedAt = DateTime.UtcNow;
+                /// Record the timestamp so the send patch can suppress re-triggering a Death Link
+                /// if the incoming damage is lethal and we hit the Game Over screen.
+                ArchipelagoClient.LastDeathLinkReceivedAt = DateTime.UtcNow;
 
-                        // Kill the player immediately.
-                        TaskHelper.RunSafely(CreatureCmd.Kill(CurrentPlayer.Creature, true));
-                        break;
-                    }
-                case DeathLinkEffect.Damage:
-                    {
-                        /// Record the timestamp so the send patch can suppress re-triggering a Death Link
-                        /// if the incoming damage is lethal and we hit the Game Over screen.
-                        ArchipelagoClient.LastDeathLinkReceivedAt = DateTime.UtcNow;
-
-                        /// Deal a percentage of the player's max health, as damage
-                        int damage = Mathf.RoundToInt(CurrentPlayer.Creature.MaxHp * (ArchipelagoClient.Settings.DeathLinkDamagePercent / 100.0f));
-                        int newHp = Math.Max(0, CurrentPlayer.Creature.CurrentHp - damage);
-                        TaskHelper.RunSafely(CreatureCmd.SetCurrentHp(CurrentPlayer.Creature, newHp));
-                        break;
-                    }
-                case DeathLinkEffect.Curse:
-                    {
-                        // Add a "Death Fragment" curse to the player's deck
-                        TaskHelper.RunSafely(AddCurseToDeck(info.Cause ?? $"{info.Source} died"));
-                        break;
-                    }
+                /// Deal a percentage of the player's max health, as damage
+                int damage = Mathf.RoundToInt(CurrentPlayer.Creature.MaxHp * (ArchipelagoClient.Settings.DeathLinkDamagePercent / 100.0f));
+                newHp = Math.Max(0, CurrentPlayer.Creature.CurrentHp - damage);
+                TaskHelper.RunSafely(CreatureCmd.SetCurrentHp(CurrentPlayer.Creature, newHp));
+            }
+            // If Death Fragments are enabled, and the player hasn't died, add a curse to the player's deck
+            if(newHp > 0 && ArchipelagoClient.Settings.EnableDeathFragments)
+            {
+                var deathMsg = info.Cause ?? $"{info.Source} died";
+                if(!deathMsg.Contains(info.Source)) deathMsg = $"{deathMsg} ({info.Source})";
+                TaskHelper.RunSafely(AddCurseToDeck(deathMsg));
             }
         }
 

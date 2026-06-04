@@ -2,7 +2,7 @@ from BaseClasses import Tutorial
 from worlds.AutoWorld import WebWorld
 from Options import DeathLink, OptionGroup
 from .options import (
-    Characters, DeathLinkDamagePercent, DeathLinkType, PickNumberCharacters, GoalNumChar,
+    Characters, DeathLinkDamagePercent, EnableDeathFragments, PickNumberCharacters, GoalNumChar,
     LockCharacters, UnlockedCharacter, Ascension,
     IncludeFloorChecks, CampfireSanity, GoldSanity, PotionSanity,
     CardReward,
@@ -38,7 +38,7 @@ class SlayTheSpire2Web(WebWorld):
         ]),
         OptionGroup("Death Link", [
             DeathLink,
-            DeathLinkType,
+            EnableDeathFragments,
             DeathLinkDamagePercent,
         ])
     ]
