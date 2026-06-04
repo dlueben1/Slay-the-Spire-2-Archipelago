@@ -31,14 +31,10 @@ namespace StS2AP
 
             LogUtility.Info("Archipelago mod initializing...");
 
-            /// Inject custom Death Link Curse into the game, whether the player is a part of DeathLink used or not.
-            /// My understanding (which we may learn better later) is that we need to inject cards like this very early on in the mod's
-            /// initialization process.
-            /// 
-            /// We also need to let StS know that there's a property on the Death Link Curse that needs to be saved/loaded with the save system. 
+            /// This lets StS know that there's a property on the Death Link Curse that needs to be saved/loaded with the save system. 
             /// This is done by injecting the type into the SavedPropertiesTypeCache.
             /// 
-            /// This also might change when we start using BaseLib. It probably makes this part easier.
+            /// This also might change when we start using BaseLib. It probably makes this easier.
             SavedPropertiesTypeCache.InjectTypeIntoCache(typeof(DeathLinkCurse));
 
             // Apply all Harmony Patches
