@@ -34,13 +34,13 @@ This mod is currently in Alpha, and is unfinished. It's not feature-complete to 
 - Campfiresanity (Progressive Rest/Smith)
 - Potionsanity
 - Saving to the AP Server, and Saving when Connection is Lost
+- Death Link
 
 ## What's **NOT** Included
 
 - **Multiplayer Support**
   - This is a popular request, but it will not be something we work on until _everything else_ is stable. You will be waiting a very long time for this, sorry.
 - Shopsanity
-- Death Link
 - Traps
 - Interesting Filler Items
 - Polish
