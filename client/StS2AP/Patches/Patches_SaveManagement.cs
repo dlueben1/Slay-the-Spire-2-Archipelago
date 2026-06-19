@@ -26,7 +26,7 @@ namespace StS2AP.Patches
     
     public static class Patches_RunSaveManager
     {
-        [HarmonyPatch(typeof(RunSaveManager), "SaveRun")]
+        [HarmonyPatch(typeof(RunSaveManager), nameof(RunSaveManager.SaveRun), new[] { typeof(AbstractRoom) })]
         public static class SaveRun
         {
             [HarmonyPrefix]
