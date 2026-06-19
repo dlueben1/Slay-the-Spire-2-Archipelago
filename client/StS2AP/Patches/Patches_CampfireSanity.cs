@@ -96,7 +96,7 @@ namespace StS2AP.Patches
                 {
                     if (option.OptionId == "SMITH")
                     {
-                        option.IsEnabled = canSmith;
+                        option.SetIsEnabled(canSmith);
                     } else
                     {
                         anyEnabled |= option.IsEnabled;
