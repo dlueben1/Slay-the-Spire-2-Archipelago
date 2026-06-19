@@ -46,13 +46,12 @@ namespace StS2AP
                 /// The syntax is somewhat ugly, but it's easier to maintain this way since we don't have to patch by category/individually.
                 harmony.PatchAll();
                 LogUtility.Success("Harmony patches applied successfully.");
+                LogUtility.Info("Archipelago mod initialized.");
             }
             catch (Exception ex)
             {
                 LogUtility.Error($"Failed to apply Harmony patches: {ex.Message}");
             }
-
-            LogUtility.Info("Archipelago mod initialized.");
 
             // Register cleanup when the application exits
             AppDomain.CurrentDomain.ProcessExit += (s, e) => ConsoleLogger.Shutdown();

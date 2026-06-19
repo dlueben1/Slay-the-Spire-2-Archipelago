@@ -233,7 +233,7 @@ namespace StS2AP.Utils
                     rarity);
 
                 var reward = new CardReward(options, 3, player);
-                await reward.Populate();
+                reward.Populate();
 
                 ArchipelagoClient.Progress.CardAssignments[index] = reward;
                 LogUtility.Info($"Pre-assigned card reward for item w/ index {index} (rare={rare})");
@@ -289,7 +289,19 @@ namespace StS2AP.Utils
                 // OnSelectWrapper opens NCardRewardSelectionScreen and waits for the player to pick
                 try
                 {
-                    await reward.OnSelectWrapper();
+                    // Use reflection to invoke the protected OnSelect method:
+                    var onSelectMethod = reward.GetType()
+                        .GetMethod("OnSelect", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+                    if (onSelectMethod != null && onSelectMethod.ReturnType == typeof(Task<bool>))
+                    {
+                        var task = (Task<bool>)onSelectMethod.Invoke(reward, null)!;
+                        await task;
+                    }
+                    else
+                    {
+                        LogUtility.Error("They removed `CardReward.OnSelect()`, update the mod!");
+                    }
                 }
                 finally
                 {
@@ -831,7 +843,7 @@ namespace StS2AP.Utils
                 {
                     var combatCard = (DeathLinkCurse)CurrentPlayer.Creature.CombatState.CreateCard(
                         ModelDb.Card<DeathLinkCurse>(), CurrentPlayer);
-                    await CardPileCmd.AddGeneratedCardToCombat(combatCard, PileType.Draw, addedByPlayer: false);
+                    await CardPileCmd.AddGeneratedCardToCombat(combatCard, PileType.Draw, CurrentPlayer, CardPilePosition.Random);
                 }
             }
             finally

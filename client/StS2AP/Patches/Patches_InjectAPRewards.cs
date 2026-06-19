@@ -144,7 +144,7 @@ namespace StS2AP.Patches
         /// <summary>
         /// When an AP Location reward has already been claimed, make it semi-transparent in the rewards screen to indicate that it's been claimed.
         /// </summary>
-        [HarmonyPatch(typeof(NRewardsScreen), "SetRewards")]
+        [HarmonyPatch(typeof(NRewardsScreen), "ShowScreen")]
         public static class ClaimedAPRewardsAreSemiTransparentPatch
         {
             private const float _claimedAlpha = 0.5f;
