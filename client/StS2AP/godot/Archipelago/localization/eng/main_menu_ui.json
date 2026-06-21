@@ -1,4 +1,6 @@
 {
   "CONTINUE_RUN.header": "Continue Run?",
-  "CONTINUE_RUN.body": "Would you like to resume your last AP save for this character? (Yes, AP keeps the save even if you die.)"
+  "CONTINUE_RUN.body": "Would you like to resume your last AP save for this character? (Yes, AP keeps the save even if you die.)",
+  "VERSION_MISMATCH.header": "Version Mismatch",
+  "VERSION_MISMATCH.body": "The version of the apworld does not match the version of the client. If you connect to the server anyway, you may encounter unexpected behavior.\n\nServer Version: {server}\n\nClient Version: {client}\n\nConnect anyways?"
 }
