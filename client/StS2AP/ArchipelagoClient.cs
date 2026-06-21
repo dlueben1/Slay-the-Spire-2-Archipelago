@@ -5,6 +5,7 @@ using Archipelago.MultiClient.Net.Helpers;
 using Archipelago.MultiClient.Net.MessageLog.Messages;
 using Archipelago.MultiClient.Net.Models;
 using Godot;
+using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
 using StS2AP.Data;
@@ -194,9 +195,8 @@ namespace StS2AP
             // Attempt to connect to the server
             try
             {
-                // it's safe to thread this function call but unity notoriously hates threading so do not use excessively
-                ThreadPool.QueueUserWorkItem(
-                    _ => HandleConnectResult(
+                // it's safe to thread this function call but Godot hates threading so do not use excessively
+                Callable.From(() => HandleConnectResult(
                         Session.TryConnectAndLogin(
                             Game,
                             PlayerName,
@@ -204,11 +204,11 @@ namespace StS2AP
                             new Version(APVersion),
                             password: ServerPassword,
                             requestSlotData: SlotData.Count == 0
-                        )));
+                        ))).CallDeferred();
             }
             catch (Exception e)
             {
-                HandleConnectResult(new LoginFailure(e.ToString()));
+                Callable.From(() => HandleConnectResult(new LoginFailure(e.ToString()))).CallDeferred();
             }
         }
 
@@ -232,30 +232,66 @@ namespace StS2AP
                 var apWorldVersion = "v" + (SlotData["mod_compat_version"] as string);
                 LogUtility.Info($"APWorld Version: {apWorldVersion}");
                 LogUtility.Info($"Client Version: {Version}");
+
+                // If there's a version mismatch, we have another step
                 if (apWorldVersion == null || apWorldVersion != Version)
                 {
-                    // Log the issue
-                    LogUtility.Error($"Version mismatch! Server expects version {apWorldVersion}, but client is version {Version}. Please update your mod.");
+                    // Log the mismatch
+                    LogUtility.Warn($"Version mismatch! Server expects version {apWorldVersion}, but client is version {Version}. Please update your mod.");
 
-                    // Disconnect from the server since we can't guarantee compatibility
-                    Disconnect();
+                    // Warn the user that there's a version mismatch, and let them decide how to proceed.
+                    var popup = new ConfirmPopup();
+                    popup.Header = new LocString("main_menu_ui", "VERSION_MISMATCH.header");
+                    popup.Body = new LocString("main_menu_ui", "VERSION_MISMATCH.body");
+                    popup.Body.Add("server", apWorldVersion!);
+                    popup.Body.Add("client", Version);
+                    popup.ButtonPressed = (yesPressed) =>
+                    {
+                        // On no, we should cancel out.
+                        if (!yesPressed)
+                        {
+                            LogUtility.Warn("User was warned about version mismatch, proceeded anyways!");
 
-                    // Re-Enable the UI
-                    ArchipelagoConnectionUI.SetConnectButtonEnabled(true);
-                    ArchipelagoConnectionUI.SetCloseButtonEnabled(true);
+                            // Show the connection UI again
+                            ArchipelagoConnectionUI.Show();
+                            
+                            // Disconnect from the server since we can't guarantee compatibility
+                            Disconnect();
 
-                    // Tell the user they need to update their mod
-                    ArchipelagoConnectionUI.SetStatus($"Version mismatch! Server expects version {apWorldVersion}, but client is version {Version}. Please update your mod.");
+                            // Re-Enable the UI
+                            ArchipelagoConnectionUI.SetConnectButtonEnabled(true);
+                            ArchipelagoConnectionUI.SetCloseButtonEnabled(true);
 
-                    return;
+                            // Tell the user they need to update their mod
+                            ArchipelagoConnectionUI.SetStatus($"Version mismatch! Server expects version {apWorldVersion}, but client is version {Version}. Please update your mod.");
+
+                            return;
+                        }
+                        // On yes, we proceed
+                        else
+                        {
+                            // Complete any locations that we have
+                            outText = $"Successfully connected to {ServerAddress} as {PlayerName}!";
+
+                            // Let the game know that we've connected
+                            OnConnected();
+                        }
+                    };
+
+                    // Hide the connection UI and show the popup
+                    ArchipelagoConnectionUI.Hide();
+                    popup.Show();
                 }
 
-                // Complete any locations that we have
-                //Session.Locations.CompleteLocationChecksAsync(null, CheckedLocations.ToArray());
-                outText = $"Successfully connected to {ServerAddress} as {PlayerName}!";
+                // Otherwise proceed
+                else
+                {
+                    // Complete any locations that we have
+                    outText = $"Successfully connected to {ServerAddress} as {PlayerName}!";
 
-                // Let the game know that we've connected
-                OnConnected();
+                    // Let the game know that we've connected
+                    OnConnected();
+                }
             }
             else
             {

@@ -31,17 +31,20 @@ namespace StS2AP.UI
             {
                 LogUtility.Warn("Someone didn't set stuff");
             }
-            NModalContainer.Instance.Add(Popup);
-            var activePopup = NModalContainer.Instance.OpenModal as NGenericPopup;
+            NModalContainer.Instance!.Add(Popup);
+            var activePopup = NModalContainer.Instance!.OpenModal as NGenericPopup;
             if (activePopup == null)
             {
                 LogUtility.Warn("Failed to get active popup from NModalContainer");
                 return;
             }
-            ToCallback(activePopup);
+            _ = ToCallback(activePopup);
         }
 
-        private async void ToCallback(NGenericPopup popup)
+        /// <summary>
+        /// Handles the Button Pressed callback
+        /// </summary>
+        private async Task ToCallback(NGenericPopup popup)
         {
             var result = await popup.WaitForConfirmation(Body, Header, NoString, YesString);
             ButtonPressed(result);
