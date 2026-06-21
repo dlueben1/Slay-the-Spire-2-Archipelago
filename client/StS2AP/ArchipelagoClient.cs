@@ -250,6 +250,8 @@ namespace StS2AP
                         // On no, we should cancel out.
                         if (!yesPressed)
                         {
+                            LogUtility.Warn("User was warned about version mismatch, proceeded anyways!");
+
                             // Show the connection UI again
                             ArchipelagoConnectionUI.Show();
                             

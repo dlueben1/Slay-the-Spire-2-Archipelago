@@ -151,7 +151,7 @@ namespace StS2AP.Patches
             private const float _normalAlpha = 1f;
 
             // Postfix runs after the screen creates and adds the NRewardButton controls.
-            static void Postfix(NRewardsScreen __instance)
+            static void Postfix(NRewardsScreen __result)
             {
                 // Grab the private _rewardsContainer field (where NRewardButton instances are added).
                 FieldInfo? containerField = typeof(NRewardsScreen).GetField("_rewardsContainer", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -160,7 +160,7 @@ namespace StS2AP.Patches
                     return;
                 }
 
-                Control? rewardsContainer = containerField.GetValue(__instance) as Control;
+                Control? rewardsContainer = containerField.GetValue(__result) as Control;
                 if (rewardsContainer == null)
                 {
                     return;
