@@ -36,6 +36,15 @@ namespace StS2AP.Patches
                 // If Death Link isn't enabled, there's nothing to do
                 if (!ArchipelagoClient.Settings.IsDeathLinkEnabled) return true;
 
+                // Grab the state of the Run
+                RunState? runState = Traverse.Create(__instance).Field<RunState>("_state").Value;
+
+                // Don't send death link if the player won (died to the Architect)
+                if (runState?.CurrentRoom?.IsVictoryRoom ?? false)
+                {
+                    return true;
+                }
+
                 /// If the timestamp is within the suppression window, this death was caused by an
                 /// incoming Death Link — don't echo it back out or we'll create an infinite loop.
                 /// 
@@ -59,9 +68,6 @@ namespace StS2AP.Patches
                     // Outside the window — clear the stale timestamp and fall through to send
                     ArchipelagoClient.LastDeathLinkReceivedAt = null;
                 }
-
-                // Grab the state of the Run
-                RunState? runState = Traverse.Create(__instance).Field<RunState>("_state").Value;
 
                 // Prepare a "Cause of Death" message, because we want to be cool
                 string floorCause = runState != null ? $"Act {runState.CurrentActIndex + 1} Floor {runState.ActFloor}" : "an unknown floor";
