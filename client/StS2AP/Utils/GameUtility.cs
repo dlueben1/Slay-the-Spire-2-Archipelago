@@ -260,11 +260,6 @@ namespace StS2AP.Utils
                 LogUtility.Warn("Cannot grant card reward: no active player (not in a run)");
                 return false;
             }
-            // hiding the map
-            var mapScreen = NMapScreen.Instance;
-            bool mapWasVisible = mapScreen?.Visible ?? false;
-            if (mapWasVisible && mapScreen != null)
-                mapScreen.Visible = false;
 
             try
             {
@@ -283,9 +278,6 @@ namespace StS2AP.Utils
                 int sacrificesBefore = paelsWing?.RewardsSacrificed ?? 0;
                 LogUtility.Info($"[Debug] PaelsWing found: {paelsWing != null}, RewardsSacrificed: {sacrificesBefore}");
 
-                // Hide the Reward UI
-                ArchipelagoRewardUI.HideTemporarily();
-
                 // OnSelectWrapper opens NCardRewardSelectionScreen and waits for the player to pick
                 try
                 {
@@ -303,9 +295,9 @@ namespace StS2AP.Utils
                         LogUtility.Error("They removed `CardReward.OnSelect()`, update the mod!");
                     }
                 }
-                finally
+                catch (Exception ex)
                 {
-                    ArchipelagoRewardUI.ShowAgain();
+                    LogUtility.Error("Failed to invoke CardReward.OnSelect(): " + ex.Message);
                 }
 
                 // hopefully this fixes it, it took me a while to figure out
@@ -336,12 +328,6 @@ namespace StS2AP.Utils
             {
                 LogUtility.Error($"Failed to grant card reward: {ex.Message}");
                 return false;
-            }
-            finally
-            {
-                // returning the map visibility so no issues are caused
-                if (mapWasVisible && mapScreen != null)
-                    mapScreen.Visible = true;
             }
         }
 
