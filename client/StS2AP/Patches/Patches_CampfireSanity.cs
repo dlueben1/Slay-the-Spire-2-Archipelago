@@ -242,7 +242,10 @@ namespace StS2AP.Patches
                 wrapper.GrowVertical = Control.GrowDirection.Both;
                 wrapper.MouseFilter = Control.MouseFilterEnum.Ignore;
 
-                choicesContainer.SizeFlagsHorizontal = Control.SizeFlags.Expand;
+                // Allow the wrapper to size itself based on content, but cap at viewport width
+                wrapper.CustomMinimumSize = new Vector2(0, 0);
+
+                choicesContainer.SizeFlagsHorizontal = Control.SizeFlags.Expand | Control.SizeFlags.ShrinkCenter;
                 choicesScreen.AddChild(wrapper);
                 choicesContainer.Reparent(wrapper);
             }
