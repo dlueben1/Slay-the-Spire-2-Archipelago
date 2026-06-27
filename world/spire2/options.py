@@ -42,7 +42,7 @@ class PickNumberCharacters(Range):
     """
     display_name = "Pick Number of Characters"
     range_start = 0
-    range_end = 5 + NUM_CUSTOM - 1
+    range_end = 5 + NUM_CUSTOM
     default = 0
 
 class LockCharacters(Choice):
