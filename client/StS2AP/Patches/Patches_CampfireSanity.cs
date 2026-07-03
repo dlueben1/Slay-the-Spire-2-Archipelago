@@ -192,7 +192,6 @@ namespace StS2AP.Patches
             {
             }
 
-            // Tells the game to use the "Cook" icon for this option
             public override string OptionId => "NOTHING";
 
             public override LocString Description
