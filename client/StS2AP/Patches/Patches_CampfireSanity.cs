@@ -92,15 +92,10 @@ namespace StS2AP.Patches
                     __result.RemoveAll(n => "HEAL".Equals(n.OptionId));
                 }
 
-                foreach (var option in __result)
+                // Removing the smith option
+                if(!canSmith)
                 {
-                    if (option.OptionId == "SMITH")
-                    {
-                        option.SetIsEnabled(canSmith);
-                    } else
-                    {
-                        anyEnabled |= option.IsEnabled;
-                    }
+                    __result.RemoveAll(n => "SMITH".Equals(n.OptionId));
                 }
 
                 if (!anyEnabled)
@@ -197,13 +192,14 @@ namespace StS2AP.Patches
             {
             }
 
-            public override string OptionId => "HEAL";
+            // Tells the game to use the "Cook" icon for this option
+            public override string OptionId => "NOTHING";
 
             public override LocString Description
             {
                 get
                 {
-                    LocString description = new LocString("rest_site_ui", "OPTION_HEAL.descriptionDisabled");
+                    LocString description = new LocString("rest_site_ui", "OPTION_NOTHING.descriptionDisabled");
                     return description;
                 }
             }
