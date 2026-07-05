@@ -33,7 +33,7 @@ class SlayTheSpire2World(World):
     web = SlayTheSpire2Web()
     options_dataclass = Spire2Options
     options: Spire2Options
-    mod_compat_version = "0.4.0"
+    mod_compat_version = "0.5.2"
     origin_region_name = "Neow's Room"
 
     # Build the final Item Table
@@ -103,16 +103,23 @@ class SlayTheSpire2World(World):
         if locked_opt == 1:
             unlocked_char = self.random.choice([x for x in characters])
         elif locked_opt == 2:
-            unlocked_char = self.options.unlocked_character.value
-            if type(unlocked_char) == int:
-                unlocked_char = character_list[unlocked_char]
+            unlocked_char_value = self.options.unlocked_character.value
+            # Convert to string if it's an int index
+            if isinstance(unlocked_char_value, int):
+                unlocked_char_value = character_list[unlocked_char_value]
 
-            for char in characters:
-                if char.lower() == unlocked_char.lower():
-                    return char
+            # If unlocked_character is empty string (meaning "any"), randomly select from available characters
+            if unlocked_char_value == "":
+                unlocked_char = self.random.choice([x for x in characters])
             else:
-                raise OptionError(
-                    f"Configured {unlocked_char} as the first unlocked character, but was not one of: {characters}")
+                # Validate that the selected character is in the configured characters list
+                for char in characters:
+                    if char.lower() == unlocked_char_value.lower():
+                        return char
+                else:
+                    # We really shouldn't be able to get here anymore...but if we do, let us know, because it means this logic needs more work...
+                    raise OptionError(
+                        f"Configured {unlocked_char_value} as the first unlocked character, but was not one of: {characters}")
         return unlocked_char
 
     def _handle_basic_chars(self) -> None:
@@ -401,6 +408,9 @@ class SlayTheSpire2World(World):
             "potion_sanity",
             "gold_sanity",
             "campfire_sanity",
+            "death_link",
+            "enable_death_fragments",
+            "death_link_damage_percent",
         ))
         return slot_data
 

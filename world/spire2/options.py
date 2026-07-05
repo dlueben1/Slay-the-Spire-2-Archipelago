@@ -1,7 +1,8 @@
 from dataclasses import dataclass
+from typing import List
 
 from Options import OptionSet, Range, Toggle, Visibility, Choice, TextChoice, OptionDict, OptionCounter, \
-    PerGameCommonOptions
+    PerGameCommonOptions, OptionGroup, DeathLink
 
 from schema import Schema, Optional, And
 
@@ -41,7 +42,7 @@ class PickNumberCharacters(Range):
     """
     display_name = "Pick Number of Characters"
     range_start = 0
-    range_end = 5 + NUM_CUSTOM - 1
+    range_end = 5 + NUM_CUSTOM
     default = 0
 
 class LockCharacters(Choice):
@@ -234,6 +235,24 @@ class AscensionDown(Range):
     range_end = 10
     default = 0
 
+# Death Link Options
+
+class EnableDeathFragments(Toggle):
+    """If Death Link is enabled, turning this setting on gives you a Curse Card whenever
+    you receive a Death Link."""
+    display_name = "Enable Death Fragments"
+    default = 1
+
+class DeathLinkDamagePercent(Range):
+    """If Death Link is enabled, this setting determines how much damage you take when you receive a Death Link, 
+    as a percentage of your max health. 
+    If you do not want to take any damage, set this to 0. 
+    If you want to be killed whenever you receive a Death Link, set this to 100."""
+    display_name = "Death Link Damage Percent"
+    range_start = 0
+    range_end = 100
+    default = 0
+
 # class TrapChance(Range):
 #     """Chance that a filler item is replaced with a trap.  Requires `include_floor_checks`
 #     for any traps to be added.
@@ -288,6 +307,9 @@ class FillerWeights(OptionCounter):
 
 @dataclass
 class Spire2Options(PerGameCommonOptions):
+    death_link: DeathLink
+    enable_death_fragments: EnableDeathFragments
+    death_link_damage_percent: DeathLinkDamagePercent
     characters: Characters
     pick_num_characters: PickNumberCharacters
     num_chars_goal: GoalNumChar
@@ -314,29 +336,3 @@ class Spire2Options(PerGameCommonOptions):
     shop_remove_slots: ShopRemoveSlots
     shop_sanity_costs: ShopSanityCosts
     seeded: SeededRun
-
-# option_groups: List[OptionGroup] = [
-#     OptionGroup("Sanities", [
-#         IncludeFloorChecks,
-#         CampfireSanity,
-#         GoldSanity,
-#         PotionSanity,
-#         KeySanity,
-#         ShopSanity,
-#         ShopCardSlots,
-#         ShopNeutralSlots,
-#         ShopRelicSlots,
-#         ShopPotionSlots,
-#         ShopRemoveSlots,
-#         ShopSanityCosts,
-#     ]),
-#     OptionGroup("Traps", [
-#         TrapChance,
-#         TrapWeights
-#     ]),
-#     OptionGroup("Misc", [
-#         ChattyMC,
-#         FillerWeights,
-#         SeededRun,
-#     ]),
-# ]

@@ -450,81 +450,81 @@ namespace StS2AP.UI
             // ── AP Checks ───────────────────────────────────────────────────────
 
             // Card Checks Counter
-            CardChecks = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_card.png", "(0 / 0)", tooltipTitle: "Card Checks", tooltipDescription: "The number of AP Checks found that replaced Card Rewards");
+            CardChecks = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_card.png", "(0 / 0)", "AP_REWARD_CARD_CHECKS");
             AddCheckRow(CardChecks);
 
             // Rare Card Checks Counter
-            RareCardChecks = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_rare.png", "(0 / 0)", tooltipTitle: "Rare Card Checks", tooltipDescription: "The number of AP Checks found that replaced Rare Card Rewards");
+            RareCardChecks = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_rare.png", "(0 / 0)", "AP_REWARD_RARE_CARD_CHECKS");
             AddCheckRow(RareCardChecks);
 
             // Relic Checks Counter
-            RelicChecks = new ItemCountLabel("res://images/relics/calling_bell.png", "(0 / 0)", tooltipTitle: "Relic Checks", tooltipDescription: "The number of AP Checks found that replaced Relic Rewards");
+            RelicChecks = new ItemCountLabel("res://images/relics/calling_bell.png", "(0 / 0)", "AP_REWARD_RELIC_CHECKS");
             AddCheckRow(RelicChecks);
 
             // Floorsanity Checks Counter (Note: When the Winged Boots are in main, we should use that relic here instead)
             if(ArchipelagoClient.Settings.Floorsanity)
             {
-                FloorsanityChecks = new ItemCountLabel("res://images/relics/planisphere.png", "(0 / 0)", tooltipTitle: "Floorsanity Checks", tooltipDescription: "The number of AP Checks sent for each floor reached");
+                FloorsanityChecks = new ItemCountLabel("res://images/relics/planisphere.png", "(0 / 0)", "AP_REWARD_FLOORSANITY_CHECKS");
                 AddCheckRow(FloorsanityChecks);
             }
 
             // Potionsanity Checks Counter
             if(ArchipelagoClient.Settings.PotionSanity)
             {
-                PotionsanityChecks = new ItemCountLabel("res://images/potions/skill_potion.png", "(0 / 0)", tooltipTitle: "Potionsanity Checks", tooltipDescription: "The number of AP Checks found that replaced Potion Rewards");
+                PotionsanityChecks = new ItemCountLabel("res://images/potions/skill_potion.png", "(0 / 0)", "AP_REWARD_POTIONSANITY_CHECKS");
                 AddCheckRow(PotionsanityChecks);
             }
 
             // Goldsanity Checks Counter
             if(ArchipelagoClient.Settings.GoldSanity)
             {
-                GoldsanityChecks = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_money.png", "(0 / 0)", tooltipTitle: "Goldsanity Checks", tooltipDescription: "The number of AP Checks found that replaced Gold Rewards");
+                GoldsanityChecks = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_money.png", "(0 / 0)", "AP_REWARD_GOLDSANITY_CHECKS");
                 AddCheckRow(GoldsanityChecks);
             }
 
             // Campfiresanity Checks Counter
             if(ArchipelagoClient.Settings.CampfireSanity)
             {
-                CampfiresanityChecks = new ItemCountLabel("res://images/ui/run_history/rest_site.png", "(0 / 0)", tooltipTitle: "Campfiresanity Checks", tooltipDescription: "The number of AP Checks found from Rest Sites");
+                CampfiresanityChecks = new ItemCountLabel("res://images/ui/run_history/rest_site.png", "(0 / 0)", "AP_REWARD_CAMPFIRESANITY_CHECKS");
                 AddCheckRow(CampfiresanityChecks);
             }
 
             // Press Start Counter
-            PressStartCheck = new ItemCountLabel("res://images/ui/run_history/neow.png", "—", tooltipTitle: "Pressed Start", tooltipDescription: "Whether this character has earned a check by starting a run.");
+            PressStartCheck = new ItemCountLabel("res://images/ui/run_history/neow.png", "—", "AP_REWARD_PRESS_START_CHECK");
             AddCheckRow(PressStartCheck);
 
             // Slayed the Spire Counter
-            ClearedCheck = new ItemCountLabel("res://images/relics/pantograph.png", "—", tooltipTitle: "Slayed the Spire", tooltipDescription: "Whether this character has earned a check by completing a run.");
+            ClearedCheck = new ItemCountLabel("res://images/relics/pantograph.png", "—", "AP_REWARD_CLEARED_CHECK");
             AddCheckRow(ClearedCheck);
 
             // ── AP Items ──────────────────────────────────────────────────────
 
             // Card Rewards Counter
-            CardRewards = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_card.png", "0", tooltipTitle: "Card Rewards", tooltipDescription: "The number of Card Rewards received for this character. You can redeem these at the start of each run.");
+            CardRewards = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_card.png", "0", "AP_REWARD_CARD_REWARDS");
             AddItemRow(CardRewards);
 
             // Rare Card Rewards Counter
-            RareCardRewards = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_rare.png", "0", tooltipTitle: "Rare Card Rewards", tooltipDescription: "The number of Rare Card Rewards received for this character. You can redeem these at the start of each run.");
+            RareCardRewards = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_rare.png", "0", "AP_REWARD_RARE_CARD_REWARDS");
             AddItemRow(RareCardRewards);
 
             // Relics Counter
-            RelicRewards = new ItemCountLabel("res://images/relics/circlet.png", "0", tooltipTitle: "Relic Rewards", tooltipDescription: "The number of Relic Rewards received for this character. You can redeem these at the start of each run.");
+            RelicRewards = new ItemCountLabel("res://images/relics/circlet.png", "0", "AP_REWARD_RELIC_REWARDS");
             AddItemRow(RelicRewards);
 
             // Potions Counter
-            PotionRewards = new ItemCountLabel("res://images/potions/glowwater_potion.png", "0", tooltipTitle: "Potion Rewards", tooltipDescription: "The number of Potion Rewards received for this character. You can redeem these at the start of each run.");
+            PotionRewards = new ItemCountLabel("res://images/potions/glowwater_potion.png", "0", "AP_REWARD_POTION_REWARDS");
             AddItemRow(PotionRewards);
 
             // Gold Rewards Total
-            GoldRewards = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_money.png", "0", tooltipTitle: "Gold", tooltipDescription: "The total amount of Gold received for this character. You can redeem this at the start of each run.");
+            GoldRewards = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_money.png", "0", "AP_REWARD_GOLD_REWARDS");
             AddItemRow(GoldRewards);
 
             // Progressive Rest Total
-            ProgressiveRestLabel = new ItemCountLabel("res://images/relics/regal_pillow.png", "(0 / 3)", tooltipTitle: "Progressive Rests", tooltipDescription: "The number of Progressive Rest rewards received for this character. The number of these represents the highest Act you can Heal at.");
+            ProgressiveRestLabel = new ItemCountLabel("res://images/relics/regal_pillow.png", "(0 / 3)", "AP_REWARD_PROGRESSIVE_REST");
             AddItemRow(ProgressiveRestLabel);
 
             // Progressive Smith Total
-            ProgressiveSmithLabel = new ItemCountLabel("res://images/relics/whetstone.png", "(0 / 3)", tooltipTitle: "Progressive Smiths", tooltipDescription: "The number of Progressive Smith rewards received for this character. The number of these represents the highest Act you can Upgrade at.");
+            ProgressiveSmithLabel = new ItemCountLabel("res://images/relics/whetstone.png", "(0 / 3)", "AP_REWARD_PROGRESSIVE_SMITH");
             AddItemRow(ProgressiveSmithLabel);
 
             // Set initial values based on the first character from the select screen

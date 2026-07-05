@@ -169,7 +169,11 @@ namespace StS2AP.UI
         /// </summary>
         public static void UpdateGoalProgress()
         {
-            SetContent($"[gold]Goal: Slay the Spire with {ArchipelagoClient.Settings.NumCharsGoal} Characters[/gold]\nProgress: {GameUtility.GoaledCharactersCount} / {ArchipelagoClient.Settings.NumCharsGoal}");
+            // Get the number of characters you need to beat the game with. If the value for `NumCharsGoal` is `0`, we need to use the number of characters available
+            var charsToGoal = ArchipelagoClient.Settings.NumCharsGoal > 0 ? ArchipelagoClient.Settings.NumCharsGoal : ArchipelagoClient.Settings.TotalCharacters;
+
+            // Update the UI
+            SetContent($"[gold]Goal: Slay the Spire with {charsToGoal} Characters[/gold]\nProgress: {GameUtility.GoaledCharactersCount} / {charsToGoal}");
         }
 
         #endregion

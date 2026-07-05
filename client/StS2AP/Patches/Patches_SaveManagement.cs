@@ -26,7 +26,7 @@ namespace StS2AP.Patches
     
     public static class Patches_RunSaveManager
     {
-        [HarmonyPatch(typeof(RunSaveManager), "SaveRun")]
+        [HarmonyPatch(typeof(RunSaveManager), nameof(RunSaveManager.SaveRun), new[] { typeof(AbstractRoom) })]
         public static class SaveRun
         {
             [HarmonyPrefix]
@@ -163,7 +163,7 @@ namespace StS2AP.Patches
                         }
                         SerializableRun serializableRun = result.SaveData;
                         RunState runState = RunState.FromSerializable(serializableRun);
-                        RunManager.Instance.SetUpSavedSinglePlayer(runState, serializableRun);
+                        await RunManager.Instance.SetUpSavedSingleplayer(runState, serializableRun);
                         Log.Info($"Continuing run with character: {serializableRun.Players[0].CharacterId}");
                         SfxCmd.Play(runState.Players[0].Character.CharacterTransitionSfx);
 
@@ -243,7 +243,7 @@ namespace StS2AP.Patches
 
                     SerializableRun serializableRun = result.SaveData;
                     RunState runState = RunState.FromSerializable(serializableRun);
-                    RunManager.Instance.SetUpSavedSinglePlayer(runState, serializableRun);
+                    await RunManager.Instance.SetUpSavedSingleplayer(runState, serializableRun);
                     Log.Info($"Continuing run from recovery save with character: {serializableRun.Players[0].CharacterId}");
                     SfxCmd.Play(runState.Players[0].Character.CharacterTransitionSfx);
 

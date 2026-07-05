@@ -268,7 +268,15 @@ namespace StS2AP.UI
         private static void OnButtonPressed()
         {
             LogUtility.Info("Opening Archipelago Rewards UI...");
-            ArchipelagoRewardUI.ShowRewards();
+
+            if(!ArchipelagoRewardUI.IsOpen)
+            {
+                ArchipelagoRewardUI.ShowRewards();
+            }
+            else
+            {
+                ArchipelagoRewardUI.Hide();
+            }
         }
 
         /// <summary>

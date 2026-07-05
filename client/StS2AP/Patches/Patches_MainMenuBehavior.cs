@@ -127,6 +127,34 @@ namespace StS2AP.Patches
         }
 
         /// <summary>
+        /// Ensures the player backs out to the main menu (and thus hides the connection UI)
+        /// when they press the back button from the character select screen.
+        /// </summary>
+        [HarmonyPatch(typeof(NSubmenuStack), nameof(NSubmenuStack.Pop))]
+        public static class BackOutFromCharSelectToMainMenu
+        {
+            public static void Postfix(NSubmenuStack __instance)
+            {
+                // Only pop again if NCharacterSelectScreen was on top
+                if (__instance.Peek() is NSingleplayerSubmenu)
+                {
+                    // Go back to the main menu
+                    __instance.Pop();
+
+                    // And force the UI to hide on the next main-thread frame
+                    var sceneTree = Engine.GetMainLoop() as SceneTree;
+                    if (sceneTree != null)
+                    {
+                        sceneTree.CreateTimer(0f).Timeout += () =>
+                         {
+                             ArchipelagoConnectionUI.Hide();
+                         };
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Injects the Archipelago Progress Tracker panel when the Character Select screen opens,
         /// and removes it when the screen closes. Keeping injection in OnSubmenuOpened (rather than
         /// _Ready) ensures the CanvasLayer is created after the scene tree is fully set up.
@@ -154,7 +182,7 @@ namespace StS2AP.Patches
                 {
                     sceneTree.CreateTimer(0.2f).Timeout += () =>
                     {
-                        ArchipelagoGoalTrackerUI.UpdateGoalProgress();
+                        Callable.From(() => ArchipelagoGoalTrackerUI.UpdateGoalProgress()).CallDeferred();
                     };
                 }
             }

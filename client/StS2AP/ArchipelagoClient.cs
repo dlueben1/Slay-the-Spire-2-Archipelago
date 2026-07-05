@@ -1,15 +1,18 @@
 ﻿using Archipelago.MultiClient.Net;
+using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Helpers;
 using Archipelago.MultiClient.Net.MessageLog.Messages;
 using Archipelago.MultiClient.Net.Models;
 using Godot;
+using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
 using StS2AP.Data;
 using StS2AP.Models;
 using StS2AP.UI;
 using StS2AP.Utils;
+using static StS2AP.Data.CharTable;
 using static StS2AP.Data.ItemTable;
 
 namespace StS2AP
@@ -58,7 +61,7 @@ namespace StS2AP
         /// <summary>
         /// Minimum Archipelago Version that's supported by the mod.
         /// </summary>
-        public const string APVersion = "0.6.6";
+        public const string APVersion = "0.6.7";
 
         /// <summary>
         /// The current connection state of the client.
@@ -86,7 +89,6 @@ namespace StS2AP
         /// Some of this data resets every run.
         /// </summary>
         public static ArchipelagoProgress Progress { get; set; } = new();
-
 
         /// <summary>
         /// Represents how caught up we are with Archipelago's sent items
@@ -118,6 +120,32 @@ namespace StS2AP
         /// Populated on connection to avoid async calls during gameplay.
         /// </summary>
         public static Dictionary<long, ScoutedItemInfo> ScoutedLocations { get; set; } = new();
+
+        #region Death Link Information
+
+        /// <summary>
+        /// Handles Death Link functionality, which allows players to share deaths across the multiworld.
+        /// </summary>
+        public static DeathLinkService DeathLinkController { get; set; }
+
+        /// <summary>
+        /// A cache of the last Death Link message received, which will be loaded into a clone of the Death Link Curse after it
+        /// goes from "canonical" to "mutable" (i.e. instanced)
+        /// </summary>
+        public static string? LastDeathLinkMessage { get; set; }
+
+        /// <summary>
+        /// The UTC timestamp of the most recently received Death Link.
+        /// 
+        /// Used to suppress re-triggering a Death Link when the player dies
+        /// as a direct result of receiving one. 
+        /// 
+        /// Null if no Death Link has been received this session,
+        /// or if we're in Curse mode (which doesn't warrant suppression).
+        /// </summary>
+        public static DateTime? LastDeathLinkReceivedAt { get; set; }
+
+        #endregion
 
         #region Networking
 
@@ -157,12 +185,18 @@ namespace StS2AP
             Session.Socket.SocketClosed += OnSocketSessionEnd;
             Session.MessageLog.OnMessageReceived += OnMessageReceived;
 
+            // Setup the Death Link Service (even if the player isn't using Death Link)
+            DeathLinkController = Session.CreateDeathLinkService();
+            DeathLinkController.OnDeathLinkReceived += deathLinkInfo =>
+            {
+                Callable.From(() => GameUtility.OnDeathLinkReceived(deathLinkInfo)).CallDeferred();
+            };
+
             // Attempt to connect to the server
             try
             {
-                // it's safe to thread this function call but unity notoriously hates threading so do not use excessively
-                ThreadPool.QueueUserWorkItem(
-                    _ => HandleConnectResult(
+                // it's safe to thread this function call but Godot hates threading so do not use excessively
+                Callable.From(() => HandleConnectResult(
                         Session.TryConnectAndLogin(
                             Game,
                             PlayerName,
@@ -170,11 +204,11 @@ namespace StS2AP
                             new Version(APVersion),
                             password: ServerPassword,
                             requestSlotData: SlotData.Count == 0
-                        )));
+                        ))).CallDeferred();
             }
             catch (Exception e)
             {
-                HandleConnectResult(new LoginFailure(e.ToString()));
+                Callable.From(() => HandleConnectResult(new LoginFailure(e.ToString()))).CallDeferred();
             }
         }
 
@@ -198,30 +232,66 @@ namespace StS2AP
                 var apWorldVersion = "v" + (SlotData["mod_compat_version"] as string);
                 LogUtility.Info($"APWorld Version: {apWorldVersion}");
                 LogUtility.Info($"Client Version: {Version}");
+
+                // If there's a version mismatch, we have another step
                 if (apWorldVersion == null || apWorldVersion != Version)
                 {
-                    // Log the issue
-                    LogUtility.Error($"Version mismatch! Server expects version {apWorldVersion}, but client is version {Version}. Please update your mod.");
+                    // Log the mismatch
+                    LogUtility.Warn($"Version mismatch! Server expects version {apWorldVersion}, but client is version {Version}. Please update your mod.");
 
-                    // Disconnect from the server since we can't guarantee compatibility
-                    Disconnect();
+                    // Warn the user that there's a version mismatch, and let them decide how to proceed.
+                    var popup = new ConfirmPopup();
+                    popup.Header = new LocString("main_menu_ui", "VERSION_MISMATCH.header");
+                    popup.Body = new LocString("main_menu_ui", "VERSION_MISMATCH.body");
+                    popup.Body.Add("server", apWorldVersion!);
+                    popup.Body.Add("client", Version);
+                    popup.ButtonPressed = (yesPressed) =>
+                    {
+                        // On no, we should cancel out.
+                        if (!yesPressed)
+                        {
+                            LogUtility.Warn("User was warned about version mismatch, proceeded anyways!");
 
-                    // Re-Enable the UI
-                    ArchipelagoConnectionUI.SetConnectButtonEnabled(true);
-                    ArchipelagoConnectionUI.SetCloseButtonEnabled(true);
+                            // Show the connection UI again
+                            ArchipelagoConnectionUI.Show();
+                            
+                            // Disconnect from the server since we can't guarantee compatibility
+                            Disconnect();
 
-                    // Tell the user they need to update their mod
-                    ArchipelagoConnectionUI.SetStatus($"Version mismatch! Server expects version {apWorldVersion}, but client is version {Version}. Please update your mod.");
+                            // Re-Enable the UI
+                            ArchipelagoConnectionUI.SetConnectButtonEnabled(true);
+                            ArchipelagoConnectionUI.SetCloseButtonEnabled(true);
 
-                    return;
+                            // Tell the user they need to update their mod
+                            ArchipelagoConnectionUI.SetStatus($"Version mismatch! Server expects version {apWorldVersion}, but client is version {Version}. Please update your mod.");
+
+                            return;
+                        }
+                        // On yes, we proceed
+                        else
+                        {
+                            // Complete any locations that we have
+                            outText = $"Successfully connected to {ServerAddress} as {PlayerName}!";
+
+                            // Let the game know that we've connected
+                            OnConnected();
+                        }
+                    };
+
+                    // Hide the connection UI and show the popup
+                    ArchipelagoConnectionUI.Hide();
+                    popup.Show();
                 }
 
-                // Complete any locations that we have
-                //Session.Locations.CompleteLocationChecksAsync(null, CheckedLocations.ToArray());
-                outText = $"Successfully connected to {ServerAddress} as {PlayerName}!";
+                // Otherwise proceed
+                else
+                {
+                    // Complete any locations that we have
+                    outText = $"Successfully connected to {ServerAddress} as {PlayerName}!";
 
-                // Let the game know that we've connected
-                OnConnected();
+                    // Let the game know that we've connected
+                    OnConnected();
+                }
             }
             else
             {
@@ -250,6 +320,19 @@ namespace StS2AP
             {
                 // Get all settings for this player
                 Settings = GetPlayerSettings();
+
+                // Enable/Disable the Death Link Service based on user settings
+                LogUtility.Info($"Is Death Link Enabled: {Settings.IsDeathLinkEnabled.ToString()}");
+                LogUtility.Info($"Death Link Damage Percentage: {Settings.DeathLinkDamagePercent.ToString()}%");
+                LogUtility.Info($"Death Link Curse Enabled: {Settings.EnableDeathFragments.ToString()}");
+                if (Settings.IsDeathLinkEnabled)
+                {
+                    DeathLinkController.EnableDeathLink();
+                }
+                else
+                {
+                    DeathLinkController.DisableDeathLink();
+                }
             }
             catch (Exception ex)
             {
@@ -276,10 +359,11 @@ namespace StS2AP
             }
 
             // Log all slot data
+            LogUtility.Info("Dumping Slot Data:");
             foreach (var kvp in SlotData)
             {
-                LogUtility.Debug($"KEY: {kvp.Key}");
-                LogUtility.Debug($"VAL: {kvp.Value.ToString()}");
+                LogUtility.Info($"KEY: {kvp.Key}");
+                LogUtility.Info($"VAL: {kvp.Value.ToString()}");
             }
 
             // Pre-scout all locations so we have item info available for notifications
@@ -289,6 +373,7 @@ namespace StS2AP
             _ = GameUtility.RestoreGoaledCharsFromStorage();
 
             _ = GameUtility.SetupOnChangedSaves();
+
             // Let the game know that we've connected
             Callable.From(() => ConnectionStateChanged?.Invoke(ConnectionState.Connected)).CallDeferred();
         }
@@ -488,6 +573,13 @@ namespace StS2AP
                 case APItem.Unlock:
                     {
                         GameUtility.UnlockCharacter(item);
+
+                        // Fire the CharacterUnlocked event on the Godot main thread.
+                        // This allows the character select screen (if open) to immediately
+                        // refresh the appropriate button without waiting for OnSubmenuOpened.
+                        var charId = item.GetStSCharID();
+                        Callable.From(() => CharacterUnlocked?.Invoke(charId)).CallDeferred();
+
                         break;
                     }
                 // Progressive Smiths/Rests
@@ -598,10 +690,33 @@ namespace StS2AP
             // Apply all found settings
             if (slotData.ContainsKey("ascension")) settings.AscensionLevel = Convert.ToInt32(slotData["ascension"]);
             if (slotData.ContainsKey("seeded")) settings.IsSeeded = Convert.ToBoolean(slotData["seeded"]);
+            if (slotData.ContainsKey("death_link")) settings.IsDeathLinkEnabled = Convert.ToBoolean(slotData["death_link"]);
             if (slotData.ContainsKey("shuffle_all_cards")) settings.ShouldShuffleAllCards = Convert.ToBoolean(slotData["shuffle_all_cards"]);
             if (slotData.ContainsKey("lock_characters")) settings.NoCharactersLocked = Convert.ToInt32(slotData["lock_characters"]) == 0;
+            if (slotData.ContainsKey("enable_death_fragments")) settings.EnableDeathFragments = Convert.ToInt32(slotData["enable_death_fragments"]) == 1;
+            if (slotData.ContainsKey("death_link_damage_percent")) settings.DeathLinkDamagePercent = Convert.ToInt32(slotData["death_link_damage_percent"]);
             if (slotData.ContainsKey("num_chars_goal")) settings.NumCharsGoal = Convert.ToInt32(slotData["num_chars_goal"]);
-            if (slotData.ContainsKey("characters") && slotData["characters"] is System.Collections.IList charsList) settings.TotalCharacters = charsList.Count;
+            if (slotData.ContainsKey("characters") && slotData["characters"] is System.Collections.IList charsList)
+            {
+                // Grab the total number of characters
+                settings.TotalCharacters = charsList.Count;
+
+                /// Go through each character and add it to the list of Characters in our settings.
+                /// Slot data from Archipelago.MultiClient.Net is deserialized via Newtonsoft.Json,
+                /// so each entry arrives as a JObject, NOT a Dictionary<string, object>.
+                var charBuffer = new List<string>();
+                foreach (var charData in charsList)
+                {
+                    // Cast to JObject to safely read the "name" field
+                    if (charData is Newtonsoft.Json.Linq.JObject charObj && charObj.TryGetValue("name", out var nameToken))
+                    {
+                        charBuffer.Add(nameToken.ToString());
+                    }
+                }
+
+                // Store the characters locally
+                settings.AvailableCharacters = charBuffer.ToArray();
+            }
 
             if (slotData.ContainsKey("campfire_sanity"))
                 settings.CampfireSanity = Convert.ToInt32(slotData["campfire_sanity"]) != 0;
@@ -620,5 +735,12 @@ namespace StS2AP
         }
 
         #endregion
+
+        /// <summary>
+        /// Fires when a character unlock item is received and processed.
+        /// Passes the <see cref="APItemCharID"/> of the character that was just unlocked.
+        /// Always dispatched on the Godot main thread via CallDeferred so UI can safely respond.
+        /// </summary>
+        public static event Action<APItemCharID> CharacterUnlocked;
     }
 }

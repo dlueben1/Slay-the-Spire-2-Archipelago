@@ -1,12 +1,15 @@
 using Godot;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Nodes.Screens.Capstones;
+using MegaCrit.Sts2.Core.Nodes.Screens.Map;
+using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
+using MegaCrit.Sts2.Core.Nodes.Screens.ScreenContext;
+using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
-using MegaCrit.Sts2.Core.Nodes.Screens.ScreenContext;
 using static StS2AP.Data.ItemTable;
 using ItemInfo = Archipelago.MultiClient.Net.Models.ItemInfo;
 
@@ -118,15 +121,32 @@ namespace StS2AP.UI
 
         private static int _remainingRewards = 0;
 
+        /// Keeps track of the previous handlers for UI overlays, so that we can tell if they've gone stale
+        private static NCapstoneContainer? _lastCapstoneSub = null;
+        private static NOverlayStack? _lastOverlaySub = null;
+
         /// <summary>
         /// Invoked when the reward screen is closed (all rewards dismissed or skipped)
         /// </summary>
         public static Action? OnScreenClosed;
 
         /// <summary>
-        /// whether the reward screen is currently visible.
+        /// Whether the reward screen is currently visible.
+        /// Note: This is NOT the same as whether or not the UI is open or not. This is only for hiding it when there are other elements on the Overlay Stack.
         /// </summary>
         public static bool IsVisible => _rewardLayer?.Visible ?? false;
+
+        /// <summary>
+        /// Whether the UI is open or not. 
+        /// Note: This is different from IsVisible, which can be false if the UI is hidden temporarily by another overlay.
+        /// </summary>
+        public static bool IsOpen { get; set; }
+
+        /// <summary>
+        /// Not my favorite solution (I don't like handling edge cases like this) but this keeps track of if the Map was opened while the reward screen
+        /// was opened too, so we can restore it if needed
+        /// </summary>
+        private static bool wasMapOpen = false;
 
         #region Public API
 
@@ -188,6 +208,9 @@ namespace StS2AP.UI
         {
             // Ignore if current player is null
             if (GameUtility.CurrentPlayer == null) return;
+
+            // Ensure subscription is fresh for this run, because the UI Stacks change with every new run
+            EnsureSubscribed();
 
             // Get Unused items from the Multiworld for our current character
             var availableItems = ArchipelagoClient.Progress.AllReceivedItems
@@ -329,8 +352,14 @@ namespace StS2AP.UI
         /// </summary>
         public static void Hide()
         {
+            LogUtility.Debug("Reward UI Hide() called");
+
             if (_rewardLayer == null || !IsInstanceValid(_rewardLayer))
                 return;
+
+            // Clear cache and local settings
+            wasMapOpen = false;
+            IsOpen = false;
 
             // Fade out the rewards window, then hide the layer
             if (_rootPanel != null && IsInstanceValid(_rootPanel))
@@ -362,8 +391,18 @@ namespace StS2AP.UI
         /// </summary>
         public static void HideTemporarily()
         {
+            LogUtility.Debug("Reward UI HideTemporarily() called");
+
             if (_rewardLayer == null || !IsInstanceValid(_rewardLayer))
                 return;
+
+            // If the map is open, we need to hide it too
+            var mapScreen = NMapScreen.Instance;
+            if (mapScreen != null && mapScreen.IsOpen)
+            {
+                wasMapOpen = true;
+                mapScreen.Visible = false;
+            }
 
             _rewardLayer.Visible = false;
             RestoreOverlayFocus();
@@ -374,8 +413,14 @@ namespace StS2AP.UI
         /// </summary>
         public static void ShowAgain()
         {
+            LogUtility.Debug("Reward UI ShowAgain() called");
             if (_rewardLayer == null || !IsInstanceValid(_rewardLayer))
                 return;
+
+            if(wasMapOpen)
+            {
+                NMapScreen.Instance.Visible = true;
+            }
 
             _rewardLayer.Visible = true;
             RestoreOverlayFocus();
@@ -386,6 +431,8 @@ namespace StS2AP.UI
         /// </summary>
         public static void RemoveUI()
         {
+            LogUtility.Debug("Reward UI RemoveUI() called");
+            
             _fadeTween?.Kill();
             _fadeTween = null;
 
@@ -454,6 +501,7 @@ namespace StS2AP.UI
             if (_rewardLayer == null || !IsInstanceValid(_rewardLayer)) return;
 
             _rewardLayer.Visible = true;
+            IsOpen = true;
 
             if (_rootPanel != null && IsInstanceValid(_rootPanel))
             {
@@ -563,12 +611,24 @@ namespace StS2AP.UI
                 catch (Exception ex) { LogUtility.Warn($"Could not load reward mask texture: {ex.Message}"); }
                 rewardsWindow.AddChild(mask);
 
-                // Rewards container 
+                // ScrollContainer fills the mask area so rewards can be scrolled when there are too many to display at once
+                var scrollContainer = new ScrollContainer { Name = "APRewardsScroll" };
+                scrollContainer.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+                // Small inset so the scroll content doesn't sit flush against the mask edge
+                scrollContainer.OffsetLeft   = ContainerLeft;
+                scrollContainer.OffsetTop    = ContainerTop;
+                scrollContainer.OffsetRight  = -ContainerLeft;
+                scrollContainer.OffsetBottom = -ContainerLeft;
+                scrollContainer.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
+                scrollContainer.VerticalScrollMode   = ScrollContainer.ScrollMode.Auto;
+                mask.AddChild(scrollContainer);
+
+                // Rewards container sits inside the scroll container
                 _itemContainer = new VBoxContainer { Name = "APRewardsContainer" };
-                _itemContainer.Position          = new Vector2(ContainerLeft, ContainerTop);
                 _itemContainer.CustomMinimumSize = new Vector2(ContainerWidth, 0);
+                _itemContainer.SizeFlagsHorizontal = Control.SizeFlags.Fill;
                 _itemContainer.AddThemeConstantOverride("separation", 10);
-                mask.AddChild(_itemContainer);
+                scrollContainer.AddChild(_itemContainer);
 
                 // Proceed / Skip button
                 _proceedButton = CreateProceedButton();
@@ -806,6 +866,93 @@ namespace StS2AP.UI
             label.AddThemeColorOverride("font_color", color);
 
             return label;
+        }
+
+        #endregion
+
+        #region Event Handling
+
+        /// <summary>
+        /// Checks if we're subscribed to the UI change events, and if we aren't anymore,
+        /// it resubscribes us to the events.
+        /// 
+        /// This is necessary because every new run has it's own instances of the overlay/capstone stack.
+        /// </summary>
+        private static void EnsureSubscribed()
+        {
+            try
+            {
+                // Get the latest UI containers
+                var capstone = NCapstoneContainer.Instance;
+                var overlay = NOverlayStack.Instance;
+
+                // If instances are null, we're not in a run
+                if (capstone == null || overlay == null)
+                    return;
+
+                // Only subscribe if instance changed (new run)
+                if (_lastCapstoneSub != capstone)
+                {
+                    if (_lastCapstoneSub != null)
+                        _lastCapstoneSub.Changed -= OnCapstoneChanged;
+                    _lastCapstoneSub = capstone;
+                    capstone.Changed += OnCapstoneChanged;
+                }
+
+                if (_lastOverlaySub != overlay)
+                {
+                    if (_lastOverlaySub != null)
+                        _lastOverlaySub.Changed -= OnOverlayStackChanged;
+                    _lastOverlaySub = overlay;
+                    overlay.Changed += OnOverlayStackChanged;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Error($"Failed to subscribe to screen events: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// My understanding is that this fires when the Capstone stack (full-screen views like deck) adds/removes elements
+        /// </summary>
+        private static void OnCapstoneChanged()
+        {
+            LogUtility.Debug($"Capstone Changed: {NCapstoneContainer.Instance.InUse}");
+
+            // If we were open previously, let's restore our UI
+            if (IsOpen && !NCapstoneContainer.Instance.InUse)
+            {
+                ShowAgain();
+
+                // If the Overlay Stack has items on it, clear it out so things don't glitch
+                if(NOverlayStack.Instance.ScreenCount > 0)
+                {
+                    NOverlayStack.Instance.Clear();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Fires when the Overlay Stack (think dialogs, pop-ups) adds/removes elements
+        /// </summary>
+        private static void OnOverlayStackChanged()
+        {
+            // If we're not open, ignore this
+            if (!IsOpen) return;
+
+            LogUtility.Debug($"Overlay Changed Count: {NOverlayStack.Instance.ScreenCount}");
+            
+            // If there are new overlays, hide our UI temporarily
+            if(NOverlayStack.Instance!.ScreenCount > 0)
+            {
+                HideTemporarily();
+            }
+            // Otherwise, re-reveal the UI
+            else
+            {
+                ShowAgain();
+            }
         }
 
         #endregion

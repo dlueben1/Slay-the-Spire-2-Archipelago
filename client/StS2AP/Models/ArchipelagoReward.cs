@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
-using System.Threading.Tasks;
 using Archipelago.MultiClient.Net.Models;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Rewards;
 using StS2AP.Utils;
+using System.Threading.Tasks;
 
 namespace StS2AP.Models;
 
@@ -81,6 +81,11 @@ public class ArchipelagoReward : Reward
         return;
     }
 
+    /// <summary>
+    /// Required to override, but there's nothing to do here, so it's a no-op...
+    /// </summary>
+    public override void Populate() { }
+
     protected override async Task<bool> OnSelect()
     {
         // Handle reward selection logic
@@ -93,11 +98,6 @@ public class ArchipelagoReward : Reward
             LogUtility.Success($"Sent location check: {_locationId}");
         }
         return true;
-    }
-
-    public override Task Populate()
-    {
-        return Task.CompletedTask;
     }
 
     public override void MarkContentAsSeen()

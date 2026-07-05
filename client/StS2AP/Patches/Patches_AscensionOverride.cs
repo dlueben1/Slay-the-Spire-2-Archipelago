@@ -1,11 +1,12 @@
-﻿using HarmonyLib;
-using Godot;
-using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
-using MegaCrit.Sts2.Core.Nodes;
+﻿using Godot;
+using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Ascension;
-using System.Reflection;
-using StS2AP.Utils;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Nodes;
+using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
+using MegaCrit.Sts2.Core.Saves;
+using StS2AP.Utils;
+using System.Reflection;
 
 namespace StS2AP.Patches
 {
@@ -24,6 +25,30 @@ namespace StS2AP.Patches
         {
             [HarmonyPostfix]
             public static void Postfix(ref int __result)
+            {
+                __result = ArchipelagoClient.Settings?.AscensionLevel ?? __result;
+            }
+        }
+
+        /// <summary>
+        /// Overrides the "Preferred Ascension" level for a character, which is used in the Character Select screen and other places.
+        /// </summary>
+        [HarmonyPatch(typeof(CharacterStats), nameof(CharacterStats.PreferredAscension), MethodType.Getter)]
+        public static class OverridePreferredAscension
+        {
+            static void Postfix(ref int __result)
+            {
+                __result = ArchipelagoClient.Settings?.AscensionLevel ?? __result;
+            }
+        }
+
+        /// <summary>
+        /// Overrides the "Preferred Ascension" level for "multiplayer", which I *suspect* is also used by the random character select option.
+        /// </summary>
+        [HarmonyPatch(typeof(ProgressState), nameof(ProgressState.PreferredMultiplayerAscension), MethodType.Getter)]
+        public static class OverridePreferredAscensionMultiplayer
+        {
+            static void Postfix(ref int __result)
             {
                 __result = ArchipelagoClient.Settings?.AscensionLevel ?? __result;
             }
