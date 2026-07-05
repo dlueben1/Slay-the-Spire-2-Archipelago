@@ -662,7 +662,8 @@ namespace StS2AP
             {
                 ItemInfo info = ArchipelagoClient.Session.Items.AllItemsReceived[i];
 
-                ProcessItem(info, i, false);
+                // i+1 because the index from multiclient .net is essentially 1 based, not 0
+                ProcessItem(info, i + 1, false);
             }
         }
 

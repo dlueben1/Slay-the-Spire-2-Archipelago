@@ -222,7 +222,10 @@ namespace StS2AP.Utils
         private static async Task<CardReward?> GetOrAssignCardReward(int index, Player player, bool rare)
         {
             if (ArchipelagoClient.Progress.CardAssignments.TryGetValue(index, out var existing))
+            {
+                LogUtility.Info($"Existing rewards: {string.Join(",", existing.Cards.Select(c => c.Title))}");
                 return existing;
+            }
 
             try
             {

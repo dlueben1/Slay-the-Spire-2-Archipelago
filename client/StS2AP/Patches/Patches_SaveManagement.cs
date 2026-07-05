@@ -154,6 +154,7 @@ namespace StS2AP.Patches
                     if (GameUtility.APSaves.TryGetValue(charName, out saveStr))
                     {
                         var unzipped = Patches_RunSaveManager.SaveRun.Unzip(saveStr);
+                        //LogUtility.Info($"JSON Save data{unzipped}");
                         SerializableAP? result = JsonSerializer.Deserialize<SerializableAP>(unzipped, SerializationUtility.CombinedOptions);
                         if (result == null)
                         {
