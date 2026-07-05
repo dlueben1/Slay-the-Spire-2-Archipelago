@@ -7,6 +7,7 @@ using StS2AP.Extensions;
 using StS2AP.Utils;
 using static StS2AP.Data.CharTable;
 using MegaCrit.Sts2.Core.Saves;
+using MegaCrit.Sts2.Core.Entities.Cards;
 
 
 namespace StS2AP.Models
@@ -347,14 +348,16 @@ namespace StS2AP.Models
                 GoldRedeemed = GoldRedeemed,
                 RelicAssignments = RelicAssignments.Select((KeyValuePair<int,RelicModel> kv) => new KeyValuePair<int, SerializableRelic>(kv.Key, kv.Value.ToMutable().ToSerializable())).ToDictionary(),
                 CardAssignments = CardAssignments.Select((KeyValuePair<int,CardReward> kv) => new KeyValuePair<int, SerializableReward>(kv.Key, kv.Value.ToSerializable())).ToDictionary(),
+                CardAssignmentModels = CardAssignments.Select((KeyValuePair<int,CardReward> kv) => 
+                new KeyValuePair<int, List<SerializableCard>>(kv.Key, kv.Value.Cards.Select(c => c.ToSerializable()).ToList())).ToDictionary(),
                 PotionAssignments = PotionAssignments.Select((KeyValuePair<int,PotionModel> kv) => new KeyValuePair<int, SerializablePotion>(kv.Key, kv.Value.ToMutable().ToSerializable(-1))).ToDictionary(),
             };
         }
 
         public static ArchipelagoProgress FromSerializable(SerializableAP saveData, Player player)
         {
-
-            return new ArchipelagoProgress()
+            LogUtility.Info($"Card Assignments {string.Join(",", saveData.CardAssignments)}");
+            var progress = new ArchipelagoProgress()
             {
                 CardRewardsAttempted = saveData.CardRewardsAttempted,
                 RareCardRewardsAttempted = saveData.RareCardRewardsAttempted,
@@ -365,9 +368,50 @@ namespace StS2AP.Models
                 UsedItems = new List<int>(saveData.UsedItems),
                 GoldRedeemed = saveData.GoldRedeemed,
                 RelicAssignments = saveData.RelicAssignments.Select((KeyValuePair<int, SerializableRelic> kv) => new KeyValuePair<int, RelicModel>(kv.Key, RelicModel.FromSerializable(kv.Value).CanonicalInstance)).ToDictionary(),
-                CardAssignments = saveData.CardAssignments.Select((KeyValuePair<int, SerializableReward> kv) => new KeyValuePair<int, CardReward>(kv.Key, (CardReward) CardReward.FromSerializable(kv.Value, player))).ToDictionary(),
+                //CardAssignments = saveData.CardAssignments.Select((KeyValuePair<int, SerializableReward> kv) => new KeyValuePair<int, CardReward>(kv.Key, (CardReward) CardReward.FromSerializable(kv.Value, player))).ToDictionary(),
                 PotionAssignments = saveData.PotionAssignments.Select((KeyValuePair<int, SerializablePotion> kv) => new KeyValuePair<int, PotionModel>(kv.Key, PotionModel.FromSerializable(kv.Value).CanonicalInstance)).ToDictionary(),
             };
+
+            var cardModels = new Dictionary<int, List<CardModel>>();
+            foreach(var kv in saveData.CardAssignmentModels)
+            {
+                var models = kv.Value.Select(cs => player.RunState.CreateCard(CardModel.FromSerializable(cs).CanonicalInstance, player)).ToList();
+                // foreach(var model in models)
+                // {
+                //     model.Owner = player;
+                // }
+                cardModels[kv.Key] = models;
+            }
+
+            var cardsInfo = typeof(CardReward).GetField("_cards", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if(cardsInfo == null)
+            {
+                LogUtility.Error("Failed to reflectively access card reward field; cannot repopulate from save");
+                return progress;
+            }
+
+            var cardRewards = new Dictionary<int, CardReward>();
+            foreach(var kv in saveData.CardAssignments)
+            {
+                if(cardModels.TryGetValue(kv.Key, out var cards))
+                {
+                    var reward = (CardReward) CardReward.FromSerializable(kv.Value, player);
+                    cardRewards[kv.Key] = reward;
+                    List<CardCreationResult> cardCreations = (List<CardCreationResult>) cardsInfo.GetValue(reward);
+                    foreach(var card in cards)
+                    {
+                        cardCreations?.Add(new CardCreationResult(card));
+                    }
+                }
+                else
+                {
+                    LogUtility.Error($"Could not recover card list from save for reward {kv.Key}");
+                }
+            }
+
+            progress.CardAssignments = cardRewards;
+
+            return progress;
         }
 
         #endregion
