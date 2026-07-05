@@ -92,15 +92,10 @@ namespace StS2AP.Patches
                     __result.RemoveAll(n => "HEAL".Equals(n.OptionId));
                 }
 
-                foreach (var option in __result)
+                // Removing the smith option
+                if(!canSmith)
                 {
-                    if (option.OptionId == "SMITH")
-                    {
-                        option.SetIsEnabled(canSmith);
-                    } else
-                    {
-                        anyEnabled |= option.IsEnabled;
-                    }
+                    __result.RemoveAll(n => "SMITH".Equals(n.OptionId));
                 }
 
                 if (!anyEnabled)
@@ -197,13 +192,13 @@ namespace StS2AP.Patches
             {
             }
 
-            public override string OptionId => "HEAL";
+            public override string OptionId => "NOTHING";
 
             public override LocString Description
             {
                 get
                 {
-                    LocString description = new LocString("rest_site_ui", "OPTION_HEAL.descriptionDisabled");
+                    LocString description = new LocString("rest_site_ui", "OPTION_NOTHING.descriptionDisabled");
                     return description;
                 }
             }
@@ -242,7 +237,10 @@ namespace StS2AP.Patches
                 wrapper.GrowVertical = Control.GrowDirection.Both;
                 wrapper.MouseFilter = Control.MouseFilterEnum.Ignore;
 
-                choicesContainer.SizeFlagsHorizontal = Control.SizeFlags.Expand;
+                // Allow the wrapper to size itself based on content, but cap at viewport width
+                wrapper.CustomMinimumSize = new Vector2(0, 0);
+
+                choicesContainer.SizeFlagsHorizontal = Control.SizeFlags.Expand | Control.SizeFlags.ShrinkCenter;
                 choicesScreen.AddChild(wrapper);
                 choicesContainer.Reparent(wrapper);
             }

@@ -4,6 +4,8 @@
   "OPTION_USEFUL.name": "Might be useful?",
   "OPTION_FILLER.name": "Who left this here?",
   "OPTION_TRAP.name": "Seems important?",
+  "OPTION_NOTHING.name": "Do Nothing",
+  "OPTION_NOTHING.descriptionDisabled": "[red]You have not received enough Progressive Rests/Smiths[/red]",
   "OPTION_HEAL.descriptionDisabled": "[red]You have not received enough Progressive Rests[/red]",
   "OPTION_SMITH.descriptionDisabled": "[red]You have not received enough Progressive Smiths[/red]",
   "OPTION_CHECK.description": "{description}"
