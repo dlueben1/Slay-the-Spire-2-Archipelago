@@ -33,7 +33,7 @@
 
 	<ItemGroup>
 	  <PackageReference Include="Archipelago.MultiClient.Net" Version="6.7.0" />
-	  <PackageReference Include="STS2-RitsuLib.Compat" Version="0.4.*" />
+	  <PackageReference Include="STS2.RitsuLib.Compat.0.107.1" Version="0.4.53" />
 	</ItemGroup>
 
 	<ItemGroup>
