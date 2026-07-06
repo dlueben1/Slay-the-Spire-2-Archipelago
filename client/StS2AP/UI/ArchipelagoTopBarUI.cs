@@ -134,7 +134,7 @@ namespace StS2AP.UI
         /// <param name="count">The number of unclaimed rewards. Values above <see cref="MaxDisplayCount"/> are clamped.</param>
         public static void SetCount(int count)
         {
-            if (_countLabel == null) return;
+            if (_countLabel == null || !GodotObject.IsInstanceValid(_countLabel)) return;
 
             if (count <= 0)
             {

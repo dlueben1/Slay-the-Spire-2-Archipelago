@@ -142,13 +142,28 @@ namespace StS2AP.Patches
             /// </summary>
             public static void HandleCharacterUnlocked(NCharacterSelectScreen screen, APItemCharID charId)
             {
-                LogUtility.Debug($"HandleCharacterUnlocked: Received unlock event for charId={charId} on screen instance {screen?.GetInstanceId()}");
-
+                // Null check
                 if (screen == null)
                 {
                     LogUtility.Debug("HandleCharacterUnlocked: screen is null — ignoring");
                     return;
                 }
+
+                // Check if we're a stale handler (screen is disposed)
+                if (!GodotObject.IsInstanceValid(screen))
+                {
+                    // Remove this handler
+                    if (Handlers.TryGetValue(screen, out var handler))
+                    {
+                        ArchipelagoClient.CharacterUnlocked -= handler;
+                    }
+                    Handlers.Remove(screen);
+
+                    // And ignore the rest of the function
+                    return;
+                }
+
+                LogUtility.Debug($"HandleCharacterUnlocked: Received unlock event for charId={charId} on screen instance {screen?.GetInstanceId()}");
 
                 if (CharButtonContainerField.GetValue(screen) is not Control container)
                 {
