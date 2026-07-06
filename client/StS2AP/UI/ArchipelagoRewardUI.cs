@@ -133,10 +133,6 @@ namespace StS2AP.UI
 
         private static int _remainingRewards = 0;
 
-        /// Keeps track of the previous handlers for UI overlays, so that we can tell if they've gone stale
-        private static NCapstoneContainer? _lastCapstoneSub = null;
-        private static NOverlayStack? _lastOverlaySub = null;
-
         /// <summary>
         /// Invoked when the reward screen is closed (all rewards dismissed or skipped)
         /// </summary>
@@ -148,12 +144,6 @@ namespace StS2AP.UI
         /// Note: This is different from IsVisible, which can be false if the UI is hidden temporarily by another overlay.
         /// </summary>
         public static bool IsOpen => _rootPanel != null && IsInstanceValid(_rootPanel) && _rootPanel.IsInsideTree();
-
-        /// <summary>
-        /// Not my favorite solution (I don't like handling edge cases like this) but this keeps track of if the Map was opened while the reward screen
-        /// was opened too, so we can restore it if needed
-        /// </summary>
-        private static bool wasMapOpen = false;
 
         #region Public API
 
@@ -362,9 +352,6 @@ namespace StS2AP.UI
             if (_rootPanel == null || !IsInstanceValid(_rootPanel))
                 return;
 
-            // Clear cache and local settings
-            wasMapOpen = false;
-
             // Fade out the rewards window, then hide the layer
             if (_rootPanel != null && IsInstanceValid(_rootPanel))
             {
@@ -383,51 +370,9 @@ namespace StS2AP.UI
             else
             {
                 _rootPanel.Visible = false;
-                RestoreOverlayFocus();
             }
 
             OnScreenClosed?.Invoke();
-        }
-
-        /// <summary>
-        /// Temporarily hides the reward layer without firing OnScreenClosed.
-        /// Use this when another UI needs to take focus (e.g., card reward selection).
-        /// </summary>
-        public static void HideTemporarily()
-        {
-            LogUtility.Debug("Reward UI HideTemporarily() called");
-
-            if (_rootPanel == null || !IsInstanceValid(_rootPanel))
-                return;
-
-            // If the map is open, we need to hide it too
-            var mapScreen = NMapScreen.Instance;
-            if (mapScreen != null && mapScreen.IsOpen)
-            {
-                wasMapOpen = true;
-                mapScreen.Visible = false;
-            }
-
-            _rootPanel.Visible = false;
-            RestoreOverlayFocus();
-        }
-
-        /// <summary>
-        /// Restores visibility of the reward layer after HideTemporarily().
-        /// </summary>
-        public static void ShowAgain()
-        {
-            LogUtility.Debug("Reward UI ShowAgain() called");
-            if (_rootPanel == null || !IsInstanceValid(_rootPanel))
-                return;
-
-            if(wasMapOpen)
-            {
-                NMapScreen.Instance.Visible = true;
-            }
-
-            _rootPanel.Visible = true;
-            RestoreOverlayFocus();
         }
 
         /// <summary>
@@ -862,93 +807,6 @@ namespace StS2AP.UI
 
         #endregion
 
-        #region Event Handling
-
-        /// <summary>
-        /// Checks if we're subscribed to the UI change events, and if we aren't anymore,
-        /// it resubscribes us to the events.
-        /// 
-        /// This is necessary because every new run has it's own instances of the overlay/capstone stack.
-        /// </summary>
-        private static void EnsureSubscribed()
-        {
-            try
-            {
-                // Get the latest UI containers
-                var capstone = NCapstoneContainer.Instance;
-                var overlay = NOverlayStack.Instance;
-
-                // If instances are null, we're not in a run
-                if (capstone == null || overlay == null)
-                    return;
-
-                // Only subscribe if instance changed (new run)
-                if (_lastCapstoneSub != capstone)
-                {
-                    if (_lastCapstoneSub != null)
-                        _lastCapstoneSub.Changed -= OnCapstoneChanged;
-                    _lastCapstoneSub = capstone;
-                    capstone.Changed += OnCapstoneChanged;
-                }
-
-                if (_lastOverlaySub != overlay)
-                {
-                    if (_lastOverlaySub != null)
-                        _lastOverlaySub.Changed -= OnOverlayStackChanged;
-                    _lastOverlaySub = overlay;
-                    overlay.Changed += OnOverlayStackChanged;
-                }
-            }
-            catch (Exception ex)
-            {
-                LogUtility.Error($"Failed to subscribe to screen events: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// My understanding is that this fires when the Capstone stack (full-screen views like deck) adds/removes elements
-        /// </summary>
-        private static void OnCapstoneChanged()
-        {
-            LogUtility.Debug($"Capstone Changed: {NCapstoneContainer.Instance.InUse}");
-
-            // If we were open previously, let's restore our UI
-            if (IsOpen && !NCapstoneContainer.Instance.InUse)
-            {
-                ShowAgain();
-
-                // If the Overlay Stack has items on it, clear it out so things don't glitch
-                if(NOverlayStack.Instance.ScreenCount > 0)
-                {
-                    NOverlayStack.Instance.Clear();
-                }
-            }
-        }
-
-        /// <summary>
-        /// Fires when the Overlay Stack (think dialogs, pop-ups) adds/removes elements
-        /// </summary>
-        private static void OnOverlayStackChanged()
-        {
-            // If we're not open, ignore this
-            if (!IsOpen) return;
-
-            LogUtility.Debug($"Overlay Changed Count: {NOverlayStack.Instance.ScreenCount}");
-            
-            // If there are new overlays, hide our UI temporarily
-            if(NOverlayStack.Instance!.ScreenCount > 0)
-            {
-                HideTemporarily();
-            }
-            // Otherwise, re-reveal the UI
-            else
-            {
-                ShowAgain();
-            }
-        }
-
-        #endregion
-
         #region Helpers
 
         /// <summary>
@@ -1040,28 +898,6 @@ namespace StS2AP.UI
         private static bool IsInstanceValid(GodotObject obj)
         {
             return GodotObject.IsInstanceValid(obj);
-        }
-        /// <summary>
-        /// Restores focus and visibility state to the game's native overlay stack.
-        /// Called when the AP reward screen is hidden or dismissed so that any underlying screen (e.g., NRewardsScreen) regains input focus and doesn't softlock.
-        /// </summary>
-        private static void RestoreOverlayFocus()
-        {
-           try
-            {
-                // Grab the top overlay's default focus control and give it focus directly
-                var topOverlay = NOverlayStack.Instance?.Peek();
-                if (topOverlay != null)
-                {
-                    topOverlay.AfterOverlayShown();
-                    var defaultControl = topOverlay.DefaultFocusedControl;
-                    defaultControl?.GrabFocus();
-                }
-            }
-            catch (Exception ex)
-            {
-                LogUtility.Warn($"Failed to restore game UI focus: {ex.Message}");
-            }
         }
         #endregion
     }
