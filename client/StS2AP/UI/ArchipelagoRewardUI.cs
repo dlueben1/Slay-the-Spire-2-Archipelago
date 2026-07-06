@@ -388,7 +388,6 @@ namespace StS2AP.UI
             if (_rootPanel != null && IsInstanceValid(_rootPanel))
                 _rootPanel.QueueFree();
 
-            _rootPanel      = null;
             _rootPanel        = null;
             _itemContainer    = null;
             _proceedButton    = null;
