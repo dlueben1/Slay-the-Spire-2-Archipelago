@@ -12,6 +12,8 @@ using StS2AP.Data;
 using StS2AP.Models;
 using StS2AP.UI;
 using StS2AP.Utils;
+using STS2RitsuLib;
+using STS2RitsuLib.Data;
 using static StS2AP.Data.CharTable;
 using static StS2AP.Data.ItemTable;
 
@@ -78,7 +80,21 @@ namespace StS2AP
         #region Session Information
 
         /// <summary>
-        /// The Player's settings, mostly from the YAML
+        /// The local settings for the client, as configured by the player.
+        /// 
+        /// This contains overrides for the server-provided settings, which are stored in <seealso cref="Settings"/>,
+        /// and allows the player to customize their experience without affecting the server's authoritative configuration,
+        /// changing non-YAML settings such as notification frequency, etc.
+        /// </summary>
+        public static ModDataStoreCache<ClientSettings> LocalSettings { get; set; } = RitsuLibFramework.GetDataStore(ModEntry.ModId).CreateCache<ClientSettings>("apsettings");
+
+        /// <summary>
+        /// The Archipelago Slot's settings, returned from the Server and initially configured from the player's YAML.
+        /// 
+        /// Unless overridden using local settings, this is the default source of truth for the session's settings.
+        /// 
+        /// It should not be written to after initialization, as it represents the server's authoritative configuration for this slot,
+        /// which we can't change.
         /// </summary>
         public static ArchipelagoSettings Settings { get; private set; }
 
@@ -189,7 +205,7 @@ namespace StS2AP
             DeathLinkController = Session.CreateDeathLinkService();
             DeathLinkController.OnDeathLinkReceived += deathLinkInfo =>
             {
-                Callable.From(() => GameUtility.OnDeathLinkReceived(deathLinkInfo)).CallDeferred();
+                Callable.From(() => DeathLinkUtility.OnDeathLinkReceived(deathLinkInfo)).CallDeferred();
             };
 
             // Attempt to connect to the server
@@ -322,10 +338,14 @@ namespace StS2AP
                 Settings = GetPlayerSettings();
 
                 // Enable/Disable the Death Link Service based on user settings
-                LogUtility.Info($"Is Death Link Enabled: {Settings.IsDeathLinkEnabled.ToString()}");
-                LogUtility.Info($"Death Link Damage Percentage: {Settings.DeathLinkDamagePercent.ToString()}%");
-                LogUtility.Info($"Death Link Curse Enabled: {Settings.EnableDeathFragments.ToString()}");
-                if (Settings.IsDeathLinkEnabled)
+                LogUtility.Info($"SLOT - Is Death Link Enabled: {Settings.IsDeathLinkEnabled.ToString()}");
+                LogUtility.Info($"SLOT - Death Link Damage Percentage: {Settings.DeathLinkDamagePercent.ToString()}%");
+                LogUtility.Info($"SLOT - Death Link Curse Enabled: {Settings.EnableDeathFragments.ToString()}");
+                LogUtility.Info($"LOCAL - Death Link Settings Override: {LocalSettings.Value.OverrideDeathLinkOptions.ToString()}");
+                LogUtility.Info($"LOCAL - Opt-In to Death Link: {LocalSettings.Value.EnableDeathLink.ToString()}");
+                LogUtility.Info($"LOCAL - Death Link Override Damage Percentage: {LocalSettings.Value.DeathLinkPercentDamage.ToString()}%");
+                LogUtility.Info($"LOCAL - Death Link Override Curse Enabled: {LocalSettings.Value.EnableDeathFragments.ToString()}");
+                if (DeathLinkUtility.IsDeathLinkEnabled)
                 {
                     DeathLinkController.EnableDeathLink();
                 }

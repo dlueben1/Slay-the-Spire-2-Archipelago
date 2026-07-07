@@ -58,6 +58,9 @@ namespace StS2AP
                     autoCreateIfMissing: true);
             }
 
+            // Initialize Utilities
+            DeathLinkUtility.Initialize();
+
             // Apply all Harmony Patches
             try
             {
@@ -162,8 +165,9 @@ namespace StS2AP
         #region Mod Settings
 
         /// <summary>
-        /// NOTE: We may want to move this to a global function that can be used for other parts of the codebase to get 
-        /// whether death link overriding is enabled or not, but for now, it's just for this mod settings option.
+        /// Local Check to use in-settings only for determining if Death Link overrides are enabled or not.
+        /// Do NOT use this outside of this class - if you want to check if Death Link is overridden, use
+        /// <see cref="ArchipelagoClient.LocalSettings"/>
         /// </summary>
         private static bool IsDeathLinkOverriden()
         {
@@ -180,17 +184,17 @@ namespace StS2AP
             RitsuLibFramework.RegisterModSettings(ModId, page => page
             .WithTitle(ModSettingsText.Literal("AP Settings"))
             .WithModDisplayName(ModSettingsText.Literal("Archipelago"))
-            .AddSection("notifications", section => section
-                .WithTitle(ModSettingsText.Literal("Notifications"))
-                .AddChoice("reward_notifications", ModSettingsText.Literal("Reward Notifications"), 
-                    new ModSettingsValueBinding<ClientSettings, string>(
-                        ModId, "apsettings", SaveScope.Global, s => s.RewardNotificationPref, (s, value) => s.RewardNotificationPref = value),
-                    new STS2RitsuLib.Settings.ModSettingsChoiceOption<string>[]
-                    {
-                        new("All", ModSettingsText.Literal("All")),
-                        new("My Checks & Items", ModSettingsText.Literal("My Checks & Items")),
-                        new("Only My Checks", ModSettingsText.Literal("Only My Checks"))
-                    }))
+            //.AddSection("notifications", section => section
+            //    .WithTitle(ModSettingsText.Literal("Notifications"))
+            //    .AddChoice("reward_notifications", ModSettingsText.Literal("Reward Notifications"), 
+            //        new ModSettingsValueBinding<ClientSettings, string>(
+            //            ModId, "apsettings", SaveScope.Global, s => s.RewardNotificationPref, (s, value) => s.RewardNotificationPref = value),
+            //        new STS2RitsuLib.Settings.ModSettingsChoiceOption<string>[]
+            //        {
+            //            new("All", ModSettingsText.Literal("All")),
+            //            new("My Checks & Items", ModSettingsText.Literal("My Checks & Items")),
+            //            new("Only My Checks", ModSettingsText.Literal("Only My Checks"))
+            //        }))
             .AddSection("deathlink", section => section
                 .WithTitle(ModSettingsText.Literal("Death Link"))
                 .AddToggle("override_deathlink", ModSettingsText.Literal("Use Custom Death Link Settings"), 

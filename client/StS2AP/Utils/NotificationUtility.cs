@@ -325,7 +325,7 @@ namespace StS2AP.Utils
         public static void ShowDeathLink(DeathLink death)
         {
             // If somehow we got here and Death Link is disabled, then back out
-            if (!ArchipelagoClient.Settings.IsDeathLinkEnabled) return;
+            if (!DeathLinkUtility.IsDeathLinkEnabled) return;
 
             // If the cause is valid, display that, otherwise use a generic message
             string cause = string.IsNullOrEmpty(death.Cause) ? $"{death.Source} has died!" : death.Cause;
