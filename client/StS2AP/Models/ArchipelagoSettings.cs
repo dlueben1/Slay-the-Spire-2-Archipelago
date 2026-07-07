@@ -7,7 +7,13 @@ using System.Threading.Tasks;
 namespace StS2AP.Models
 {
     /// <summary>
-    /// The settings that a player has configured for their Archipelago Slot
+    /// The settings that a player has configured for their Archipelago Slot.
+    /// 
+    /// This is intended to be read-only once it's been initialized during the Archipelago connection,
+    /// representing what the server-side settings are for this slot, which are configured at generation
+    /// time for an Archipelago session.
+    /// 
+    /// For local/configurable settings, see  <seealso cref="ClientSettings"/>.
     /// </summary>
     public class ArchipelagoSettings
     {

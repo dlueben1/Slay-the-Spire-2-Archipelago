@@ -7,8 +7,6 @@ using MegaCrit.Sts2.Core.Nodes.HoverTips;
 using MegaCrit.Sts2.Core.Nodes.Screens;
 using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
 using MegaCrit.Sts2.Core.Nodes.TopBar;
-using StS2AP.Utils;
-using System;
 
 namespace StS2AP.UI
 {
