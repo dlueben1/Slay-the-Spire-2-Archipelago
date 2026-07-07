@@ -34,7 +34,7 @@ namespace StS2AP.Patches
             static bool Prefix(NRun __instance, SerializableRun serializableRun)
             {
                 // If Death Link isn't enabled, there's nothing to do
-                if (!ArchipelagoClient.Settings.IsDeathLinkEnabled) return true;
+                if (!DeathLinkUtility.IsDeathLinkEnabled) return true;
 
                 // Grab the state of the Run
                 RunState? runState = Traverse.Create(__instance).Field<RunState>("_state").Value;

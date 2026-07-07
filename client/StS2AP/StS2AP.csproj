@@ -20,7 +20,7 @@
 		<ModName Condition="'$(ModName)' == ''">ExampleMod</ModName>
 		<ModDisplayName Condition="'$(ModDisplayName)' == ''">Example Mod</ModDisplayName>
 		<ModAuthor Condition="'$(ModAuthor)' == ''">Unknown</ModAuthor>
-		<ModVersion Condition="'$(ModVersion)' == ''">0.5.2</ModVersion>
+		<ModVersion Condition="'$(ModVersion)' == ''">0.5.3</ModVersion>
 
 		<AssemblyName>$(ModName)</AssemblyName>
 		<Version>$(ModVersion)</Version>
@@ -33,6 +33,7 @@
 
 	<ItemGroup>
 	  <PackageReference Include="Archipelago.MultiClient.Net" Version="6.7.0" />
+	  <PackageReference Include="STS2.RitsuLib.Compat.0.107.1" Version="0.4.53" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -185,7 +186,7 @@ dotnet/embed_build_outputs=false
 		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModsOutputDir)" />
 		<!-- Copy all dependency DLLs (NuGet packages) except game-provided assemblies -->
 		<ItemGroup>
-			<DependencyDlls Include="$(TargetDir)*.dll" Exclude="$(TargetDir)$(TargetFileName);$(TargetDir)GodotSharp.dll;$(TargetDir)0Harmony.dll;$(TargetDir)sts2.dll" />
+			<DependencyDlls Include="$(TargetDir)*.dll" Exclude="$(TargetDir)$(TargetFileName);$(TargetDir)GodotSharp.dll;$(TargetDir)0Harmony.dll;$(TargetDir)sts2.dll;$(TargetDir)STS2.RitsuLib*.dll" />
 		</ItemGroup>
 		<Copy SourceFiles="@(DependencyDlls)" DestinationFolder="$(ModsOutputDir)" />
 		<Copy SourceFiles="Archipelago.json" DestinationFiles="$(ModsOutputDir)\Archipelago.json" />

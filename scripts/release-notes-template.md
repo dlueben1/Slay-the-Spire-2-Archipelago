@@ -19,23 +19,24 @@
 
 ## Installing the Mod
 
-1. Download the "sts2-client.zip" from the [Releases](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest) section of the Repo
-2. Go to your Slay the Spire II directory (In Steam, click "Browse Local Files")
-3. If a folder called `mods` does not exist, create it
-4. Unzip the **contents** of `sts2-client.zip` into `mods`
+1. Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) installed. The easiest way to obtain it is from Steam Workshop.
+2. Download the "sts2-client.zip" from the [Releases](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest) section of the Repo
+3. Go to your Slay the Spire II directory (In Steam, click "Browse Local Files")
+4. If a folder called `mods` does not exist, create it
+5. Unzip the **contents** of `sts2-client.zip` into `mods`
 
 - If you've done this step correctly, your directory structure should look like this: `/<slay-the-spire-2-local-files>/mods/Archipelago/` and the contents of that folder should be a bunch of `.dll` files and a `.pck` file (there may be more files too, please don't touch anything in this folder)
 
-5. Start the game
+6. Start the game
 
 ### Additional Steps for **Hosts**
 
-6. Download `spire2.apworld`
-7. Open your Archipelago Launcher
-8. Click "Install APWorld"
-9. Select `spire2.apworld` in the file dialog that pops up
-10. **Restart the Archipelago Launcher**
-11. Now you should be able to properly host/generate an Archipelago Session with StS 2
+7. Download `spire2.apworld`
+8. Open your Archipelago Launcher
+9. Click "Install APWorld"
+10. Select `spire2.apworld` in the file dialog that pops up
+11. **Restart the Archipelago Launcher**
+12. Now you should be able to properly host/generate an Archipelago Session with StS 2
 
 - If you want to use `archipelago.gg` to host the game, generate it locally first following the steps above, then upload the `.zip` file from the `output` folder in your Archipelago installation
 
