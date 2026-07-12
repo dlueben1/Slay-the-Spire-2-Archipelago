@@ -133,9 +133,6 @@ namespace StS2AP.Utils
             // Grab the entry ID of the setting that was changed
             var entryId = binding.DataKey;
 
-            LogUtility.Info($"DEBUG: entryId: {entryId}, value: {binding.ToString()}");
-            LogUtility.Info($"DEBUG: IsDeathLinkEnabled: {IsDeathLinkEnabled} / SLOT: {ArchipelagoClient.Settings.IsDeathLinkEnabled} / LOCAL: {ArchipelagoClient.LocalSettings.Value.EnableDeathLink}");
-
             // Listen for changes that may require us to enable/disable death link
             if (entryId == "apsettings")
             {
