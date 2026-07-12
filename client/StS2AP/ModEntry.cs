@@ -1,4 +1,9 @@
-﻿using HarmonyLib;
+﻿using System;
+using System.IO;
+using System.Reflection;
+using System.Runtime;
+using System.Runtime.Loader;
+using HarmonyLib;
 using MegaCrit.Sts2.Core.Modding;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
@@ -9,11 +14,6 @@ using STS2RitsuLib;
 using STS2RitsuLib.Interop;
 using STS2RitsuLib.Settings;
 using STS2RitsuLib.Utils.Persistence;
-using System;
-using System.IO;
-using System.Reflection;
-using System.Runtime;
-using System.Runtime.Loader;
 
 namespace StS2AP
 {
@@ -37,16 +37,15 @@ namespace StS2AP
 
             LogUtility.Info("Archipelago mod initializing...");
 
-            /// This lets StS know that there's a property on the Death Link Curse that needs to be saved/loaded with the save system. 
+            /// This lets StS know that there's a property on the Death Link Curse that needs to be saved/loaded with the save system.
             /// This is done by injecting the type into the SavedPropertiesTypeCache.
-            /// 
+            ///
             /// This also might change when we start using BaseLib. It probably makes this easier.
             SavedPropertiesTypeCache.InjectTypeIntoCache(typeof(DeathLinkCurse));
 
             // Register with RitsuLib
             var assembly = Assembly.GetExecutingAssembly();
             ModTypeDiscoveryHub.RegisterModAssembly(ModId, assembly);
-            ModSettingsRegistration.Register();
             using (RitsuLibFramework.BeginModDataRegistration(ModId))
             {
                 var store = RitsuLibFramework.GetDataStore(ModId);
@@ -55,8 +54,10 @@ namespace StS2AP
                     fileName: "apsettings.json",
                     scope: SaveScope.Global,
                     defaultFactory: () => new ClientSettings(),
-                    autoCreateIfMissing: true);
+                    autoCreateIfMissing: true
+                );
             }
+            ModSettingsRegistration.Register();
 
             // Initialize Utilities
             DeathLinkUtility.Initialize();
@@ -98,14 +99,17 @@ namespace StS2AP
         /// <summary>
         /// Called when the runtime can't find an assembly. We check the mod directory.
         /// </summary>
-        private static Assembly? OnAssemblyResolve(AssemblyLoadContext context, AssemblyName assemblyName)
+        private static Assembly? OnAssemblyResolve(
+            AssemblyLoadContext context,
+            AssemblyName assemblyName
+        )
         {
             if (string.IsNullOrEmpty(_modDirectory) || string.IsNullOrEmpty(assemblyName.Name))
                 return null;
 
             // Try to find the assembly in the mod directory
             var assemblyPath = Path.Combine(_modDirectory, $"{assemblyName.Name}.dll");
-            
+
             if (File.Exists(assemblyPath))
             {
                 try
@@ -135,20 +139,24 @@ namespace StS2AP
                     LogUtility.Error($"Exception Type: {ex.GetType().FullName}");
                     LogUtility.Error($"Message: {ex.Message}");
                     LogUtility.Error($"Stack Trace:\n{ex.StackTrace}");
-                    
+
                     if (ex.InnerException != null)
                     {
-                        LogUtility.Error($"Inner Exception: {ex.InnerException.GetType().FullName}");
+                        LogUtility.Error(
+                            $"Inner Exception: {ex.InnerException.GetType().FullName}"
+                        );
                         LogUtility.Error($"Inner Message: {ex.InnerException.Message}");
                         LogUtility.Error($"Inner Stack Trace:\n{ex.InnerException.StackTrace}");
                     }
-                    
+
                     LogUtility.Error($"Is Terminating: {e.IsTerminating}");
                     LogUtility.Error("=== END UNHANDLED EXCEPTION ===");
                 }
                 else
                 {
-                    LogUtility.Error($"Unhandled exception (non-Exception type): {e.ExceptionObject}");
+                    LogUtility.Error(
+                        $"Unhandled exception (non-Exception type): {e.ExceptionObject}"
+                    );
                 }
 
                 // Flush the console output to ensure everything is written
@@ -158,7 +166,9 @@ namespace StS2AP
             catch
             {
                 // If logging fails, at least try to write something to standard output
-                Console.Error.WriteLine($"CRITICAL: Failed to log unhandled exception: {e.ExceptionObject}");
+                Console.Error.WriteLine(
+                    $"CRITICAL: Failed to log unhandled exception: {e.ExceptionObject}"
+                );
             }
         }
     }

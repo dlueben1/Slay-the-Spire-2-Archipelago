@@ -52,5 +52,14 @@ namespace StS2AP.Models
         public int DeathLinkPercentDamage { get; set; } = 15;
 
         #endregion
+
+        #region Key/Button Bindings
+
+        /// <summary>
+        /// Keybinding for opening the Archipelago Loot window.
+        /// </summary>
+        public string OpenArchLootHotKey { get; set; } = "P";
+
+        #endregion
     }
 }

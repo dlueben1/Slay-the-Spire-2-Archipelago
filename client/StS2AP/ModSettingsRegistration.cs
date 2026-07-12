@@ -1,5 +1,8 @@
 ﻿using StS2AP.Models;
+using StS2AP.UI;
+using StS2AP.Utils;
 using STS2RitsuLib;
+using STS2RitsuLib.RuntimeInput;
 using STS2RitsuLib.Settings;
 using STS2RitsuLib.Utils.Persistence;
 
@@ -10,12 +13,75 @@ namespace StS2AP;
 /// </summary>
 public static class ModSettingsRegistration
 {
-    #region Death Link Settings Keys
+    #region Settings Keys
 
+    // Keybindings
+    private const string KeyBinds_APMenuId = "keybind_ap_menu";
+
+    // Death Link
     private const string DeathLink_OverrideId = "override_deathlink";
     private const string DeathLink_EnableId = "enable_deathlink";
     private const string DeathLink_FragmentsOnId = "enable_death_fragments";
     private const string DeathLink_DamageId = "deathlink_damage";
+
+    #endregion
+
+    #region Handle Hotkeys
+
+    /// <summary>
+    /// The Handle for the current registered hotkey for opening the Archipelago Loot Menu.
+    /// </summary>
+    private static IRuntimeHotkeyHandle? ApLootHotkeyHandle;
+
+    /// <summary>
+    /// Registers runtime hotkeys after the game is ready.
+    /// Currently we don't have more than one hotkey, but if we ever end up with a lot more
+    /// we probably want to refactor this into a separate hotkey registration system.
+    /// </summary>
+    public static void RegisterHotkeys()
+    {
+        // Pull the settings from the data store and normalize the hotkey binding
+        var store = RitsuLibFramework.GetDataStore(ModEntry.ModId);
+        var settings = store.Get<ClientSettings>("apsettings");
+
+        var normalizedBinding = RuntimeHotkeyService.NormalizeOrDefault(
+            settings.OpenArchLootHotKey,
+            "P"
+        );
+
+        // Map the normalized binding
+        settings.OpenArchLootHotKey = normalizedBinding;
+
+        // And register it
+        ApLootHotkeyHandle?.Dispose();
+        ApLootHotkeyHandle = RuntimeHotkeyService.Register(
+            normalizedBinding,
+            () =>
+            {
+                // Ignore if we're not in a run
+                if (!GameUtility.IsInRun)
+                    return;
+
+                // Toggle the Archipelago Reward UI
+                if (!ArchipelagoRewardUI.IsOpen)
+                {
+                    ArchipelagoRewardUI.ShowRewards();
+                }
+                else
+                {
+                    ArchipelagoRewardUI.Hide();
+                }
+            },
+            new RuntimeHotkeyOptions
+            {
+                Id = $"{ModEntry.ModId}.{KeyBinds_APMenuId}",
+                DisplayName = RuntimeHotkeyText.Literal("Open AP Loot Menu"),
+                Description = RuntimeHotkeyText.Literal("Opens the Archipelago Loot menu."),
+                Category = RuntimeHotkeyText.Literal("Archipelago"),
+                MarkInputHandled = true,
+            }
+        );
+    }
 
     #endregion
 
@@ -28,69 +94,110 @@ public static class ModSettingsRegistration
     {
         RitsuLibFramework.RegisterModSettings(
             ModEntry.ModId,
-            page => page
-                .WithTitle(ModSettingsText.Literal("Archipelago Settings"))
-                .WithModDisplayName(ModSettingsText.Literal("Archipelago"))
-                .AddSection("deathlink", ConfigureDeathLinkSection));
+            page =>
+                page.WithTitle(ModSettingsText.Literal("Archipelago Settings"))
+                    .WithModDisplayName(ModSettingsText.Literal("Archipelago"))
+                    .AddSection("keybinds", ConfigureKeybindsSection)
+                    .AddSection("deathlink", ConfigureDeathLinkSection)
+        );
+        RegisterHotkeys();
+    }
+
+    /// <summary>
+    /// Composes the Keybinds settings section
+    /// </summary>
+    private static void ConfigureKeybindsSection(ModSettingsSectionBuilder section)
+    {
+        section
+            .WithTitle(ModSettingsText.Literal("Keyboard Controls"))
+            .WithDescription(
+                ModSettingsText.Literal("Configure keybinds for Archipelago functionality.")
+            )
+            .AddKeyBinding(
+                KeyBinds_APMenuId,
+                ModSettingsText.Literal("Open AP Loot Menu"),
+                CreateBinding(
+                    static settings => settings.OpenArchLootHotKey,
+                    static (settings, value) =>
+                    {
+                        // Normalize the input and save it
+                        var normalizedBinding = RuntimeHotkeyService.NormalizeOrDefault(value, "P");
+                        settings.OpenArchLootHotKey = normalizedBinding;
+
+                        // Attempt to rebind it (it should have been initially bound during startup)
+                        if (ApLootHotkeyHandle is not null)
+                        {
+                            ApLootHotkeyHandle.TryRebind(normalizedBinding, out var error);
+
+                            if (error is not null)
+                            {
+                                RitsuLibFramework.Logger.Warn(
+                                    $"Unable to rebind AP menu hotkey: {error}"
+                                );
+                            }
+                        }
+                    }
+                )
+            );
     }
 
     /// <summary>
     /// Composes the Death Link settings section
     /// </summary>
-    private static void ConfigureDeathLinkSection(
-        ModSettingsSectionBuilder section)
+    private static void ConfigureDeathLinkSection(ModSettingsSectionBuilder section)
     {
         section
             .WithTitle(ModSettingsText.Literal("Death Link"))
-            .WithDescription(ModSettingsText.Literal(
-                "Configure how received Death Links affect this game."))
+            .WithDescription(
+                ModSettingsText.Literal("Configure how received Death Links affect this game.")
+            )
             .AddToggle(
                 DeathLink_OverrideId,
                 ModSettingsText.Literal("Use Custom Death Link Settings"),
                 CreateBinding(
                     static settings => settings.OverrideDeathLinkOptions,
-                    static (settings, value) => settings.OverrideDeathLinkOptions = value),
+                    static (settings, value) => settings.OverrideDeathLinkOptions = value
+                ),
                 ModSettingsText.Literal(
-                    "Override the Death Link options supplied by the " +
-                    "Archipelago slot data."))
+                    "Override the Death Link options supplied by the Archipelago slot data."
+                )
+            )
             .AddToggle(
                 DeathLink_EnableId,
                 ModSettingsText.Literal("Enable Death Link"),
                 CreateBinding(
                     static settings => settings.EnableDeathLink,
-                    static (settings, value) => settings.EnableDeathLink = value),
-                ModSettingsText.Literal(
-                    "Opt in to or out of Death Link."))
-            .WithEntryEnabledWhen(
-                DeathLink_EnableId,
-                IsDeathLinkOverriden)
+                    static (settings, value) => settings.EnableDeathLink = value
+                ),
+                ModSettingsText.Literal("Opt in to or out of Death Link.")
+            )
+            .WithEntryEnabledWhen(DeathLink_EnableId, IsDeathLinkOverriden)
             .AddToggle(
                 DeathLink_FragmentsOnId,
                 ModSettingsText.Literal("Enable Death Fragments"),
                 CreateBinding(
                     static settings => settings.EnableDeathFragments,
-                    static (settings, value) => settings.EnableDeathFragments = value),
-                ModSettingsText.Literal(
-                    "Receive a special curse when a Death Link is received."))
-            .WithEntryEnabledWhen(
-                DeathLink_FragmentsOnId,
-                IsDeathLinkOverriden)
+                    static (settings, value) => settings.EnableDeathFragments = value
+                ),
+                ModSettingsText.Literal("Receive a special curse when a Death Link is received.")
+            )
+            .WithEntryEnabledWhen(DeathLink_FragmentsOnId, IsDeathLinkOverriden)
             .AddIntSlider(
                 DeathLink_DamageId,
                 ModSettingsText.Literal("Death Link Damage"),
                 CreateBinding(
                     static settings => settings.DeathLinkPercentDamage,
-                    static (settings, value) => settings.DeathLinkPercentDamage = value),
+                    static (settings, value) => settings.DeathLinkPercentDamage = value
+                ),
                 minValue: 0,
                 maxValue: 100,
                 step: 5,
                 valueFormatter: static value => $"{value}%",
                 description: ModSettingsText.Literal(
-                    "The percentage of maximum health lost when a " +
-                    "Death Link is received."))
-            .WithEntryEnabledWhen(
-                DeathLink_DamageId,
-                IsDeathLinkOverriden);
+                    "The percentage of maximum health lost when a Death Link is received."
+                )
+            )
+            .WithEntryEnabledWhen(DeathLink_DamageId, IsDeathLinkOverriden);
     }
 
     #endregion
@@ -110,19 +217,20 @@ public static class ModSettingsRegistration
     }
 
     /// <summary>
-    /// Factory Pattern for Settings Binding 
+    /// Factory Pattern for Settings Binding
     /// </summary>
-    private static ModSettingsValueBinding<ClientSettings, TValue>
-        CreateBinding<TValue>(
-            Func<ClientSettings, TValue> getter,
-            Action<ClientSettings, TValue> setter)
+    private static ModSettingsValueBinding<ClientSettings, TValue> CreateBinding<TValue>(
+        Func<ClientSettings, TValue> getter,
+        Action<ClientSettings, TValue> setter
+    )
     {
         return new ModSettingsValueBinding<ClientSettings, TValue>(
             ModEntry.ModId,
             "apsettings",
             SaveScope.Global,
             getter,
-            setter);
+            setter
+        );
     }
 
     #endregion
