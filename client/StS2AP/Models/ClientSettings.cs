@@ -8,7 +8,7 @@ namespace StS2AP.Models
 {
     /// <summary>
     /// Represents a collection of user-configurable settings for the mod.
-    /// 
+    ///
     /// Compared to <seealso cref="ArchipelagoSettings"/>, these settings represent
     /// local preferences and configuration, intended to be read/written to at runtime.
     /// </summary>
@@ -21,6 +21,11 @@ namespace StS2AP.Models
         /// Values: "All", "My Checks & Items", "Only My Checks"
         /// </summary>
         public string RewardNotificationPref { get; set; } = "All";
+
+        /// <summary>
+        /// Which Ancient will announce your Archipelago Messages
+        /// </summary>
+        public string Announcer { get; set; } = "neow";
 
         #endregion
 

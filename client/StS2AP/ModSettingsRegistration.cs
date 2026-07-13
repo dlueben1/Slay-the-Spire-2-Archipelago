@@ -18,6 +18,9 @@ public static class ModSettingsRegistration
     // Keybindings
     private const string KeyBinds_APMenuId = "keybind_ap_menu";
 
+    // Notifications
+    private const string Notif_AnnouncerId = "notif_announcer";
+
     // Death Link
     private const string DeathLink_OverrideId = "override_deathlink";
     private const string DeathLink_EnableId = "enable_deathlink";
@@ -99,6 +102,7 @@ public static class ModSettingsRegistration
                     .WithModDisplayName(ModSettingsText.Literal("Archipelago"))
                     .WithMenuCapabilities(ModSettingsMenuCapabilities.None)
                     .AddSection("keybinds", ConfigureKeybindsSection)
+                    .AddSection("notifications", ConfigureNotificationsSection)
                     .AddSection("deathlink", ConfigureDeathLinkSection)
         );
         RegisterHotkeys();
@@ -144,6 +148,58 @@ public static class ModSettingsRegistration
                 KeyBinds_APMenuId,
                 ModSettingsMenuCapabilities.Copy | ModSettingsMenuCapabilities.Paste
             );
+    }
+
+    /// <summary>
+    /// Composes the Notifications settings section
+    /// </summary>
+    private static void ConfigureNotificationsSection(ModSettingsSectionBuilder section)
+    {
+        section
+            .WithTitle(ModSettingsText.Literal("Notifications"))
+            .WithDescription(
+                ModSettingsText.Literal("Configure how Archipelago notifications are displayed.")
+            )
+            .WithMenuCapabilities(ModSettingsMenuCapabilities.None)
+            .AddChoice(
+                Notif_AnnouncerId,
+                ModSettingsText.Literal("Announcer"),
+                CreateBinding(
+                    static settings => settings.Announcer,
+                    static (settings, value) =>
+                    {
+                        settings.Announcer = value;
+
+                        // Update the speaker icon immediately if the UI is already injected
+                        ArchipelagoNotificationUI.UpdateSpeakerIcon();
+                    }
+                ),
+                options: new[]
+                {
+                    new ModSettingsChoiceOption<string>("neow", ModSettingsText.Literal("Neow")),
+                    new ModSettingsChoiceOption<string>("pael", ModSettingsText.Literal("Pael")),
+                    new ModSettingsChoiceOption<string>(
+                        "orobas",
+                        ModSettingsText.Literal("Orobas")
+                    ),
+                    new ModSettingsChoiceOption<string>(
+                        "tezcatara",
+                        ModSettingsText.Literal("Tezcatara")
+                    ),
+                    new ModSettingsChoiceOption<string>("darv", ModSettingsText.Literal("Darv")),
+                    new ModSettingsChoiceOption<string>("vakuu", ModSettingsText.Literal("Vakuu")),
+                    new ModSettingsChoiceOption<string>("tanx", ModSettingsText.Literal("Tanx")),
+                    new ModSettingsChoiceOption<string>(
+                        "nonupeipe",
+                        ModSettingsText.Literal("Nonupeipe")
+                    ),
+                },
+                description: ModSettingsText.Literal(
+                    "Select which Ancient announces notifications"
+                ),
+                presentation: ModSettingsChoicePresentation.Dropdown
+            )
+            .ConfigureEntryMenu(Notif_AnnouncerId, ModSettingsMenuCapabilities.None);
     }
 
     /// <summary>
