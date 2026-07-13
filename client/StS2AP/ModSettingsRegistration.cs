@@ -97,6 +97,7 @@ public static class ModSettingsRegistration
             page =>
                 page.WithTitle(ModSettingsText.Literal("Archipelago Settings"))
                     .WithModDisplayName(ModSettingsText.Literal("Archipelago"))
+                    .WithMenuCapabilities(ModSettingsMenuCapabilities.None)
                     .AddSection("keybinds", ConfigureKeybindsSection)
                     .AddSection("deathlink", ConfigureDeathLinkSection)
         );
@@ -138,6 +139,10 @@ public static class ModSettingsRegistration
                         }
                     }
                 )
+            )
+            .ConfigureEntryMenu(
+                KeyBinds_APMenuId,
+                ModSettingsMenuCapabilities.Copy | ModSettingsMenuCapabilities.Paste
             );
     }
 
@@ -151,6 +156,7 @@ public static class ModSettingsRegistration
             .WithDescription(
                 ModSettingsText.Literal("Configure how received Death Links affect this game.")
             )
+            .WithMenuCapabilities(ModSettingsMenuCapabilities.None)
             .AddToggle(
                 DeathLink_OverrideId,
                 ModSettingsText.Literal("Use Custom Death Link Settings"),
@@ -162,6 +168,7 @@ public static class ModSettingsRegistration
                     "Override the Death Link options supplied by the Archipelago slot data."
                 )
             )
+            .ConfigureEntryMenu(DeathLink_OverrideId, ModSettingsMenuCapabilities.None)
             .AddToggle(
                 DeathLink_EnableId,
                 ModSettingsText.Literal("Enable Death Link"),
@@ -171,6 +178,7 @@ public static class ModSettingsRegistration
                 ),
                 ModSettingsText.Literal("Opt in to or out of Death Link.")
             )
+            .ConfigureEntryMenu(DeathLink_EnableId, ModSettingsMenuCapabilities.None)
             .WithEntryEnabledWhen(DeathLink_EnableId, IsDeathLinkOverriden)
             .AddToggle(
                 DeathLink_FragmentsOnId,
@@ -181,6 +189,7 @@ public static class ModSettingsRegistration
                 ),
                 ModSettingsText.Literal("Receive a special curse when a Death Link is received.")
             )
+            .ConfigureEntryMenu(DeathLink_FragmentsOnId, ModSettingsMenuCapabilities.None)
             .WithEntryEnabledWhen(DeathLink_FragmentsOnId, IsDeathLinkOverriden)
             .AddIntSlider(
                 DeathLink_DamageId,
@@ -197,6 +206,7 @@ public static class ModSettingsRegistration
                     "The percentage of maximum health lost when a Death Link is received."
                 )
             )
+            .ConfigureEntryMenu(DeathLink_DamageId, ModSettingsMenuCapabilities.None)
             .WithEntryEnabledWhen(DeathLink_DamageId, IsDeathLinkOverriden);
     }
 
