@@ -29,9 +29,6 @@ namespace StS2AP
             /// This ensures dependencies like Archipelago.MultiClient.Net can be found
             RegisterAssemblyResolver();
 
-            // Initialize debug console first so we can see log output
-            ConsoleLogger.Initialize();
-
             // Register unhandled exception handler to log crashes before app closes
             AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
 
@@ -77,9 +74,6 @@ namespace StS2AP
             {
                 LogUtility.Error($"Failed to apply Harmony patches: {ex.Message}");
             }
-
-            // Register cleanup when the application exits
-            AppDomain.CurrentDomain.ProcessExit += (s, e) => ConsoleLogger.Shutdown();
         }
 
         /// <summary>
