@@ -26,6 +26,8 @@ class ItemType(Enum):
     ASCENSION_DOWN = auto()
     # TRAP = auto()
     CAW_CAW = auto()
+    BUFF = auto()
+    FILLER_CARD_REWARD = auto()
     OTHER = auto()
 
 class ItemData(typing.NamedTuple):
@@ -41,6 +43,7 @@ class ItemData(typing.NamedTuple):
         newcode = base.code + char_offset if base.code is not None else base.code
         return ItemData(newcode, base.type, base.classification, base.event, base.is_victory, char_offset//CHAR_OFFSET)
 
+# Items in this table get unique variations for each character. For example, "Five Gold" becomes "Ironclad Five Gold", "Silent Five Gold", etc.
 base_item_table: Dict[str, ItemData] = {
     'Card Reward': ItemData(1, ItemType.CARD_REWARD, ItemClassification.progression_deprioritized),
     'Rare Card Reward': ItemData(2, ItemType.RARE_CARD_REWARD, ItemClassification.progression_deprioritized),
@@ -68,8 +71,17 @@ base_item_table: Dict[str, ItemData] = {
     **{asc: ItemData(i + 19, ItemType.ASCENSION_DOWN, ItemClassification.useful) for i, asc in enumerate(ASCENSIONS.values()) }
 }
 
+# Items in this table are character-agnostic, and can be claimed by any of them
 universal_items: Dict[str, ItemData] = {
-    'CAW CAW': ItemData(1, ItemType.CAW_CAW, ItemClassification.filler)
+    'Free Attack': ItemData(2, ItemType.BUFF, ItemClassification.filler),
+    'Free Power': ItemData(3, ItemType.BUFF, ItemClassification.filler),
+    'Free Skill': ItemData(4, ItemType.BUFF, ItemClassification.filler),
+    'Dexterity': ItemData(5, ItemType.BUFF, ItemClassification.filler),
+    'Strength': ItemData(6, ItemType.BUFF, ItemClassification.filler),
+    'Plating': ItemData(7, ItemType.BUFF, ItemClassification.filler),
+    'Friendship': ItemData(8, ItemType.BUFF, ItemClassification.filler),
+    'Post-Combat Card Upgrade': ItemData(9, ItemType.BUFF, ItemClassification.filler),
+    'Single Colorless Card': ItemData(10, ItemType.FILLER_CARD_REWARD, ItemClassification.filler),
 }
 
 base_event_item_pairs: Dict[str, str] = {

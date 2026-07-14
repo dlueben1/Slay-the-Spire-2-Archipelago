@@ -11,7 +11,7 @@ from .rules import set_rules, SpireLogic
 from .web_world import SlayTheSpire2Web
 from .characters import CharacterConfig, character_list, character_offset_map
 from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET, ASCENSIONS
-from .items import item_table, chars_to_items, ItemType, base_event_item_pairs, ItemData
+from .items import item_table, chars_to_items, universal_items, ItemType, base_event_item_pairs, ItemData
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
 from .options import Spire2Options
 
@@ -267,9 +267,92 @@ class SlayTheSpire2World(World):
         item_id = self.item_name_to_id[name]
         return SlayTheSpire2Item(data, name, data.classification, item_id, self.player)
 
+    # Returns a weighted random filler item based on options and character availability
+    def get_filler_item(self, character: Optional[str] = None) -> str:
+        """Select a filler item based on configured weights and character availability.
+        
+        Args:
+            character: Optional character name. If provided, character-specific items (gold) will be included.
+                      If not provided, a random character from the pool will be selected for character-specific items.
+        
+        Returns:
+            The name of a filler item (e.g., "Ironclad One Gold", "Free Attack", etc.)
+        """
+        filler_pool = []
+        filler_weights = []
+        
+        # Add universal items (available to all characters) dynamically from universal_items dict
+        # Map item names to their option attributes
+        universal_item_option_map = {
+            "Free Attack": self.options.free_attack_filler_weight.value,
+            "Free Power": self.options.free_power_filler_weight.value,
+            "Free Skill": self.options.free_skill_filler_weight.value,
+            "Dexterity": self.options.dexterity_filler_weight.value,
+            "Strength": self.options.strength_filler_weight.value,
+            "Plating": self.options.plating_filler_weight.value,
+            "Friendship": self.options.friendship_filler_weight.value,
+            "Post-Combat Card Upgrade": self.options.post_combat_card_upgrade_filler_weight.value,
+            "Single Colorless Card": self.options.single_colorless_card_filler_weight.value,
+        }
+        
+        # Only add universal items that exist in the item table and have non-zero weight
+        for item_name in universal_items.keys():
+            weight = universal_item_option_map.get(item_name, 0)
+            if weight > 0:
+                filler_pool.append(item_name)
+                filler_weights.append(weight)
+        
+        # Add character-specific items (gold items)
+        # If no character specified, pick one randomly from available characters
+        if character is None and self.characters:
+            character = self.random.choice(self.characters).name
+        
+        if character:
+            # Look up character-specific items
+            char_lookup = character
+            # Check if we need to use the character's name or mod number for lookup
+            for config in self.characters:
+                if config.name == character:
+                    char_lookup = config.name if config.mod_num == 0 else config.mod_num
+                    break
+            
+            # Get character-specific gold items from the character's item pool
+            if char_lookup in chars_to_items:
+                char_gold_items = [(key, val) for key, val in chars_to_items[char_lookup].items()
+                                   if ItemType.GOLD == val.type and ItemClassification.filler == val.classification]
+                
+                # Add One Gold and Five Gold with their weights
+                for item_name, item_data in char_gold_items:
+                    if "One Gold" in item_name:
+                        weight = self.options.one_gold_filler_weight.value
+                        if weight > 0:
+                            filler_pool.append(item_name)
+                            filler_weights.append(weight)
+                    elif "Five Gold" in item_name:
+                        weight = self.options.five_gold_filler_weight.value
+                        if weight > 0:
+                            filler_pool.append(item_name)
+                            filler_weights.append(weight)
+        
+        # Fallback: if no items in pool or all weights are 0, return One Gold for a random character
+        if not filler_pool or sum(filler_weights) <= 0:
+            # Select a random character and return their One Gold item
+            if self.characters:
+                fallback_char = self.random.choice(self.characters)
+                char_lookup = fallback_char.name if fallback_char.mod_num == 0 else fallback_char.mod_num
+                if char_lookup in chars_to_items:
+                    for item_name, item_data in chars_to_items[char_lookup].items():
+                        if "One Gold" in item_name:
+                            return item_name
+            # Ultimate fallback if something goes wrong
+            return "Ironclad One Gold"
+        
+        # Select and return a random item based on weights
+        return self.random.choices(filler_pool, weights=filler_weights, k=1)[0]
+
     # Randomly selects a filler item name from the item table
     def get_filler_item_name(self) -> str:
-        return 'CAW CAW'
+        return self.get_filler_item()
 
     def create_items(self) -> None:
         pool = []
@@ -331,33 +414,12 @@ class SlayTheSpire2World(World):
                 if 'DoubleBoss'.lower() in config.ascension and 'DoubleBoss'.lower() not in config.ascension_down:
                     remaining_checks += 1
 
-                # traps: list[bool] = [self.random.randint(0, 100) < self.options.trap_chance for _ in
-                #                      range(remaining_checks)]
-                # trap_num = traps.count(True)
-                # filler_num = len(traps) - trap_num
+                # Generate filler items for floor checks using the weighted filler system
                 filler_num = remaining_checks
-                # if trap_num > 0:
-                #     for name in self.random.choices(list(self.options.trap_weights.keys()),
-                #                                     weights=list(self.options.trap_weights.values()), k=trap_num):
-                #         pool.append(SpireItem(name, self.player))
-
-                # Char specific 1 Gold and 5 Gold, in that order
-                filler_pool = [key for key, val in chars_to_items[char_lookup].items()
-                               if ItemType.GOLD == val.type and ItemClassification.filler == val.classification]
-                filler_pool.append("CAW CAW")
-                # filler_pool.append("Combat Buff")
-                filler_weights = [
-                    self.options.filler_weights.get("1 Gold", 0),
-                    self.options.filler_weights.get("5 Gold", 0),
-                    self.options.filler_weights.get("CAW CAW", 0),
-                    # self.options.filler_weights.get("Combat Buff", 0),
-                ]
-                if sum(filler_weights) <= 0:
-                    filler_weights = [40, 60, 0]
-                    # filler_weights = [40, 60, 0, 0]
-
-                for name in self.random.choices(filler_pool, weights=filler_weights, k=filler_num):
-                    pool.append(self.create_item(name))
+                
+                for _ in range(filler_num):
+                    filler_item_name = self.get_filler_item(character=config.name)
+                    pool.append(self.create_item(filler_item_name))
             # Pair up our event locations with our event items
             for base_event, base_item in base_event_item_pairs.items():
                 event = f"{config.name} {base_event}"

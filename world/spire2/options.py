@@ -316,29 +316,126 @@ class DeathLinkDamagePercent(Range):
 #     default = {trap: 1 for trap in trap_item_table.keys()}
 #     valid_keys = sorted(trap_item_table.keys())
 
-class FillerWeights(OptionCounter):
+# Filler Item Weight Options
+
+# Factory function to create filler weight Choice classes dynamically
+def _create_filler_weight_class(item_name: str, description: str, default_weight: int = 1):
+    """Create a Choice class for filler item weights.
+    
+    Args:
+        item_name: The display name of the item (e.g., "One Gold", "Free Attack")
+        description: Description of what the item does
+    
+    Returns:
+        A Choice class with standard weight options (none=0, low=1, medium=3, high=5)
     """
-    The list of filler and corresponding weights that will be added to the item pool
-    1 Gold - One gold, character bound
-    5 Gold - Five gold, character bound
-    CAW CAW - CAW CAW
-    """
-    # Combat Buff - Similar to traps in function, but beneficial instead of detrimental, not character bound
-    visibility = Visibility.none
-    display_name = "Filler Weights"
-    min = 0
-    default = {
-        "1 Gold": 40,
-        "5 Gold": 60,
-        "CAW CAW": 0,
-        # "Combat Buff": 0,
-    }
-    valid_keys = [
-        "5 Gold",
-        "1 Gold",
-        "CAW CAW",
-        # "Combat Buff",
+    class_name = item_name.replace(" ", "").replace("-", "") + "FillerWeight"
+    display_name = f"{item_name} Filler Weight"
+    docstring = f"""Weight for {item_name} filler items. {description}"""
+    
+    return type(
+        class_name,
+        (Choice,),
+        {
+            "__doc__": docstring,
+            "display_name": display_name,
+            "option_none": 0,
+            "option_low": 1,
+            "option_medium": 3,
+            "option_high": 5,
+            "default": default_weight,
+        }
+    )
+
+# Character-specific filler items
+OneGoldFillerWeight = _create_filler_weight_class(
+    "One Gold",
+    """Generates one gold for the character who receives it.
+    Available across runs, as a pool of all gold rewards.
+    
+    Note: Even if you disable this item, you may still see it in on rare occasion, 
+    as it's the fallback for when item generation has issues.""",
+    default_weight = 0
+)
+
+FiveGoldFillerWeight = _create_filler_weight_class(
+    "Five Gold",
+    """Generates five gold for the character who receives it.
+    Available across runs, as a pool of all gold rewards.""",
+    default_weight = 5
+)
+
+# Universal filler items
+FreeAttackFillerWeight = _create_filler_weight_class(
+    "Free Attack",
+    "Grants a buff that makes the next attack card you play free.",
+    default_weight = 5
+)
+
+FreePowerFillerWeight = _create_filler_weight_class(
+    "Free Power",
+    "Grants a buff that makes the next power card you play free.",
+    default_weight = 5
+)
+
+FreeSkillFillerWeight = _create_filler_weight_class(
+    "Free Skill",
+    "Grants a buff that makes the next skill card you play free.",
+    default_weight = 5
+)
+
+DexterityFillerWeight = _create_filler_weight_class(
+    "Dexterity",
+    "Grants a buff that increases Dexterity for the next combat.",
+    default_weight = 3
+)
+
+StrengthFillerWeight = _create_filler_weight_class(
+    "Strength",
+    "Grants a buff that increases Strength for the next combat.",
+    default_weight = 3
+)
+
+PlatingFillerWeight = _create_filler_weight_class(
+    "Plating",
+    "Grants a buff that provides Plating for the next combat.",
+    default_weight = 3
+)
+
+FriendshipFillerWeight = _create_filler_weight_class(
+    "Friendship",
+    "Raises the Max Energy per turn by 1 for the next combat."
+)
+
+PostCombatCardUpgradeFillerWeight = _create_filler_weight_class(
+    "Post-Combat Card Upgrade",
+    "Grants a buff that randomly upgrades a card in your deck after combat."
+)
+
+SingleColorlessCardFillerWeight = _create_filler_weight_class(
+    "Single Colorless Card",
+    """Grants a Card Reward with a Single, Random Colorless Card. 
+    Like other buffs, it's provided only once upon receiving it - the reward will not appear on subsequent runs.""",
+    default_weight = 3
+)
+
+# Filler Items Option Group
+filler_item_options = OptionGroup(
+    "Filler Items",
+    [
+        OneGoldFillerWeight,
+        FiveGoldFillerWeight,
+        FreeAttackFillerWeight,
+        FreePowerFillerWeight,
+        FreeSkillFillerWeight,
+        DexterityFillerWeight,
+        StrengthFillerWeight,
+        PlatingFillerWeight,
+        FriendshipFillerWeight,
+        PostCombatCardUpgradeFillerWeight,
+        SingleColorlessCardFillerWeight,
     ]
+)
 
 
 
@@ -360,7 +457,18 @@ class Spire2Options(PerGameCommonOptions):
     ascension_down: AscensionDown
     shuffle_all_cards: CardReward
     include_floor_checks: IncludeFloorChecks
-    filler_weights: FillerWeights
+    # Filler item weights
+    one_gold_filler_weight: OneGoldFillerWeight
+    five_gold_filler_weight: FiveGoldFillerWeight
+    free_attack_filler_weight: FreeAttackFillerWeight
+    free_power_filler_weight: FreePowerFillerWeight
+    free_skill_filler_weight: FreeSkillFillerWeight
+    dexterity_filler_weight: DexterityFillerWeight
+    strength_filler_weight: StrengthFillerWeight
+    plating_filler_weight: PlatingFillerWeight
+    friendship_filler_weight: FriendshipFillerWeight
+    post_combat_card_upgrade_filler_weight: PostCombatCardUpgradeFillerWeight
+    single_colorless_card_filler_weight: SingleColorlessCardFillerWeight
     # trap_chance: TrapChance
     # trap_weights: TrapWeights
     campfire_sanity: CampfireSanity
