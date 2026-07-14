@@ -280,6 +280,29 @@ namespace StS2AP.Patches
         }
 
         /// <summary>
+        /// Injects the custom Archipelago logo
+        /// </summary>
+        [HarmonyPatch(typeof(NMainMenuBg), nameof(NMainMenuBg.MethodName._Ready))]
+        public static class InjectAPLogo
+        {
+            public static void Postfix(NMainMenuBg __instance)
+            {
+                var customLogoRect = new TextureRect();
+                customLogoRect.Texture = GD.Load<Texture2D>(
+                    // This is a stable path, defined in the `.png.import` file but I'm open to better ways to do this
+                    "res://.godot/imported/archipelalogo.png-2f6acf8679de2a385a685cdb2750bebf.ctex"
+                );
+                customLogoRect.ExpandMode = TextureRect.ExpandModeEnum.FitWidth;
+                customLogoRect.StretchMode = TextureRect.StretchModeEnum.Keep;
+
+                // Add to the container and position it
+                __instance.AddChild(customLogoRect);
+                customLogoRect.Position = new Vector2(490, 490);
+                customLogoRect.ZIndex = int.MaxValue;
+            }
+        }
+
+        /// <summary>
         /// Normally, first time players skip straight to the Character Select
         /// screen after starting a single player run, but that step is where
         /// the connection UI now lives. This patches that behavior out.
