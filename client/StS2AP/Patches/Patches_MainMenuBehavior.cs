@@ -298,7 +298,6 @@ namespace StS2AP.Patches
                 // Add to the container and position it
                 __instance.AddChild(customLogoRect);
                 customLogoRect.Position = new Vector2(490, 490);
-                customLogoRect.ZIndex = int.MaxValue;
             }
         }
 
