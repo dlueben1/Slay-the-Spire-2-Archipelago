@@ -46,4 +46,3 @@ class Test48Floors(Spire2TestBase):
 
     def test_no_floor_49(self):
         self.assertFalse( "Ironclad Reached Floor 49" in self.world.get_locations())
-

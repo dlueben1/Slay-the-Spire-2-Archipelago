@@ -1,3 +1,5 @@
+import typing
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import List
 
@@ -7,7 +9,7 @@ from Options import OptionSet, Range, Toggle, Visibility, Choice, TextChoice, Op
 from schema import Schema, Optional, And
 
 from .characters import character_list
-from .constants import NUM_CUSTOM
+from .constants import NUM_CUSTOM, ASCENSIONS
 
 
 class Characters(OptionSet):
@@ -66,12 +68,32 @@ class UnlockedCharacter(TextChoice):
     option_regent = 3
     option_necrobinder = 4
 
-class Ascension(Range):
-    """What Ascension do you wish to play with. Note that logic is written assuming ascension 1"""
+class Ascension(OptionSet):
+    """What Ascensions do you wish to play with. Note that logic is written assuming ascension 1
+        Valid values are the numbers for the ascensions, and the names for the ascensions.  When a number is provided
+        alone, all ascensions below that number will also be enabled.
+
+        The ascension names are as follows:
+        - 'SwarmingElites'
+        - 'WearyTraveler'
+        - 'Poverty'
+        - 'TightBelt'
+        - "AscenderBane"
+        - 'Inflation'
+        - 'Scarcity'
+        - 'ToughEnemies'
+        - 'DeadlyEnemies'
+        - 'DoubleBoss'
+    """
+    def __init__(self, value: typing.Iterable[str], random_str: str | None = None):
+        self.value = { str(x) for x in value }
+        self.random_str = random_str
+        super(OptionSet, self).__init__()
+
     display_name = "Ascension"
-    range_start = 0
-    range_end = 10
-    default = 1
+    valid_keys_casefold = True
+    valid_keys = { *[str(i) for i in range(1,11)], *ASCENSIONS.keys() }
+    default = list(ASCENSIONS.keys())[1:]
 
 # class FinalAct(Toggle):
 #     """Whether you will need to collect the 3 keys and beat the final act to complete the game."""
@@ -223,17 +245,33 @@ class CharacterOptions(OptionDict):
         }
     })
 
-class AscensionDown(Range):
-    """The number of ascension downs to add to the item pool, per character. Only valid when
+class AscensionDown(OptionSet):
+    """The ascension downs to add to the item pool, per character. Only valid when
     `use_advanced_characters` is false (see `advanced_characters`), and when `include_floor_checks` is true.
-    Will be ignored if invalid.
+    Valid values are the numbers for the ascensions, and also the names for the ascensions.  When a number is provided
+    alone, ascension downs for all the ones below will also be added to the pool.
+
+    - 'SwarmingElites'
+    - 'WearyTraveler'
+    - 'Poverty'
+    - 'TightBelt'
+    - "AscenderBane"
+    - 'Inflation'
+    - 'Scarcity'
+    - 'ToughEnemies'
+    - 'DeadlyEnemies'
+    - 'DoubleBoss'
 
     Logic does NOT account for this."""
-    visibility = Visibility.none
+    def __init__(self, value: typing.Iterable[str], random_str: str | None = None):
+        self.value = { str(x) for x in value }
+        self.random_str = random_str
+        super(OptionSet, self).__init__()
+
     display_name = "Ascension Down"
-    range_start = 0
-    range_end = 10
-    default = 0
+    valid_keys_casefold = True
+    valid_keys = { *[str(i) for i in range(1,11)], *ASCENSIONS.keys() }
+    default = list(ASCENSIONS.keys())[1:]
 
 # Death Link Options
 

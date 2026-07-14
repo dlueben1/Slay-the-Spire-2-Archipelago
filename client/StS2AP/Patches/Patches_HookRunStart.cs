@@ -6,6 +6,7 @@ using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves.Runs;
 using MegaCrit.Sts2.Core.Unlocks;
+using StS2AP.Models;
 using StS2AP.UI;
 using StS2AP.Utils;
 using System;
@@ -14,11 +15,29 @@ using static Godot.HttpRequest;
 
 namespace StS2AP.Patches
 {
+
+
+
     /// <summary>
     /// Patches for managing the current player reference and run lifecycle events for Archipelago.
     /// </summary>
     public static class Patches_HookRunStart
     {
+        ///<summary>
+        /// Sets up the character config on run start
+        /// </summary>
+        [HarmonyPatch(typeof(NGame), nameof(NGame.StartNewSingleplayerRun))]
+        public static class OnRunPreStart
+        {
+            [HarmonyPrefix]
+            public static void Prefix(CharacterModel character, ref int ascensionLevel)
+            {
+                var officialName = character.GetType().Name;
+                GameUtility.CurrentConfig = ArchipelagoClient.Settings.Characters[officialName];
+                // TODO: This needs to properly handle the ascensions + ascension downs; might need an ascension manager
+                ascensionLevel = 10;
+            }
+        }
         /// <summary>
         /// Does a bunch of work we need when a run starts, including caching references, resetting game state/progress, and hooking event listeners.
         /// </summary>
@@ -75,6 +94,7 @@ namespace StS2AP.Patches
             public static void Postfix()
             {
                 GameUtility.CurrentPlayer = null;
+                GameUtility.CurrentConfig = null;
                 LogUtility.Info("CurrentPlayer cleared (returned to main menu)");
             }
         }

@@ -8,6 +8,7 @@ using Godot;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
+using Newtonsoft.Json.Linq;
 using StS2AP.Data;
 using StS2AP.Models;
 using StS2AP.UI;
@@ -661,6 +662,20 @@ namespace StS2AP
 
                         break;
                     }
+                case APItem.SwarmingElites:
+                case APItem.WearyTraveler:
+                case APItem.Poverty:
+                case APItem.TightBelt:
+                case APItem.AscenderBane:
+                case APItem.Inflation:
+                case APItem.Scarcity:
+                case APItem.ToughEnemies:
+                case APItem.DeadlyEnemies:
+                case APItem.DoubleBoss:
+                    Progress.Ascensions.ProcessAscensionLevel(GameUtility.CurrentConfig, item, false);
+                    Progress.UsedItems.Add(index);
+                    Progress.AllReceivedItems.Add(new IndexedItemInfo(item, index));
+                    break;
                 // Everything else ends up in the "reward pool"
                 default:
                     {
@@ -709,7 +724,7 @@ namespace StS2AP
             ArchipelagoSettings settings = new();
 
             // Apply all found settings
-            if (slotData.ContainsKey("ascension")) settings.AscensionLevel = Convert.ToInt32(slotData["ascension"]);
+            //if (slotData.ContainsKey("ascension")) settings.AscensionLevel = Convert.ToInt32(slotData["ascension"]);
             if (slotData.ContainsKey("seeded")) settings.IsSeeded = Convert.ToBoolean(slotData["seeded"]);
             if (slotData.ContainsKey("death_link")) settings.IsDeathLinkEnabled = Convert.ToBoolean(slotData["death_link"]);
             if (slotData.ContainsKey("shuffle_all_cards")) settings.ShouldShuffleAllCards = Convert.ToBoolean(slotData["shuffle_all_cards"]);
@@ -725,18 +740,27 @@ namespace StS2AP
                 /// Go through each character and add it to the list of Characters in our settings.
                 /// Slot data from Archipelago.MultiClient.Net is deserialized via Newtonsoft.Json,
                 /// so each entry arrives as a JObject, NOT a Dictionary<string, object>.
-                var charBuffer = new List<string>();
+                //var charBuffer = new List<string>();
                 foreach (var charData in charsList)
                 {
                     // Cast to JObject to safely read the "name" field
-                    if (charData is Newtonsoft.Json.Linq.JObject charObj && charObj.TryGetValue("name", out var nameToken))
+                    //if (charData is Newtonsoft.Json.Linq.JObject charObj && charObj.TryGetValue("name", out var nameToken))
+                    //{
+                    //    charBuffer.Add(nameToken.ToString());
+                    //}
+                    if (charData is JObject)
                     {
-                        charBuffer.Add(nameToken.ToString());
+                        var config = ToCharacterConfig(charData as JObject);
+                        if(config != null)
+                        {
+                            settings.Characters.Add(config.OfficialName, config);
+                        }
                     }
                 }
 
                 // Store the characters locally
-                settings.AvailableCharacters = charBuffer.ToArray();
+                //settings.AvailableCharacters = charBuffer.ToArray();
+                
             }
 
             if (slotData.ContainsKey("campfire_sanity"))
@@ -753,6 +777,62 @@ namespace StS2AP
 
             // And return it
             return settings;
+        }
+
+        private static CharacterConfig? ToCharacterConfig(Newtonsoft.Json.Linq.JObject charObj)
+        {
+            CharacterConfig config = new CharacterConfig();
+            if(charObj.TryGetValue("name", out var name))
+            {
+                config.Name = name.ToString();
+            }
+            else
+            {
+                return null;
+            }
+
+            if(charObj.TryGetValue("option_name", out var optionName))
+            {
+                config.OptionName = optionName.ToString();
+            }
+            else
+            {
+                return null;
+            }
+            if(charObj.TryGetValue("char_offset", out var offset))
+            {
+                config.CharOffset = ((int)offset);
+            }
+            else
+            {
+                return null;
+            }
+            if(charObj.TryGetValue("official_name", out var official_name))
+            {
+                config.OfficialName = official_name.ToString();
+            }
+            else
+            {
+                return null;
+            }
+            if(charObj.TryGetValue("seed", out var seed))
+            {
+                config.Seed = seed.ToString();
+            }
+            if(charObj.TryGetValue("locked", out var locked))
+            {
+                config.Locked = (bool)locked;
+            }
+            if(charObj.TryGetValue("mod_num", out var modNum))
+            {
+                config.ModNum = (int) modNum;
+            }
+
+            if(charObj.TryGetValue("ascension", out var ascension))
+            {
+                config.Ascension = ascension.ToObject<HashSet<String>>();
+            }
+            return config;
         }
 
         #endregion
