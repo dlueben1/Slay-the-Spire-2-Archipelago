@@ -2,5 +2,7 @@
   "CONTINUE_RUN.header": "Continue Run?",
   "CONTINUE_RUN.body": "Would you like to resume your last AP save for this character? (Yes, AP keeps the save even if you die.)",
   "VERSION_MISMATCH.header": "Version Mismatch",
-  "VERSION_MISMATCH.body": "The version of the apworld does not match the version of the client. If you connect to the server anyway, you may encounter unexpected behavior.\n\nServer Version: {server}\n\nClient Version: {client}\n\nConnect anyways?"
+  "VERSION_MISMATCH.body": "The version of the apworld does not match the version of the client. If you connect to the server anyway, you may encounter unexpected behavior.\n\nServer Version: {server}\n\nClient Version: {client}\n\nConnect anyways?",
+  "INSTALL_APWORLD.header": "Install/Update APWorld?",
+  "INSTALL_APWORLD.body": "The APWorld is [i]only necessary[/i] if you're [b]hosting the Archipelago yourself[/b], and to install it you must have the [b]Archipelago Launcher (v0.6.7 or later) installed[/b] for this to work.\n\nThis will install in the background and take a few moments, then please restart your launcher. Proceed?"
 }

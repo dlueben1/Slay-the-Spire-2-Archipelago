@@ -1,5 +1,7 @@
-﻿using Godot;
+﻿using System.Diagnostics;
+using Godot;
 using HarmonyLib;
+using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
@@ -30,12 +32,15 @@ namespace StS2AP.Patches
         // The subpath to the "Settings" button, which we will clone many times
         private const string SettingsButtonPath = MainMenuButtonsPath + "/SettingsButton";
 
-        // The new name of our injected Archipelago Settings button, which is a clone of the vanilla Settings button
+        // The new name & path of our injected Archipelago Settings button, which is a clone of the vanilla Settings button
         private const string ArchipelagoSettingsButtonName = "ArchipelagoSettingsButton";
-
-        // The new path to our injected Archipelago Settings button
         private const string ArchipelagoSettingsButtonPath =
             MainMenuButtonsPath + "/" + ArchipelagoSettingsButtonName;
+
+        // The new name & path of our injected "Install APWorld" button, which is a clone of the vanilla Settings button
+        private const string InstallWorldButtonName = "InstallAPWorldButton";
+        private const string InstallWorldButtonPath =
+            MainMenuButtonsPath + "/" + InstallWorldButtonName;
 
         #endregion
 
@@ -58,7 +63,7 @@ namespace StS2AP.Patches
             [HarmonyPrefix]
             public static void Prefix(NMainMenu __instance)
             {
-                InjectArchipelagoSettingsButton(__instance);
+                InjectMainMenuButtons(__instance);
             }
 
             /// <summary>
@@ -79,6 +84,11 @@ namespace StS2AP.Patches
                 // Grab the custom Archipelago settings button
                 var archipelagoSettingsButton = __instance.GetNodeOrNull<NMainMenuTextButton>(
                     ArchipelagoSettingsButtonPath
+                );
+
+                // Grab the custom Install APWorld button
+                var installWorldButton = __instance.GetNodeOrNull<NMainMenuTextButton>(
+                    InstallWorldButtonPath
                 );
 
                 // Grab the original settings button
@@ -132,6 +142,15 @@ namespace StS2AP.Patches
                     archipelagoSettingsButton.Enable();
                     archipelagoSettingsButton.label.Text = "Archipelago Settings";
                 }
+
+                /// Configure the injected Install APWorld button after its label
+                /// reference has been initialized by the vanilla _Ready method.
+                if (installWorldButton?.label != null)
+                {
+                    installWorldButton.Visible = true;
+                    installWorldButton.Enable();
+                    installWorldButton.label.Text = "Install APWorld";
+                }
             }
         }
 
@@ -142,7 +161,7 @@ namespace StS2AP.Patches
         /// Duplicating a vanilla button preserves the game's styling,
         /// sounds, animations, and controller behavior.
         /// </summary>
-        private static void InjectArchipelagoSettingsButton(NMainMenu mainMenu)
+        private static void InjectMainMenuButtons(NMainMenu mainMenu)
         {
             // Avoid injecting a duplicate if _Ready is ever called again.
             if (mainMenu.GetNodeOrNull<NMainMenuTextButton>(ArchipelagoSettingsButtonPath) != null)
@@ -170,10 +189,56 @@ namespace StS2AP.Patches
                 archipelagoSettingsButton.CustomMinimumSize.Y
             );
 
+            // Create an "Install APWorld" button
+            var installButton = (NMainMenuTextButton)settingsButton.Duplicate();
+            installButton.Name = InstallWorldButtonName;
+            installButton.Connect(
+                NClickableControl.SignalName.Released,
+                Callable.From<NButton>(_ =>
+                {
+                    // Show a dialog that speedbumps the user and ensures they want to install this
+                    var popup = new ConfirmPopup();
+                    popup.Header = new LocString("main_menu_ui", "INSTALL_APWORLD.header");
+                    popup.Body = new LocString("main_menu_ui", "INSTALL_APWORLD.body");
+                    popup.ButtonPressed = (yesPressed) =>
+                    {
+                        if (yesPressed)
+                        {
+                            try
+                            {
+                                // Run the APWorld installation
+                                var modDirectory = Path.GetDirectoryName(
+                                    typeof(ModEntry).Assembly.Location
+                                );
+                                var apWorldPath = Path.Combine(modDirectory!, "spire2.apworld");
+                                Process.Start(
+                                    new ProcessStartInfo
+                                    {
+                                        FileName = apWorldPath,
+                                        UseShellExecute = true,
+                                    }
+                                );
+                            }
+                            catch (Exception ex)
+                            {
+                                LogUtility.Error(
+                                    $"Failed to launch APWorld installer: {ex.Message}\n{ex.StackTrace}"
+                                );
+                            }
+                        }
+                    };
+                    popup.Show();
+                })
+            );
+            settingsButton.AddSibling(installButton);
+            settingsButton.CustomMinimumSize = new Vector2(300f, installButton.CustomMinimumSize.Y);
+
             // Adjust button focusing
             var selfNodePath = new NodePath(".");
             archipelagoSettingsButton.FocusNeighborLeft = selfNodePath;
             archipelagoSettingsButton.FocusNeighborRight = selfNodePath;
+            installButton.FocusNeighborLeft = selfNodePath;
+            installButton.FocusNeighborRight = selfNodePath;
         }
 
         /// <summary>
