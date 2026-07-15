@@ -235,7 +235,7 @@ public static class ModSettingsRegistration
                 ModSettingsText.Literal("Opt in to or out of Death Link.")
             )
             .ConfigureEntryMenu(DeathLink_EnableId, ModSettingsMenuCapabilities.None)
-            .WithEntryEnabledWhen(DeathLink_OverrideId, IsDeathLinkOverriden)
+            .WithEntryEnabledWhen(DeathLink_EnableId, IsDeathLinkOverriden)
             .AddToggle(
                 DeathLink_FragmentsOnId,
                 ModSettingsText.Literal("Enable Death Fragments"),
@@ -246,7 +246,7 @@ public static class ModSettingsRegistration
                 ModSettingsText.Literal("Receive a special curse when a Death Link is received.")
             )
             .ConfigureEntryMenu(DeathLink_FragmentsOnId, ModSettingsMenuCapabilities.None)
-            .WithEntryEnabledWhen(DeathLink_OverrideId, IsDeathLinkOverriden)
+            .WithEntryEnabledWhen(DeathLink_FragmentsOnId, IsDeathLinkOverriden)
             .AddIntSlider(
                 DeathLink_DamageId,
                 ModSettingsText.Literal("Death Link Damage"),
@@ -263,7 +263,7 @@ public static class ModSettingsRegistration
                 )
             )
             .ConfigureEntryMenu(DeathLink_DamageId, ModSettingsMenuCapabilities.None)
-            .WithEntryEnabledWhen(DeathLink_OverrideId, IsDeathLinkOverriden);
+            .WithEntryEnabledWhen(DeathLink_DamageId, IsDeathLinkOverriden);
     }
 
     #endregion
