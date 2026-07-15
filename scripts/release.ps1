@@ -174,30 +174,6 @@ if ($gitCommitExit -ne 0) {
 }
 Write-Host "  Committed: $Version" -ForegroundColor Green
 
-# ~ Build C# client ~
-Write-Host "`nBuilding C# client (Release)..." -ForegroundColor Cyan
-$csprojPath = Join-Path $RepoRoot "client\StS2AP\StS2AP.csproj"
-$buildResult = dotnet build $csprojPath -c Release 2>&1
-$buildExitCode = $LASTEXITCODE
-
-if ($buildExitCode -ne 0) {
-    Write-Host ($buildResult | Out-String) -ForegroundColor Red
-    Write-Error "Build failed (exit code $buildExitCode). Check that local.props is configured."
-    exit 1
-}
-Write-Host "  Build succeeded." -ForegroundColor Green
-
-# ~ Locate the .pck file from the mods output directory ~
-$msbuildJson = dotnet msbuild $csprojPath -getProperty:ModsOutputDir -getProperty:ModName 2>$null | ConvertFrom-Json
-$modsOutputDir = $msbuildJson.Properties.ModsOutputDir
-$modName = $msbuildJson.Properties.ModName
-$pckPath = Join-Path $modsOutputDir "$modName.pck"
-
-if (-not (Test-Path $pckPath)) {
-    Write-Warning "  .pck file not found at $pckPath - it will not be included in the zip."
-    Write-Warning "  Ensure Godot is installed and GodotExePath is set in local.props."
-}
-
 # ~ Sync world source into Archipelago repo ~
 Write-Host "`nSyncing world source into Archipelago repo..." -ForegroundColor Cyan
 $archRepoRoot = Resolve-Path (Join-Path $RepoRoot "..") | Select-Object -ExpandProperty Path
@@ -235,18 +211,51 @@ if ($apworldExitCode -ne 0) {
 }
 Write-Host "  APWorld build succeeded." -ForegroundColor Green
 
+# ~ Copy spire2.apworld to dist (for C# build to pick up) ~
+$apworldSource = Join-Path $archRepoRoot "Archipelago\build\apworlds\spire2.apworld"
+$distDir = Join-Path $RepoRoot "dist"
+New-Item -ItemType Directory -Force -Path $distDir | Out-Null
+if (Test-Path $apworldSource) {
+    Copy-Item -Path $apworldSource -Destination $distDir -Force
+    Write-Host "  Copied: spire2.apworld to $distDir" -ForegroundColor Green
+} else {
+    Write-Error "spire2.apworld not found at $apworldSource after successful build."
+    exit 1
+}
+
+# ~ Build C# client ~
+Write-Host "`nBuilding C# client (Release)..." -ForegroundColor Cyan
+$csprojPath = Join-Path $RepoRoot "client\StS2AP\StS2AP.csproj"
+$buildResult = dotnet build $csprojPath -c Release 2>&1
+$buildExitCode = $LASTEXITCODE
+
+if ($buildExitCode -ne 0) {
+    Write-Host ($buildResult | Out-String) -ForegroundColor Red
+    Write-Error "Build failed (exit code $buildExitCode). Check that local.props is configured."
+    exit 1
+}
+Write-Host "  Build succeeded." -ForegroundColor Green
+
+# ~ Locate the .pck file from the mods output directory ~
+$msbuildJson = dotnet msbuild $csprojPath -getProperty:ModsOutputDir -getProperty:ModName 2>$null | ConvertFrom-Json
+$modsOutputDir = $msbuildJson.Properties.ModsOutputDir
+$modName = $msbuildJson.Properties.ModName
+$pckPath = Join-Path $modsOutputDir "$modName.pck"
+
+if (-not (Test-Path $pckPath)) {
+    Write-Warning "  .pck file not found at $pckPath - it will not be included in the zip."
+    Write-Warning "  Ensure Godot is installed and GodotExePath is set in local.props."
+}
+
 # ~ Prepare release artifacts ~
 Write-Host "`nPreparing files for the new release..." -ForegroundColor Cyan
 $outputDir = Join-Path $RepoRoot "client\StS2AP\bin\Release\net9.0"
-$distDir = Join-Path $RepoRoot "dist"
 $zipPath = Join-Path $distDir "sts2-client.zip"
 
 if (-not (Test-Path $outputDir)) {
     Write-Error "Build output directory not found: $outputDir"
     exit 1
 }
-
-New-Item -ItemType Directory -Force -Path $distDir | Out-Null
 
 if (Test-Path $zipPath) {
     Remove-Item $zipPath -Force
@@ -293,13 +302,10 @@ try {
     Remove-Item -Recurse -Force $tempDir -ErrorAction SilentlyContinue
 }
 
-# ~ Copy spire2.apworld to dist ~
-$apworldSource = Join-Path $archRepoRoot "Archipelago\build\apworlds\spire2.apworld"
-if (Test-Path $apworldSource) {
-    Copy-Item -Path $apworldSource -Destination $distDir -Force
-    Write-Host "  Copied: spire2.apworld to $distDir" -ForegroundColor Green
-} else {
-    Write-Warning "  spire2.apworld not found at $apworldSource"
+# Verify spire2.apworld is in dist (should have been copied earlier)
+$apworldPath = Join-Path $distDir "spire2.apworld"
+if (-not (Test-Path $apworldPath)) {
+    Write-Warning "  spire2.apworld not found in dist folder."
 }
 
 # ~ Tag the version commit ~
