@@ -73,15 +73,15 @@ base_item_table: Dict[str, ItemData] = {
 
 # Items in this table are character-agnostic, and can be claimed by any of them
 universal_items: Dict[str, ItemData] = {
-    'Free Attack': ItemData(2, ItemType.BUFF, ItemClassification.filler),
-    'Free Power': ItemData(3, ItemType.BUFF, ItemClassification.filler),
-    'Free Skill': ItemData(4, ItemType.BUFF, ItemClassification.filler),
-    'Dexterity': ItemData(5, ItemType.BUFF, ItemClassification.filler),
-    'Strength': ItemData(6, ItemType.BUFF, ItemClassification.filler),
-    'Plating': ItemData(7, ItemType.BUFF, ItemClassification.filler),
-    'Friendship': ItemData(8, ItemType.BUFF, ItemClassification.filler),
-    'Post-Combat Card Upgrade': ItemData(9, ItemType.BUFF, ItemClassification.filler),
-    'Single Colorless Card': ItemData(10, ItemType.FILLER_CARD_REWARD, ItemClassification.filler),
+    'Free Attack': ItemData(500, ItemType.BUFF, ItemClassification.filler),
+    'Free Power': ItemData(501, ItemType.BUFF, ItemClassification.filler),
+    'Free Skill': ItemData(502, ItemType.BUFF, ItemClassification.filler),
+    'Dexterity': ItemData(503, ItemType.BUFF, ItemClassification.filler),
+    'Strength': ItemData(504, ItemType.BUFF, ItemClassification.filler),
+    'Plating': ItemData(505, ItemType.BUFF, ItemClassification.filler),
+    'Friendship': ItemData(506, ItemType.BUFF, ItemClassification.filler),
+    'Post-Combat Card Upgrade': ItemData(507, ItemType.BUFF, ItemClassification.filler),
+    'Single Colorless Card': ItemData(508, ItemType.FILLER_CARD_REWARD, ItemClassification.filler),
 }
 
 base_event_item_pairs: Dict[str, str] = {
