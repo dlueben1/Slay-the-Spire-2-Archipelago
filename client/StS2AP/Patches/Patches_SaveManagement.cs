@@ -171,6 +171,7 @@ namespace StS2AP.Patches
                         GameUtility.CurrentPlayer = runState.Players[0];
                         ArchipelagoClient.Progress = ArchipelagoProgress.FromSerializable(result, GameUtility.CurrentPlayer);
                         ArchipelagoClient.ReprocessItems();
+                        ArchipelagoClient.Progress.InitializeFromServer(GameUtility.CurrentPlayer);
                         await NGame.Instance.Transition.FadeOut(0.8f, runState.Players[0].Character.CharacterSelectTransitionPath);
                         NGame.Instance.ReactionContainer.InitializeNetworking(new NetSingleplayerGameService());
                         await NGame.Instance.LoadRun(runState, serializableRun.PreFinishedRoom);
