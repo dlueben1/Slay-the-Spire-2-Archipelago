@@ -453,7 +453,7 @@ filler_item_options = OptionGroup(
         PlatingFillerWeight,
         FriendshipFillerWeight,
         PostCombatCardUpgradeFillerWeight,
-        SingleColorlessCardFillerWeight,
+        #SingleColorlessCardFillerWeight,
     ]
 )
 
@@ -489,7 +489,7 @@ class Spire2Options(PerGameCommonOptions):
     plating_filler_weight: PlatingFillerWeight
     friendship_filler_weight: FriendshipFillerWeight
     post_combat_card_upgrade_filler_weight: PostCombatCardUpgradeFillerWeight
-    single_colorless_card_filler_weight: SingleColorlessCardFillerWeight
+    #single_colorless_card_filler_weight: SingleColorlessCardFillerWeight
     # trap_chance: TrapChance
     # trap_weights: TrapWeights
     campfire_sanity: CampfireSanity
