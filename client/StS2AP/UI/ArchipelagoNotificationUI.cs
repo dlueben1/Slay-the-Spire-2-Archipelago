@@ -1,10 +1,12 @@
-using Godot;
-using MegaCrit.Sts2.addons.mega_text;
-using MegaCrit.Sts2.Core.Nodes.Debug;
-using StS2AP.Utils;
 using System;
 using System.Reflection;
 using System.Threading;
+using Godot;
+using MegaCrit.Sts2.addons.mega_text;
+using MegaCrit.Sts2.Core.Nodes.Debug;
+using StS2AP.Models;
+using StS2AP.Utils;
+using STS2RitsuLib;
 using static StS2AP.Utils.NotificationUtility;
 
 namespace StS2AP.UI
@@ -76,6 +78,9 @@ namespace StS2AP.UI
                 _canvasLayer.AddChild(_rootPanel);
                 root.AddChild(_canvasLayer);
 
+                // Load the desired ancient as the announcer icon
+                UpdateSpeakerIcon();
+
                 LogUtility.Success("Archipelago notification UI injected successfully");
             }
             catch (Exception ex)
@@ -83,7 +88,6 @@ namespace StS2AP.UI
                 LogUtility.Error($"Failed to inject Archipelago notification UI: {ex.Message}");
             }
         }
-
 
         /// <summary>
         /// Removes the UI from the scene tree
@@ -114,12 +118,66 @@ namespace StS2AP.UI
 
         #endregion
 
+        #region Speaker Icon Management
+
+        /// <summary>
+        /// Updates the speaker icon based on the current announcer setting.
+        /// Can be called at any time - will handle cases where UI is not yet injected.
+        /// </summary>
+        public static void UpdateSpeakerIcon()
+        {
+            LogUtility.Info($"AP: Updating speaker icon based on current announcer setting");
+
+            // If the UI hasn't been injected yet, there's nothing to update
+            if (_speakerIcon == null || !IsInstanceValid(_speakerIcon))
+            {
+                LogUtility.Error($"AP: FAILED TO RUN!");
+                return;
+            }
+
+            try
+            {
+                // Get the current announcer setting
+                var store = RitsuLibFramework.GetDataStore(ModEntry.ModId);
+                var settings = store.Get<ClientSettings>("apsettings");
+                var announcer = settings.Announcer?.ToLower() ?? "neow";
+
+                LogUtility.Info($"ANNOUNCER: {announcer}");
+
+                // Load the appropriate icon texture
+                var iconPath = $"res://images/ui/run_history/{announcer}.png";
+                _speakerIcon.Texture = GD.Load<Texture2D>(iconPath);
+
+                LogUtility.Info($"AP: Updated notification speaker icon to: {announcer}");
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Warn(
+                    $"Failed to update speaker icon: {ex.Message}. Falling back to Neow."
+                );
+
+                // Fallback to Neow if something goes wrong
+                try
+                {
+                    _speakerIcon.Texture = GD.Load<Texture2D>(
+                        "res://images/ui/run_history/neow.png"
+                    );
+                }
+                catch (Exception fallbackEx)
+                {
+                    LogUtility.Error($"Failed to load fallback Neow icon: {fallbackEx.Message}");
+                }
+            }
+            LogUtility.Info($"AP: Finished updating speaker icon");
+        }
+
+        #endregion
+
         /// <summary>
         /// Shows the notification UI by dequeuing the next message and displaying it with a fade-in animation
         /// </summary>
         public static void ShowMessage(ArchipelagoNotification notification)
         {
-
             // Set the message text
             SetMessage(notification.Message);
 
@@ -136,7 +194,6 @@ namespace StS2AP.UI
             _fadeTween.TweenProperty(_rootPanel, "modulate", new Color(1, 1, 1, 1), 0.3);
 
             ResetTimer(notification.DisplayDuration);
-
         }
 
         public static void ResetTimer(double timeout)
@@ -149,7 +206,8 @@ namespace StS2AP.UI
                 OnDisplayTimerTimeout,
                 null,
                 TimeSpan.FromSeconds(timeout),
-                Timeout.InfiniteTimeSpan);
+                Timeout.InfiniteTimeSpan
+            );
         }
 
         /// <summary>
@@ -166,14 +224,12 @@ namespace StS2AP.UI
             {
                 return NDevConsole.Instance?.Visible ?? false;
             }
-            catch(Exception)
+            catch (Exception)
             {
                 // can throw if the dev console is not created
                 return false;
             }
         }
-
-
 
         /// <summary>
         /// Checks for notifications to process from the queues.
@@ -191,10 +247,13 @@ namespace StS2AP.UI
                 }
             }
 
-            if((NotificationUtility.PeekDevNotification()?.ForceIntoDevConsole ?? false) || !DevConsoleVisible())
+            if (
+                (NotificationUtility.PeekDevNotification()?.ForceIntoDevConsole ?? false)
+                || !DevConsoleVisible()
+            )
             {
                 var notif = NotificationUtility.DequeueDevNotification();
-                if(notif != null)
+                if (notif != null)
                 {
                     WriteToDevConsole(notif.Message);
                 }
@@ -208,7 +267,7 @@ namespace StS2AP.UI
         private static void WriteToDevConsole(string msg)
         {
             RichTextLabel? outputBuffer = GetDevConsoleBuffer();
-            if(outputBuffer != null)
+            if (outputBuffer != null)
             {
                 outputBuffer.Text = outputBuffer.Text + msg + "\n";
             }
@@ -223,19 +282,21 @@ namespace StS2AP.UI
             try
             {
                 var console = NDevConsole.Instance;
-                if(console == null)
+                if (console == null)
                 {
                     return null;
                 }
 
-                var outputBufferInfo = console.GetType().GetField("_outputBuffer", BindingFlags.Instance | BindingFlags.NonPublic);
-                if(outputBufferInfo == null)
+                var outputBufferInfo = console
+                    .GetType()
+                    .GetField("_outputBuffer", BindingFlags.Instance | BindingFlags.NonPublic);
+                if (outputBufferInfo == null)
                 {
                     return null;
                 }
-                return (RichTextLabel?) outputBufferInfo.GetValue(console);
+                return (RichTextLabel?)outputBufferInfo.GetValue(console);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 // Can throw if the dev console isn't instantiated.
                 LogUtility.Debug("No dev console" + ex.Message);
@@ -264,13 +325,15 @@ namespace StS2AP.UI
             // Fade out
             _fadeTween = _rootPanel.CreateTween();
             _fadeTween.TweenProperty(_rootPanel, "modulate", new Color(1, 1, 1, 0), 0.3);
-            _fadeTween.TweenCallback(Callable.From(() =>
-            {
-                if (_rootPanel != null && IsInstanceValid(_rootPanel))
+            _fadeTween.TweenCallback(
+                Callable.From(() =>
                 {
-                    _rootPanel.Visible = false;
-                }
-            }));
+                    if (_rootPanel != null && IsInstanceValid(_rootPanel))
+                    {
+                        _rootPanel.Visible = false;
+                    }
+                })
+            );
         }
 
         /// <summary>
@@ -332,31 +395,23 @@ namespace StS2AP.UI
         }
 
         /// <summary>
-        /// Creates the speaker icon (Neow) on the left side
+        /// Creates the speaker icon on the left side of the notification.
+        /// It will be set to an Ancient of the user's preference when the UI is injected or
+        /// the user updates their settings.
         /// </summary>
         private static Control CreateSpeakerIcon()
         {
+            // Build the Control
             var container = new Control();
             container.Name = "SpeakerIconContainer";
             container.CustomMinimumSize = new Vector2(IconSize, IconSize);
 
-            // The actual speaker icon (Neow)
+            // Configure the Control
             _speakerIcon = new TextureRect();
             _speakerIcon.Name = "SpeakerIcon";
             _speakerIcon.SetAnchorsPreset(Control.LayoutPreset.FullRect);
             _speakerIcon.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
             _speakerIcon.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
-            
-            // Load the Neow icon
-            try
-            {
-                _speakerIcon.Texture = GD.Load<Texture2D>("res://images/ui/run_history/neow.png");
-            }
-            catch (Exception ex)
-            {
-                LogUtility.Warn($"Could not load Neow icon: {ex.Message}");
-            }
-
             container.AddChild(_speakerIcon);
 
             return container;
@@ -412,7 +467,10 @@ namespace StS2AP.UI
             // Message label using MegaRichTextLabel (the in-game rich text label with effects support)
             _messageLabel = new MegaRichTextLabel();
             _messageLabel.Name = "ArchipelagoNotificationLabel";
-            _messageLabel.CustomMinimumSize = new Vector2(maxBubbleWidth - (BubblePadding * 2) - TailWidth, 0);
+            _messageLabel.CustomMinimumSize = new Vector2(
+                maxBubbleWidth - (BubblePadding * 2) - TailWidth,
+                0
+            );
             _messageLabel.SizeFlagsHorizontal = Control.SizeFlags.Fill;
             _messageLabel.FitContent = true; // Allows height to grow with content
             _messageLabel.AutowrapMode = TextServer.AutowrapMode.Word; // Word wrap for long text
@@ -420,7 +478,7 @@ namespace StS2AP.UI
 
             /// MegaRichTextLabel._Ready() calls AssertThemeFontOverride with ThemeConstants.RichTextLabel.normalFont,
             /// which is the "normal_font" theme property on RichTextLabel.
-            /// 
+            ///
             /// Please note: The terminal still complains that we didn't set a "Theme Font", but there won't be a problem
             /// since we apply it right away.
             try
@@ -460,15 +518,15 @@ namespace StS2AP.UI
             // We'll use a ColorRect with a custom shape via a Polygon2D
             var tail = new Polygon2D();
             tail.Name = "TailPolygon";
-            
+
             // Triangle pointing left
             // Points: top-right, bottom-right, middle-left (pointing to speaker)
             float midY = IconSize / 2;
             tail.Polygon = new Vector2[]
             {
                 new Vector2(TailWidth, midY - 10), // Top right
-                new Vector2(TailWidth, midY + 10), // Bottom right  
-                new Vector2(0, midY)               // Point (left, center)
+                new Vector2(TailWidth, midY + 10), // Bottom right
+                new Vector2(0, midY), // Point (left, center)
             };
             tail.Color = new Color(0.18f, 0.15f, 0.25f, 0.95f); // Match bubble background
             tailContainer.AddChild(tail);
