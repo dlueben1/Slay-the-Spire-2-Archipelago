@@ -70,6 +70,9 @@ namespace StS2AP.Utils
         /// </summary>
         public static Player? CurrentPlayer { get; set; }
 
+        /// <summary>
+        /// Returns the slot data configuration for the current character being run.
+        /// </summary>
         public static CharacterConfig? CurrentConfig { get; set; }
         
         /// <summary>

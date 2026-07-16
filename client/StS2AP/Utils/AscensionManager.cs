@@ -5,28 +5,32 @@ using MegaCrit.Sts2.Core.Entities.Ascension;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
-using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Models;
 using StS2AP.Patches;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using static StS2AP.Data.ItemTable;
 
 namespace StS2AP.Utils
 {
     public class AscensionManager
     {
+        /// <summary>
+        /// The initial ascension configuration for the current character.
+        /// </summary>
         public ISet<AscensionLevel> ConfiguredAscension { get; set; } = new HashSet<AscensionLevel>();
 
+        /// <summary>
+        /// The current ascension "level" for the current character, based on the initial configuration
+        /// plus any ascension downs that the player has received for the current character.
+        /// </summary>
         public ISet<AscensionLevel> CurrentAscension { get; set; } = new HashSet<AscensionLevel>();
 
         private IHoverTip? _hoverTip;
 
+        /// <summary>
+        /// The hover tip for the ascension icon during a run.  Shows which ascensions are currently enabled.
+        /// </summary>
         public IHoverTip HoverTip { 
             get {
                 if(_hoverTip == null)
@@ -49,6 +53,9 @@ namespace StS2AP.Utils
             }
         }
 
+        /// <summary>
+        /// Whether the provided ascension level is set or not.
+        /// </summary>
         public bool HasLevel(AscensionLevel level)
         {
             return CurrentAscension.Contains(level);
@@ -62,6 +69,11 @@ namespace StS2AP.Utils
 
         private void UpdateHoverTip()
         {
+
+            if(GameUtility.CurrentPlayer == null)
+            {
+                return;
+            }
 
             LocString title = new LocString("ascension", "PORTRAIT_TITLE");
             title.Add("character", GameUtility.CurrentPlayer.Character.Title);
@@ -82,6 +94,9 @@ namespace StS2AP.Utils
         }
 
 
+        /// <summary>
+        /// 
+        /// </summary>
         public void Initialize(CharacterConfig currentConfig, ISet<AscensionLevel>? currentLevels = null)
         {
             // Initialize on new run, save, and update in game.
@@ -149,6 +164,10 @@ namespace StS2AP.Utils
 
         }
 
+
+        /// <summary>
+        /// Converts the Ascension Down item id to the appropriate AscensionLevel.
+        /// </summary>
         public AscensionLevel ToAscensionLevel(APItem rawItemId)
         {
 
@@ -180,6 +199,9 @@ namespace StS2AP.Utils
             }
         }
 
+        /// <summary>
+        /// Attempts to parse the AscensionLevel from the provided string, as the actual enum value.
+        /// </summary>
         public AscensionLevel? GetLevel(string level)
         {
             if(Enum.TryParse(typeof(AscensionLevel), level, true, out var result))
@@ -189,6 +211,10 @@ namespace StS2AP.Utils
             return null;
         }
 
+        /// <summary>
+        /// Removes the AscensionLevel from the current run.  If extra processing needs to occur to ensure this works as intended,
+        /// this method will do so.
+        /// </summary>
         public async void RemoveLevel(AscensionLevel level)
         {
             if(!CurrentAscension.Remove(level))
@@ -199,6 +225,8 @@ namespace StS2AP.Utils
             switch(level)
             {
                 case AscensionLevel.AscendersBane:
+                    // Note: For some reason a very janky curse is rendered on screen when this fires.  I don't think the game
+                    // was every setup for you to remove the Ascender's Bane.  Nothing problematic gameplay wise occurs though.
                     var card = GameUtility.CurrentPlayer?.Deck.Cards.Where((c) => c is AscendersBane).FirstOrDefault();
                     if(card != null)
                     {
@@ -232,7 +260,6 @@ namespace StS2AP.Utils
                                 PlayerCmd.GainMaxPotionCount(1, player);
                                 return;
                             }).CallDeferred();
-                        //await Engine.GetMainLoop().Call(PlayerCmd.GainMaxPotionCount(1, player));
                     }
                     break;
                 default:

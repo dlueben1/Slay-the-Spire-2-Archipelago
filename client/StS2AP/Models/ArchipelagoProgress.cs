@@ -120,7 +120,6 @@ namespace StS2AP.Models
         /// </summary>
         public Dictionary<int, PotionModel> PotionAssignments { get; set; } = new Dictionary<int, PotionModel>();
 
-        public ISet<AscensionLevel> AscensionLevels {get; set;} = new HashSet<AscensionLevel>();
         public AscensionManager Ascensions = new AscensionManager();
 
         /// <summary>

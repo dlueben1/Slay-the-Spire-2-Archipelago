@@ -3,18 +3,12 @@ using HarmonyLib;
 using MegaCrit.sts2.Core.Nodes.TopBar;
 using MegaCrit.Sts2.addons.mega_text;
 using MegaCrit.Sts2.Core.Entities.Ascension;
-using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Map;
-using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.HoverTips;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Runs;
-using MegaCrit.Sts2.Core.Saves;
 using MegaCrit.Sts2.Core.Saves.Runs;
-using StS2AP.Models;
-using StS2AP.Utils;
-using System.Reflection;
 
 namespace StS2AP.Patches
 {
@@ -23,68 +17,12 @@ namespace StS2AP.Patches
     /// </summary>
     public static class Patches_AscensionOverride
     {
-        #region Set In-Game Ascenion Level
+        #region Set In-Game Ascension Level
+
 
         /// <summary>
-        /// Override `Player`'s `MaxAscensionWhenRunStarted` with the Ascension Level
+        /// Sets the hover tooltip based on the currently enabled ascensions.
         /// </summary>
-        //[HarmonyPatch(typeof(Player), nameof(Player.MaxAscensionWhenRunStarted), MethodType.Getter)]
-        //public static class OverrideMaxAscensionWhenRunStarted
-        //{
-        //    [HarmonyPostfix]
-        //    public static void Postfix(ref int __result)
-        //    {
-        //        // TODO: update to max ascension for character?
-        //        __result = ArchipelagoClient.Settings?.AscensionLevel ?? __result;
-        //    }
-        //}
-
-        ///// <summary>
-        ///// Overrides the "Preferred Ascension" level for a character, which is used in the Character Select screen and other places.
-        ///// </summary>
-        //[HarmonyPatch(typeof(CharacterStats), nameof(CharacterStats.PreferredAscension), MethodType.Getter)]
-        //public static class OverridePreferredAscension
-        //{
-        //    static void Postfix(ref int __result)
-        //    {
-        //        __result = ArchipelagoClient.Settings?.AscensionLevel ?? __result;
-        //    }
-        //}
-
-        ///// <summary>
-        ///// Overrides the "Preferred Ascension" level for "multiplayer", which I *suspect* is also used by the random character select option.
-        ///// </summary>
-        //[HarmonyPatch(typeof(ProgressState), nameof(ProgressState.PreferredMultiplayerAscension), MethodType.Getter)]
-        //public static class OverridePreferredAscensionMultiplayer
-        //{
-        //    static void Postfix(ref int __result)
-        //    {
-        //        __result = ArchipelagoClient.Settings?.AscensionLevel ?? __result;
-        //    }
-        //}
-
-        ///// <summary>
-        ///// Sets the Ascension Level at the start of a run
-        ///// </summary>
-        //[HarmonyPatch(typeof(NGame), nameof(NGame.StartNewSingleplayerRun))]
-        //public static class ForceAscensionOnGameStart
-        //{
-        //    [HarmonyPrefix]
-        //    public static void Prefix(ref int ascensionLevel)
-        //    {
-        //        int? overrideAscension = ArchipelagoClient.Settings?.AscensionLevel;
-        //        if (overrideAscension.HasValue)
-        //        {
-        //            ascensionLevel = overrideAscension.Value;
-        //        }
-        //        else
-        //        {
-        //            // if we somehow don't have an override, 
-        //            ascensionLevel = 1;
-        //        }
-        //    }
-        //}
-
         [HarmonyPatch(typeof(NTopBarPortraitTip), "OnFocus")]
         public static class ChangeHoverTip
         {
@@ -100,7 +38,7 @@ namespace StS2AP.Patches
             }
         }
 
-        private static MegaLabel _ascensionLabel;
+        private static MegaLabel? _ascensionLabel;
         public static MegaLabel? AscensionLabel
         {
             get
@@ -113,11 +51,18 @@ namespace StS2AP.Patches
             }
         }
 
+        /// <summary>
+        /// Sets the Ascension number in the top left during a run to be the number of enabled ascensions.
+        /// </summary>
         public static void ChangeAscensionLabel(String newText)
         {
             Callable.From(() => AscensionLabel?.SetTextAutoSize(newText)).CallDeferred();
         }
 
+
+        /// <summary>
+        /// Captures the ascension number label, so we can change the number.
+        /// </summary>
         [HarmonyPatch(typeof(NTopBar), "Initialize")]
         public static class CaptureAscensionLabel
         {
@@ -130,52 +75,10 @@ namespace StS2AP.Patches
         }
 
 
-        ///// <summary>
-        ///// Overrides the Ascension Level of an AscensionManager instance during integer constructor.
-        ///// Overrides the constructor that takes an int parameter, which is used in the copy constructor.
-        ///// </summary>
-        //[HarmonyPatch(typeof(AscensionManager), MethodType.Constructor, new[] { typeof(int) })]
-        //public static class OverrideAscensionManagerInt
-        //{
-        //    private static readonly FieldInfo s_levelField =
-        //        typeof(AscensionManager).GetField("_level", BindingFlags.Instance | BindingFlags.NonPublic);
-
-        //    [HarmonyPostfix]
-        //    public static void Postfix(AscensionManager __instance, int level)
-        //    {
-        //        if (s_levelField == null || __instance == null) return;
-
-        //        // Prefer the value from Archipelago settings if available; otherwise use original value
-        //        var desired = ArchipelagoClient.Settings?.AscensionLevel ?? level;
-        //        LogUtility.Debug($"Patching Ascension Level to {desired}");
-        //        s_levelField.SetValue(__instance, desired);
-        //    }
-        //}
-
-        ///// <summary>
-        ///// Overrides the Ascension Level of an AscensionManager instance during enum constructor.
-        ///// Overrides the constructor that takes an AscensionLevel enum parameter, which is used in the copy constructor.
-        ///// </summary>
-        //[HarmonyPatch(typeof(AscensionManager), MethodType.Constructor, new[] { typeof(AscensionLevel) })]
-        //public static class OverrideAscensionManagerEnum
-        //{
-        //    private static readonly FieldInfo s_levelField =
-        //        typeof(AscensionManager).GetField("_level", BindingFlags.Instance | BindingFlags.NonPublic);
-
-        //    [HarmonyPostfix]
-        //    public static void Postfix(AscensionManager __instance, AscensionLevel level)
-        //    {
-        //        if (s_levelField == null || __instance == null) return;
-
-        //        // Prefer the value from Archipelago settings if available; otherwise use original value
-        //        var desired = ArchipelagoClient.Settings?.AscensionLevel ?? (int)level;
-        //        LogUtility.Debug($"Patching Ascension Level to {desired}");
-        //        s_levelField.SetValue(__instance, desired);
-        //    }
-        //}
-
         ///<summary>
-        /// Changes the AscensionManager lookup to check an inmemory hashset for whether a particular level is toggled.
+        /// Changes the AscensionManager lookup to check an in memory Set for whether a particular level is toggled.
+        /// During a run, everything gets piped to this method.  There are some things that happen outside of runs, but
+        /// we mostly don't care.
         /// </summary>
         [HarmonyPatch(typeof(MegaCrit.Sts2.Core.Entities.Ascension.AscensionManager), "HasLevel")]
         public static class InGameAscensionOverride
@@ -183,11 +86,18 @@ namespace StS2AP.Patches
             [HarmonyPostfix]
             public static void Postfix(AscensionLevel level, ref bool __result)
             {
-                // TODO: does this need to check if we're in a game?
-                __result = ArchipelagoClient.Progress.Ascensions.CurrentAscension.Contains(level);
+                if(!RunManager.Instance.IsInProgress)
+                {
+                    // Not sure we can trust the CurrentAscension Set in this case or not.
+                    return;
+                }
+                __result = ArchipelagoClient.Progress.Ascensions.HasLevel(level);
             }
         }
         
+        /// <summary>
+        /// Helps disable Double Boss when that ascension was active, but is no longer.
+        /// </summary>
         [HarmonyPatch(typeof(SavedActMap), nameof(SavedActMap.SecondBossMapPoint), MethodType.Getter)]
         public static class DisableSecondBossMapPointSaved
         {
@@ -202,6 +112,9 @@ namespace StS2AP.Patches
 
         }
 
+        /// <summary>
+        /// Helps disable Double Boss when that ascension was active, but is no longer.
+        /// </summary>
         [HarmonyPatch(typeof(SerializableActMap), nameof(SerializableActMap.SecondBossPoint), MethodType.Getter)]
         public static class DisableSecondBossMapPointSerializable
         {
@@ -216,6 +129,9 @@ namespace StS2AP.Patches
 
         }
 
+        /// <summary>
+        /// Helps disable Double Boss when that ascension was active, but is no longer.
+        /// </summary>
         [HarmonyPatch(typeof(StandardActMap), nameof(StandardActMap.SecondBossMapPoint), MethodType.Getter)]
         public static class DisableSecondBossMapPoint
         {
@@ -262,55 +178,6 @@ namespace StS2AP.Patches
             }
         }
 
-        ///// <summary>
-        ///// Overrides the Max Ascension for the Character Select Screen UI
-        ///// </summary>
-        //[HarmonyPatch(typeof(NAscensionPanel), nameof(NAscensionPanel.SetMaxAscension))]
-        //public static class OverrideMaxAscensionOnUI
-        //{
-        //    [HarmonyPrefix]
-        //    public static void Prefix(ref int maxAscension)
-        //    {
-        //        if (ArchipelagoClient.Settings == null) return;
-        //        maxAscension = 10;
-        //    }
-        //}
-
-        ///// <summary>
-        ///// Overrides the Ascension for the Character Select Screen UI
-        ///// </summary>
-        //[HarmonyPatch(typeof(NAscensionPanel), nameof(NAscensionPanel.SetAscensionLevel))]
-        //public static class OverrideAscensionOnUI
-        //{
-        //    [HarmonyPrefix]
-        //    public static void Prefix(ref int ascension)
-        //    {
-        //        if (ArchipelagoClient.Settings == null) return;
-        //        ascension = 10;
-        //    }
-        //}
-
-        ///// <summary>
-        ///// Forces the Ascension Level during Character Select Screen initialization.
-        ///// Honestly not sure how this is different from `OverrideAscensionOnUI` but it seems like we need both (maybe).
-        ///// </summary>
-        //[HarmonyPatch(typeof(NCharacterSelectScreen), nameof(NCharacterSelectScreen.InitializeSingleplayer))]
-        //public static class ForceAscensionOnCharacterSelect
-        //{
-        //    [HarmonyPostfix]
-        //    public static void Postfix(NCharacterSelectScreen __instance)
-        //    {
-        //        int overrideAscension = ArchipelagoClient.Settings?.AscensionLevel ?? 0;
-
-        //        var ascensionPanelField = typeof(NCharacterSelectScreen).GetField("_ascensionPanel",
-        //            BindingFlags.NonPublic | BindingFlags.Instance);
-
-        //        if (ascensionPanelField?.GetValue(__instance) is NAscensionPanel ascensionPanel)
-        //        {
-        //            ascensionPanel.SetAscensionLevel(overrideAscension);
-        //        }
-        //    }
-        //}
 
         #endregion
     }
