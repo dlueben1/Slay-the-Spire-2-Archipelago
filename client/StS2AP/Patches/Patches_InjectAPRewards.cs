@@ -1,6 +1,9 @@
 ﻿using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Hooks;
+using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Nodes.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Screens;
 using MegaCrit.Sts2.Core.Rewards;
@@ -10,6 +13,7 @@ using StS2AP.Extensions;
 using StS2AP.Models;
 using StS2AP.Utils;
 using System.Reflection;
+using static MegaCrit.Sts2.Core.Multiplayer.Game.TreasureRoomRelicSynchronizer;
 
 namespace StS2AP.Patches
 {
@@ -19,6 +23,19 @@ namespace StS2AP.Patches
     /// </summary>
     public static class Patches_InjectAPRewards
     {
+
+        private static ArchipelagoReward? GenerateForRelic(string name)
+        {
+            // Have we already given out enough relic rewards?
+            ArchipelagoClient.Progress.RelicRewardsAttempted++;
+            if (ArchipelagoClient.Progress.RelicRewardsAttempted <= ArchipelagoProgress._maxRelicRewards)
+            {
+                // Replace this reward with an AP Location reward
+                //__result.Remove(relicReward);
+                return new ArchipelagoReward($"{name} Relic {ArchipelagoClient.Progress.RelicRewardsAttempted}");
+            }
+            return null;
+        }
         /// <summary>
         /// Patches RewardsSet.GenerateRewardsFor to replace or inject Archipelago Location rewards.
         /// </summary>
@@ -52,13 +69,11 @@ namespace StS2AP.Patches
                     var relicReward = __result.FirstOrDefault(r => r is RelicReward);
                     if (relicReward != null)
                     {
-                        // Have we already given out enough relic rewards?
-                        ArchipelagoClient.Progress.RelicRewardsAttempted++;
-                        if (ArchipelagoClient.Progress.RelicRewardsAttempted <= ArchipelagoProgress._maxRelicRewards)
+                        var apReward = GenerateForRelic(name);
+                        if(apReward != null)
                         {
-                            // Replace this reward with an AP Location reward
                             __result.Remove(relicReward);
-                            __result.Add(new ArchipelagoReward($"{name} Relic {ArchipelagoClient.Progress.RelicRewardsAttempted}"));
+                            __result.Add(apReward);
                         }
                     }
 
@@ -180,6 +195,56 @@ namespace StS2AP.Patches
 
                     // Immediate change:
                     btn.Modulate = new Color(1f, 1f, 1f, targetAlpha);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Prevents chests from giving relics if that list hasn't been exhausted.
+        /// </summary>
+        [HarmonyPatch(typeof(TreasureRoomRelicSynchronizer), nameof(TreasureRoomRelicSynchronizer.BeginRelicPicking))]
+        public static class PreventRelicsFromChests
+        {
+            [HarmonyPrefix]
+            public static bool Prefix(ref List<RelicModel> ____currentRelics, ref PlayerVote ____predictedVote)
+            {
+                if(____currentRelics != null)
+                {
+			        throw new InvalidOperationException("Attempted to start new relic picking session while one was already occurring!");
+                }
+
+                if(ArchipelagoClient.Progress.RelicAssignments.Count <= ArchipelagoProgress._maxRelicRewards)
+                {
+                    ____currentRelics = new List<RelicModel>();
+                    ____predictedVote = new PlayerVote()
+                    {
+                        voteReceived    = true,     
+                        index = 0
+                    };
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Adds an AP Relic reward, if appropriate
+        /// </summary>
+        [HarmonyPatch(typeof(RewardsSet), nameof(RewardsSet.WithRewardsFromRoom))]
+        public static class InjectAPRewardsForChest
+        {
+            [HarmonyPostfix]
+            public static void Postfix(RewardsSet __instance, AbstractRoom room)
+            {
+                if(room.RoomType != RoomType.Treasure)
+                {
+                    return;
+                }
+                var apReward = GenerateForRelic(__instance.Player.APName());
+                if(apReward != null)
+                {
+                    __instance.Rewards.Add(apReward);
                 }
             }
         }
