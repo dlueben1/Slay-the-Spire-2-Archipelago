@@ -724,7 +724,6 @@ namespace StS2AP
             ArchipelagoSettings settings = new();
 
             // Apply all found settings
-            //if (slotData.ContainsKey("ascension")) settings.AscensionLevel = Convert.ToInt32(slotData["ascension"]);
             if (slotData.ContainsKey("seeded")) settings.IsSeeded = Convert.ToBoolean(slotData["seeded"]);
             if (slotData.ContainsKey("death_link")) settings.IsDeathLinkEnabled = Convert.ToBoolean(slotData["death_link"]);
             if (slotData.ContainsKey("shuffle_all_cards")) settings.ShouldShuffleAllCards = Convert.ToBoolean(slotData["shuffle_all_cards"]);
@@ -740,14 +739,8 @@ namespace StS2AP
                 /// Go through each character and add it to the list of Characters in our settings.
                 /// Slot data from Archipelago.MultiClient.Net is deserialized via Newtonsoft.Json,
                 /// so each entry arrives as a JObject, NOT a Dictionary<string, object>.
-                //var charBuffer = new List<string>();
                 foreach (var charData in charsList)
                 {
-                    // Cast to JObject to safely read the "name" field
-                    //if (charData is Newtonsoft.Json.Linq.JObject charObj && charObj.TryGetValue("name", out var nameToken))
-                    //{
-                    //    charBuffer.Add(nameToken.ToString());
-                    //}
                     if (charData is JObject)
                     {
                         var config = ToCharacterConfig(charData as JObject);
@@ -758,8 +751,6 @@ namespace StS2AP
                     }
                 }
 
-                // Store the characters locally
-                //settings.AvailableCharacters = charBuffer.ToArray();
                 
             }
 
