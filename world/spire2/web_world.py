@@ -56,6 +56,6 @@ class SlayTheSpire2Web(WebWorld):
             PlatingFillerWeight,
             FriendshipFillerWeight,
             PostCombatCardUpgradeFillerWeight,
-            SingleColorlessCardFillerWeight,
+            #SingleColorlessCardFillerWeight,
         ]),
     ]

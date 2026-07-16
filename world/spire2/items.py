@@ -81,7 +81,7 @@ universal_items: Dict[str, ItemData] = {
     'Plating': ItemData(505, ItemType.BUFF, ItemClassification.filler),
     'Friendship': ItemData(506, ItemType.BUFF, ItemClassification.filler),
     'Post-Combat Card Upgrade': ItemData(507, ItemType.BUFF, ItemClassification.filler),
-    'Single Colorless Card': ItemData(508, ItemType.FILLER_CARD_REWARD, ItemClassification.filler),
+    #'Single Colorless Card': ItemData(508, ItemType.FILLER_CARD_REWARD, ItemClassification.filler),
 }
 
 base_event_item_pairs: Dict[str, str] = {
