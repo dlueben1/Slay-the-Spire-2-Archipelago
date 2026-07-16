@@ -91,9 +91,9 @@ class Ascension(OptionSet):
         super(OptionSet, self).__init__()
 
     display_name = "Ascension"
-    valid_keys_casefold = True
+    valid_keys_casefold = False
     valid_keys = { *[str(i) for i in range(1,11)], *ASCENSIONS.keys() }
-    default = list(ASCENSIONS.keys())[1:]
+    default = list(ASCENSIONS.keys())[:1]
 
 # class FinalAct(Toggle):
 #     """Whether you will need to collect the 3 keys and beat the final act to complete the game."""
@@ -269,9 +269,9 @@ class AscensionDown(OptionSet):
         super(OptionSet, self).__init__()
 
     display_name = "Ascension Down"
-    valid_keys_casefold = True
+    valid_keys_casefold = False
     valid_keys = { *[str(i) for i in range(1,11)], *ASCENSIONS.keys() }
-    default = list(ASCENSIONS.keys())[1:]
+    default = list()
 
 # Death Link Options
 
