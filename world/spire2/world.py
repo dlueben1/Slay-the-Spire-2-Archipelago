@@ -328,8 +328,7 @@ class SlayTheSpire2World(World):
 
                 # remaining_checks = 51 - ascension_downs
                 remaining_checks = 48
-                if 'DoubleBoss'.lower() in config.ascension:
-                    # TODO: handle ascension downs
+                if 'DoubleBoss'.lower() in config.ascension and 'DoubleBoss'.lower() not in config.ascension_down:
                     remaining_checks += 1
 
                 # traps: list[bool] = [self.random.randint(0, 100) < self.options.trap_chance for _ in

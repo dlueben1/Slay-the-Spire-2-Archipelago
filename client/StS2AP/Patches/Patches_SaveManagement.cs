@@ -170,19 +170,12 @@ namespace StS2AP.Patches
 
                         GameUtility.CurrentPlayer = runState.Players[0];
                         GameUtility.CurrentConfig = ArchipelagoClient.Settings.Characters[GameUtility.CurrentPlayer.APName()];
-                        LogUtility.Info($"Current character name {GameUtility.CurrentConfig?.OfficialName}");
                         ArchipelagoClient.Progress = ArchipelagoProgress.FromSerializable(result, GameUtility.CurrentPlayer);
-                        LogUtility.Info("Progress setup complete from save data");
                         ArchipelagoClient.ReprocessItems();
-                        LogUtility.Info("Finished reprocessing items");
                         await NGame.Instance.Transition.FadeOut(0.8f, runState.Players[0].Character.CharacterSelectTransitionPath);
-                        LogUtility.Info("Finished Fade out");
                         NGame.Instance.ReactionContainer.InitializeNetworking(new NetSingleplayerGameService());
-                        LogUtility.Info("Initialized networking");
                         await NGame.Instance.LoadRun(runState, serializableRun.PreFinishedRoom);
-                        LogUtility.Info("Loaded run");
                         await NGame.Instance.Transition.FadeIn();
-                        LogUtility.Info("Fade in");
                         return;
                     }
                 }

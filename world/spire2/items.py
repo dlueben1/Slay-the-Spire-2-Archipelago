@@ -112,5 +112,3 @@ def create_item_tables(vanilla_chars: typing.List[str], extras: int) -> typing.T
     return item_name_to_data, characters_to_items, event_item_pairs
 
 item_table, chars_to_items, event_item_pairs = create_item_tables(character_list, NUM_CUSTOM)
-
-print(chars_to_items)

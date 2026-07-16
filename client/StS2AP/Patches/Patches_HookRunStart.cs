@@ -34,8 +34,15 @@ namespace StS2AP.Patches
             {
                 var officialName = character.GetType().Name;
                 GameUtility.CurrentConfig = ArchipelagoClient.Settings.Characters[officialName];
-                // TODO: This needs to properly handle the ascensions + ascension downs; might need an ascension manager
-                ascensionLevel = 10;
+                if(GameUtility.CurrentConfig.Ascension.Count == 0)
+                {
+                    ascensionLevel = 0;
+                }
+                else
+                {
+                    // Not 100% sure this is correct, but in testing this didn't have a negative impact.
+                    ascensionLevel = 10;
+                }
             }
         }
         /// <summary>
