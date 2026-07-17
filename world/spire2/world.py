@@ -10,7 +10,7 @@ from .regions import create_regions
 from .rules import set_rules, SpireLogic
 from .web_world import SlayTheSpire2Web
 from .characters import CharacterConfig, character_list, character_offset_map
-from .constants import NUM_CUSTOM
+from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET, ASCENSIONS
 from .items import item_table, chars_to_items, ItemType, base_event_item_pairs, ItemData
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
 from .options import Spire2Options
@@ -134,9 +134,14 @@ class SlayTheSpire2World(World):
                 selected_chars = self.random.sample(selected_chars, k=num_rand_chars)
 
         # self.logger.info("Generating with characters %s", selected_chars)
-        # ascension_down = self.options.ascension_down.value
-        # if self.options.include_floor_checks.value == 0:
-        #     ascension_down = 0
+        ascension_down: typing.Set[str] = self.options.ascension_down.value
+        ascension: typing.Set[str] = self.options.ascension.value
+        ascension = self._to_ascensions(ascension)
+        ascension_down = self._to_ascensions(ascension_down, True)
+        if self.options.include_floor_checks.value == 0:
+            ascension_down = set()
+        ascension_down = ascension.intersection(ascension_down)
+
         for char_val in selected_chars:
             option_name = char_val
             char_offset = character_offset_map[option_name.lower()]
@@ -152,8 +157,31 @@ class SlayTheSpire2World(World):
                                      0,
                                      seed,
                                      locked,
-                                     ascension=self.options.ascension.value)
+                                     ascension=ascension,
+                                     ascension_down=ascension_down)
             self.characters.append(config)
+
+    def _to_ascensions(self, ascensions: typing.Set[str], invert: bool = False) -> typing.Set[str]:
+        ret = set()
+        if len(ascensions) == 1:
+            try:
+                number = int(list(ascensions)[0])
+                start = 9 if invert else 0
+                end = 9 - number  if invert else number
+                for i in range(start, end):
+                    ret.add(ASCENSION_LIST[i].lower())
+                return ret
+            except:
+                return {asc.lower() for asc in ascensions}
+
+        for asc in ascensions:
+            try:
+                number = int(asc)
+                ret.add(ASCENSION_LIST[number].lower())
+            except:
+                ret.add(asc.lower())
+        return ret
+
 
     def _handle_advanced_chars(self) -> None:
         advanced_chars = self.options.advanced_characters.keys()
@@ -277,9 +305,11 @@ class SlayTheSpire2World(World):
                 elif ItemType.POTION == data.type:
                     if self.options.potion_sanity.value != 0:
                         amount = 9
-                # elif ItemType.ASCENSION_DOWN == data.type:
-                #     if self.options.include_floor_checks.value != 0:
-                #         amount = ascension_downs
+                elif ItemType.ASCENSION_DOWN == data.type:
+                    if self.options.include_floor_checks.value != 0:
+                        # dumb math cause I've made this hard
+                        base_item_code = data.code - (CHAR_OFFSET*config.char_offset)
+                        amount = 1 if ASCENSIONS[ASCENSION_LIST[base_item_code - 19]] in name else 0
                 elif self.options.shop_sanity.value != 0:
                     if ItemType.SHOP_CARD == data.type:
                         amount = self.options.shop_card_slots.value
@@ -298,8 +328,7 @@ class SlayTheSpire2World(World):
 
                 # remaining_checks = 51 - ascension_downs
                 remaining_checks = 48
-                if config.ascension >= 10:
-                    # TODO: handle ascension downs
+                if 'DoubleBoss'.lower() in config.ascension and 'DoubleBoss'.lower() not in config.ascension_down:
                     remaining_checks += 1
 
                 # traps: list[bool] = [self.random.randint(0, 100) < self.options.trap_chance for _ in

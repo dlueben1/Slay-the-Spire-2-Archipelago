@@ -38,6 +38,7 @@ namespace StS2AP.Models
         public List<int> UsedItems { get; set; } = new List<int>();
         [JsonPropertyName("gold_redeemed")]
         public int GoldRedeemed { get; set; }
+        public List<int> Ascensions { get; set; } = new List<int>();
 
     }
 

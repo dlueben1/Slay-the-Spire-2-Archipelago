@@ -8,6 +8,7 @@ using Godot;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
+using Newtonsoft.Json.Linq;
 using StS2AP.Data;
 using StS2AP.Models;
 using StS2AP.UI;
@@ -661,6 +662,20 @@ namespace StS2AP
 
                         break;
                     }
+                case APItem.SwarmingElites:
+                case APItem.WearyTraveler:
+                case APItem.Poverty:
+                case APItem.TightBelt:
+                case APItem.AscenderBane:
+                case APItem.Inflation:
+                case APItem.Scarcity:
+                case APItem.ToughEnemies:
+                case APItem.DeadlyEnemies:
+                case APItem.DoubleBoss:
+                    Progress.Ascensions.ProcessAscensionLevel(GameUtility.CurrentConfig, item, false);
+                    Progress.UsedItems.Add(index);
+                    Progress.AllReceivedItems.Add(new IndexedItemInfo(item, index));
+                    break;
                 // Everything else ends up in the "reward pool"
                 default:
                     {
@@ -709,7 +724,6 @@ namespace StS2AP
             ArchipelagoSettings settings = new();
 
             // Apply all found settings
-            if (slotData.ContainsKey("ascension")) settings.AscensionLevel = Convert.ToInt32(slotData["ascension"]);
             if (slotData.ContainsKey("seeded")) settings.IsSeeded = Convert.ToBoolean(slotData["seeded"]);
             if (slotData.ContainsKey("death_link")) settings.IsDeathLinkEnabled = Convert.ToBoolean(slotData["death_link"]);
             if (slotData.ContainsKey("shuffle_all_cards")) settings.ShouldShuffleAllCards = Convert.ToBoolean(slotData["shuffle_all_cards"]);
@@ -725,18 +739,19 @@ namespace StS2AP
                 /// Go through each character and add it to the list of Characters in our settings.
                 /// Slot data from Archipelago.MultiClient.Net is deserialized via Newtonsoft.Json,
                 /// so each entry arrives as a JObject, NOT a Dictionary<string, object>.
-                var charBuffer = new List<string>();
                 foreach (var charData in charsList)
                 {
-                    // Cast to JObject to safely read the "name" field
-                    if (charData is Newtonsoft.Json.Linq.JObject charObj && charObj.TryGetValue("name", out var nameToken))
+                    if (charData is JObject)
                     {
-                        charBuffer.Add(nameToken.ToString());
+                        var config = CharacterConfig.fromJObject(charData as JObject);
+                        if(config != null)
+                        {
+                            settings.Characters.Add(config.OfficialName, config);
+                        }
                     }
                 }
 
-                // Store the characters locally
-                settings.AvailableCharacters = charBuffer.ToArray();
+                
             }
 
             if (slotData.ContainsKey("campfire_sanity"))
@@ -754,6 +769,7 @@ namespace StS2AP
             // And return it
             return settings;
         }
+
 
         #endregion
 

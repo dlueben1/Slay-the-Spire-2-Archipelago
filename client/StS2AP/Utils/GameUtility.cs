@@ -69,6 +69,11 @@ namespace StS2AP.Utils
         /// Set when a run starts, cleared when a run ends.
         /// </summary>
         public static Player? CurrentPlayer { get; set; }
+
+        /// <summary>
+        /// Returns the slot data configuration for the current character being run.
+        /// </summary>
+        public static CharacterConfig? CurrentConfig { get; set; }
         
         /// <summary>
         /// Dictionary that holds the current AP Saves for each character. Stored in DataStorage.

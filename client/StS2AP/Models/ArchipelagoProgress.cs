@@ -8,6 +8,8 @@ using StS2AP.Utils;
 using static StS2AP.Data.CharTable;
 using MegaCrit.Sts2.Core.Saves;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Ascension;
+using AscensionManager = StS2AP.Utils.AscensionManager;
 
 
 namespace StS2AP.Models
@@ -118,6 +120,8 @@ namespace StS2AP.Models
         /// </summary>
         public Dictionary<int, PotionModel> PotionAssignments { get; set; } = new Dictionary<int, PotionModel>();
 
+        public AscensionManager Ascensions = new AscensionManager();
+
         /// <summary>
         /// Returns the relic assigned to the given location, pulling one from the RelicFactory if it hasn't been assigned yet.
         /// This guarantees that the same relic is shown every time the reward screen is opened for the same item.
@@ -205,6 +209,8 @@ namespace StS2AP.Models
                     CampfiresChecked[checkName] = ArchipelagoClient.Session.Locations.AllLocationsChecked.Contains(locationId);
                 }
             }
+            Ascensions.Initialize(GameUtility.CurrentConfig);
+            LogUtility.Info($"Starting game with ascension levels {string.Join(",", Ascensions.CurrentAscension)}");
         }
 
         public void ResetTrackers()
@@ -219,6 +225,7 @@ namespace StS2AP.Models
             RelicAssignments.Clear();
             CardAssignments.Clear();
             PotionAssignments.Clear();
+            Ascensions.Reset();
             GoldRedeemed = 0;
         }
 
@@ -346,11 +353,12 @@ namespace StS2AP.Models
                 BossRewardsDistributed = BossRewardsDistributed,
                 UsedItems = UsedItems,
                 GoldRedeemed = GoldRedeemed,
-                RelicAssignments = RelicAssignments.Select((KeyValuePair<int,RelicModel> kv) => new KeyValuePair<int, SerializableRelic>(kv.Key, kv.Value.ToMutable().ToSerializable())).ToDictionary(),
-                CardAssignments = CardAssignments.Select((KeyValuePair<int,CardReward> kv) => new KeyValuePair<int, SerializableReward>(kv.Key, kv.Value.ToSerializable())).ToDictionary(),
-                CardAssignmentModels = CardAssignments.Select((KeyValuePair<int,CardReward> kv) => 
+                RelicAssignments = RelicAssignments.Select((KeyValuePair<int, RelicModel> kv) => new KeyValuePair<int, SerializableRelic>(kv.Key, kv.Value.ToMutable().ToSerializable())).ToDictionary(),
+                CardAssignments = CardAssignments.Select((KeyValuePair<int, CardReward> kv) => new KeyValuePair<int, SerializableReward>(kv.Key, kv.Value.ToSerializable())).ToDictionary(),
+                CardAssignmentModels = CardAssignments.Select((KeyValuePair<int, CardReward> kv) =>
                 new KeyValuePair<int, List<SerializableCard>>(kv.Key, kv.Value.Cards.Select(c => c.ToSerializable()).ToList())).ToDictionary(),
-                PotionAssignments = PotionAssignments.Select((KeyValuePair<int,PotionModel> kv) => new KeyValuePair<int, SerializablePotion>(kv.Key, kv.Value.ToMutable().ToSerializable(-1))).ToDictionary(),
+                PotionAssignments = PotionAssignments.Select((KeyValuePair<int, PotionModel> kv) => new KeyValuePair<int, SerializablePotion>(kv.Key, kv.Value.ToMutable().ToSerializable(-1))).ToDictionary(),
+                Ascensions = Ascensions.CurrentAscension.Select((level) => ((int)level)).ToList()
             };
         }
 
@@ -368,7 +376,6 @@ namespace StS2AP.Models
                 UsedItems = new List<int>(saveData.UsedItems),
                 GoldRedeemed = saveData.GoldRedeemed,
                 RelicAssignments = saveData.RelicAssignments.Select((KeyValuePair<int, SerializableRelic> kv) => new KeyValuePair<int, RelicModel>(kv.Key, RelicModel.FromSerializable(kv.Value).CanonicalInstance)).ToDictionary(),
-                //CardAssignments = saveData.CardAssignments.Select((KeyValuePair<int, SerializableReward> kv) => new KeyValuePair<int, CardReward>(kv.Key, (CardReward) CardReward.FromSerializable(kv.Value, player))).ToDictionary(),
                 PotionAssignments = saveData.PotionAssignments.Select((KeyValuePair<int, SerializablePotion> kv) => new KeyValuePair<int, PotionModel>(kv.Key, PotionModel.FromSerializable(kv.Value).CanonicalInstance)).ToDictionary(),
             };
 
@@ -376,10 +383,6 @@ namespace StS2AP.Models
             foreach(var kv in saveData.CardAssignmentModels)
             {
                 var models = kv.Value.Select(cs => player.RunState.CreateCard(CardModel.FromSerializable(cs).CanonicalInstance, player)).ToList();
-                // foreach(var model in models)
-                // {
-                //     model.Owner = player;
-                // }
                 cardModels[kv.Key] = models;
             }
 
@@ -408,6 +411,10 @@ namespace StS2AP.Models
                     LogUtility.Error($"Could not recover card list from save for reward {kv.Key}");
                 }
             }
+
+            var ascensionLevels = saveData.Ascensions?.Select((level) => (AscensionLevel)level).ToHashSet() ?? new HashSet<AscensionLevel>();
+
+            progress.Ascensions.Initialize(GameUtility.CurrentConfig, ascensionLevels);
 
             progress.CardAssignments = cardRewards;
 

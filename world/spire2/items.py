@@ -5,7 +5,7 @@ from collections import defaultdict
 from enum import auto, Enum
 
 from worlds.spire2.characters import character_list
-from worlds.spire2.constants import CHAR_OFFSET, NUM_CUSTOM
+from worlds.spire2.constants import CHAR_OFFSET, NUM_CUSTOM, ASCENSIONS
 
 
 class ItemType(Enum):
@@ -60,12 +60,12 @@ base_item_table: Dict[str, ItemData] = {
     'Progressive Shop Remove': ItemData(13, ItemType.SHOP_REMOVE, ItemClassification.progression_deprioritized),
     'Unlock': ItemData(14, ItemType.CHAR_UNLOCK, ItemClassification.progression),
     'Potion': ItemData(18, ItemType.POTION, ItemClassification.useful),
-    'Ascension Down': ItemData(19, ItemType.ASCENSION_DOWN, ItemClassification.useful),
 
     # Event Items
     'Victory': ItemData(None, ItemType.EVENT, ItemClassification.progression, True, True),
     'Beat Act 1 Boss': ItemData(None, ItemType.EVENT, ItemClassification.progression, True),
     'Beat Act 2 Boss': ItemData(None, ItemType.EVENT, ItemClassification.progression, True),
+    **{asc: ItemData(i + 19, ItemType.ASCENSION_DOWN, ItemClassification.useful) for i, asc in enumerate(ASCENSIONS.values()) }
 }
 
 universal_items: Dict[str, ItemData] = {

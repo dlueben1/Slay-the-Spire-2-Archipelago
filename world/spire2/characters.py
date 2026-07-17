@@ -35,7 +35,9 @@ class CharacterConfig:
         self.official_name: str = official_names[char_offset - 1]
         self.seed: str = seed
         self.locked: bool = locked
-        self.ascension: int = kwargs['ascension']
+        self.ascension: List[str] = kwargs['ascension']
+        # Doesn't need to make it to the mod
+        self.ascension_down: List[str] = kwargs['ascension_down']
 
     def to_dict(self) -> dict[str, Any]:
         return {

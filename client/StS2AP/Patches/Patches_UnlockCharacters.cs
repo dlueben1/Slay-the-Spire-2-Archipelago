@@ -57,7 +57,7 @@ namespace StS2AP.Patches
             [HarmonyPostfix]
             public static void Postfix(NCharacterSelectScreen __instance)
             {
-                LogUtility.Debug($"OverrideCharacterSelectMenuOptions: OnSubmenuOpened postfix fired. AvailableCharacters: [{string.Join(", ", ArchipelagoClient.Settings.AvailableCharacters)}]");
+                LogUtility.Debug($"OverrideCharacterSelectMenuOptions: OnSubmenuOpened postfix fired. AvailableCharacters: [{string.Join(", ", ArchipelagoClient.Settings.Characters.Values)}]");
 
                 if (CharButtonContainerField.GetValue(__instance) is not Control container)
                 {
@@ -76,7 +76,7 @@ namespace StS2AP.Patches
                     LogUtility.Debug($"OverrideCharacterSelectMenuOptions: Checking button '{rawName}' → characterEntry '{characterEntry}'");
 
                     // Hide any character that isn't in the available characters list for this Archipelago slot
-                    bool isVisible = ArchipelagoClient.Settings.AvailableCharacters.Contains(characterEntry);
+                    bool isVisible = ArchipelagoClient.Settings.Characters.Keys.Contains(characterEntry);
                     LogUtility.Debug($"OverrideCharacterSelectMenuOptions: '{characterEntry}' isVisible={isVisible}");
 
                     if (!isVisible)

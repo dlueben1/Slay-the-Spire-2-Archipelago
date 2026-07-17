@@ -29,8 +29,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
     prefix = config.name
     multiworld = world.multiworld
     every_other = not world.options.shuffle_all_cards
-    # TODO: update for ascension down?
-    ascension_mod = 0 if config.ascension <= 9 else 1
+    ascension_mod = 1 if 'DoubleBoss'.lower() in config.ascension and 'DoubleBoss'.lower() not in config.ascension_down else 0
     first_char_region = world.create_region(player, prefix, 'Early Act 1', config,
                                             [
                                                 "Press Start",
