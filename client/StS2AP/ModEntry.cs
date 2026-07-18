@@ -58,6 +58,7 @@ namespace StS2AP
 
             // Initialize Utilities
             DeathLinkUtility.Initialize();
+            BuffUtility.Initialize();
 
             // Apply all Harmony Patches
             try
