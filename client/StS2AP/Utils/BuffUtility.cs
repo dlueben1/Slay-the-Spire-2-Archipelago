@@ -3,7 +3,11 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Archipelago.MultiClient.Net.Enums;
 using MegaCrit.Sts2.Core.Combat;
+using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Powers;
 using STS2RitsuLib;
 using static StS2AP.Data.ItemTable;
 
@@ -299,7 +303,7 @@ namespace StS2AP.Utils
                     LogUtility.Info(
                         $"[BuffUtility] Applying buff '{buffType}' (index {itemIndex}) to player."
                     );
-                    ApplyBuff(buffType, player);
+                    await ApplyBuff(buffType, player);
                 }
                 catch (Exception ex)
                 {
@@ -332,7 +336,90 @@ namespace StS2AP.Utils
         /// </summary>
         /// <param name="buffType">The type of buff to apply.</param>
         /// <param name="player">The active Player instance for the current run.</param>
-        private static void ApplyBuff(APItem buffType, Player player) { }
+        private static async Task ApplyBuff(APItem buffType, Player player)
+        {
+            // Load the correct power to apply
+            switch (buffType)
+            {
+                case APItem.FreeAttack:
+                    await PowerCmd.Apply<FreeAttackPower>(
+                        new BlockingPlayerChoiceContext(),
+                        player.Creature,
+                        1,
+                        player.Creature,
+                        null
+                    );
+                    break;
+                case APItem.FreePower:
+                    await PowerCmd.Apply<FreePowerPower>(
+                        new BlockingPlayerChoiceContext(),
+                        player.Creature,
+                        1,
+                        player.Creature,
+                        null
+                    );
+                    break;
+                case APItem.FreeSkill:
+                    await PowerCmd.Apply<FreeSkillPower>(
+                        new BlockingPlayerChoiceContext(),
+                        player.Creature,
+                        1,
+                        player.Creature,
+                        null
+                    );
+                    break;
+                case APItem.Dexterity:
+                    await PowerCmd.Apply<DexterityPower>(
+                        new BlockingPlayerChoiceContext(),
+                        player.Creature,
+                        2,
+                        player.Creature,
+                        null
+                    );
+                    break;
+                case APItem.Strength:
+                    await PowerCmd.Apply<StrengthPower>(
+                        new BlockingPlayerChoiceContext(),
+                        player.Creature,
+                        2,
+                        player.Creature,
+                        null
+                    );
+                    break;
+                case APItem.Plating:
+                    await PowerCmd.Apply<PlatingPower>(
+                        new BlockingPlayerChoiceContext(),
+                        player.Creature,
+                        5,
+                        player.Creature,
+                        null
+                    );
+                    break;
+                case APItem.Friendship:
+                    await PowerCmd.Apply<FriendshipPower>(
+                        new BlockingPlayerChoiceContext(),
+                        player.Creature,
+                        1,
+                        player.Creature,
+                        null
+                    );
+                    break;
+                case APItem.PostCombatCardUpgrade:
+                    await PowerCmd.Apply<ImprovementPower>(
+                        new BlockingPlayerChoiceContext(),
+                        player.Creature,
+                        1,
+                        player.Creature,
+                        null
+                    );
+                    break;
+                default:
+                    LogUtility.Warn(
+                        $"[BuffUtility] ApplyBuff: unrecognized buff type '{buffType}'."
+                    );
+                    break;
+            }
+        }
 
         #endregion
 
