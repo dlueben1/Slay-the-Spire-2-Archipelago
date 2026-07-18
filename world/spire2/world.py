@@ -267,22 +267,59 @@ class SlayTheSpire2World(World):
         item_id = self.item_name_to_id[name]
         return SlayTheSpire2Item(data, name, data.classification, item_id, self.player)
 
-    # Returns a weighted random filler item based on options and character availability
+    # Returns a filler item selected using a two-stage rarity tier system.
+    #
+    # A rarity tier (HIGH / MEDIUM / LOW) is chosen first at a fixed probability,
+    # then one item is selected uniformly from all items in that tier. 
+    # 
+    # This means the number of items in a tier does not affect the probability of
+    # other tiers being selected. (I learned this the hard way while testing).
     def get_filler_item(self, character: Optional[str] = None) -> str:
-        """Select a filler item based on configured weights and character availability.
-        
+        """Select a filler item using two-stage rarity tier selection.
+
+        Stage 1: Randomly select a rarity tier (HIGH / MEDIUM / LOW) based on fixed
+                 probabilities. HIGH items are more likely to be selected than LOW items,
+                 but the probability of any individual HIGH item is the same as any other
+                 HIGH item.
+
+        Stage 2: Uniformly select one item from all items in the chosen tier. If the
+                 chosen tier has no items (because the player hasn't configured any items
+                 at that rarity), fall back to the next available tier.
+
+        Fallback order when the selected tier is empty:
+            LOW  -> MEDIUM -> HIGH
+            MEDIUM -> HIGH -> LOW
+            HIGH -> MEDIUM -> LOW
+
+        If no items exist in any tier at all, return "One Gold" for a random character.
+
         Args:
-            character: Optional character name. If provided, character-specific items (gold) will be included.
-                      If not provided, a random character from the pool will be selected for character-specific items.
-        
+            character: Optional character name. If provided, character-specific items
+                       (gold) will be included. If not provided, a random character
+                       from the pool will be selected for character-specific items.
+
         Returns:
-            The name of a filler item (e.g., "Ironclad One Gold", "Free Attack", etc.)
+            The name of a filler item (e.g., "Ironclad Five Gold", "Free Attack", etc.)
         """
-        filler_pool = []
-        filler_weights = []
-        
-        # Add universal items (available to all characters) dynamically from universal_items dict
-        # Map item names to their option attributes
+        # --- Tier probability weights ---
+        # These constants control the base probability of selecting each rarity tier
+        # before item availability is considered. They are used as weights for
+        # random.choices(), so HIGH / (HIGH + MEDIUM + LOW) = ~50% chance for HIGH.
+        TIER_HIGH_WEIGHT = 50
+        TIER_MEDIUM_WEIGHT = 33
+        TIER_LOW_WEIGHT = 17
+
+        # --- Rarity tier buckets ---
+        # Items are sorted into these lists based on their configured option weight:
+        #   option_low    = 1  -> LOW tier
+        #   option_medium = 3  -> MEDIUM tier
+        #   option_high   = 5  -> HIGH tier
+        #   option_none   = 0  -> excluded entirely
+        high_items: list = []
+        medium_items: list = []
+        low_items: list = []
+
+        # Map each universal item to its configured weight value
         universal_item_option_map = {
             "Free Attack": self.options.free_attack_filler_weight.value,
             "Free Power": self.options.free_power_filler_weight.value,
@@ -292,63 +329,99 @@ class SlayTheSpire2World(World):
             "Plating": self.options.plating_filler_weight.value,
             "Friendship": self.options.friendship_filler_weight.value,
             "Post-Combat Card Upgrade": self.options.post_combat_card_upgrade_filler_weight.value,
-            "Single Colorless Card": self.options.single_colorless_card_filler_weight.value,
         }
-        
-        # Only add universal items that exist in the item table and have non-zero weight
+
+        # Sort universal items into their tier buckets based on the configured weight value
         for item_name in universal_items.keys():
             weight = universal_item_option_map.get(item_name, 0)
-            if weight > 0:
-                filler_pool.append(item_name)
-                filler_weights.append(weight)
-        
-        # Add character-specific items (gold items)
-        # If no character specified, pick one randomly from available characters
+            if weight == 5:
+                high_items.append(item_name)
+            elif weight == 3:
+                medium_items.append(item_name)
+            elif weight == 1:
+                low_items.append(item_name)
+
+        # Character-specific items: "Ironclad One Gold", "Silent Five Gold", etc.
+        # If no character was specified, pick one at random from the available characters.
         if character is None and self.characters:
             character = self.random.choice(self.characters).name
-        
+
         if character:
-            # Look up character-specific items
+            # Resolve the lookup key: vanilla characters use their name, modded characters
+            # use their mod_num integer. This matches the chars_to_items dictionary structure.
+            #
+            # @Platano this is my understanding that will hopefully help while you're working on
+            # modded characters, let me know if this is wrong.
             char_lookup = character
-            # Check if we need to use the character's name or mod number for lookup
             for config in self.characters:
                 if config.name == character:
                     char_lookup = config.name if config.mod_num == 0 else config.mod_num
                     break
-            
-            # Get character-specific gold items from the character's item pool
+
+            # Find and sort the character's filler-classified gold items into tier buckets
             if char_lookup in chars_to_items:
-                char_gold_items = [(key, val) for key, val in chars_to_items[char_lookup].items()
-                                   if ItemType.GOLD == val.type and ItemClassification.filler == val.classification]
-                
-                # Add One Gold and Five Gold with their weights
+                char_gold_items = [
+                    (key, val) for key, val in chars_to_items[char_lookup].items()
+                    if ItemType.GOLD == val.type and ItemClassification.filler == val.classification
+                ]
+
                 for item_name, item_data in char_gold_items:
                     if "One Gold" in item_name:
                         weight = self.options.one_gold_filler_weight.value
-                        if weight > 0:
-                            filler_pool.append(item_name)
-                            filler_weights.append(weight)
                     elif "Five Gold" in item_name:
                         weight = self.options.five_gold_filler_weight.value
-                        if weight > 0:
-                            filler_pool.append(item_name)
-                            filler_weights.append(weight)
-        
-        # Fallback: if no items in pool or all weights are 0, return One Gold for a random character
-        if not filler_pool or sum(filler_weights) <= 0:
-            # Select a random character and return their One Gold item
+                    else:
+                        weight = 0
+
+                    if weight == 5:
+                        high_items.append(item_name)
+                    elif weight == 3:
+                        medium_items.append(item_name)
+                    elif weight == 1:
+                        low_items.append(item_name)
+
+        # If the player has disabled every filler item (all weights set to 0), fall back to
+        # "One Gold" for a random character as a safe default.
+        if not high_items and not medium_items and not low_items:
             if self.characters:
                 fallback_char = self.random.choice(self.characters)
-                char_lookup = fallback_char.name if fallback_char.mod_num == 0 else fallback_char.mod_num
-                if char_lookup in chars_to_items:
-                    for item_name, item_data in chars_to_items[char_lookup].items():
+                fallback_lookup = fallback_char.name if fallback_char.mod_num == 0 else fallback_char.mod_num
+                if fallback_lookup in chars_to_items:
+                    for item_name, item_data in chars_to_items[fallback_lookup].items():
                         if "One Gold" in item_name:
                             return item_name
-            # Ultimate fallback if something goes wrong
+            # Last-resort fallback in case something is very wrong
             return "Ironclad One Gold"
-        
-        # Select and return a random item based on weights
-        return self.random.choices(filler_pool, weights=filler_weights, k=1)[0]
+
+        # --- Stage 1: Select a rarity tier ---
+        # Roll for which tier to pick from.
+        tier_selection = self.random.choices(
+            ['high', 'medium', 'low'],
+            weights=[TIER_HIGH_WEIGHT, TIER_MEDIUM_WEIGHT, TIER_LOW_WEIGHT],
+            k=1
+        )[0]
+
+        # --- Stage 2: Pick an item from the selected tier, with fallback ---
+        # If the chosen tier is empty (the player hasn't configured any items at that rarity),
+        # fall back to the next available tier rather than failing. Fallback direction:
+        #   LOW was chosen but empty:    try MEDIUM, then HIGH
+        #   MEDIUM was chosen but empty: try HIGH, then LOW
+        #   HIGH was chosen but empty:   try MEDIUM, then LOW
+        if tier_selection == 'low':
+            tier_candidates = [low_items, medium_items, high_items]
+        elif tier_selection == 'medium':
+            tier_candidates = [medium_items, high_items, low_items]
+        else:  # 'high'
+            tier_candidates = [high_items, medium_items, low_items]
+
+        for tier in tier_candidates:
+            if tier:
+                # Select uniformly from all items in this tier
+                return self.random.choice(tier)
+
+        # This should never be reached given the early-exit check above, but
+        # included as a safety net in case something unexpected bypasses it.
+        return "Ironclad One Gold"
 
     # Randomly selects a filler item name from the item table
     def get_filler_item_name(self) -> str:
