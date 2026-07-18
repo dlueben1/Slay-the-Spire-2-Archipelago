@@ -81,6 +81,12 @@ universal_items: Dict[str, ItemData] = {
     'Plating': ItemData(505, ItemType.BUFF, ItemClassification.filler),
     'Friendship': ItemData(506, ItemType.BUFF, ItemClassification.filler),
     'Post-Combat Card Upgrade': ItemData(507, ItemType.BUFF, ItemClassification.filler),
+    'Post-Combat Card Removal': ItemData(508, ItemType.BUFF, ItemClassification.filler),
+    'Additional Card Reward': ItemData(509, ItemType.BUFF, ItemClassification.filler),
+    'Buffer': ItemData(510, ItemType.BUFF, ItemClassification.filler),
+    'Vigor': ItemData(511, ItemType.BUFF, ItemClassification.filler),
+    'Thorns': ItemData(512, ItemType.BUFF, ItemClassification.filler),
+    'Artifact': ItemData(513, ItemType.BUFF, ItemClassification.filler),
     #'Single Colorless Card': ItemData(508, ItemType.FILLER_CARD_REWARD, ItemClassification.filler),
 }
 

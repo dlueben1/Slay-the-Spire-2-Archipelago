@@ -368,6 +368,15 @@ namespace StS2AP.Utils
                         null
                     );
                     break;
+                case APItem.Artifact:
+                    await PowerCmd.Apply<ArtifactPower>(
+                        new BlockingPlayerChoiceContext(),
+                        player.Creature,
+                        2,
+                        player.Creature,
+                        null
+                    );
+                    break;
                 case APItem.Dexterity:
                     await PowerCmd.Apply<DexterityPower>(
                         new BlockingPlayerChoiceContext(),
@@ -395,6 +404,33 @@ namespace StS2AP.Utils
                         null
                     );
                     break;
+                case APItem.Thorns:
+                    await PowerCmd.Apply<ThornsPower>(
+                        new BlockingPlayerChoiceContext(),
+                        player.Creature,
+                        3,
+                        player.Creature,
+                        null
+                    );
+                    break;
+                case APItem.Vigor:
+                    await PowerCmd.Apply<VigorPower>(
+                        new BlockingPlayerChoiceContext(),
+                        player.Creature,
+                        8,
+                        player.Creature,
+                        null
+                    );
+                    break;
+                case APItem.Buffer:
+                    await PowerCmd.Apply<BufferPower>(
+                        new BlockingPlayerChoiceContext(),
+                        player.Creature,
+                        1,
+                        player.Creature,
+                        null
+                    );
+                    break;
                 case APItem.Friendship:
                     await PowerCmd.Apply<FriendshipPower>(
                         new BlockingPlayerChoiceContext(),
@@ -406,6 +442,24 @@ namespace StS2AP.Utils
                     break;
                 case APItem.PostCombatCardUpgrade:
                     await PowerCmd.Apply<ImprovementPower>(
+                        new BlockingPlayerChoiceContext(),
+                        player.Creature,
+                        1,
+                        player.Creature,
+                        null
+                    );
+                    break;
+                case APItem.PostCombatCardRemoval:
+                    await PowerCmd.Apply<ForbiddenGrimoirePower>(
+                        new BlockingPlayerChoiceContext(),
+                        player.Creature,
+                        1,
+                        player.Creature,
+                        null
+                    );
+                    break;
+                case APItem.AdditionalCardReward:
+                    await PowerCmd.Apply<TheHuntPower>(
                         new BlockingPlayerChoiceContext(),
                         player.Creature,
                         1,

@@ -53,6 +53,12 @@ namespace StS2AP.Data
             Plating = 505,
             Friendship = 506,
             PostCombatCardUpgrade = 507,
+            PostCombatCardRemoval = 508,
+            AdditionalCardReward = 509,
+            Buffer = 510,
+            Vigor = 511,
+            Thorns = 512,
+            Artifact = 513,
         }
 
         public static Dictionary<int, string> Items = new Dictionary<int, string>
@@ -94,6 +100,12 @@ namespace StS2AP.Data
             { 505, "Plating" },
             { 506, "Friendship" },
             { 507, "Post-Combat Card Upgrade" },
+            { 508, "Post-Combat Card Removal" },
+            { 509, "Additional Card Reward" },
+            { 510, "Buffer" },
+            { 511, "Vigor" },
+            { 512, "Thorns" },
+            { 513, "Artifact" },
         };
 
         /// <summary>

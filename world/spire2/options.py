@@ -404,6 +404,24 @@ FreeSkillFillerWeight = _create_filler_weight_class(
     default_weight = 5
 )
 
+VigorFillerWeight = _create_filler_weight_class(
+    "Vigor",
+    "Grants a buff that provides Vigor for the next combat.",
+    default_weight = 5
+)
+
+ArtifactFillerWeight = _create_filler_weight_class(
+    "Artifact",
+    "Grants a buff that protects you from debuffs for the next combat.",
+    default_weight = 5
+)
+
+ThornsFillerWeight = _create_filler_weight_class(
+    "Thorns",
+    "Grants a buff that provides Thorns for the next combat.",
+    default_weight = 5
+)
+
 DexterityFillerWeight = _create_filler_weight_class(
     "Dexterity",
     "Grants a buff that increases Dexterity for the next combat.",
@@ -422,6 +440,12 @@ PlatingFillerWeight = _create_filler_weight_class(
     default_weight = 3
 )
 
+BufferFillerWeight = _create_filler_weight_class(
+    "Buffer",
+    "Grants a buff that provides Buffer for the next combat.",
+    default_weight = 1
+)
+
 FriendshipFillerWeight = _create_filler_weight_class(
     "Friendship",
     "Raises the Max Energy per turn by 1 for the next combat.",
@@ -430,7 +454,20 @@ FriendshipFillerWeight = _create_filler_weight_class(
 
 PostCombatCardUpgradeFillerWeight = _create_filler_weight_class(
     "Post-Combat Card Upgrade",
-    "Grants a buff that randomly upgrades a card in your deck after combat."
+    "Grants a buff that randomly upgrades a card in your deck after combat.",
+    default_weight = 1
+)
+
+PostCombatCardRemovalFillerWeight = _create_filler_weight_class(
+    "Post-Combat Card Removal",
+    "Grants a buff that lets you removes a card from your deck after combat.",
+    default_weight = 1
+)
+
+AdditionalCardRewardFillerWeight = _create_filler_weight_class(
+    "Additional Card Reward",
+    "Grants a buff that provides an additional card reward after combat.",
+    default_weight = 1
 )
 
 SingleColorlessCardFillerWeight = _create_filler_weight_class(
@@ -485,11 +522,17 @@ class Spire2Options(PerGameCommonOptions):
     free_attack_filler_weight: FreeAttackFillerWeight
     free_power_filler_weight: FreePowerFillerWeight
     free_skill_filler_weight: FreeSkillFillerWeight
+    vigor_filler_weight: VigorFillerWeight
+    artifact_filler_weight: ArtifactFillerWeight
+    thorns_filler_weight: ThornsFillerWeight
+    buffer_filler_weight: BufferFillerWeight
     dexterity_filler_weight: DexterityFillerWeight
     strength_filler_weight: StrengthFillerWeight
     plating_filler_weight: PlatingFillerWeight
     friendship_filler_weight: FriendshipFillerWeight
     post_combat_card_upgrade_filler_weight: PostCombatCardUpgradeFillerWeight
+    post_combat_card_removal_filler_weight: PostCombatCardRemovalFillerWeight
+    additional_card_reward_filler_weight: AdditionalCardRewardFillerWeight
     #single_colorless_card_filler_weight: SingleColorlessCardFillerWeight
     # trap_chance: TrapChance
     # trap_weights: TrapWeights

@@ -9,7 +9,9 @@ from .options import (
     OneGoldFillerWeight, FiveGoldFillerWeight,
     FreeAttackFillerWeight, FreePowerFillerWeight, FreeSkillFillerWeight,
     DexterityFillerWeight, StrengthFillerWeight, PlatingFillerWeight,
-    FriendshipFillerWeight, PostCombatCardUpgradeFillerWeight, SingleColorlessCardFillerWeight,
+    FriendshipFillerWeight, PostCombatCardUpgradeFillerWeight, PostCombatCardRemovalFillerWeight,
+    AdditionalCardRewardFillerWeight, BufferFillerWeight, VigorFillerWeight, ThornsFillerWeight, ArtifactFillerWeight,
+    SingleColorlessCardFillerWeight,
 )
 
 # The info needed for the Archipelago Website, not the actual `apworld`
@@ -56,6 +58,12 @@ class SlayTheSpire2Web(WebWorld):
             PlatingFillerWeight,
             FriendshipFillerWeight,
             PostCombatCardUpgradeFillerWeight,
+            PostCombatCardRemovalFillerWeight,
+            AdditionalCardRewardFillerWeight,
+            BufferFillerWeight,
+            VigorFillerWeight,
+            ThornsFillerWeight,
+            ArtifactFillerWeight,
             #SingleColorlessCardFillerWeight,
         ]),
     ]

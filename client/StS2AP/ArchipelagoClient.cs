@@ -814,7 +814,13 @@ namespace StS2AP
                 case APItem.Strength:
                 case APItem.Plating:
                 case APItem.Friendship:
+                case APItem.Thorns:
+                case APItem.Buffer:
+                case APItem.Vigor:
+                case APItem.Artifact:
                 case APItem.PostCombatCardUpgrade:
+                case APItem.PostCombatCardRemoval:
+                case APItem.AdditionalCardReward:
                     BuffUtility.EnqueueBuff(item.GetRawItemID(), index);
                     break;
 
