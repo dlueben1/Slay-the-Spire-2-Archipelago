@@ -404,7 +404,8 @@ PlatingFillerWeight = _create_filler_weight_class(
 
 FriendshipFillerWeight = _create_filler_weight_class(
     "Friendship",
-    "Raises the Max Energy per turn by 1 for the next combat."
+    "Raises the Max Energy per turn by 1 for the next combat.",
+    default_weight = 3
 )
 
 PostCombatCardUpgradeFillerWeight = _create_filler_weight_class(
