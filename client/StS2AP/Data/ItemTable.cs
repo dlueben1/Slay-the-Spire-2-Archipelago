@@ -38,7 +38,21 @@ namespace StS2AP.Data
             Scarcity = 25,
             ToughEnemies = 26,
             DeadlyEnemies = 27,
-            DoubleBoss = 28
+            DoubleBoss = 28,
+
+            /// ── Ephemeral Buff items (universal / character-agnostic) ──────────────────
+            /// These are one-time-use filler items that apply a temporary in-combat buff
+            /// when received. Unlike run rewards (gold, cards, relics), buffs are never
+            /// reapplied on subsequent runs. Consumption is tracked permanently in the
+            /// Archipelago server's DataStorage. IDs match universal_items in items.py.
+            FreeAttack = 500,
+            FreePower = 501,
+            FreeSkill = 502,
+            Dexterity = 503,
+            Strength = 504,
+            Plating = 505,
+            Friendship = 506,
+            PostCombatCardUpgrade = 507,
         }
 
         public static Dictionary<int, string> Items = new Dictionary<int, string>
@@ -71,7 +85,15 @@ namespace StS2AP.Data
             { 25, "Scarcity" },
             { 26, "Tough Enemies" },
             { 27, "Deadly Enemies" },
-            { 28, "Double Boss" }
+            { 28, "Double Boss" },
+            { 500, "Free Attack" },
+            { 501, "Free Power" },
+            { 502, "Free Skill" },
+            { 503, "Dexterity" },
+            { 504, "Strength" },
+            { 505, "Plating" },
+            { 506, "Friendship" },
+            { 507, "Post-Combat Card Upgrade" },
         };
 
         /// <summary>
@@ -83,7 +105,7 @@ namespace StS2AP.Data
             { APItem.FiveGold, 5 },
             { APItem._15Gold, 15 },
             { APItem._30Gold, 30 },
-            { APItem.BossGold, 100 }
+            { APItem.BossGold, 100 },
         };
     }
 }
