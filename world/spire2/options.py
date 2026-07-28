@@ -490,7 +490,13 @@ filler_item_options = OptionGroup(
         StrengthFillerWeight,
         PlatingFillerWeight,
         FriendshipFillerWeight,
+        ThornsFillerWeight,
+        ArtifactFillerWeight,
+        BufferFillerWeight,
+        VigorFillerWeight,
         PostCombatCardUpgradeFillerWeight,
+        PostCombatCardRemovalFillerWeight,
+        AdditionalCardRewardFillerWeight,
         #SingleColorlessCardFillerWeight,
     ]
 )

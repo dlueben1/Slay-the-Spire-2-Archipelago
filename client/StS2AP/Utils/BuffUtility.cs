@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Archipelago.MultiClient.Net.Enums;
 using MegaCrit.Sts2.Core.Combat;
@@ -53,8 +54,27 @@ namespace StS2AP.Utils
         /// <summary>
         /// Queue of buff items that have been received from AP but not yet applied in combat.
         /// Items stay here until the player's next combat turn starts.
+        ///
+        /// The <c>NotificationShown</c> flag tracks whether the received-item notification
+        /// has already been displayed for this buff:
+        /// <list type="bullet">
+        ///   <item><c>true</c> — Notification was shown immediately in <see cref="EnqueueBuff"/>
+        ///     because storage was already loaded, confirming the item was new.</item>
+        ///   <item><c>false</c> — Storage was not yet loaded at enqueue time (reconnect replay).
+        ///     <see cref="ProcessQueuedBuffsAsync"/> will show the notification after the deferred
+        ///     consumed check passes, ensuring only genuinely new items trigger the notification.</item>
+        /// </list>
+        /// <para>
+        /// Using a <c>bool</c> flag (rather than storing <c>ItemInfo</c>) keeps all static field
+        /// generic-type arguments as plain value types. This is important because having an AP
+        /// library type (e.g., <c>ItemInfo</c>) in a static generic field can cause the .NET runtime
+        /// to eagerly resolve the <c>Archipelago.MultiClient.Net</c> assembly before the game's
+        /// mod-loader assembly context is fully configured, resulting in a load failure.
+        /// The <c>ItemInfo</c> is looked up from <c>Session.Items.AllItemsReceived</c> in method
+        /// bodies instead, where JIT resolution is lazy.
+        /// </para>
         /// </summary>
-        private static readonly Queue<(APItem BuffType, int ItemIndex)> _buffQueue = new();
+        private static readonly Queue<(APItem BuffType, int ItemIndex, bool NotificationShown)> _buffQueue = new();
 
         /// <summary>
         /// The Archipelago item index of the most recently applied (consumed) buff.
@@ -211,14 +231,15 @@ namespace StS2AP.Utils
         /// </param>
         public static void EnqueueBuff(APItem buffType, int itemIndex)
         {
+            // Determine whether the storage load has already completed.
+            // If it has, we know the exact watermark and can make a definitive decision right now.
+            // If not, we must enqueue and defer both the consumed check and the notification.
+            bool storageReady = _storageLoadTask != null && _storageLoadTask.IsCompleted;
+
             /// Fast-path consumed check: if storage is already loaded, any buff at or below
             /// the last consumed index is guaranteed to be already applied and can be skipped
             /// immediately without touching the queue.
-            if (
-                _storageLoadTask != null
-                && _storageLoadTask.IsCompleted
-                && itemIndex <= _lastConsumedBuffIndex
-            )
+            if (storageReady && itemIndex <= _lastConsumedBuffIndex)
             {
                 LogUtility.Info(
                     $"[BuffUtility] Buff '{buffType}' (index {itemIndex}) is at or below last consumed index ({_lastConsumedBuffIndex}) — skipping (fast path)."
@@ -226,10 +247,29 @@ namespace StS2AP.Utils
                 return;
             }
 
-            /// Enqueue for later application on the next player combat turn.
-            /// If storage hasn't loaded yet, we enqueue anyway; ProcessQueuedBuffsAsync will
-            /// await the storage load and perform the consumed check before applying.
-            _buffQueue.Enqueue((buffType, itemIndex));
+            // Decide whether to show the notification now or defer it to ProcessQueuedBuffsAsync.
+            //
+            // If storage is ready, this item is confirmed new (it passed the watermark check above),
+            // so we notify immediately — this is the real-time receive path.
+            //
+            // If storage is NOT ready yet (e.g. mid-reconnect replay), we can't confirm whether
+            // the item is new without the watermark. We set NotificationShown = false so that
+            // ProcessQueuedBuffsAsync will show it after the deferred consumed check passes.
+            // This prevents false notifications for already-consumed items replayed on reconnect.
+            bool notificationShown = false;
+            if (storageReady)
+            {
+                // Storage confirms this is a new item — notify immediately.
+                // Look up the ItemInfo by index from the session's received-items list.
+                // We do this in the method body (not in a static field type) so that the
+                // Archipelago.MultiClient.Net assembly is resolved lazily by the JIT rather
+                // than eagerly at type-load time.
+                var itemInfo = ArchipelagoClient.Session?.Items.AllItemsReceived.ElementAtOrDefault(itemIndex - 1);
+                NotificationUtility.ShowBuffReceived(itemInfo);
+                notificationShown = true;
+            }
+
+            _buffQueue.Enqueue((buffType, itemIndex, notificationShown));
             LogUtility.Info(
                 $"[BuffUtility] Buff '{buffType}' (index {itemIndex}) enqueued. Queue size: {_buffQueue.Count}."
             );
@@ -277,18 +317,28 @@ namespace StS2AP.Utils
             // Drain the queue and apply each buff
             while (_buffQueue.TryDequeue(out var entry))
             {
-                var (buffType, itemIndex) = entry;
+                var (buffType, itemIndex, notificationShown) = entry;
 
                 /// Final consumed check now that storage is guaranteed to be loaded.
                 /// This catches buffs that were enqueued before the storage load finished
-                /// (i.e., they were received during the connect flow before LoadFromStorageAsync
-                /// completed and were therefore not caught by EnqueueBuff's fast-path check).
+                /// (i.e., they were received during the reconnect replay before
+                /// LoadFromStorageAsync completed and were not caught by the fast-path check).
                 if (itemIndex <= _lastConsumedBuffIndex)
                 {
                     LogUtility.Info(
                         $"[BuffUtility] Buff '{buffType}' (index {itemIndex}) is at or below last consumed index ({_lastConsumedBuffIndex}) — skipping (deferred check)."
                     );
+                    // Do NOT notify — this item was already consumed in a prior session.
                     continue;
+                }
+
+                // If the notification was deferred (storage wasn't ready at enqueue time), show it
+                // now that we've confirmed the item is genuinely new via the consumed check above.
+                // This handles buffs received during a reconnect replay that hadn't been applied yet.
+                if (!notificationShown)
+                {
+                    var itemInfo = ArchipelagoClient.Session?.Items.AllItemsReceived.ElementAtOrDefault(itemIndex - 1);
+                    NotificationUtility.ShowBuffReceived(itemInfo);
                 }
 
                 // Update the in-memory high-water mark. The last time this is updated is what will be sync'd to the server.
@@ -316,7 +366,7 @@ namespace StS2AP.Utils
             // Sync the last applied buff index to DataStorage so it is persisted across sessions.
             if (ArchipelagoClient.IsConnected)
             {
-                ArchipelagoClient.Session.DataStorage[Scope.Slot, StorageKey] =
+                ArchipelagoClient.Session!.DataStorage[Scope.Slot, StorageKey] =
                     _lastConsumedBuffIndex;
                 LogUtility.Info(
                     $"[BuffUtility] Last consumed buff index is now {_lastConsumedBuffIndex}."
