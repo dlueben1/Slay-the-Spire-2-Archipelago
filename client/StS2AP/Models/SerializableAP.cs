@@ -39,9 +39,7 @@ namespace StS2AP.Models
         [JsonPropertyName("gold_redeemed")]
         public int GoldRedeemed { get; set; }
         public List<int> Ascensions { get; set; } = new List<int>();
-
     }
-
 
     [JsonSerializable(typeof(SerializableAP))]
     public partial class APSerializationContext : JsonSerializerContext

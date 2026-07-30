@@ -47,6 +47,7 @@ namespace StS2AP.Models
         /// </summary>
         public IDictionary<string, CharacterConfig> UnrecognizedCharacters { get; set; } = new ConcurrentDictionary<string, CharacterConfig>(StringComparer.InvariantCultureIgnoreCase);
 
+        public bool NeowSanity { get; set; }
         public bool CampfireSanity { get; set; }
         public bool GoldSanity { get; set; }
         public bool PotionSanity { get; set; }

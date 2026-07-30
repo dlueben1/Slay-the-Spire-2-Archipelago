@@ -17,7 +17,7 @@ def _create_combat_check(start: int, end: int) -> List[str]:
 class PowerLevel(NamedTuple):
     draw: int = 0
     relic: int = 0
-    # boss_relic: int = 0
+    ancient: int = 0
     rest: int = 0
     smith: int = 0
     shop: int = 0
@@ -64,14 +64,14 @@ logic_map: dict[PowerLevel, List[str]] = {
         *_create_floor_check(17, 17),
         # *_create_combat_check(9, 11),
     ],
-    PowerLevel(draw=4,relic=2, rest=1, smith=1, shop=3, shop_remove=1, gold=2): [
+    PowerLevel(draw=4,relic=2, ancient=1, rest=1, smith=1, shop=3, shop_remove=1, gold=2): [
         "Card Reward 5",
         "Potion Drop 4",
         "Act 2 Campfire 1",
         *_create_floor_check(18, 22),
         *_create_combat_check(9, 10),
     ],
-    PowerLevel(draw=5,relic=2, rest=2, smith=1, shop=4, shop_remove=1, gold=2): [
+    PowerLevel(draw=5,relic=2, ancient=1, rest=2, smith=1, shop=4, shop_remove=1, gold=2): [
         "Relic 4",
         "Relic 5",
         "Card Reward 6",
@@ -80,14 +80,14 @@ logic_map: dict[PowerLevel, List[str]] = {
         *_create_floor_check(23, 27),
         *_create_combat_check(11, 12),
     ],
-    PowerLevel(draw=6,relic=2, rest=2, smith=1, shop=5, shop_remove=1, gold=2): [
+    PowerLevel(draw=6,relic=2, ancient=1, rest=2, smith=1, shop=5, shop_remove=1, gold=2): [
         "Relic 6",
         "Card Reward 7",
         "Potion Drop 6",
         *_create_floor_check(28, 32),
         *_create_combat_check(13, 14),
     ],
-    PowerLevel(draw=7, relic=4, rest=2, smith=2, shop=6, shop_remove=2, gold=5): [
+    PowerLevel(draw=7, relic=4, ancient=1, rest=2, smith=2, shop=6, shop_remove=2, gold=5): [
     # PowerLevel(draw=7, relic=4, boss_relic=1, rest=2, smith=2, shop=6, shop_remove=2, gold=5): [
         "Act 2 Boss",
         "Rare Card Reward 2",
@@ -95,7 +95,7 @@ logic_map: dict[PowerLevel, List[str]] = {
         "Boss Gold 2",
         *_create_floor_check(33, 33),
     ],
-    PowerLevel(draw=7, relic=4, rest=2, smith=2, shop=6, shop_remove=2, gold=5): [
+    PowerLevel(draw=7, relic=4, ancient=2, rest=2, smith=2, shop=6, shop_remove=2, gold=5): [
     # PowerLevel(draw=7, relic=4, boss_relic=1, rest=2, smith=2, shop=6, shop_remove=2, gold=5): [
         "Card Reward 8",
         "Potion Drop 7",
@@ -103,7 +103,7 @@ logic_map: dict[PowerLevel, List[str]] = {
         *_create_floor_check(34, 38),
         *_create_combat_check(15, 16),
     ],
-    PowerLevel(draw=8,relic=4, rest=3,smith=2, shop=8, shop_remove=2, gold=5): [
+    PowerLevel(draw=8,relic=4, ancient=2, rest=3,smith=2, shop=8, shop_remove=2, gold=5): [
     # PowerLevel(draw=8,relic=4,boss_relic=1, rest=3,smith=2, shop=8, shop_remove=2, gold=5): [
         "Relic 7",
         "Relic 8",
@@ -113,7 +113,7 @@ logic_map: dict[PowerLevel, List[str]] = {
         *_create_floor_check(39, 43),
         *_create_combat_check(17, 18),
     ],
-    PowerLevel(draw=8,relic=6, rest=3,smith=2, shop=10, shop_remove=2, gold=5): [
+    PowerLevel(draw=8,relic=6, ancient=2, rest=3,smith=2, shop=10, shop_remove=2, gold=5): [
     # PowerLevel(draw=8,relic=6,boss_relic=1, rest=3,smith=2, shop=10, shop_remove=2, gold=5): [
         "Card Reward 10",
         "Relic 9",
@@ -122,7 +122,7 @@ logic_map: dict[PowerLevel, List[str]] = {
         *_create_floor_check(44, 47),
         *_create_combat_check(19, 20),
     ],
-    PowerLevel(draw=8,relic=8, rest=3,smith=3, shop=10,shop_remove=3, gold=9): [
+    PowerLevel(draw=8,relic=8, ancient=2, rest=3,smith=3, shop=10,shop_remove=3, gold=9): [
     # PowerLevel(draw=8,relic=8,boss_relic=2,rest=3,smith=3, shop=10,shop_remove=3, gold=9): [
         "Act 3 Boss",
         *_create_floor_check(48, 48),
@@ -160,10 +160,10 @@ class LogicTestBase(Spire2TestBase):
         for _ in range(power.relic):
             state.collect(relic)
 
-        # boss_relic = self.get_item_by_name(f"{self.prefix} Boss Relic")
-        # for _ in range(power.boss_relic):
-        #     state.collect(boss_relic)
-        #
+        ancient_unlock = self.get_item_by_name(f"{self.prefix} Ancient Unlock")
+        for _ in range(power.ancient):
+            state.collect(ancient_unlock)
+
         rest = self.get_item_by_name(f"{self.prefix} Progressive Rest")
         for _ in range(power.rest):
             state.collect(rest)

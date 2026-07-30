@@ -36,12 +36,19 @@ namespace StS2AP.Patches
                 LogUtility.Info($"Current room type {RunManager.Instance.DebugOnlyGetState()?.CurrentRoom?.RoomType}");
                 LogUtility.Info($"Current Map node type {RunManager.Instance.DebugOnlyGetState()?.CurrentMapPoint?.PointType}");
                 LogUtility.Info($"Game thinks we should save: {RunManager.Instance.ShouldSave}");
+
+                var maxSaveAct = ArchipelagoClient.Progress.MaxAncientUnlock(GameUtility.CurrentConfig?.CharOffset ?? -1);
+                var currentAct = (GameUtility.CurrentPlayer?.RunState.CurrentActIndex ?? 0) + 1;
+                
+                LogUtility.Info($"Max Act: {maxSaveAct} Current Act: {currentAct}");
                 // Goal is to just save on boss kills, treasure rooms, and after ancient selections
                 if (!RunManager.Instance.ShouldSave ||
                     (RunManager.Instance.NetService.Type != MegaCrit.Sts2.Core.Multiplayer.Game.NetGameType.Singleplayer && RunManager.Instance.NetService.Type != MegaCrit.Sts2.Core.Multiplayer.Game.NetGameType.Host)
                     || (preFinishedRoom?.RoomType != RoomType.Boss
                     && RunManager.Instance.DebugOnlyGetState()?.CurrentMapPoint?.PointType != MapPointType.Treasure
-                    && !(preFinishedRoom?.RoomType == RoomType.Event && RunManager.Instance.DebugOnlyGetState()?.CurrentMapPoint?.PointType == MapPointType.Ancient)))
+                    && !(preFinishedRoom?.RoomType == RoomType.Event && RunManager.Instance.DebugOnlyGetState()?.CurrentMapPoint?.PointType == MapPointType.Ancient))
+                    // Always save on Act 1; otherwise check to see if we have enough ancient unlocks
+                    || (maxSaveAct < currentAct && currentAct > 1))
                 {
                     LogUtility.Info($"Skipping save {preFinishedRoom?.RoomType}");
                     __result = Task.CompletedTask;
@@ -112,7 +119,7 @@ namespace StS2AP.Patches
             public static bool intercept(NCharacterSelectScreen __instance)
             {
 
-                var charName = __instance.Lobby.LocalPlayer.character.GetType().Name;
+                var charName = __instance.Lobby.LocalPlayer.character.Id.Entry;
                 foreach(var entry in GameUtility.APSaves)
                 {
                     if (entry.Value.Length > 0)
@@ -150,7 +157,7 @@ namespace StS2AP.Patches
                 {
                     NAudioManager.Instance?.StopMusic();
                     string saveStr;
-                    var charName = _charSelect.Lobby.LocalPlayer.character.GetType().Name;
+                    var charName = _charSelect.Lobby.LocalPlayer.character.Id.Entry;
                     if (GameUtility.APSaves.TryGetValue(charName, out saveStr))
                     {
                         var unzipped = Patches_RunSaveManager.SaveRun.Unzip(saveStr);

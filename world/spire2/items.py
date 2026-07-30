@@ -12,7 +12,7 @@ class ItemType(Enum):
     CARD_REWARD = auto()
     RARE_CARD_REWARD = auto()
     RELIC = auto()
-    BOSS_RELIC = auto()
+    ANCIENT_UNLOCK = auto()
     GOLD = auto()
     EVENT = auto()
     CAMPFIRE = auto()
@@ -48,7 +48,7 @@ base_item_table: Dict[str, ItemData] = {
     'Card Reward': ItemData(1, ItemType.CARD_REWARD, ItemClassification.progression_deprioritized),
     'Rare Card Reward': ItemData(2, ItemType.RARE_CARD_REWARD, ItemClassification.progression_deprioritized),
     'Relic': ItemData(3, ItemType.RELIC, ItemClassification.progression),
-    'Boss Relic': ItemData(4, ItemType.BOSS_RELIC, ItemClassification.progression),
+    'Ancient Unlock': ItemData(4, ItemType.ANCIENT_UNLOCK, ItemClassification.progression),
     'One Gold': ItemData(5, ItemType.GOLD, ItemClassification.filler),
     'Five Gold': ItemData(6, ItemType.GOLD, ItemClassification.filler),
     '15 Gold': ItemData(15, ItemType.GOLD, ItemClassification.useful),

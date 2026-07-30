@@ -227,7 +227,7 @@ namespace StS2AP.UI
 
                 // For relic items, pre-assign a specific relic so the name is stable across open/close
                 var rawId = i.Item.GetRawItemID();
-                if (rawId == APItem.Relic || rawId == APItem.BossRelic)
+                if (rawId == APItem.Relic)
                 {
                     var relic = ArchipelagoClient.Progress.GetOrAssignRelic(i.Index, GameUtility.CurrentPlayer);
                     if (relic != null)
@@ -865,7 +865,7 @@ namespace StS2AP.UI
                     return IconCard;
 
                 case APItem.Relic:
-                case APItem.BossRelic:
+                case APItem.AncientUnlock:
                     return IconRelic;
 
 

@@ -727,37 +727,14 @@ namespace StS2AP
                 }
                 // Progressive Smiths/Rests
                 case APItem.ProgressiveSmith:
-                case APItem.ProgressiveRest:
-                    {
-                        // Get the IDs for storing the item
-                        var itemId = item.GetRawItemID();
-                        var offset = item.GetCharacterOffset();
-
-                    // Add the Smith/Rest to the amount we've received for this character
-                    var source =
-                        itemId == APItem.ProgressiveSmith
-                            ? Progress.ProgressiveSmiths
-                            : Progress.ProgressiveRests;
-
-                        // Increment the reward
-                        try
-                        {
-                            var haveKey = source.TryGetValue(offset, out int amount);
-                            if (!haveKey) amount = 0;
-                            source[offset] = amount + 1;
-                            LogUtility.Success($"New Value for {(itemId == APItem.ProgressiveSmith ? "ProgressiveSmiths" : "ProgressiveRests")} is {source[offset]}");
-                        }
-                        catch (KeyNotFoundException e)
-                        {
-                            LogUtility.Error($"ProgressiveSmiths/ProgressiveRests does not have a value for this character! ({item.ItemDisplayName} from {item.Player.Name})");
-                        }
-                        catch
-                        {
-                            LogUtility.Error($"Failed to process Progressive Smith/Rest when this item was received: ({item.ItemDisplayName} from {item.Player.Name})");
-                        }
-
+                    HandleThreshholdItem(item, Progress.ProgressiveSmiths, "Progressive Smiths");
                     break;
-                }
+                case APItem.ProgressiveRest:
+                    HandleThreshholdItem(item, Progress.ProgressiveRests, "Progressive Rests");
+                    break;
+                case APItem.AncientUnlock:
+                    HandleThreshholdItem(item, Progress.AncientUnlocks, "Progressive Rests");
+                    break;
                 // Gold is condensed into a single reward pool
                 case APItem.OneGold:
                 case APItem.FiveGold:
@@ -837,6 +814,34 @@ namespace StS2AP
                 // Refresh the unused item count
                 ArchipelagoTopBarUI.RefreshCount();
             }
+        }
+
+        /// <summary>
+        /// Helper for handling common threshold containers
+        /// </summary>
+        private static void HandleThreshholdItem(ItemInfo item, Dictionary<long, int> source, string name)
+        {
+            // Get the IDs for storing the item
+            var itemId = item.GetRawItemID();
+            var offset = item.GetCharacterOffset();
+
+            // Increment the reward
+            try
+            {
+                var haveKey = source.TryGetValue(offset, out int amount);
+                if (!haveKey) amount = 0;
+                source[offset] = amount + 1;
+                LogUtility.Success($"New Value for {name} is {source[offset]}");
+            }
+            catch (KeyNotFoundException e)
+            {
+                LogUtility.Error($"{name} does not have a value for this character! ({item.ItemDisplayName} from {item.Player.Name})");
+            }
+            catch
+            {
+                LogUtility.Error($"Failed to process {name} when this item was received: ({item.ItemDisplayName} from {item.Player.Name})");
+            }
+
         }
 
         public static void ReprocessItems()
@@ -926,6 +931,9 @@ namespace StS2AP
                 }
                 
             }
+
+            if (slotData.ContainsKey("neow_sanity"))
+                settings.NeowSanity = Convert.ToInt32(slotData["neow_sanity"]) != 0;
 
             if (slotData.ContainsKey("campfire_sanity"))
                 settings.CampfireSanity = Convert.ToInt32(slotData["campfire_sanity"]) != 0;

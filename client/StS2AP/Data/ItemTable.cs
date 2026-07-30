@@ -14,7 +14,7 @@ namespace StS2AP.Data
             CardReward = 1,
             RareCardReward = 2,
             Relic = 3,
-            BossRelic = 4,
+            AncientUnlock = 4,
             OneGold = 5,
             FiveGold = 6,
             ProgressiveRest = 7,
@@ -67,7 +67,7 @@ namespace StS2AP.Data
             { 1, "Card Reward" },
             { 2, "Rare Card Reward" },
             { 3, "Relic" },
-            { 4, "Boss Relic" },
+            { 4, "Ancient Unlock" },
             { 5, "One Gold" },
             { 6, "Five Gold" },
             { 7, "Progressive Rest" },
@@ -130,7 +130,7 @@ namespace StS2AP.Data
               case APItem.RareCardReward:
               case APItem.Relic:
                     return true;
-              case APItem.BossRelic:
+              case APItem.AncientUnlock:
                     return false;
               case APItem.ProgressiveRest:
               case APItem.ProgressiveSmith:

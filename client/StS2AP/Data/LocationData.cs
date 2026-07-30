@@ -102,6 +102,16 @@ namespace StS2AP.Data
         }
 
         /// <summary>
+        /// Returns all location IDs for Ancient Rewards for a given character.
+        /// </summary>
+        /// <param name="character">The character to get Ancient Reward locations for.</param>
+        /// <returns>A list of location IDs for the specified character's Ancient Rewards.</returns>
+        public static List<long> GetAncientRewardLocations(CharacterModel character)
+        {
+            return GetLocationsByPattern($"{character.APName()} Ancient Act #", ArchipelagoProgress.MaxAncientRewards);
+        }
+
+        /// <summary>
         /// Returns all location IDs for Goldsanity for a given character.
         /// </summary>
         /// <param name="character">The character to get Goldsanity locations for.</param>

@@ -195,7 +195,7 @@ class SlayTheSpire2World(World):
         for asc in ascensions:
             try:
                 number = int(asc)
-                ret.add(ASCENSION_LIST[number].lower())
+                ret.add(ASCENSION_LIST[number - 1].lower())
             except:
                 ret.add(asc.lower())
         return ret
@@ -221,7 +221,7 @@ class SlayTheSpire2World(World):
         for asc in ascensions:
             try:
                 number = int(asc)
-                ret.add(ASCENSION_LIST[number].lower())
+                ret.add(ASCENSION_LIST[number - 1].lower())
             except:
                 ret.add(asc.lower())
         return ret
@@ -496,6 +496,8 @@ class SlayTheSpire2World(World):
                 # elif ItemType.RARE_CARD_REWARD == data.type or ItemType.BOSS_RELIC == data.type:
                 elif ItemType.RARE_CARD_REWARD == data.type:
                     amount = 2
+                elif ItemType.ANCIENT_UNLOCK == data.type:
+                    amount = 2 if self.options.neow_sanity.value == 0 else 3
                 elif ItemType.RELIC == data.type:
                     amount = 10
                 elif ItemType.CAMPFIRE == data.type:
@@ -566,6 +568,10 @@ class SlayTheSpire2World(World):
             return False
         elif data.type == LocationType.Campfire and self.options.campfire_sanity == 0:
             return False
+        elif data.type == LocationType.Ancient:
+            if self.options.neow_sanity == 0 and "Ancient Act 1" in data.name:
+                return False
+            return True
         elif data.type == LocationType.Shop:
             if self.options.shop_sanity.value == 0:
                 return False
@@ -624,6 +630,7 @@ class SlayTheSpire2World(World):
             "num_chars_goal",
             "shuffle_all_cards",
             "include_floor_checks",
+            "neow_sanity",
             "shop_sanity",
             "potion_sanity",
             "gold_sanity",
@@ -663,6 +670,7 @@ class SlayTheSpire2World(World):
         if self.total_shop_locations <= 0:
             self.options.shop_sanity.value = 0
         self.options.include_floor_checks.value = slot_data['include_floor_checks']
+        self.options.neow_sanity.value = slot_data['neow_sanity']
         self.options.campfire_sanity.value = slot_data['campfire_sanity']
         self.options.shop_sanity.value = slot_data['shop_sanity']
         self.options.gold_sanity.value = slot_data['gold_sanity']

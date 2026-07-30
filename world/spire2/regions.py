@@ -35,6 +35,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                 "Press Start",
                                                 "Potion Drop 1",
                                                 "Act 1 Campfire 1",
+                                                "Ancient Act 1",
                                                 *_create_floor_check(1,6),
                                                 *_create_combat_check(1,4),
                                                 *_create_card_rewards(1, 4, every_other)
@@ -78,6 +79,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
 
     multiworld.regions.append(world.create_region(player, prefix, 'Early Act 2', config,
                                                   [
+                                                      "Ancient Act 2",
                                                       "Potion Drop 4",
                                                       *_create_floor_check(18, 22),
                                                       "Act 2 Campfire 1",
@@ -118,6 +120,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
 
     multiworld.regions.append(world.create_region(player, prefix, 'Early Act 3', config,
                                                   [
+                                                      "Ancient Act 3",
                                                       "Potion Drop 7",
                                                       "Act 3 Campfire 1",
                                                       *_create_floor_check(34, 38),

@@ -62,6 +62,8 @@ namespace StS2AP.UI
 
         /// <summary>Tracks how many Relic Reward AP Checks have been found.</summary>
         public static ItemCountLabel? RelicChecks { get; private set; }
+        /// <summary>Tracks how many Ancient AP Checks have been found.</summary>
+        public static ItemCountLabel? AncientChecks { get; private set; }
 
         /// <summary>Tracks how many Floorsanity AP Checks have been sent.</summary>
         public static ItemCountLabel? FloorsanityChecks { get; private set; }
@@ -93,6 +95,9 @@ namespace StS2AP.UI
 
         /// <summary>Tracks the number of Relic Rewards received from the multiworld.</summary>
         public static ItemCountLabel? RelicRewards { get; private set; }
+
+        /// <summary>Tracks the number of Ancient Rewards received from the multiworld.</summary>
+        public static ItemCountLabel? AncientRewards { get; private set; }
 
         /// <summary>Tracks the number of Potion Rewards received from the multiworld.</summary>
         public static ItemCountLabel? PotionRewards { get; private set; }
@@ -223,6 +228,7 @@ namespace StS2AP.UI
                 CardChecks           = null;
                 RareCardChecks       = null;
                 RelicChecks          = null;
+                AncientChecks = null;
                 FloorsanityChecks    = null;
                 PotionsanityChecks   = null;
                 GoldsanityChecks     = null;
@@ -232,6 +238,7 @@ namespace StS2AP.UI
                 CardRewards          = null;
                 RareCardRewards      = null;
                 RelicRewards         = null;
+                AncientRewards = null;
                 PotionRewards        = null;
                 GoldRewards          = null;
                 ProgressiveRestLabel = null;
@@ -461,6 +468,9 @@ namespace StS2AP.UI
             RelicChecks = new ItemCountLabel("res://images/relics/calling_bell.png", "(0 / 0)", "AP_REWARD_RELIC_CHECKS");
             AddCheckRow(RelicChecks);
 
+            AncientChecks = new ItemCountLabel("res://images/relics/snecko_eye.png", "(0 / 0)", "AP_REWARD_ANCIENT_CHECKS");
+            AddCheckRow(AncientChecks);
+
             // Floorsanity Checks Counter (Note: When the Winged Boots are in main, we should use that relic here instead)
             if(ArchipelagoClient.Settings.Floorsanity)
             {
@@ -511,6 +521,10 @@ namespace StS2AP.UI
             RelicRewards = new ItemCountLabel("res://images/relics/circlet.png", "0", "AP_REWARD_RELIC_REWARDS");
             AddItemRow(RelicRewards);
 
+            // Ancients Counter
+            AncientRewards = new ItemCountLabel("res://images/relics/tezcataras_candle.png", "0", "AP_REWARD_ANCIENT_REWARDS");
+            AddItemRow(AncientRewards);
+    
             // Potions Counter
             PotionRewards = new ItemCountLabel("res://images/potions/glowwater_potion.png", "0", "AP_REWARD_POTION_REWARDS");
             AddItemRow(PotionRewards);
