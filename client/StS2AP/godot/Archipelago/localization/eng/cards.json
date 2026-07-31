@@ -1,4 +1,16 @@
 {
   "DEATH_LINK_CURSE.title": "Death Fragment",
-  "DEATH_LINK_CURSE.description": "Made when {death_message}."
+  "DEATH_LINK_CURSE.description": "Made when {death_message}.",
+
+  "AP_ITEM_CARD_PROGRESSION.title": "Catalyst",
+  "AP_ITEM_CARD_PROGRESSION.description": "({classification}) {item_name} for {player_name}.", 
+
+  "AP_ITEM_CARD_USEFUL.title": "Utility",
+  "AP_ITEM_CARD_USEFUL.description": "({classification}) {item_name} for {player_name}.",
+
+  "AP_ITEM_CARD_FILLER.title": "Trinket",
+  "AP_ITEM_CARD_FILLER.description": "({classification}) {item_name} for {player_name}.",
+
+  "AP_ITEM_CARD_TRAP.title": "Normality",
+  "AP_ITEM_CARD_TRAP.description": "({classification}) Inflict {item_name} for {player_name}."
 }

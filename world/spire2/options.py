@@ -92,7 +92,6 @@ class CampfireSanity(Toggle):
 
 class ShopSanity(Toggle):
     """Whether to shuffle shop slots into the pool.  Also adds new locations at the shop per slot shuffled."""
-    visibility = Visibility.none
     display_name = "Shop Sanity"
     option_true = 1
     option_false = 0
@@ -100,7 +99,6 @@ class ShopSanity(Toggle):
 
 class ShopCardSlots(Range):
     """When shop_sanity is enabled, the number of colored card slots to shuffle."""
-    visibility = Visibility.none
     display_name = "Shop Card Slots"
     range_start = 0
     range_end = 5
@@ -108,7 +106,6 @@ class ShopCardSlots(Range):
 
 class ShopNeutralSlots(Range):
     """When shop_sanity is enabled, the number of neutral card slots to shuffle."""
-    visibility = Visibility.none
     display_name = "Shop Neutral Card Slots"
     range_start = 0
     range_end = 2
@@ -116,7 +113,6 @@ class ShopNeutralSlots(Range):
 
 class ShopRelicSlots(Range):
     """When shop_sanity is enabled, the number of relic slots to shuffle."""
-    visibility = Visibility.none
     display_name = "Shop Relic Slots"
     range_start = 0
     range_end = 3
@@ -124,7 +120,6 @@ class ShopRelicSlots(Range):
 
 class ShopPotionSlots(Range):
     """When shop_sanity is enabled, the number of potion slots to shuffle"""
-    visibility = Visibility.none
     display_name = "Shop Potion Slots"
     range_start = 0
     range_end = 3
@@ -134,7 +129,6 @@ class ShopRemoveSlots(Toggle):
     """When shop_sanity is enabled, whether to shuffle the ability to remove cards at the shop.
     Progressive based on Act; i.e. you'll gain the ability to remove cards per Act, starting from Act 1.
     Act 4 will be treated as Act 3."""
-    visibility = Visibility.none
     display_name = "Shop Remove Slots"
     default = 0
 
@@ -147,7 +141,6 @@ class ShopSanityCosts(Choice):
     Discount_Tiered=50% of tiered costs
     Tiered=Vanilla price for slot
     """
-    visibility = Visibility.none
     display_name = "Shop Sanity Costs"
     option_Fixed = 0
     option_Super_Discount_Tiered = 1

@@ -143,6 +143,10 @@ namespace StS2AP.Data
             }
             return ids;
         }
+        public static List<long> GetShopsanityLocations(CharacterModel character)
+        {
+            return GetLocationsByPattern($"{character.APName()} Shop Slot #", 16);
+        }
 
         /// <summary>
         /// Returns a list of location IDs that match a given pattern, up to a specified count.

@@ -328,6 +328,18 @@ namespace StS2AP.Models
             if (!canSmith) return null;
             return act;
         }
+        public Dictionary<APItemCharID, int> ShopCardSlotsReceived = new Dictionary<APItemCharID, int>();
+        public Dictionary<APItemCharID, int> ShopNeutralSlotsReceived = new Dictionary<APItemCharID, int>();
+        public Dictionary<APItemCharID, int> ShopRelicSlotsReceived = new Dictionary<APItemCharID, int>();
+        public Dictionary<APItemCharID, int> ShopPotionSlotsReceived = new Dictionary<APItemCharID, int>();
+        public Dictionary<APItemCharID, int> ShopRemovesReceived = new Dictionary<APItemCharID, int>();
+        public int? MaxShopRemoveLevel(APItemCharID character)
+        {
+            var canRemove = ShopRemovesReceived.TryGetValue(character, out int act);
+            if (!canRemove) return null;
+            return act;
+        }
+        public Dictionary<string, bool> ShopSlotsChecked { get; set; } = new Dictionary<string, bool>();
 
         #endregion
 

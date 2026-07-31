@@ -42,6 +42,18 @@ namespace StS2AP.Models
         public bool PotionSanity { get; set; }
         public bool Floorsanity { get; set; }
 
+        #region Shop Sanity Settings
+
+        public bool ShopSanity { get; set; }
+        public int ShopCardSlots { get; set; }
+        public int ShopNeutralSlots { get; set; }
+        public int ShopRelicSlots { get; set; }
+        public int ShopPotionSlots { get; set; }
+        public bool ShopRemoveSlots { get; set; }
+        public int ShopSanityCosts { get; set; }
+
+        #endregion
+
         #region Death Link Settings
 
         /// <summary>
