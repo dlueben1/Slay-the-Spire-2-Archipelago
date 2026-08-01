@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -74,7 +75,11 @@ namespace StS2AP.Utils
         /// bodies instead, where JIT resolution is lazy.
         /// </para>
         /// </summary>
-        private static readonly Queue<(APItem BuffType, int ItemIndex, bool NotificationShown)> _buffQueue = new();
+        private static readonly ConcurrentQueue<(
+            APItem BuffType,
+            int ItemIndex,
+            bool NotificationShown
+        )> _buffQueue = new();
 
         /// <summary>
         /// The Archipelago item index of the most recently applied (consumed) buff.
@@ -264,7 +269,9 @@ namespace StS2AP.Utils
                 // We do this in the method body (not in a static field type) so that the
                 // Archipelago.MultiClient.Net assembly is resolved lazily by the JIT rather
                 // than eagerly at type-load time.
-                var itemInfo = ArchipelagoClient.Session?.Items.AllItemsReceived.ElementAtOrDefault(itemIndex - 1);
+                var itemInfo = ArchipelagoClient.Session?.Items.AllItemsReceived.ElementAtOrDefault(
+                    itemIndex - 1
+                );
                 NotificationUtility.ShowBuffReceived(itemInfo);
                 notificationShown = true;
             }
@@ -337,7 +344,10 @@ namespace StS2AP.Utils
                 // This handles buffs received during a reconnect replay that hadn't been applied yet.
                 if (!notificationShown)
                 {
-                    var itemInfo = ArchipelagoClient.Session?.Items.AllItemsReceived.ElementAtOrDefault(itemIndex - 1);
+                    var itemInfo =
+                        ArchipelagoClient.Session?.Items.AllItemsReceived.ElementAtOrDefault(
+                            itemIndex - 1
+                        );
                     NotificationUtility.ShowBuffReceived(itemInfo);
                 }
 
