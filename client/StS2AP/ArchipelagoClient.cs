@@ -222,12 +222,13 @@ namespace StS2AP
             try
             {
                 // it's safe to thread this function call but Godot hates threading so do not use excessively
-                Callable.From(() =>
-                {
-                    ConnectionLock.AcquireWriterLock(30000);
-                    try
+                Callable
+                    .From(() =>
                     {
-                        HandleConnectResult(
+                        ConnectionLock.AcquireWriterLock(30000);
+                        try
+                        {
+                            HandleConnectResult(
                                 Session.TryConnectAndLogin(
                                     Game,
                                     PlayerName,
@@ -235,13 +236,15 @@ namespace StS2AP
                                     new Version(APVersion),
                                     password: ServerPassword,
                                     requestSlotData: SlotData.Count == 0
-                                ));
-                    }
-                    finally
-                    {
-                        ConnectionLock.ReleaseWriterLock();
-                    }
-                }).CallDeferred();
+                                )
+                            );
+                        }
+                        finally
+                        {
+                            ConnectionLock.ReleaseWriterLock();
+                        }
+                    })
+                    .CallDeferred();
             }
             catch (Exception e)
             {
@@ -365,11 +368,13 @@ namespace StS2AP
         private static void SetupUnlockedCharacters()
         {
             var characters = Settings.Characters;
-            var ids = new HashSet<string>(ArchipelagoClient.Progress.UnlockedCharacters.Select(c => c.Id.Entry));
+            var ids = new HashSet<string>(
+                ArchipelagoClient.Progress.UnlockedCharacters.Select(c => c.Id.Entry)
+            );
             bool someoneUnlocked = false;
-            foreach(var c in characters)
+            foreach (var c in characters)
             {
-                if(ids.Contains(c.Key))
+                if (ids.Contains(c.Key))
                 {
                     someoneUnlocked = true;
                     break;
@@ -388,14 +393,18 @@ namespace StS2AP
                         break;
                     }
                 }
-                if(ArchipelagoClient.Progress.UnlockedCharacters.Count == 0)
+                if (ArchipelagoClient.Progress.UnlockedCharacters.Count == 0)
                 {
-                    LogUtility.Error($"No valid AP characters found to unlock!  Valid characters: {string.Join(",", characters.Keys)}; Existing: {
-                        string.Join(",", ModelDb.AllCharacters.Select(c => c.Id.Entry))}");
+                    LogUtility.Error(
+                        $"No valid AP characters found to unlock!  Valid characters: {string.Join(",", characters.Keys)}; Existing: {
+                        string.Join(",", ModelDb.AllCharacters.Select(c => c.Id.Entry))}"
+                    );
                 }
                 else
                 {
-                    LogUtility.Info($"Force unlocking character {ArchipelagoClient.Progress.UnlockedCharacters.First().Id.Entry}");
+                    LogUtility.Info(
+                        $"Force unlocking character {ArchipelagoClient.Progress.UnlockedCharacters.First().Id.Entry}"
+                    );
                 }
                 //__result = newResult;
             }
@@ -473,7 +482,6 @@ namespace StS2AP
             }
 
             SetupUnlockedCharacters();
-
 
             // Pre-scout all locations so we have item info available for notifications
             ThreadPool.QueueUserWorkItem(_ => PreScoutAllLocations());
@@ -640,9 +648,9 @@ namespace StS2AP
                     // Grab the item data
                     var receivedItem = helper.DequeueItem();
 
-                // Ignore if this item is an old message
-                if (helper.Index <= Index)
-                    return;
+                    // Ignore if this item is an old message
+                    if (helper.Index <= Index)
+                        return;
 
                     // Process it
                     ProcessItem(receivedItem, helper.Index);
@@ -698,30 +706,43 @@ namespace StS2AP
                 $"Received: {item.ItemName} from {item.Player.Name} (ID: {item.ItemId} / LocID: {item.LocationId} / Index: {index})"
             );
 
-            // Apply the item to the game
-            switch (item.GetRawItemID())
+            /// Universal items (IDs < 10000) are character-agnostic and handled separately.
+            /// The 10k ID gap ensures universal IDs never collide with character-specific IDs,
+            /// no matter how many characters we add in the future.
+            if (item.ItemId < 10000)
+            {
+                HandleUniversalItem(item, index);
+                if (refresh)
+                    ArchipelagoTopBarUI.RefreshCount();
+                return;
+            }
+
+            // Character-specific items (IDs >= 10000): strip the character offset to get the base item type.
+            switch (item.GetCharacterSpecificItemID())
             {
                 // Character Unlocks
                 case APItem.Unlock:
-                    {
-                        LogUtility.Info("Before GameUtility Unlock");
-                        GameUtility.UnlockCharacter(item);
-                        LogUtility.Info("After GameUtility Unlock");
+                {
+                    LogUtility.Info("Before GameUtility Unlock");
+                    GameUtility.UnlockCharacter(item);
+                    LogUtility.Info("After GameUtility Unlock");
 
-                        // Fire the CharacterUnlocked event on the Godot main thread.
-                        // This allows the character select screen (if open) to immediately
-                        // refresh the appropriate button without waiting for OnSubmenuOpened.
-                        var offset = item.GetCharacterOffset();
-                        LogUtility.Info("After offset acquisition");
-                        var config = ArchipelagoClient.Settings.Characters.Values.FirstOrDefault(config => config.CharOffset == offset);
-                        LogUtility.Info("After Settings check");
-                        if(config == null)
-                        {
-                            LogUtility.Warn($"Got Unlock for character not configured {item.ItemId}");
-                            break;
-                        }
-                        LogUtility.Info("after config null check");
-                        Callable.From(() => CharacterUnlocked?.Invoke(config)).CallDeferred();
+                    /// Fire the CharacterUnlocked event on the Godot main thread.
+                    /// This allows the character select screen (if open) to immediately
+                    /// refresh the appropriate button without waiting for OnSubmenuOpened.
+                    var offset = item.GetCharacterOffset();
+                    LogUtility.Info("After offset acquisition");
+                    var config = ArchipelagoClient.Settings.Characters.Values.FirstOrDefault(
+                        config => config.CharOffset == offset
+                    );
+                    LogUtility.Info("After Settings check");
+                    if (config == null)
+                    {
+                        LogUtility.Warn($"Got Unlock for character not configured {item.ItemId}");
+                        break;
+                    }
+                    LogUtility.Info("after config null check");
+                    Callable.From(() => CharacterUnlocked?.Invoke(config)).CallDeferred();
 
                     break;
                 }
@@ -741,26 +762,32 @@ namespace StS2AP
                 case APItem._15Gold:
                 case APItem._30Gold:
                 case APItem.BossGold:
-                    {
-                        // Get the IDs for storing the item
-                        var charOffset = item.GetCharacterOffset();
-                        var itemId = item.GetRawItemID();
+                {
+                    // Get the IDs for storing the item
+                    var charOffset = item.GetCharacterOffset();
+                    var itemId = item.GetCharacterSpecificItemID();
 
-                        // Add the Gold to the amount we've received
-                        try
-                        {
-                            var haveKey = Progress.GoldReceived.TryGetValue(charOffset, out int gold);
-                            if (!haveKey) gold = 0;
-                            Progress.GoldReceived[charOffset] = gold + ItemTable.GoldItemAmounts[itemId];
-                        }
-                        catch (KeyNotFoundException e)
-                        {
-                            LogUtility.Error($"GoldItemAmounts does not have a value for this item! ({item.ItemDisplayName} from {item.Player.Name})");
-                        }
-                        catch
-                        {
-                            LogUtility.Error($"Failed to process Gold when this item was received: ({item.ItemDisplayName} from {item.Player.Name})");
-                        }
+                    // Add the Gold to the amount we've received
+                    try
+                    {
+                        var haveKey = Progress.GoldReceived.TryGetValue(charOffset, out int gold);
+                        if (!haveKey)
+                            gold = 0;
+                        Progress.GoldReceived[charOffset] =
+                            gold + ItemTable.GoldItemAmounts[itemId];
+                    }
+                    catch (KeyNotFoundException e)
+                    {
+                        LogUtility.Error(
+                            $"GoldItemAmounts does not have a value for this item! ({item.ItemDisplayName} from {item.Player.Name})"
+                        );
+                    }
+                    catch
+                    {
+                        LogUtility.Error(
+                            $"Failed to process Gold when this item was received: ({item.ItemDisplayName} from {item.Player.Name})"
+                        );
+                    }
 
                     break;
                 }
@@ -783,24 +810,6 @@ namespace StS2AP
                     Progress.AllReceivedItems.Add(new IndexedItemInfo(item, index));
                     break;
 
-                // Process Buffs
-                case APItem.FreeAttack:
-                case APItem.FreePower:
-                case APItem.FreeSkill:
-                case APItem.Dexterity:
-                case APItem.Strength:
-                case APItem.Plating:
-                case APItem.Friendship:
-                case APItem.Thorns:
-                case APItem.Buffer:
-                case APItem.Vigor:
-                case APItem.Artifact:
-                case APItem.PostCombatCardUpgrade:
-                case APItem.PostCombatCardRemoval:
-                case APItem.AdditionalCardReward:
-                    BuffUtility.EnqueueBuff(item.GetRawItemID(), index);
-                    break;
-
                 // Everything else ends up in the "reward pool"
                 default:
                 {
@@ -817,31 +826,76 @@ namespace StS2AP
         }
 
         /// <summary>
+        /// Handles universal items that do not have a character offset baked in.
+        ///
+        /// Universal items have no character offset, so their ItemId is cast directly to APItem
+        /// without any modulo operation. Currently all universal items are combat buffs applied
+        /// via <see cref="BuffUtility"/> at the start of the player's next turn.
+        /// </summary>
+        private static void HandleUniversalItem(ItemInfo item, int index)
+        {
+            // Cast ItemId directly — no modulo needed since universal items have no character offset.
+            var universalId = (APItem)item.ItemId;
+            switch (universalId)
+            {
+                case APItem.FreeAttack:
+                case APItem.FreePower:
+                case APItem.FreeSkill:
+                case APItem.Dexterity:
+                case APItem.Strength:
+                case APItem.Plating:
+                case APItem.Friendship:
+                case APItem.Thorns:
+                case APItem.Buffer:
+                case APItem.Vigor:
+                case APItem.Artifact:
+                case APItem.PostCombatCardUpgrade:
+                case APItem.PostCombatCardRemoval:
+                case APItem.AdditionalCardReward:
+                    BuffUtility.EnqueueBuff(universalId, index);
+                    break;
+                default:
+                    LogUtility.Warn(
+                        $"[ArchipelagoClient] Received unrecognized universal item ID {item.ItemId} ({item.ItemName}) — not handled."
+                    );
+                    break;
+            }
+        }
+
+        /// <summary>
         /// Helper for handling common threshold containers
         /// </summary>
-        private static void HandleThreshholdItem(ItemInfo item, Dictionary<long, int> source, string name)
+        private static void HandleThreshholdItem(
+            ItemInfo item,
+            Dictionary<long, int> source,
+            string name
+        )
         {
             // Get the IDs for storing the item
-            var itemId = item.GetRawItemID();
+            var itemId = item.GetCharacterSpecificItemID();
             var offset = item.GetCharacterOffset();
 
             // Increment the reward
             try
             {
                 var haveKey = source.TryGetValue(offset, out int amount);
-                if (!haveKey) amount = 0;
+                if (!haveKey)
+                    amount = 0;
                 source[offset] = amount + 1;
                 LogUtility.Success($"New Value for {name} is {source[offset]}");
             }
             catch (KeyNotFoundException e)
             {
-                LogUtility.Error($"{name} does not have a value for this character! ({item.ItemDisplayName} from {item.Player.Name})");
+                LogUtility.Error(
+                    $"{name} does not have a value for this character! ({item.ItemDisplayName} from {item.Player.Name})"
+                );
             }
             catch
             {
-                LogUtility.Error($"Failed to process {name} when this item was received: ({item.ItemDisplayName} from {item.Player.Name})");
+                LogUtility.Error(
+                    $"Failed to process {name} when this item was received: ({item.ItemDisplayName} from {item.Player.Name})"
+                );
             }
-
         }
 
         public static void ReprocessItems()
@@ -920,16 +974,21 @@ namespace StS2AP
                         }
                     }
                 }
-                
-                foreach(var config in settings.Characters.Values)
+
+                foreach (var config in settings.Characters.Values)
                 {
-                    var model = ModelDb.AllCharacters.FirstOrDefault(model => string.Equals(model.Id.Entry, config.OfficialName, StringComparison.OrdinalIgnoreCase));
-                    if(model == null)
+                    var model = ModelDb.AllCharacters.FirstOrDefault(model =>
+                        string.Equals(
+                            model.Id.Entry,
+                            config.OfficialName,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    );
+                    if (model == null)
                     {
                         settings.UnrecognizedCharacters[config.OfficialName] = config;
                     }
                 }
-                
             }
 
             if (slotData.ContainsKey("neow_sanity"))

@@ -212,7 +212,7 @@ namespace StS2AP.UI
                                 .Where(i => !ArchipelagoClient.Progress.UsedItems.Contains(i.Index) && i.Item.GetCharacterOffset() == GameUtility.CurrentCharacterID);
             
             // Prepare them for the UI
-            var rewardDataList = availableItems.Where(i => i.Item.GetRawItemID().CanBePickedUp()).Select(i =>
+            var rewardDataList = availableItems.Where(i => i.Item.GetCharacterSpecificItemID().CanBePickedUp()).Select(i =>
             {
                 var data = new ArchipelagoRewardData
                 {
@@ -226,7 +226,7 @@ namespace StS2AP.UI
                 };
 
                 // For relic items, pre-assign a specific relic so the name is stable across open/close
-                var rawId = i.Item.GetRawItemID();
+                var rawId = i.Item.GetCharacterSpecificItemID();
                 if (rawId == APItem.Relic)
                 {
                     var relic = ArchipelagoClient.Progress.GetOrAssignRelic(i.Index, GameUtility.CurrentPlayer);
@@ -825,7 +825,7 @@ namespace StS2AP.UI
         /// <returns>An async grant action, or null if not applicable.</returns>
         private static Func<Task<bool>>? GetGrantAction(ItemInfo item)
         {
-            switch (item.GetRawItemID())
+            switch (item.GetCharacterSpecificItemID())
             {
                 case APItem.OneGold:      return async () => { await GameUtility.GrantGold(1); return true; };
                 case APItem.FiveGold:     return async () => { await GameUtility.GrantGold(5); return true; };
@@ -851,7 +851,7 @@ namespace StS2AP.UI
         /// <returns>A resource path string, or <see cref="string.Empty"/> if no icon is available.</returns>
         private static string GetIconForItem(ItemInfo item)
         {
-            switch (item.GetRawItemID())
+            switch (item.GetCharacterSpecificItemID())
             {
                 case APItem.OneGold:
                 case APItem.FiveGold:

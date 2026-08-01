@@ -155,7 +155,7 @@ namespace StS2AP.Patches
                 // Count Card/Relic/Potion/Progressive Rewards
                 var itemCounts = ArchipelagoClient.Progress.AllReceivedItems
                     .Where(i => i.Item.GetCharacterOffset() == offset)
-                    .GroupBy(i => i.Item.GetRawItemID())
+                    .GroupBy(i => i.Item.GetCharacterSpecificItemID())
                     .ToDictionary(
                         g => g.Key,
                         g => g.Count());

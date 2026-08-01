@@ -126,7 +126,7 @@ namespace StS2AP.Utils
                 // new run flow
                 foreach (var item in ArchipelagoClient.Progress.AllReceivedItems)
                 {
-                    var id = item.Item.GetRawItemID();
+                    var id = item.Item.GetCharacterSpecificItemID();
                     LogUtility.Info($"Checking if item is an ascension {item.Item.ItemName} {id}");
                     if (((int)id) >= 19 && ((int)id) <= 28)
                     {
@@ -145,7 +145,7 @@ namespace StS2AP.Utils
                 // not for this character
                 return;
             }
-            var id = item.GetRawItemID();
+            var id = item.GetCharacterSpecificItemID();
             var level = ToAscensionLevel(id);
             if(level == AscensionLevel.None)
             {

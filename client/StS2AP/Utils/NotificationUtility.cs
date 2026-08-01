@@ -151,7 +151,7 @@ namespace StS2AP.Utils
         /// <returns></returns>
         private static string? GetItemIcon(ItemInfo item)
         {
-            switch (item.GetRawItemID())
+            switch (item.GetCharacterSpecificItemID())
             {
                 case APItem.OneGold:
                 case APItem.FiveGold:

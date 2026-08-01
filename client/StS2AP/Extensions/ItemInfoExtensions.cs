@@ -1,24 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Archipelago.MultiClient.Net.Models;
-using static StS2AP.Data.ItemTable;
 using static StS2AP.Data.CharTable;
+using static StS2AP.Data.ItemTable;
 
 namespace StS2AP
 {
     public static class ItemInfoExtensions
     {
         /// <summary>
-        /// Extracts the ID of the Item from the ItemInfo object.
-        /// It's a simple algorithm: only the last four digits of the number matter for the Item ID, the rest of the digits represent the Character ID of the item.
-        /// Example: An item with ID 20003 represents an item from the Silent (Character ID: 2) where the raw ID of the item is (3).
+        /// Extracts the character-specific item ID from the ItemInfo object by stripping the character offset.
+        /// Only valid for character-specific items (ItemId > 10000). For universal items (ItemId < 10000),
+        /// cast ItemId directly to APItem instead — there is no character offset to strip.
+        /// Example: An item with ID 20003 represents an item from the Silent (Character ID: 2)
+        /// where the character-specific item ID is (3).
         /// </summary>
-        public static APItem GetRawItemID(this ItemInfo item)
+        public static APItem GetCharacterSpecificItemID(this ItemInfo item)
         {
             if (item is null || item.ItemId < 0)
             {
@@ -43,9 +45,11 @@ namespace StS2AP
 
         public static long GetCharacterOffset(this ItemInfo item)
         {
-            if(item is null || item.ItemId < 0)
+            if (item is null || item.ItemId < 0)
             {
-                LogUtility.Error($"Could not Parse Raw Character offset ID for Item #{item?.ItemId}");
+                LogUtility.Error(
+                    $"Could not Parse Raw Character offset ID for Item #{item?.ItemId}"
+                );
                 return 0L;
             }
             return (Math.Abs(item.ItemId) / 10000L);
@@ -55,10 +59,12 @@ namespace StS2AP
         {
             return (info.Flags & Archipelago.MultiClient.Net.Enums.ItemFlags.Advancement) > 0;
         }
+
         public static bool Useful(this ItemInfo info)
         {
             return (info.Flags & Archipelago.MultiClient.Net.Enums.ItemFlags.NeverExclude) > 0;
         }
+
         public static bool Trap(this ItemInfo info)
         {
             return (info.Flags & Archipelago.MultiClient.Net.Enums.ItemFlags.Trap) > 0;
