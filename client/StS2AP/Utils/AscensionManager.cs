@@ -252,6 +252,16 @@ namespace StS2AP.Utils
                         }
                     }
                     break;
+                case AscensionLevel.Poverty:
+                    int refund = ArchipelagoClient.Progress.CalculatePovertyRefund();
+                    if(refund > 0)
+                    {
+                        Callable.From(() =>
+                        {
+                            _ = GameUtility.GrantGold(refund);
+                        }).CallDeferred();
+                    }
+                    break;
                 case AscensionLevel.TightBelt:
                     var player = GameUtility.CurrentPlayer;
                     if(player != null)

@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using static StS2AP.Data.ItemTable;
 using ItemInfo = Archipelago.MultiClient.Net.Models.ItemInfo;
 using MegaCrit.Sts2.Core.Entities.Multiplayer;
+using StS2AP.Models;
 
 namespace StS2AP.UI
 {
@@ -295,18 +296,20 @@ namespace StS2AP.UI
                 _remainingRewards = 0;
 
                 // Inject a reward for any remaining gold (if applicable)
-                int pendingGold = ArchipelagoClient.Progress.GoldRemaining;
-                if(pendingGold > 0)
+                ArchipelagoGoldOffer offer = ArchipelagoClient.Progress.PrepareGoldOffer();
+
+                if (offer.GrantedAmount > 0)
                 {
                     rewards.Insert(0, new ArchipelagoRewardData
                     {
-                        ItemName    = $"{pendingGold} Gold",
-                        SenderName  = "",
-                        IconPath    = IconGold,
-                        GrantAction = async() =>
-                        { 
-                            await GameUtility.GrantGold(pendingGold); 
-                            ArchipelagoClient.Progress.GoldRedeemed += pendingGold;
+                        ItemName = $"{offer.GrantedAmount} Gold",
+                        SenderName = "",
+                        IconPath = IconCard,
+                        GrantAction = async () =>
+                        {
+                            var amountToGrant = ArchipelagoClient.Progress.ConsumeGoldOffer(offer);
+                            
+                            await GameUtility.GrantGold(amountToGrant);
                             return true;
                         }
                     });

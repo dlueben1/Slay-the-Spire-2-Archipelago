@@ -300,6 +300,76 @@ namespace StS2AP.Models
             }
         }
 
+        /// <summary>
+        ///  Helper function to apply the Poverty Ascension modifier affect
+        /// </summary>
+        private static int ApplyPoverty(int amount)
+        {
+            return amount * 3 / 4;
+        }
+        
+        /// <summary>
+        /// Calculates the Poverty Refund based on the Gold Redeemed
+        /// Should only be called on getting Poverty Ascension Down
+        /// </summary>
+        /// <returns></returns>
+        public int CalculatePovertyRefund()
+        {
+            return GoldRedeemed - ApplyPoverty(GoldRedeemed);
+        }
+
+        /// <summary>
+        /// Helps prepare the Gold Reward Display to be displayed to the user accounting for Ascension 3 poverty
+        /// </summary>
+        /// <returns></returns>
+        public ArchipelagoGoldOffer PrepareGoldOffer()
+        {
+            int consumedBefore = GoldRedeemed;
+            int sourceAmount = GoldRemaining;
+            bool povertyApplied = Ascensions.HasLevel(AscensionLevel.Poverty);
+            
+            var consumedAfter = consumedBefore + sourceAmount;
+
+            // consumedBefore and consumedAfter are needed to handle cumulative rounding like if you receive multiple
+            // 1 gold rewards in a row which always rounds to 0.
+            int grantedAmount = povertyApplied
+                ? ApplyPoverty(consumedAfter) - ApplyPoverty(consumedBefore)
+                : sourceAmount;
+
+            return new ArchipelagoGoldOffer(
+                SourceAmount: sourceAmount,
+                GrantedAmount: grantedAmount,
+                WithheldAmount: sourceAmount - grantedAmount,
+                PovertyApplied: povertyApplied
+            );
+        }
+
+        /// <summary>
+        /// Handles the edge-case when you get an Ascension Down during the AP reward menu.
+        /// Updates the GoldRedeemed global state as well.
+        /// </summary>
+        /// <param name="offer"></param>
+        /// <returns> The amount to grant to the player</returns>
+        public int ConsumeGoldOffer(ArchipelagoGoldOffer offer)
+        {
+            bool povertyCurrentlyApplied = Ascensions.HasLevel(AscensionLevel.Poverty);
+
+            GoldRedeemed += offer.SourceAmount;
+
+            if (offer.PovertyApplied && povertyCurrentlyApplied)
+            {
+                return offer.GrantedAmount;
+            }
+
+            if (offer.PovertyApplied)
+            {
+                // received an Ascension Down while viewing the reward so give proper amount
+                return offer.GrantedAmount + offer.WithheldAmount;
+            }
+            
+            return offer.GrantedAmount;
+        }
+
         #endregion
 
         #region My Unlocks (From the Multiworld)
