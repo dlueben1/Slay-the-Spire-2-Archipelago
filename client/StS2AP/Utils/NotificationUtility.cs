@@ -156,8 +156,8 @@ namespace StS2AP.Utils
                 case APItem.OneGold:
                 case APItem.FiveGold:
                 case APItem.BossGold:
-                case APItem._15Gold:
-                case APItem._30Gold:
+                case APItem.CombatGold:
+                case APItem.EliteGold:
                     return @"[img]res://images/packed/sprite_fonts/gold_icon.png[/img]";
                 case APItem.CardReward:
                 case APItem.RareCardReward:

@@ -760,8 +760,8 @@ namespace StS2AP
                 // Gold is condensed into a single reward pool
                 case APItem.OneGold:
                 case APItem.FiveGold:
-                case APItem._15Gold:
-                case APItem._30Gold:
+                case APItem.CombatGold:
+                case APItem.EliteGold:
                 case APItem.BossGold:
                 {
                     // Get the IDs for storing the item

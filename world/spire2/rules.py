@@ -106,7 +106,8 @@ class SpireHasGold(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
 
         @typing.override
         def _evaluate(self, state: CollectionState) -> bool:
-            return state.count(f"{self.char} 30 Gold", self.player) * 30 + state.count(f"{self.char} Boss Gold", self.player) * 75 >= self.gold
+            # Assume Ascension 3 Poverty reduces gold rewards by 25%.
+            return state.count(f"{self.char} Elite Gold", self.player) * 30 + state.count(f"{self.char} Boss Gold", self.player) * 75 >= self.gold
 
 @dataclasses.dataclass()
 class SpireHasShop(Rule['SlayTheSpire2World'], game="Slay the Spire II"):

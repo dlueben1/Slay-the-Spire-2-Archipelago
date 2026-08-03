@@ -25,8 +25,8 @@ namespace StS2AP.Data
             ShopPotionSlot = 12,
             ProgressiveShopRemove = 13,
             Unlock = 14,
-            _15Gold = 15,
-            _30Gold = 16,
+            CombatGold = 15,
+            EliteGold = 16,
             BossGold = 17,
             Potion = 18,
             SwarmingElites = 19,
@@ -78,8 +78,8 @@ namespace StS2AP.Data
             { 12, "Shop Potion Slot" },
             { 13, "Progressive Shop Remove" },
             { 14, "Unlock" },
-            { 15, "15 Gold" },
-            { 16, "30 Gold" },
+            { 15, "Combat Gold" },
+            { 16, "Elite Gold" },
             { 17, "Boss Gold" },
             { 18, "Potion" },
             { 19, "Swarming Elites" },
@@ -115,8 +115,8 @@ namespace StS2AP.Data
         {
             { APItem.OneGold, 1 },
             { APItem.FiveGold, 5 },
-            { APItem._15Gold, 15 },
-            { APItem._30Gold, 30 },
+            { APItem.CombatGold, 15 },
+            { APItem.EliteGold, 40 },
             { APItem.BossGold, 100 },
         };
 
@@ -144,8 +144,8 @@ namespace StS2AP.Data
                     return false;
               case APItem.OneGold:
               case APItem.FiveGold:
-              case APItem._15Gold:
-              case APItem._30Gold:
+              case APItem.CombatGold:
+              case APItem.EliteGold:
               case APItem.BossGold:
                     return false;
               case APItem.Potion:

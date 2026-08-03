@@ -829,8 +829,8 @@ namespace StS2AP.UI
             {
                 case APItem.OneGold:      return async () => { await GameUtility.GrantGold(1); return true; };
                 case APItem.FiveGold:     return async () => { await GameUtility.GrantGold(5); return true; };
-                case APItem._15Gold:      return async () => { await GameUtility.GrantGold(15); return true; };
-                case APItem._30Gold:      return async () => { await GameUtility.GrantGold(30); return true; };
+                case APItem.CombatGold:   return async () => { await GameUtility.GrantGold(15); return true; };
+                case APItem.EliteGold:    return async () => { await GameUtility.GrantGold(40); return true; };
                 case APItem.BossGold:     return async () => { await GameUtility.GrantGold(100); return true; };
                 case APItem.Relic:        return async () => { await GameUtility.GrantRelic(); return true; };
                     // Need to do potion lookup before granting; see ShowRewards
@@ -856,8 +856,8 @@ namespace StS2AP.UI
                 case APItem.OneGold:
                 case APItem.FiveGold:
                 case APItem.BossGold:
-                case APItem._15Gold:
-                case APItem._30Gold:
+                case APItem.CombatGold:
+                case APItem.EliteGold:
                     return IconGold;
 
                 case APItem.CardReward:

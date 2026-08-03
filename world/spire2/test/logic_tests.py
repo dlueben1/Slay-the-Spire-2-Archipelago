@@ -176,7 +176,7 @@ class LogicTestBase(Spire2TestBase):
         for _ in range(power.shop):
             state.collect(shop)
 
-        gold = self.get_item_by_name(f"{self.prefix} 30 Gold")
+        gold = self.get_item_by_name(f"{self.prefix} Elite Gold")
         for _ in range(power.gold):
             state.collect(gold)
 
@@ -212,7 +212,7 @@ class LogicTestBase(Spire2TestBase):
         remove = self.get_item_by_name(f"{self.prefix} Progressive Shop Remove")
         removes = [remove for _ in range(power.shop_remove)]
 
-        gold = self.get_item_by_name(f"{self.prefix} 30 Gold")
+        gold = self.get_item_by_name(f"{self.prefix} Elite Gold")
         golds = [gold for _ in range(power.gold)]
 
 
@@ -230,7 +230,7 @@ class LogicTestBase(Spire2TestBase):
             shops.pop()
         elif type == "Progressive Shop Remove":
             removes.pop()
-        elif type == "30 Gold":
+        elif type == "Elite Gold":
             golds.pop()
 
 
@@ -243,8 +243,8 @@ class LogicTestBase(Spire2TestBase):
 
     def _test_inaccessible(self, power: PowerLevel, locations: Iterable[str]):
 
-        for i, type in enumerate([ x for x in ['Card Reward', 'Relic', 'Progressive Rest', 'Progressive Smith', "Shop Card Slot", "Progressive Shop Remove", "30 Gold"]]):
-        # for i, type in enumerate([ x for x in ['Card Reward', 'Relic', 'Boss Relic', 'Progressive Rest', 'Progressive Smith', "Shop Card Slot", "Progressive Shop Remove", "30 Gold", "Keys"]]):
+        for i, type in enumerate([ x for x in ['Card Reward', 'Relic', 'Progressive Rest', 'Progressive Smith', "Shop Card Slot", "Progressive Shop Remove", "Elite Gold"]]):
+        # for i, type in enumerate([ x for x in ['Card Reward', 'Relic', 'Boss Relic', 'Progressive Rest', 'Progressive Smith', "Shop Card Slot", "Progressive Shop Remove", "Elite Gold", "Keys"]]):
             if power[i] == 0:
                 continue
             state = self._setup_state_inaccessible(power, type)
