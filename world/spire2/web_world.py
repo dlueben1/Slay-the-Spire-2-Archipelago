@@ -4,7 +4,7 @@ from Options import DeathLink, OptionGroup
 from .options import (
     Characters, DeathLinkDamagePercent, EnableDeathFragments, PickNumberCharacters, GoalNumChar,
     LockCharacters, UnlockedCharacter, Ascension,
-    IncludeFloorChecks, CampfireSanity, GoldSanity, PotionSanity,
+    IncludeFloorChecks, CampfireSanity, GoldSanity, PotionSanity, AncientChaos,
     CardReward,
     OneGoldFillerWeight, FiveGoldFillerWeight,
     FreeAttackFillerWeight, FreePowerFillerWeight, FreeSkillFillerWeight,
@@ -41,6 +41,7 @@ class SlayTheSpire2Web(WebWorld):
             GoldSanity,
             PotionSanity,
             CardReward,
+            AncientChaos,
         ]),
         OptionGroup("Death Link", [
             DeathLink,

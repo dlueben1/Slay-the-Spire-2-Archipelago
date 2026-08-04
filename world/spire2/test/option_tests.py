@@ -48,6 +48,32 @@ class Test48Floors(Spire2TestBase):
         self.assertFalse( "Ironclad Reached Floor 49" in self.world.get_locations())
 
 
+class TestAncientChaosBalanced(Spire2TestBase):
+    def test_balanced_by_default_and_sent_in_slot_data(self):
+        self.assertEqual(0, self.world.options.ancient_chaos.value)
+        self.assertEqual(0, self.world.fill_slot_data()["ancient_chaos"])
+
+
+class TestAncientChaosActOrdered(Spire2TestBase):
+    options = {
+        "ancient_chaos": 1,
+    }
+
+    def test_act_ordered_value_is_sent_in_slot_data(self):
+        self.assertEqual(1, self.world.options.ancient_chaos.value)
+        self.assertEqual(1, self.world.fill_slot_data()["ancient_chaos"])
+
+
+class TestAncientChaosFullPool(Spire2TestBase):
+    options = {
+        "ancient_chaos": 2,
+    }
+
+    def test_full_pool_value_is_sent_in_slot_data(self):
+        self.assertEqual(2, self.world.options.ancient_chaos.value)
+        self.assertEqual(2, self.world.fill_slot_data()["ancient_chaos"])
+
+
 class TestAscensionDowns(Spire2TestBase):
     options = {
         "characters": [

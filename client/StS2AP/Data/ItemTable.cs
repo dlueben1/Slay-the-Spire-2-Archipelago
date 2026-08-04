@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using StS2AP.Models;
 
 namespace StS2AP.Data
 {
@@ -131,7 +132,7 @@ namespace StS2AP.Data
               case APItem.Relic:
                     return true;
               case APItem.AncientUnlock:
-                    return false;
+                    return (ArchipelagoClient.Settings?.AncientChaos ?? AncientChaosMode.Balanced) != AncientChaosMode.Balanced;
               case APItem.ProgressiveRest:
               case APItem.ProgressiveSmith:
               case APItem.ShopCardSlot:

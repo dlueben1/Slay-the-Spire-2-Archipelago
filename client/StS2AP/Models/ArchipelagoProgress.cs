@@ -10,6 +10,7 @@ using MegaCrit.Sts2.Core.Saves;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Ascension;
 using AscensionManager = StS2AP.Utils.AscensionManager;
+using static StS2AP.Data.ItemTable;
 using System.Text.Json;
 
 
@@ -118,6 +119,12 @@ namespace StS2AP.Models
         public Dictionary<int, RelicModel> RelicAssignments { get; set; } = new Dictionary<int, RelicModel>();
 
         /// <summary>
+        /// Maps an Ancient Unlock's AP item index to its three linked relic choices.
+        /// The complete set is retained so reopening or loading the reward screen cannot reroll it.
+        /// </summary>
+        public Dictionary<int, List<RelicModel>> AncientRelicChoiceAssignments { get; set; } = new Dictionary<int, List<RelicModel>>();
+
+        /// <summary>
         /// Maps an Archipelago item's index to the CardReward that was pre-populated for it.
         /// This ensures that even if you skip the Card Reward, it will still be the same if you come back to it later.
         /// </summary>
@@ -162,6 +169,55 @@ namespace StS2AP.Models
                 LogUtility.Error($"Failed to pre-assign relic for item w/ index {index}: {ex.Message}");
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Returns the three Ancient relics assigned to an Ancient Unlock, creating the deterministic
+        /// assignment on first use. An empty list indicates that a valid three-relic pool could not be built.
+        /// </summary>
+        public IReadOnlyList<RelicModel> GetOrAssignAncientRelicChoices(int index, Player player)
+        {
+            if (AncientRelicChoiceAssignments.TryGetValue(index, out var existing))
+                return existing;
+
+            if (player == null)
+            {
+                LogUtility.Warn($"Cannot assign Ancient relic choices for item w/ index {index}: no active player");
+                return Array.Empty<RelicModel>();
+            }
+
+            var reservedRelicIds = AncientRelicChoiceAssignments.Values
+                .SelectMany(assignment => assignment)
+                .Select(relic => relic.Id)
+                .ToHashSet();
+
+            int? ancientActIndex = null;
+            if (ArchipelagoClient.Settings?.AncientChaos == AncientChaosMode.ActOrdered)
+            {
+                var characterOffset = player.Character.GetCharacterOffset();
+                var orderedAncientItemIndices = AllReceivedItems
+                    .Where(item => item.Item.GetCharacterOffset() == characterOffset &&
+                                   item.Item.GetCharacterSpecificItemID() == APItem.AncientUnlock)
+                    .OrderBy(item => item.Index)
+                    .Select(item => item.Index)
+                    .ToList();
+                var rewardOrdinal = orderedAncientItemIndices.IndexOf(index);
+                if (rewardOrdinal is < 0 or > 1)
+                {
+                    LogUtility.Error($"Could not map Ancient reward item index {index} to its Act 2/3 progression");
+                    return Array.Empty<RelicModel>();
+                }
+
+                // ModelDb uses zero-based Act indices: 1 is Act 2 and 2 is Act 3.
+                ancientActIndex = rewardOrdinal + 1;
+            }
+
+            var choices = AncientRelicPool.CreateChoices(player, index, reservedRelicIds, ancientActIndex).ToList();
+            if (choices.Count != AncientRelicPool.ChoiceCount)
+                return Array.Empty<RelicModel>();
+
+            AncientRelicChoiceAssignments[index] = choices;
+            return choices;
         }
 
         /// <summary>
@@ -233,6 +289,7 @@ namespace StS2AP.Models
             PotionRewardsAttempted = 0;
             CampfiresChecked.Clear();
             RelicAssignments.Clear();
+            AncientRelicChoiceAssignments.Clear();
             CardAssignments.Clear();
             PotionAssignments.Clear();
             Ascensions.Reset();
@@ -475,6 +532,12 @@ namespace StS2AP.Models
                 UsedItems = UsedItems,
                 GoldRedeemed = GoldRedeemed,
                 RelicAssignments = RelicAssignments.Select((KeyValuePair<int, RelicModel> kv) => new KeyValuePair<int, SerializableRelic>(kv.Key, kv.Value.ToMutable().ToSerializable())).ToDictionary(),
+                AncientRelicChoiceAssignments = AncientRelicChoiceAssignments.Select(kv =>
+                    new KeyValuePair<int, List<SerializableRelic>>(
+                        kv.Key,
+                        kv.Value.Select(relic => relic.ToMutable().ToSerializable()).ToList()
+                    )
+                ).ToDictionary(),
                 CardAssignments = CardAssignments.Select((KeyValuePair<int, CardReward> kv) => new KeyValuePair<int, SerializableReward>(kv.Key, kv.Value.ToSerializable())).ToDictionary(),
                 CardAssignmentModels = CardAssignments.Select((KeyValuePair<int, CardReward> kv) =>
                 new KeyValuePair<int, List<SerializableCard>>(kv.Key, kv.Value.Cards.Select(c => c.ToSerializable()).ToList())).ToDictionary(),
@@ -497,6 +560,12 @@ namespace StS2AP.Models
                 UsedItems = new List<int>(saveData.UsedItems),
                 GoldRedeemed = saveData.GoldRedeemed,
                 RelicAssignments = saveData.RelicAssignments.Select((KeyValuePair<int, SerializableRelic> kv) => new KeyValuePair<int, RelicModel>(kv.Key, RelicModel.FromSerializable(kv.Value).CanonicalInstance)).ToDictionary(),
+                AncientRelicChoiceAssignments = (saveData.AncientRelicChoiceAssignments ?? new Dictionary<int, List<SerializableRelic>>()).Select(kv =>
+                    new KeyValuePair<int, List<RelicModel>>(
+                        kv.Key,
+                        kv.Value.Select(serializedRelic => RelicModel.FromSerializable(serializedRelic)).ToList()
+                    )
+                ).ToDictionary(),
                 PotionAssignments = saveData.PotionAssignments.Select((KeyValuePair<int, SerializablePotion> kv) => new KeyValuePair<int, PotionModel>(kv.Key, PotionModel.FromSerializable(kv.Value).CanonicalInstance)).ToDictionary(),
             };
 

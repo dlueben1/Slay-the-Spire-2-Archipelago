@@ -1,5 +1,9 @@
 using Godot;
+using HarmonyLib;
+using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Nodes.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Screens.Capstones;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
@@ -14,6 +18,7 @@ using static StS2AP.Data.ItemTable;
 using ItemInfo = Archipelago.MultiClient.Net.Models.ItemInfo;
 using MegaCrit.Sts2.Core.Entities.Multiplayer;
 using StS2AP.Models;
+using System.Reflection;
 
 namespace StS2AP.UI
 {
@@ -66,6 +71,12 @@ namespace StS2AP.UI
         /// </summary>
         public Func<Task<bool>>? GrantAction { get; set; }
 
+        /// <summary>
+        /// Three relics linked to one Ancient Unlock. When present, the UI renders a single
+        /// grouped reward and consumes the AP item only after one of these relics is granted.
+        /// </summary>
+        public IReadOnlyList<RelicModel>? LinkedRelicChoices { get; set; }
+
         /// <summary>Optional sync callback invoked after the grant completes (e.g. for cleanup)</summary>
         public Action? OnClaimed { get; set; }
     }
@@ -82,6 +93,10 @@ namespace StS2AP.UI
         private static VBoxContainer? _itemContainer;
         private static Button? _proceedButton;
         private static Tween? _fadeTween;
+        private static Texture2D? _linkedRewardChainTexture;
+        private static bool _linkedRewardChainTextureResolved;
+        private static readonly PropertyInfo? ChainImagePathProperty =
+            AccessTools.Property(typeof(NLinkedRewardSet), "ChainImagePath");
 
         // UI resource paths sourced from rewards_screen.tscn
         private const string PanelPath   = "res://images/ui/reward_screen/reward_panel.png";
@@ -235,7 +250,23 @@ namespace StS2AP.UI
                     {
                         data.ItemName = relic.Title.GetRawText();
                         data.IconPath = relic.IconPath;
-                        data.GrantAction = async () => { await GameUtility.GrantRelic(relic); return true; };
+                        data.GrantAction = () => GameUtility.TryGrantRelic(relic);
+                    }
+                }
+
+                if (rawId == APItem.AncientUnlock)
+                {
+                    var choices = ArchipelagoClient.Progress.GetOrAssignAncientRelicChoices(i.Index, GameUtility.CurrentPlayer);
+                    if (choices.Count == AncientRelicPool.ChoiceCount)
+                    {
+                        data.ItemName = "Choose an Ancient Relic";
+                        data.LinkedRelicChoices = choices;
+                    }
+                    else
+                    {
+                        // Fail closed: do not consume the AP item if its choice pool could not be built.
+                        data.ItemName = "Ancient Relic Choice Unavailable";
+                        data.GrantAction = () => Task.FromResult(false);
                     }
                 }
 
@@ -439,7 +470,10 @@ namespace StS2AP.UI
         {
             if (_itemContainer == null || !IsInstanceValid(_itemContainer)) return;
 
-            _itemContainer.AddChild(CreateRewardButton(data));
+            var rewardControl = data.LinkedRelicChoices?.Count == AncientRelicPool.ChoiceCount
+                ? CreateAncientChoiceGroup(data)
+                : CreateRewardButton(data);
+            _itemContainer.AddChild(rewardControl);
             _remainingRewards++;
             UpdateProceedButton();
         }
@@ -640,12 +674,147 @@ namespace StS2AP.UI
         }
 
         /// <summary>
+        /// Creates three visually linked relic buttons which collectively represent one AP item.
+        /// </summary>
+        private static Control CreateAncientChoiceGroup(ArchipelagoRewardData data)
+        {
+            var choices = data.LinkedRelicChoices;
+            if (choices == null || choices.Count != AncientRelicPool.ChoiceCount)
+                return CreateRewardButton(data);
+
+            var chainTexture = GetLinkedRewardChainTexture();
+            const float choiceSeparation = 10f;
+            var group = new Control
+            {
+                Name = $"AncientChoice_{data.Index}",
+                CustomMinimumSize = new Vector2(0, choices.Count * ButtonHeight + (choices.Count - 1) * choiceSeparation),
+                SizeFlagsHorizontal = Control.SizeFlags.Fill
+            };
+            var buttonContainer = new VBoxContainer();
+            buttonContainer.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+            buttonContainer.AddThemeConstantOverride("separation", (int)choiceSeparation);
+            group.AddChild(buttonContainer);
+
+            var buttons = new List<Button>(choices.Count);
+            var resolving = false;
+
+            void ResolveChoice(RelicModel relic)
+            {
+                if (resolving)
+                    return;
+
+                resolving = true;
+                foreach (var button in buttons)
+                    button.Disabled = true;
+
+                GameUtility.TryGrantRelic(relic).ContinueWith(task =>
+                {
+                    var granted = task.Status == TaskStatus.RanToCompletion && task.Result;
+                    var failure = task.Exception?.InnerException?.Message ?? task.Exception?.Message;
+
+                    Callable.From(() =>
+                    {
+                        if (granted)
+                            data.OnClaimed?.Invoke();
+
+                        if (!GodotObject.IsInstanceValid(group))
+                            return;
+
+                        if (!granted)
+                        {
+                            if (!string.IsNullOrEmpty(failure))
+                                LogUtility.Error($"Ancient relic choice failed for '{relic.Id}': {failure}");
+
+                            resolving = false;
+                            foreach (var button in buttons.Where(button => GodotObject.IsInstanceValid(button)))
+                                button.Disabled = false;
+                            return;
+                        }
+
+                        group.QueueFree();
+                        _remainingRewards--;
+                        UpdateProceedButton();
+                        ArchipelagoTopBarUI.SetCount(ArchipelagoClient.Progress.UnusedItemCount);
+
+                        if (_remainingRewards <= 0)
+                            Hide();
+                    }).CallDeferred();
+                });
+            }
+
+            for (var index = 0; index < choices.Count; index++)
+            {
+                var relic = choices[index];
+                var choiceData = new ArchipelagoRewardData
+                {
+                    Index = data.Index,
+                    ItemOriginID = data.ItemOriginID,
+                    ItemName = relic.Title.GetRawText(),
+                    SenderName = data.SenderName,
+                    FoundLocation = data.FoundLocation,
+                    IconPath = relic.IconPath
+                };
+
+                var button = CreateRewardButton(choiceData, _ => ResolveChoice(relic));
+                buttons.Add(button);
+                buttonContainer.AddChild(button);
+            }
+
+            if (chainTexture != null)
+            {
+                for (var index = 0; index < choices.Count - 1; index++)
+                {
+                    var chainTop = (index + 1) * ButtonHeight + index * choiceSeparation - 20f;
+                    var chain = new TextureRect
+                    {
+                        Texture = chainTexture,
+                        ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+                        StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+                        MouseFilter = Control.MouseFilterEnum.Ignore,
+                        ZIndex = 1
+                    };
+                    chain.SetAnchorsPreset(Control.LayoutPreset.TopRight);
+                    chain.OffsetLeft = -55f;
+                    chain.OffsetTop = chainTop;
+                    chain.OffsetRight = -5f;
+                    chain.OffsetBottom = chainTop + 50f;
+                    group.AddChild(chain);
+                }
+            }
+
+            return group;
+        }
+
+        private static Texture2D? GetLinkedRewardChainTexture()
+        {
+            if (_linkedRewardChainTextureResolved)
+                return _linkedRewardChainTexture;
+
+            _linkedRewardChainTextureResolved = true;
+            try
+            {
+                var chainPath = ChainImagePathProperty?.GetValue(null) as string;
+                if (!string.IsNullOrWhiteSpace(chainPath))
+                    _linkedRewardChainTexture = PreloadManager.Cache.GetCompressedTexture2D(chainPath);
+                else
+                    LogUtility.Warn("Native linked-reward chain asset path was unavailable; using spacing-only Ancient choices");
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Warn($"Failed to load native linked-reward chain asset: {ex.Message}");
+            }
+
+            return _linkedRewardChainTexture;
+        }
+
+        /// <summary>
         /// Creates a single reward row button for the given reward data.
         /// The button shows an icon on the left, the item name prominently,
         /// and the sender's name in smaller text below.
         /// </summary>
         /// <param name="data">The reward entry to represent.</param>
-        private static Button CreateRewardButton(ArchipelagoRewardData data)
+        /// <param name="customPressed">Optional group-owned click handler.</param>
+        private static Button CreateRewardButton(ArchipelagoRewardData data, Action<Button>? customPressed = null)
         {
             var btn = new Button { CustomMinimumSize = new Vector2(0, ButtonHeight) };
 
@@ -710,6 +879,12 @@ namespace StS2AP.UI
             {
                 var senderLabel = CreateTextLabel($"from {data.SenderName} ({data.FoundLocation})", RewardSenderFontSize, new Color(0.7f, 0.85f, 1f));
                 vbox.AddChild(senderLabel);
+            }
+
+            if (customPressed != null)
+            {
+                btn.Pressed += () => customPressed(btn);
+                return btn;
             }
 
             // Grant the item and dismiss the button on click
@@ -836,6 +1011,9 @@ namespace StS2AP.UI
                 case APItem.EliteGold:    return async () => { await GameUtility.GrantGold(40); return true; };
                 case APItem.BossGold:     return async () => { await GameUtility.GrantGold(100); return true; };
                 case APItem.Relic:        return async () => { await GameUtility.GrantRelic(); return true; };
+                // Ancient choices require the received-item index and are built in ShowRewards().
+                // Keep the obsolete AddReward(ItemInfo) path from consuming one as display-only.
+                case APItem.AncientUnlock: return () => Task.FromResult(false);
                     // Need to do potion lookup before granting; see ShowRewards
                 case APItem.Potion:       return async () => {  return false; };
                 default:

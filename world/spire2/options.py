@@ -124,6 +124,18 @@ class NeowSanity(Toggle):
     display_name = "Neow Sanity"
     default = 0
 
+class AncientChaos(Choice):
+    """Controls how Ancient Unlock items grant Ancient relics.
+
+    Balanced progressively enables the normal start-of-act Ancient choices. Act Ordered
+    grants linked AP reward choices from Act 2, then Act 3. Full Pool grants each linked
+    AP reward choice from the combined Act 2 and Act 3 pool."""
+    display_name = "Ancient Chaos"
+    option_balanced = 0
+    option_act_ordered = 1
+    option_full_pool = 2
+    default = 0
+
 class IncludeFloorChecks(Toggle):
     """Whether to include reaching new floors as a location.  Adds small amounts of gold as items."""
     display_name = "Include Floor Checks"
@@ -540,6 +552,7 @@ class Spire2Options(PerGameCommonOptions):
     # trap_chance: TrapChance
     # trap_weights: TrapWeights
     neow_sanity: NeowSanity
+    ancient_chaos: AncientChaos
     campfire_sanity: CampfireSanity
     gold_sanity: GoldSanity
     potion_sanity: PotionSanity

@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Extensions;
+using StS2AP.Models;
 using StS2AP.Utils;
 using System;
 using System.Collections.Generic;
@@ -20,14 +21,19 @@ namespace StS2AP.Patches
         [HarmonyPostfix]
         public static void ReplaceAncientOptions(AncientEventModel __instance, ref IReadOnlyList<EventOption> __result)
         {
-            List<EventOption> newResult = new List<EventOption>();
             var player = GameUtility.CurrentPlayer;
+            if (player == null)
+                return;
+
+            var currentAct = player.RunState.CurrentActIndex + 1;
             var maxAct = ArchipelagoClient.Progress.MaxAncientUnlock(player?.Character.GetCharacterOffset() ?? -1);
-            if (maxAct == null || player == null || maxAct < (player.RunState.CurrentActIndex + 1))
+            var ancientChaos = ArchipelagoClient.Settings?.AncientChaos ?? AncientChaosMode.Balanced;
+            var useProceedOnly = maxAct < currentAct ||
+                                 (ancientChaos != AncientChaosMode.Balanced && currentAct is 2 or 3);
+            if (useProceedOnly)
             {
-                LogUtility.Info($"Not enough Ancient Unlocks for Act; replacing with fake options maxAct {maxAct} current act {(player?.RunState.CurrentActIndex ?? 0) + 1}");
-                newResult.Add(CreateFakeOption(__instance));
-                __result = newResult;
+                LogUtility.Info($"Replacing Ancient choices with Proceed; AncientChaos {ancientChaos} maxAct {maxAct} current act {currentAct}");
+                __result = new List<EventOption> { CreateFakeOption(__instance) };
             }
         }
 

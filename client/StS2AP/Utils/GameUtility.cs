@@ -174,10 +174,20 @@ namespace StS2AP.Utils
         /// <param name="relicModel">The pre-assigned relic model to grant.</param>
         public static async Task GrantRelic(RelicModel relicModel)
         {
+            await TryGrantRelic(relicModel);
+        }
+
+        /// <summary>
+        /// Attempts to grant a specific pre-assigned relic and reports whether it was actually obtained.
+        /// Reward UIs must only consume their AP item when this returns true.
+        /// </summary>
+        /// <param name="relicModel">The pre-assigned relic model to grant.</param>
+        public static async Task<bool> TryGrantRelic(RelicModel relicModel)
+        {
             if (CurrentPlayer == null)
             {
                 LogUtility.Warn("Cannot grant relic: no active player (not in a run)");
-                return;
+                return false;
             }
 
             try
@@ -185,10 +195,12 @@ namespace StS2AP.Utils
                 var relic = relicModel.ToMutable();
                 await RelicCmd.Obtain(relic, CurrentPlayer);
                 LogUtility.Success($"Granted pre-assigned relic '{relic.Id}' to player");
+                return true;
             }
             catch (Exception ex)
             {
                 LogUtility.Error($"Failed to grant relic: {ex.Message}");
+                return false;
             }
         }
 

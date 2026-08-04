@@ -31,6 +31,8 @@ namespace StS2AP.Models
         public int BossRewardsDistributed { get; set; }
         [JsonPropertyName("relic_assignments")]
         public Dictionary<int, SerializableRelic> RelicAssignments { get; set; } = new Dictionary<int, SerializableRelic>();
+        [JsonPropertyName("ancient_relic_choice_assignments")]
+        public Dictionary<int, List<SerializableRelic>> AncientRelicChoiceAssignments { get; set; } = new Dictionary<int, List<SerializableRelic>>();
         [JsonPropertyName("card_assignments")]
         public Dictionary<int, SerializableReward> CardAssignments { get; set; } = new Dictionary<int, SerializableReward>();
         [JsonPropertyName("card_models")]

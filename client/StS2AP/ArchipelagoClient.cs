@@ -755,8 +755,21 @@ namespace StS2AP
                     HandleThreshholdItem(item, Progress.ProgressiveRests, "Progressive Rests");
                     break;
                 case APItem.AncientUnlock:
-                    HandleThreshholdItem(item, Progress.AncientUnlocks, "Progressive Rests");
+                {
+                    HandleThreshholdItem(item, Progress.AncientUnlocks, "Ancient Unlocks");
+
+                    if (Settings.AncientChaos != AncientChaosMode.Balanced)
+                    {
+                        // NeowSanity's first progressive unlock still controls the normal Act 1 Neow reward.
+                        // Every Act 2/3 unlock becomes a per-run, linked Ancient choice in the AP reward menu.
+                        var characterOffset = item.GetCharacterOffset();
+                        Progress.AncientUnlocks.TryGetValue(characterOffset, out var unlockCount);
+                        if (!Settings.NeowSanity || unlockCount > 1)
+                            Progress.AllReceivedItems.Add(new IndexedItemInfo(item, index));
+                    }
+
                     break;
+                }
                 // Gold is condensed into a single reward pool
                 case APItem.OneGold:
                 case APItem.FiveGold:
@@ -1034,6 +1047,8 @@ namespace StS2AP
 
             if (slotData.ContainsKey("neow_sanity"))
                 settings.NeowSanity = Convert.ToInt32(slotData["neow_sanity"]) != 0;
+
+            settings.AncientChaos = (AncientChaosMode)Convert.ToInt32(slotData["ancient_chaos"]);
 
             if (slotData.ContainsKey("campfire_sanity"))
                 settings.CampfireSanity = Convert.ToInt32(slotData["campfire_sanity"]) != 0;

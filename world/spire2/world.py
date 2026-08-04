@@ -38,7 +38,7 @@ class SlayTheSpire2World(World):
     web = SlayTheSpire2Web()
     options_dataclass = Spire2Options
     options: Spire2Options
-    mod_compat_version = "0.5.3"
+    mod_compat_version = "0.5.5"
     origin_region_name = "Neow's Room"
 
     # Build the final Item Table
@@ -672,6 +672,7 @@ class SlayTheSpire2World(World):
             "shuffle_all_cards",
             "include_floor_checks",
             "neow_sanity",
+            "ancient_chaos",
             "shop_sanity",
             "potion_sanity",
             "gold_sanity",
@@ -712,6 +713,7 @@ class SlayTheSpire2World(World):
             self.options.shop_sanity.value = 0
         self.options.include_floor_checks.value = slot_data['include_floor_checks']
         self.options.neow_sanity.value = slot_data['neow_sanity']
+        self.options.ancient_chaos.value = slot_data['ancient_chaos']
         self.options.campfire_sanity.value = slot_data['campfire_sanity']
         self.options.shop_sanity.value = slot_data['shop_sanity']
         self.options.gold_sanity.value = slot_data['gold_sanity']

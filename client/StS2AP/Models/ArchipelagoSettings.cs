@@ -8,6 +8,13 @@ using System.Threading.Tasks;
 
 namespace StS2AP.Models
 {
+    public enum AncientChaosMode
+    {
+        Balanced = 0,
+        ActOrdered = 1,
+        FullPool = 2,
+    }
+
     /// <summary>
     /// The settings that a player has configured for their Archipelago Slot.
     /// 
@@ -48,6 +55,13 @@ namespace StS2AP.Models
         public IDictionary<string, CharacterConfig> UnrecognizedCharacters { get; set; } = new ConcurrentDictionary<string, CharacterConfig>(StringComparer.InvariantCultureIgnoreCase);
 
         public bool NeowSanity { get; set; }
+
+        /// <summary>
+        /// Controls whether Ancient Unlocks use the normal start-of-act rewards, ordered Act 2/3
+        /// AP reward pools, or the combined Act 2/3 AP reward pool.
+        /// </summary>
+        public AncientChaosMode AncientChaos { get; set; }
+
         public bool CampfireSanity { get; set; }
         public bool GoldSanity { get; set; }
         public bool PotionSanity { get; set; }
