@@ -255,6 +255,56 @@ namespace StS2AP.Utils
         }
 
         /// <summary>
+        /// Adds a combat-local copy of a selected AP reward card to the draw pile.
+        /// Does nothing when the player is not currently in combat.
+        /// </summary>
+        private static async Task AddCardRewardToCombatDrawPile(CardModel selectedCard, Player player)
+        {
+            var combatState = player.Creature.CombatState;
+            if (combatState == null)
+            {
+                return;
+            }
+
+            try
+            {
+                var combatCard = combatState.CreateCard(selectedCard.CanonicalInstance, player);
+                for (int level = 0; level < selectedCard.CurrentUpgradeLevel; level++)
+                {
+                    CardCmd.Upgrade(combatCard, CardPreviewStyle.None);
+                }
+
+                var result = await CardPileCmd.AddGeneratedCardToCombat(
+                    combatCard,
+                    PileType.Draw,
+                    player,
+                    CardPilePosition.Random
+                );
+
+                if (result.success)
+                {
+                    LogUtility.Success(
+                        $"Added selected AP reward card '{selectedCard.Id}' to the combat draw pile"
+                    );
+                }
+                else
+                {
+                    LogUtility.Warn(
+                        $"Could not add selected AP reward card '{selectedCard.Id}' to the combat draw pile"
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // The card has already been added to the permanent deck. Do not make the AP
+                // reward claimable again if only the additional combat copy fails.
+                LogUtility.Warn(
+                    $"Failed to add selected AP reward card '{selectedCard.Id}' to the combat draw pile: {ex.Message}"
+                );
+            }
+        }
+
+        /// <summary>
         /// Opens the game's standard card selection screen so the player can pick a card
         /// from a pre-assigned (or freshly generated) card reward pool.
         /// </summary>
@@ -279,7 +329,8 @@ namespace StS2AP.Utils
                     return false;
                 }
 
-                // Track how many cards are in the reward before selection
+                // Track the reward contents before selection so we can identify the chosen card.
+                var cardsBeforeSelection = reward.Cards.ToList();
                 int cardCountBefore = reward.Cards.Count();
 
                 var paelsWing = CurrentPlayer.Relics.OfType<PaelsWing>().FirstOrDefault();
@@ -314,12 +365,29 @@ namespace StS2AP.Utils
                 // If the card count decreased, a card was picked (added to deck)
                 int cardCountAfter = reward.Cards.Count();
                 bool cardWasPicked = cardCountAfter < cardCountBefore;
+                CardModel? selectedCard = cardWasPicked
+                    ? cardsBeforeSelection.FirstOrDefault(
+                        card => !reward.Cards.Any(remaining => ReferenceEquals(card, remaining))
+                    )
+                    : null;
                 bool wasSacrificed = (paelsWing?.RewardsSacrificed ?? 0) > sacrificesBefore;
                 bool rewardConsumed = cardWasPicked || wasSacrificed;
 
                 if (rewardConsumed)
                 {
                     ArchipelagoClient.Progress.CardAssignments.Remove(index);
+
+                    if (selectedCard != null)
+                    {
+                        await AddCardRewardToCombatDrawPile(selectedCard, CurrentPlayer);
+                    }
+                    else if (cardWasPicked)
+                    {
+                        LogUtility.Warn(
+                            "A card reward was selected, but the selected card model could not be identified"
+                        );
+                    }
+
                     LogUtility.Success(cardWasPicked
                         ? "Card reward selection completed — card added to deck"
                         : "Card reward selection completed — sacrificed via Pael's Wing");
