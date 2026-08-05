@@ -563,7 +563,7 @@ namespace StS2AP.Models
                 AncientRelicChoiceAssignments = (saveData.AncientRelicChoiceAssignments ?? new Dictionary<int, List<SerializableRelic>>()).Select(kv =>
                     new KeyValuePair<int, List<RelicModel>>(
                         kv.Key,
-                        kv.Value.Select(serializedRelic => RelicModel.FromSerializable(serializedRelic)).ToList()
+                        kv.Value.Select(serializedRelic => RelicModel.FromSerializable(serializedRelic).CanonicalInstance).ToList()
                     )
                 ).ToDictionary(),
                 PotionAssignments = saveData.PotionAssignments.Select((KeyValuePair<int, SerializablePotion> kv) => new KeyValuePair<int, PotionModel>(kv.Key, PotionModel.FromSerializable(kv.Value).CanonicalInstance)).ToDictionary(),

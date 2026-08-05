@@ -2,7 +2,9 @@ using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Nodes.HoverTips;
 using MegaCrit.Sts2.Core.Nodes.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Screens.Capstones;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
@@ -77,6 +79,9 @@ namespace StS2AP.UI
         /// </summary>
         public IReadOnlyList<RelicModel>? LinkedRelicChoices { get; set; }
 
+        /// <summary>The relic whose native hover tips should be shown for this reward row.</summary>
+        public RelicModel? TooltipRelic { get; set; }
+
         /// <summary>Optional sync callback invoked after the grant completes (e.g. for cleanup)</summary>
         public Action? OnClaimed { get; set; }
     }
@@ -146,6 +151,11 @@ namespace StS2AP.UI
         private const int RewardSenderFontSize = 16;
         private const float IconSlotSize      = 48f;
         private const float ButtonHeight      = 74f;
+        private const float AncientChainSize  = 72f;
+        private static readonly Color AncientButtonNormalColor = new(0.78f, 0.48f, 0.95f);
+        private static readonly Color AncientButtonHoverColor = new(0.95f, 0.62f, 1f);
+        private static readonly Color AncientButtonPressedColor = new(0.65f, 0.34f, 0.82f);
+        private static readonly Color AncientButtonDisabledColor = new(0.45f, 0.30f, 0.55f, 0.8f);
 
         private static int _remainingRewards = 0;
 
@@ -250,6 +260,7 @@ namespace StS2AP.UI
                     {
                         data.ItemName = relic.Title.GetRawText();
                         data.IconPath = relic.IconPath;
+                        data.TooltipRelic = relic;
                         data.GrantAction = () => GameUtility.TryGrantRelic(relic);
                     }
                 }
@@ -752,10 +763,11 @@ namespace StS2AP.UI
                     ItemName = relic.Title.GetRawText(),
                     SenderName = data.SenderName,
                     FoundLocation = data.FoundLocation,
-                    IconPath = relic.IconPath
+                    IconPath = relic.IconPath,
+                    TooltipRelic = relic
                 };
 
-                var button = CreateRewardButton(choiceData, _ => ResolveChoice(relic));
+                var button = CreateRewardButton(choiceData, _ => ResolveChoice(relic), isAncientChoice: true);
                 buttons.Add(button);
                 buttonContainer.AddChild(button);
             }
@@ -764,7 +776,7 @@ namespace StS2AP.UI
             {
                 for (var index = 0; index < choices.Count - 1; index++)
                 {
-                    var chainTop = (index + 1) * ButtonHeight + index * choiceSeparation - 20f;
+                    var chainCenterY = (index + 1) * ButtonHeight + index * choiceSeparation + choiceSeparation / 2f;
                     var chain = new TextureRect
                     {
                         Texture = chainTexture,
@@ -773,11 +785,11 @@ namespace StS2AP.UI
                         MouseFilter = Control.MouseFilterEnum.Ignore,
                         ZIndex = 1
                     };
-                    chain.SetAnchorsPreset(Control.LayoutPreset.TopRight);
-                    chain.OffsetLeft = -55f;
-                    chain.OffsetTop = chainTop;
-                    chain.OffsetRight = -5f;
-                    chain.OffsetBottom = chainTop + 50f;
+                    chain.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
+                    chain.OffsetLeft = -AncientChainSize / 2f;
+                    chain.OffsetTop = chainCenterY - AncientChainSize / 2f;
+                    chain.OffsetRight = AncientChainSize / 2f;
+                    chain.OffsetBottom = chainCenterY + AncientChainSize / 2f;
                     group.AddChild(chain);
                 }
             }
@@ -814,19 +826,35 @@ namespace StS2AP.UI
         /// </summary>
         /// <param name="data">The reward entry to represent.</param>
         /// <param name="customPressed">Optional group-owned click handler.</param>
-        private static Button CreateRewardButton(ArchipelagoRewardData data, Action<Button>? customPressed = null)
+        /// <param name="isAncientChoice">Whether to apply the Ancient-specific button tint.</param>
+        private static Button CreateRewardButton(
+            ArchipelagoRewardData data,
+            Action<Button>? customPressed = null,
+            bool isAncientChoice = false)
         {
             var btn = new Button { CustomMinimumSize = new Vector2(0, ButtonHeight) };
 
             // Apply the in-game reward button texture as the button style
             try
             {
-                var normalStyle = new StyleBoxTexture { Texture = GD.Load<Texture2D>(ItemBtnPath) };
-                var hoverStyle  = new StyleBoxTexture { Texture = GD.Load<Texture2D>(ItemBtnPath) };
+                var buttonTexture = GD.Load<Texture2D>(ItemBtnPath);
+                var normalColor = isAncientChoice ? AncientButtonNormalColor : Colors.White;
+                var hoverColor = isAncientChoice ? AncientButtonHoverColor : Colors.White;
+                var pressedColor = isAncientChoice ? AncientButtonPressedColor : Colors.White;
+                var disabledColor = isAncientChoice ? AncientButtonDisabledColor : Colors.White;
+
+                StyleBoxTexture CreateButtonStyle(Color color) => new()
+                {
+                    Texture = buttonTexture,
+                    ModulateColor = color
+                };
+
+                var normalStyle = CreateButtonStyle(normalColor);
                 btn.AddThemeStyleboxOverride("normal",  normalStyle);
-                btn.AddThemeStyleboxOverride("hover",   hoverStyle);
-                btn.AddThemeStyleboxOverride("pressed", normalStyle);
+                btn.AddThemeStyleboxOverride("hover",   CreateButtonStyle(hoverColor));
+                btn.AddThemeStyleboxOverride("pressed", CreateButtonStyle(pressedColor));
                 btn.AddThemeStyleboxOverride("focus",   normalStyle);
+                btn.AddThemeStyleboxOverride("disabled", CreateButtonStyle(disabledColor));
             }
             catch (Exception ex)
             {
@@ -880,6 +908,9 @@ namespace StS2AP.UI
                 var senderLabel = CreateTextLabel($"from {data.SenderName} ({data.FoundLocation})", RewardSenderFontSize, new Color(0.7f, 0.85f, 1f));
                 vbox.AddChild(senderLabel);
             }
+
+            if (data.TooltipRelic != null)
+                AttachRelicHoverTips(btn, data.TooltipRelic);
 
             if (customPressed != null)
             {
@@ -944,6 +975,82 @@ namespace StS2AP.UI
             };
 
             return btn;
+        }
+
+        /// <summary>
+        /// Shows the game's original relic description and any extra hover tips while a reward
+        /// button is hovered or keyboard-focused.
+        /// </summary>
+        private static void AttachRelicHoverTips(Button button, RelicModel relic)
+        {
+            var isHovered = false;
+            var isFocused = false;
+            var isTooltipVisible = false;
+
+            void ShowTooltip()
+            {
+                if (isTooltipVisible)
+                    return;
+
+                try
+                {
+                    var tipSet = NHoverTipSet.CreateAndShow(button, relic.HoverTips, HoverTipAlignment.Left);
+                    isTooltipVisible = tipSet != null;
+                }
+                catch (Exception ex)
+                {
+                    LogUtility.Warn($"Failed to show relic tooltip for '{relic.Id}': {ex.Message}");
+                }
+            }
+
+            void HideTooltip()
+            {
+                if (!isTooltipVisible)
+                    return;
+
+                try
+                {
+                    NHoverTipSet.Remove(button);
+                }
+                catch (Exception ex)
+                {
+                    LogUtility.Warn($"Failed to hide relic tooltip for '{relic.Id}': {ex.Message}");
+                }
+                finally
+                {
+                    isTooltipVisible = false;
+                }
+            }
+
+            void RefreshTooltip()
+            {
+                if (isHovered || isFocused)
+                    ShowTooltip();
+                else
+                    HideTooltip();
+            }
+
+            button.MouseEntered += () =>
+            {
+                isHovered = true;
+                RefreshTooltip();
+            };
+            button.MouseExited += () =>
+            {
+                isHovered = false;
+                RefreshTooltip();
+            };
+            button.FocusEntered += () =>
+            {
+                isFocused = true;
+                RefreshTooltip();
+            };
+            button.FocusExited += () =>
+            {
+                isFocused = false;
+                RefreshTooltip();
+            };
+            button.Pressed += HideTooltip;
         }
 
         /// <summary>

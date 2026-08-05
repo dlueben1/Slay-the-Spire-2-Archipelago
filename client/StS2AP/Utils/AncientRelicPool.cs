@@ -1,4 +1,3 @@
-using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using System.Security.Cryptography;
@@ -43,7 +42,7 @@ namespace StS2AP.Utils
                     {
                         var extractedForAncient = 0;
                         foreach (var relic in ancient.AllPossibleOptions
-                                                      .Select(option => option.Relic)
+                                                      .Select(option => option.Relic?.CanonicalInstance)
                                                       .OfType<RelicModel>())
                         {
                             extractedForAncient++;
@@ -77,7 +76,6 @@ namespace StS2AP.Utils
             var choices = candidatesById.Values
                 .OrderBy(relic => StableChoiceKey(runSeed, itemIndex, relic.Id))
                 .Take(ChoiceCount)
-                .Select(relic => relic.ToMutable())
                 .ToList();
 
             LogUtility.Info(
@@ -91,16 +89,7 @@ namespace StS2AP.Utils
 
         private static string ResolveRunSeed(Player player)
         {
-            var runState = player.RunState;
-            foreach (var memberName in new[] { "RunSeed", "Seed", "Id" })
-            {
-                var value = AccessTools.Property(runState.GetType(), memberName)?.GetValue(runState) ??
-                            AccessTools.Field(runState.GetType(), memberName)?.GetValue(runState);
-                if (value != null)
-                    return value.ToString() ?? string.Empty;
-            }
-
-            return GameUtility.CurrentConfig?.Seed ?? ArchipelagoClient.Seed ?? "unknown";
+            return player.RunState.Rng.StringSeed;
         }
 
         private static string StableChoiceKey(string runSeed, int itemIndex, ModelId relicId)
