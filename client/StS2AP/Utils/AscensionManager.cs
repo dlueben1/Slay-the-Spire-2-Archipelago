@@ -65,6 +65,7 @@ namespace StS2AP.Utils
         {
             ConfiguredAscension.Clear();
             CurrentAscension.Clear();
+            _hoverTip = null;
         }
 
         private void UpdateHoverTip()
