@@ -10,6 +10,8 @@ namespace StS2AP.Utils;
 /// </summary>
 public static class RelicUtility
 {
+    private const int MaxRelicPullAttempts = 15;
+
     /// <summary>
     /// Relics whose effects do not work correctly with Archipelago's custom reward flow.
     /// Add new incompatible relic model types here.
@@ -25,9 +27,7 @@ public static class RelicUtility
     /// </summary>
     public static RelicModel PullNextAllowedRelic(Player player)
     {
-        var skippedTypes = new HashSet<Type>();
-
-        while (true)
+        for (int attempt = 0; attempt < MaxRelicPullAttempts; attempt++)
         {
             var relic = RelicFactory.PullNextRelicFromFront(player);
             if (!BlacklistedRelicTypes.Contains(relic.GetType()))
@@ -38,13 +38,10 @@ public static class RelicUtility
             LogUtility.Info(
                 $"Skipped blacklisted relic '{relic.Id}' while assigning an Archipelago relic reward"
             );
-
-            if (!skippedTypes.Add(relic.GetType()))
-            {
-                throw new InvalidOperationException(
-                    $"RelicFactory returned blacklisted relic type '{relic.GetType().Name}' more than once"
-                );
-            }
         }
+
+        throw new InvalidOperationException(
+            $"RelicFactory did not return an allowed relic after {MaxRelicPullAttempts} attempts"
+        );
     }
 }
