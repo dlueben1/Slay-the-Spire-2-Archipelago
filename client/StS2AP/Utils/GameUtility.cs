@@ -5,7 +5,6 @@ using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.DevConsole.ConsoleCommands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
-using MegaCrit.Sts2.Core.Factories;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
@@ -157,7 +156,7 @@ namespace StS2AP.Utils
 
             try
             {
-                var relic = RelicFactory.PullNextRelicFromFront(CurrentPlayer).ToMutable();
+                var relic = RelicUtility.PullNextAllowedRelic(CurrentPlayer).ToMutable();
                 await RelicCmd.Obtain(relic, CurrentPlayer);
                 LogUtility.Success($"Granted relic '{relic.Id}' to player");
             }
