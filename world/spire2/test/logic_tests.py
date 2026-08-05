@@ -160,7 +160,7 @@ class LogicTestBase(Spire2TestBase):
         for _ in range(power.relic):
             state.collect(relic)
 
-        ancient_unlock = self.get_item_by_name(f"{self.prefix} Ancient Unlock")
+        ancient_unlock = self.get_item_by_name(f"{self.prefix} Progressive Ancient")
         for _ in range(power.ancient):
             state.collect(ancient_unlock)
 

@@ -108,7 +108,7 @@ class TestAscensionDowns(Spire2TestBase):
 
     def test_high_ascension_downs_shuffled(self):
         for item in self.world.multiworld.itempool:
-            if 'Scarcity' in item.name:
+            if item.name == "Silent Disable Scarcity":
                 break
         else:
             raise Exception("Failed to find ascension down")
@@ -124,7 +124,7 @@ class TestAscensionDownNumbers(Spire2TestBase):
 
     def test_has_double_boss(self):
         for item in self.world.multiworld.itempool:
-            if 'Double Boss' in item.name:
+            if item.name == "Silent Disable Double Boss":
                 break
         else:
             raise Exception("Failed to find Double Boss")

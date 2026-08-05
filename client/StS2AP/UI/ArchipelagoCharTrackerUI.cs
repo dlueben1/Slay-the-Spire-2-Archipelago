@@ -97,7 +97,7 @@ namespace StS2AP.UI
         public static ItemCountLabel? RelicRewards { get; private set; }
 
         /// <summary>Tracks the number of Ancient Rewards received from the multiworld.</summary>
-        public static ItemCountLabel? AncientRewards { get; private set; }
+        public static ItemCountLabel? ProgressiveAncients { get; private set; }
 
         /// <summary>Tracks the number of Potion Rewards received from the multiworld.</summary>
         public static ItemCountLabel? PotionRewards { get; private set; }
@@ -238,7 +238,7 @@ namespace StS2AP.UI
                 CardRewards          = null;
                 RareCardRewards      = null;
                 RelicRewards         = null;
-                AncientRewards = null;
+                ProgressiveAncients = null;
                 PotionRewards        = null;
                 GoldRewards          = null;
                 ProgressiveRestLabel = null;
@@ -522,8 +522,8 @@ namespace StS2AP.UI
             AddItemRow(RelicRewards);
 
             // Ancients Counter
-            AncientRewards = new ItemCountLabel("res://images/relics/tezcataras_candle.png", "0", "AP_REWARD_ANCIENT_REWARDS");
-            AddItemRow(AncientRewards);
+            ProgressiveAncients = new ItemCountLabel("res://images/relics/tezcataras_candle.png", "0", "AP_REWARD_PROGRESSIVE_ANCIENTS");
+            AddItemRow(ProgressiveAncients);
     
             // Potions Counter
             PotionRewards = new ItemCountLabel("res://images/potions/glowwater_potion.png", "0", "AP_REWARD_POTION_REWARDS");

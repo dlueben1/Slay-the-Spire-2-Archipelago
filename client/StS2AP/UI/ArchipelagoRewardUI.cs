@@ -281,7 +281,7 @@ namespace StS2AP.UI
                     }
                 }
 
-                if (rawId == APItem.AncientUnlock)
+                if (rawId == APItem.ProgressiveAncient)
                 {
                     var choices = ArchipelagoClient.Progress.GetOrAssignAncientRelicChoices(i.Index, currentPlayer);
                     if (choices.Count == AncientRelicPool.ChoiceCount)
@@ -1164,7 +1164,7 @@ namespace StS2AP.UI
                 case APItem.Relic:        return async () => { await GameUtility.GrantRelic(); return true; };
                 // Ancient choices require the received-item index and are built in ShowRewards().
                 // Keep the obsolete AddReward(ItemInfo) path from consuming one as display-only.
-                case APItem.AncientUnlock: return () => Task.FromResult(false);
+                case APItem.ProgressiveAncient: return () => Task.FromResult(false);
                     // Need to do potion lookup before granting; see ShowRewards
                 case APItem.Potion:       return async () => {  return false; };
                 default:
@@ -1197,7 +1197,7 @@ namespace StS2AP.UI
                     return IconCard;
 
                 case APItem.Relic:
-                case APItem.AncientUnlock:
+                case APItem.ProgressiveAncient:
                     return IconRelic;
 
 

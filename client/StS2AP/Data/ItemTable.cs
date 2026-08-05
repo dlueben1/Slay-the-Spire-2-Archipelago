@@ -15,7 +15,7 @@ namespace StS2AP.Data
             CardReward = 1,
             RareCardReward = 2,
             Relic = 3,
-            AncientUnlock = 4,
+            ProgressiveAncient = 4,
             OneGold = 5,
             FiveGold = 6,
             ProgressiveRest = 7,
@@ -68,7 +68,7 @@ namespace StS2AP.Data
             { 1, "Card Reward" },
             { 2, "Rare Card Reward" },
             { 3, "Relic" },
-            { 4, "Ancient Unlock" },
+            { 4, "Progressive Ancient" },
             { 5, "One Gold" },
             { 6, "Five Gold" },
             { 7, "Progressive Rest" },
@@ -83,16 +83,16 @@ namespace StS2AP.Data
             { 16, "Elite Gold" },
             { 17, "Boss Gold" },
             { 18, "Potion" },
-            { 19, "Swarming Elites" },
-            { 20, "Weary Traveler" },
-            { 21, "Poverty" },
-            { 22, "Tight Belt" },
-            { 23, "Ascender's Bane" },
-            { 24, "Inflation" },
-            { 25, "Scarcity" },
-            { 26, "Tough Enemies" },
-            { 27, "Deadly Enemies" },
-            { 28, "Double Boss" },
+            { 19, "Disable Swarming Elites" },
+            { 20, "Disable Weary Traveler" },
+            { 21, "Disable Poverty" },
+            { 22, "Disable Tight Belt" },
+            { 23, "Disable Ascender's Bane" },
+            { 24, "Disable Inflation" },
+            { 25, "Disable Scarcity" },
+            { 26, "Disable Tough Enemies" },
+            { 27, "Disable Deadly Enemies" },
+            { 28, "Disable Double Boss" },
             { 500, "Free Attack" },
             { 501, "Free Power" },
             { 502, "Free Skill" },
@@ -131,7 +131,7 @@ namespace StS2AP.Data
               case APItem.RareCardReward:
               case APItem.Relic:
                     return true;
-              case APItem.AncientUnlock:
+              case APItem.ProgressiveAncient:
                     // pickup is true if Anytime since Relics are in AP reward menu, false otherwise
                     return (ArchipelagoClient.Settings?.AncientRelicLocation ?? AncientRelicLocation.Anytime) == AncientRelicLocation.Anytime;
               case APItem.ProgressiveRest:

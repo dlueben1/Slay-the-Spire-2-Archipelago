@@ -747,23 +747,23 @@ namespace StS2AP
 
                     break;
                 }
-                // Progressive Smiths/Rests
+                // Progressive threshold items
                 case APItem.ProgressiveSmith:
                     HandleThreshholdItem(item, Progress.ProgressiveSmiths, "Progressive Smiths");
                     break;
                 case APItem.ProgressiveRest:
                     HandleThreshholdItem(item, Progress.ProgressiveRests, "Progressive Rests");
                     break;
-                case APItem.AncientUnlock:
+                case APItem.ProgressiveAncient:
                 {
-                    HandleThreshholdItem(item, Progress.AncientUnlocks, "Ancient Unlocks");
+                    HandleThreshholdItem(item, Progress.ProgressiveAncients, "Progressive Ancients");
 
                     if (Settings.AncientRelicLocation == AncientRelicLocation.Anytime)
                     {
                         // NeowSanity's first progressive unlock still controls the normal Act 1 Neow reward.
                         // Every Act 2/3 unlock becomes a per-run, linked Ancient choice in the AP reward menu.
                         var characterOffset = item.GetCharacterOffset();
-                        Progress.AncientUnlocks.TryGetValue(characterOffset, out var unlockCount);
+                        Progress.ProgressiveAncients.TryGetValue(characterOffset, out var unlockCount);
                         if (!Settings.NeowSanity || unlockCount > 1)
                             Progress.AllReceivedItems.Add(new IndexedItemInfo(item, index));
                     }

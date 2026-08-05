@@ -25,7 +25,9 @@ namespace StS2AP.Patches
                 return;
 
             var currentAct = player.RunState.CurrentActIndex + 1;
-            var maxAct = ArchipelagoClient.Progress.MaxAncientUnlock(player?.Character.GetCharacterOffset() ?? -1);
+            var maxAct = ArchipelagoClient.Progress.MaxProgressiveAncientLevel(
+                player.Character.GetCharacterOffset() ?? -1
+            );
             
             // use Anytime and balanced as our defaults
             var location = ArchipelagoClient.Settings?.AncientRelicLocation ?? AncientRelicLocation.Anytime;
@@ -83,7 +85,7 @@ namespace StS2AP.Patches
         }
 
         [HarmonyPrefix]
-        public static void SendAncientUnlockCheck()
+        public static void SendAncientCheck()
         {
 
             var player = GameUtility.CurrentPlayer;

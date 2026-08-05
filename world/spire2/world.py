@@ -537,7 +537,7 @@ class SlayTheSpire2World(World):
                 # elif ItemType.RARE_CARD_REWARD == data.type or ItemType.BOSS_RELIC == data.type:
                 elif ItemType.RARE_CARD_REWARD == data.type:
                     amount = 2
-                elif ItemType.ANCIENT_UNLOCK == data.type:
+                elif ItemType.PROGRESSIVE_ANCIENT == data.type:
                     amount = 2 if self.options.neow_sanity.value == 0 else 3
                 elif ItemType.RELIC == data.type:
                     amount = 10

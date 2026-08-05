@@ -119,7 +119,7 @@ namespace StS2AP.Models
         public Dictionary<int, List<RelicModel>> RelicChoiceAssignments { get; set; } = new Dictionary<int, List<RelicModel>>();
 
         /// <summary>
-        /// Maps an Ancient Unlock's AP item index to its three linked relic choices.
+        /// Maps a Progressive Ancient's AP item index to its three linked relic choices.
         /// The complete set is retained so reopening or loading the reward screen cannot reroll it.
         /// </summary>
         public Dictionary<int, List<RelicModel>> AncientRelicChoiceAssignments { get; set; } = new Dictionary<int, List<RelicModel>>();
@@ -178,7 +178,7 @@ namespace StS2AP.Models
         }
 
         /// <summary>
-        /// Returns the three Ancient relics assigned to an Ancient Unlock, creating the deterministic
+        /// Returns the three Ancient relics assigned to a Progressive Ancient, creating the deterministic
         /// assignment on first use. An empty list indicates that a valid three-relic pool could not be built.
         /// </summary>
         public IReadOnlyList<RelicModel> GetOrAssignAncientRelicChoices(int index, Player player)
@@ -198,14 +198,14 @@ namespace StS2AP.Models
                 .ToHashSet();
             
             // AllReceivedItems contains multiple reward types, so restrict it to this
-            // character's Ancient Unlocks. ArchipelagoClient adds these entries only for
+            // character's Progressive Ancients. ArchipelagoClient adds these entries only for
             // Anytime mode; with Neow Sanity enabled, it omits the first unlock because
             // that remains Neow's start-of-run reward. Sorting the remaining entries by
             // AP item index maps ordinal 0 to Act 2 and ordinal 1 to Act 3.
             var characterOffset = player.Character.GetCharacterOffset();
             var orderedAncientItemIndices = AllReceivedItems
                 .Where(item => item.Item.GetCharacterOffset() == characterOffset &&
-                               item.Item.GetCharacterSpecificItemID() == APItem.AncientUnlock)
+                               item.Item.GetCharacterSpecificItemID() == APItem.ProgressiveAncient)
                 .OrderBy(item => item.Index)
                 .Select(item => item.Index)
                 .ToList();
@@ -486,9 +486,9 @@ namespace StS2AP.Models
         public Dictionary<long, int> ProgressiveRests = new Dictionary<long, int>();
 
         /// <summary>
-        /// Keeps track of the number of Ancient Unlocks we've received for each character
+        /// Keeps track of the number of Progressive Ancients we've received for each character
         /// </summary>
-        public Dictionary<long, int> AncientUnlocks = new Dictionary<long, int>();
+        public Dictionary<long, int> ProgressiveAncients = new Dictionary<long, int>();
 
         /// <summary>
         /// Gets the highest Act that a character can rest at
@@ -527,14 +527,14 @@ namespace StS2AP.Models
         public Dictionary<string, bool> ShopSlotsChecked { get; set; } = new Dictionary<string, bool>();
 
         /// <summary>
-        /// Returns the highest Act that a character can receive Ancient Rewards at
+        /// Returns the highest Act that a character can redeem Progressive Ancients at
         /// </summary>
         /// <param name="character"> The Character's offset</param>
-        /// <returns>The highest Act (one-based) that the character can receive Ancient Rewards at </returns>
-        public int MaxAncientUnlock(long offset)
+        /// <returns>The highest Act (one-based) that the character can redeem Progressive Ancients at</returns>
+        public int MaxProgressiveAncientLevel(long offset)
         {
             int count;
-            if(!AncientUnlocks.TryGetValue( offset, out count))
+            if(!ProgressiveAncients.TryGetValue(offset, out count))
             {
                 count = 0;
             }
