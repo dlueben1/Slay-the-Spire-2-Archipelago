@@ -8,12 +8,17 @@ using System.Threading.Tasks;
 
 namespace StS2AP.Models
 {
+    
+    // Where you can receive Ancient Relics
     public enum AncientRelicLocation
     {
         StartOfAct = 0,
         Anytime = 1,
     }
 
+    // Balanced = Relics from a specific act 2 ancient followed by Relics from a specific act 3 ancient
+    // Chaos = Any act 2 ancient relic followed by any act 3 ancient relic
+    // TrueChaos = Any act 2 or act 3 ancient relic always.
     public enum AncientRelicPoolMode
     {
         Balanced = 0,
@@ -66,13 +71,13 @@ namespace StS2AP.Models
         /// Controls whether Progressive Ancient choices appear at the start of their act or
         /// immediately in the Archipelago reward menu.
         /// </summary>
-        public AncientRelicLocation AncientRelicLocation { get; set; }
+        public AncientRelicLocation AncientRelicLocation { get; set; } = AncientRelicLocation.Anytime;
 
         /// <summary>
         /// Controls whether Ancient choices use the rolled Ancient, the appropriate act's
         /// Ancient pool, or the combined Act 2 and Act 3 Ancient pool.
         /// </summary>
-        public AncientRelicPoolMode AncientRelicPool { get; set; }
+        public AncientRelicPoolMode AncientRelicPool { get; set; } = AncientRelicPoolMode.Balanced;
 
         public bool CampfireSanity { get; set; }
         public bool GoldSanity { get; set; }

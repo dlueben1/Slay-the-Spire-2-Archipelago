@@ -49,10 +49,10 @@ class Test48Floors(Spire2TestBase):
 
 
 class TestAncientRelicOptionsDefault(Spire2TestBase):
-    def test_start_of_act_and_balanced_by_default(self):
+    def test_anytime_and_balanced_by_default(self):
         slot_data = self.world.fill_slot_data()
-        self.assertEqual(0, self.world.options.ancient_relic_location.value)
-        self.assertEqual(0, slot_data["ancient_relic_location"])
+        self.assertEqual(1, self.world.options.ancient_relic_location.value)
+        self.assertEqual(1, slot_data["ancient_relic_location"])
         self.assertEqual(0, self.world.options.ancient_relic_pool.value)
         self.assertEqual(0, slot_data["ancient_relic_pool"])
 

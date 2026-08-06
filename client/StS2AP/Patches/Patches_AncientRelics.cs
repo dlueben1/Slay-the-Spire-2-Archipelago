@@ -26,6 +26,8 @@ namespace StS2AP.Patches
 
             var currentAct = player.RunState.CurrentActIndex + 1;
             var maxAct = ArchipelagoClient.Progress.MaxAncientUnlock(player?.Character.GetCharacterOffset() ?? -1);
+            
+            // Tries gets it from settings otherwise defaults to a normal run ish
             var location = ArchipelagoClient.Settings?.AncientRelicLocation ?? AncientRelicLocation.StartOfAct;
             var poolMode = ArchipelagoClient.Settings?.AncientRelicPool ?? AncientRelicPoolMode.Balanced;
             var useProceedOnly = maxAct < currentAct ||

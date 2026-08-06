@@ -15,6 +15,8 @@ namespace StS2AP.Utils
         public const int ChoiceCount = 3;
 
         private const string ChoiceSeedDomain = "sts2ap-ancient-choice-v1";
+        
+        // TODO: this should really be a list but currently only golden compass is blacklisted as it only works if you pick it up at the start of act 2.
         private const string GoldenCompassId = "GOLDEN_COMPASS";
 
         /// <summary>
@@ -114,7 +116,7 @@ namespace StS2AP.Utils
             }
         }
 
-        /// <summary>Builds the unlocked same-act Ancient list used by Balanced's seeded fallback.</summary>
+        /// <summary>Builds the unlocked same-act Ancient list, used by Balanced's seeded fallback.</summary>
         private static IReadOnlyList<AncientEventModel> GetFallbackAncients(Player player, int ancientActIndex)
         {
             try
@@ -175,6 +177,7 @@ namespace StS2AP.Utils
                                                   .OfType<RelicModel>())
                     {
                         extractedForAncient++;
+                        // TODO: do model selection in a better way than this
                         if (relic.Id == ModelId.none ||
                             excludedRelicIds.Contains(relic.Id) ||
                             string.Equals(relic.Id.Entry, GoldenCompassId, StringComparison.OrdinalIgnoreCase))

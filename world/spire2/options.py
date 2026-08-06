@@ -133,13 +133,13 @@ class AncientRelicLocation(Choice):
     display_name = "Ancient Relic Location"
     option_start_of_act = 0
     option_anytime = 1
-    default = 0
+    default = 1
 
 
 class AncientRelicPool(Choice):
     """Controls which Ancient relics can appear in each three-choice reward.
 
-    Balanced uses the specific Ancient rolled for that act. Chaos can use relics from
+    Balanced uses the natural Ancient rolled for that act. Chaos can use relics from
     any Ancient in the appropriate act. True Chaos combines the Act 2 and Act 3 pools
     for both Progressive Ancient rewards."""
     display_name = "Ancient Relic Pool"
@@ -150,7 +150,7 @@ class AncientRelicPool(Choice):
 
 
 class IncludeFloorChecks(Toggle):
-    """Whether to include reaching new floors as a location.  Adds small amounts of gold as items."""
+    """Whether to include reaching new floors as a location. Adds various fillers as items."""
     display_name = "Include Floor Checks"
     default = 1
 
@@ -542,6 +542,8 @@ class Spire2Options(PerGameCommonOptions):
     # final_act: FinalAct
     ascension: Ascension
     ascension_down: AscensionDown
+    ancient_relic_location: AncientRelicLocation
+    ancient_relic_pool: AncientRelicPool
     shuffle_all_cards: CardReward
     include_floor_checks: IncludeFloorChecks
     # Filler item weights
@@ -565,8 +567,6 @@ class Spire2Options(PerGameCommonOptions):
     # trap_chance: TrapChance
     # trap_weights: TrapWeights
     neow_sanity: NeowSanity
-    ancient_relic_location: AncientRelicLocation
-    ancient_relic_pool: AncientRelicPool
     campfire_sanity: CampfireSanity
     gold_sanity: GoldSanity
     potion_sanity: PotionSanity

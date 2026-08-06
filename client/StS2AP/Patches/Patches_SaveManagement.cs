@@ -39,7 +39,7 @@ namespace StS2AP.Patches
 
                 var maxSaveAct = ArchipelagoClient.Progress.MaxAncientUnlock(GameUtility.CurrentConfig?.CharOffset ?? -1);
                 var currentAct = (GameUtility.CurrentPlayer?.RunState.CurrentActIndex ?? 0) + 1;
-                var ancientRelicLocation = ArchipelagoClient.Settings?.AncientRelicLocation ?? AncientRelicLocation.StartOfAct;
+                var ancientRelicLocation = ArchipelagoClient.Settings?.AncientRelicLocation ?? AncientRelicLocation.Anytime;
                 var ancientIsLocked = ancientRelicLocation == AncientRelicLocation.StartOfAct && currentAct > 1 && maxSaveAct < currentAct;
                 
                 LogUtility.Info($"Max Act: {maxSaveAct} Current Act: {currentAct} AncientRelicLocation: {ancientRelicLocation}");

@@ -154,6 +154,8 @@ namespace StS2AP.UI
         private const int RewardSenderFontSize = 16;
         private const float IconSlotSize      = 48f;
         private const float ButtonHeight      = 74f;
+        
+        // Ancient Relics related settings
         private const float AncientChainWidth = 104f;
         private const float AncientChainHeight = 88f;
         private static readonly Color AncientButtonNormalColor = new(0.78f, 0.48f, 0.95f);
@@ -700,6 +702,9 @@ namespace StS2AP.UI
         /// </summary>
         private static Control CreateAncientChoiceGroup(ArchipelagoRewardData data)
         {
+            // this is probably infinitely more complicated than it needs to be...
+            // so im sorry if this hurts your brain or can be made simpler
+            // i took inspiration from decompiled code of a similar mod that does this
             var choices = data.LinkedRelicChoices;
             if (choices == null || choices.Count != AncientRelicPool.ChoiceCount)
                 return CreateRewardButton(data);

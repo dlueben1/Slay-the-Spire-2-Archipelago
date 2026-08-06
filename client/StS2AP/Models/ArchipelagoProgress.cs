@@ -190,12 +190,12 @@ namespace StS2AP.Models
                 .SelectMany(assignment => assignment)
                 .Select(relic => relic.Id)
                 .ToHashSet();
-
-            // AllReceivedItems contains only Ancient Unlocks that should be claimed through the
-            // AP reward menu. When Neow Sanity is enabled, ArchipelagoClient keeps the first
-            // Progressive Ancient unlock as Neow's start-of-run reward and does not add it here.
-            // After filtering to this character, sorting by AP item index therefore gives the
-            // two non-Neow rewards in server order: ordinal 0 is Act 2 and ordinal 1 is Act 3.
+            
+            // AllReceivedItems contains multiple reward types, so restrict it to this
+            // character's Ancient Unlocks. ArchipelagoClient adds these entries only for
+            // Anytime mode; with Neow Sanity enabled, it omits the first unlock because
+            // that remains Neow's start-of-run reward. Sorting the remaining entries by
+            // AP item index maps ordinal 0 to Act 2 and ordinal 1 to Act 3.
             var characterOffset = player.Character.GetCharacterOffset();
             var orderedAncientItemIndices = AllReceivedItems
                 .Where(item => item.Item.GetCharacterOffset() == characterOffset &&
@@ -212,23 +212,23 @@ namespace StS2AP.Models
                 return Array.Empty<RelicModel>();
             }
 
-            // ModelDb uses zero-based Act indices: 1 is Act 2 and 2 is Act 3.
+            // ModelDb uses zero-based Act indices: 1 is Act 2 and 2 is Act 3 so convert accordingly
             var ancientActIndex = rewardOrdinal + 1;
             var poolMode = ArchipelagoClient.Settings?.AncientRelicPool ?? AncientRelicPoolMode.Balanced;
-            var poolActIndex = (poolMode == AncientRelicPoolMode.TrueChaos) ? null : ancientActIndex;
+            int? poolActIndex = (poolMode == AncientRelicPoolMode.TrueChaos) ? null : ancientActIndex;
             var choiceKey = index.ToString();
-            AncientEventModel? specificAncient = null;
+            AncientEventModel? naturalAncient = null;
             if (poolMode == AncientRelicPoolMode.Balanced)
             {
                 // Balanced must choose from one Ancient, so prefer the Ancient already rolled
                 // into this run's ActModel and use a stable same-act fallback only if necessary.
-                specificAncient = AncientRelicPool.ResolveSpecificAncient(
+                naturalAncient = AncientRelicPool.ResolveSpecificAncient(
                     player,
                     ancientActIndex,
                     choiceKey,
                     reservedRelicIds
                 );
-                if (specificAncient == null)
+                if (naturalAncient == null)
                     return Array.Empty<RelicModel>();
             }
 
@@ -237,7 +237,7 @@ namespace StS2AP.Models
                 choiceKey,
                 reservedRelicIds,
                 poolActIndex,
-                specificAncient
+                naturalAncient
             ).ToList();
             if (choices.Count != AncientRelicPool.ChoiceCount)
                 return Array.Empty<RelicModel>();
