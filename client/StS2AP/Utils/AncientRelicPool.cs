@@ -1,5 +1,6 @@
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Relics;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -42,10 +43,26 @@ namespace StS2AP.Utils
             }
 
             var runSeed = ResolveRunSeed(player);
-            var choices = candidatesById.Values
-                .OrderBy(relic => StableChoiceKey(runSeed, choiceKey, relic.Id))
-                .Take(ChoiceCount)
-                .ToList();
+            var choices = new List<RelicModel>(ChoiceCount);
+            foreach (var candidate in candidatesById.Values
+                                                    .OrderBy(relic => StableChoiceKey(runSeed, choiceKey, relic.Id)))
+            {
+                var preparedRelic = PrepareForPlayer(candidate, player, choiceKey);
+                if (preparedRelic != null)
+                    choices.Add(preparedRelic);
+
+                if (choices.Count == ChoiceCount)
+                    break;
+            }
+
+            if (choices.Count < ChoiceCount)
+            {
+                LogUtility.Error(
+                    $"Ancient relic pool only contained {choices.Count} player-compatible relic(s) after setup; " +
+                    $"{ChoiceCount} are required"
+                );
+                return Array.Empty<RelicModel>();
+            }
 
             LogUtility.Info(
                 $"Assigned Ancient relic choices for '{choiceKey}' from " +
@@ -54,6 +71,50 @@ namespace StS2AP.Utils
             );
 
             return choices;
+        }
+
+        /// <summary>
+        /// Creates the mutable, player-specific form of an Ancient relic. The base game performs
+        /// these setup calls while generating the natural Ancient's options; AP choices are built
+        /// from AllPossibleOptions instead, so they must mirror that setup explicitly.
+        /// </summary>
+        private static RelicModel? PrepareForPlayer(RelicModel relicModel, Player player, string choiceKey)
+        {
+            try
+            {
+                var relic = relicModel.ToMutable();
+                switch (relic)
+                {
+                    case SeaGlass seaGlass:
+                        // Orobas normally selects an unlocked character other than the owner.
+                        // Use the AP reward key to make that character stable without consuming
+                        // the game's RNG, then set the saved property before the tooltip is built.
+                        var targetCharacter = player.UnlockState.Characters
+                            .Where(character => character.Id != player.Character.Id)
+                            .OrderBy(character => StableChoiceKey(
+                                ResolveRunSeed(player),
+                                $"{choiceKey}|sea-glass",
+                                character.Id
+                            ))
+                            .FirstOrDefault() ?? player.Character;
+                        seaGlass.CharacterId = targetCharacter.Id;
+                        break;
+                    case DustyTome dustyTome:
+                        dustyTome.SetupForPlayer(player);
+                        break;
+                    case ArchaicTooth archaicTooth when !archaicTooth.SetupForPlayer(player):
+                    case TouchOfOrobas touchOfOrobas when !touchOfOrobas.SetupForPlayer(player):
+                        LogUtility.Warn($"Skipping Ancient relic '{relic.Id}' because it is not compatible with the current player");
+                        return null;
+                }
+
+                return relic;
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Warn($"Skipping Ancient relic '{relicModel.Id}' because player setup failed: {ex.Message}");
+                return null;
+            }
         }
 
         /// <summary>

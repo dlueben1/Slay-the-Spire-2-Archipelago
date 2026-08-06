@@ -27,8 +27,8 @@ namespace StS2AP.Patches
             var currentAct = player.RunState.CurrentActIndex + 1;
             var maxAct = ArchipelagoClient.Progress.MaxAncientUnlock(player?.Character.GetCharacterOffset() ?? -1);
             
-            // Tries gets it from settings otherwise defaults to a normal run ish
-            var location = ArchipelagoClient.Settings?.AncientRelicLocation ?? AncientRelicLocation.StartOfAct;
+            // use Anytime and balanced as our defaults
+            var location = ArchipelagoClient.Settings?.AncientRelicLocation ?? AncientRelicLocation.Anytime;
             var poolMode = ArchipelagoClient.Settings?.AncientRelicPool ?? AncientRelicPoolMode.Balanced;
             var useProceedOnly = maxAct < currentAct ||
                                  (location == AncientRelicLocation.Anytime && currentAct is 2 or 3);
@@ -109,14 +109,15 @@ namespace StS2AP.Patches
 
         private static EventOption CreateRelicOption(AncientEventModel ancient, RelicModel relicModel)
         {
-            var relic = relicModel.ToMutable();
+            var relic = relicModel.IsMutable ? relicModel : relicModel.ToMutable();
             var owner = ancient.Owner ?? throw new InvalidOperationException(
                 $"Cannot construct Ancient relic option '{relic.Id}': the event has no owner"
             );
 
             // Mirrors the base game's EventModel.RelicOption helper. Binding the mutable relic
             // to the event owner initializes owner-dependent descriptions/hover tips and ensures
-            // the same player is passed to RelicCmd.Obtain when the option is chosen.
+            // the same player is passed to RelicCmd.Obtain when the option is chosen. 
+            // Something something megacrit multiplayer thing, idk the base game had it
             relic.Owner = owner;
 
             var textKey = $"{StringHelper.Slugify(ancient.GetType().Name)}.pages.INITIAL.options.{relic.Id.Entry}";

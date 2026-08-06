@@ -192,7 +192,10 @@ namespace StS2AP.Utils
 
             try
             {
-                var relic = relicModel.ToMutable();
+                // some hacky weird mutable changing stuff to make relics with setup for players work
+                var relic = relicModel.IsMutable
+                    ? RelicModel.FromSerializable(relicModel.ToSerializable())
+                    : relicModel.ToMutable();
                 await RelicCmd.Obtain(relic, CurrentPlayer);
                 LogUtility.Success($"Granted pre-assigned relic '{relic.Id}' to player");
                 return true;

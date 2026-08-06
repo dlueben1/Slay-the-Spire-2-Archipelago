@@ -133,7 +133,7 @@ namespace StS2AP.Data
                     return true;
               case APItem.AncientUnlock:
                     // pickup is true if Anytime since Relics are in AP reward menu, false otherwise
-                    return (ArchipelagoClient.Settings?.AncientRelicLocation ?? AncientRelicLocation.StartOfAct) == AncientRelicLocation.Anytime;
+                    return (ArchipelagoClient.Settings?.AncientRelicLocation ?? AncientRelicLocation.Anytime) == AncientRelicLocation.Anytime;
               case APItem.ProgressiveRest:
               case APItem.ProgressiveSmith:
               case APItem.ShopCardSlot:
