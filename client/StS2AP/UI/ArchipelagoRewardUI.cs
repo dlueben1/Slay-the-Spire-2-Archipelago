@@ -82,6 +82,9 @@ namespace StS2AP.UI
         /// <summary>The relic whose native hover tips should be shown for this reward row.</summary>
         public RelicModel? TooltipRelic { get; set; }
 
+        /// <summary>The potion whose native hover tips should be shown for this reward row.</summary>
+        public PotionModel? TooltipPotion { get; set; }
+
         /// <summary>Optional sync callback invoked after the grant completes (e.g. for cleanup)</summary>
         public Action? OnClaimed { get; set; }
     }
@@ -231,7 +234,8 @@ namespace StS2AP.UI
         public static void ShowRewards()
         {
             // Ignore if current player is null
-            if (GameUtility.CurrentPlayer == null) return;
+            var currentPlayer = GameUtility.CurrentPlayer;
+            if (currentPlayer == null) return;
 
 
             // Get Unused items from the Multiworld for our current character
@@ -256,7 +260,7 @@ namespace StS2AP.UI
                 var rawId = i.Item.GetCharacterSpecificItemID();
                 if (rawId == APItem.Relic)
                 {
-                    var relic = ArchipelagoClient.Progress.GetOrAssignRelic(i.Index, GameUtility.CurrentPlayer);
+                    var relic = ArchipelagoClient.Progress.GetOrAssignRelic(i.Index, currentPlayer);
                     if (relic != null)
                     {
                         data.ItemName = relic.Title.GetRawText();
@@ -268,7 +272,7 @@ namespace StS2AP.UI
 
                 if (rawId == APItem.AncientUnlock)
                 {
-                    var choices = ArchipelagoClient.Progress.GetOrAssignAncientRelicChoices(i.Index, GameUtility.CurrentPlayer);
+                    var choices = ArchipelagoClient.Progress.GetOrAssignAncientRelicChoices(i.Index, currentPlayer);
                     if (choices.Count == AncientRelicPool.ChoiceCount)
                     {
                         data.ItemName = "Choose an Ancient Relic";
@@ -292,11 +296,17 @@ namespace StS2AP.UI
 
                 if(rawId == APItem.Potion)
                 {
-                    var potion = ArchipelagoClient.Progress.GetOrAssignPotion(i.Index, GameUtility.CurrentPlayer);
+                    var potion = ArchipelagoClient.Progress.GetOrAssignPotion(i.Index, currentPlayer);
                     if(potion != null)
                     {
+                        // Potion assignments stay canonical for persistence/granting. Use an
+                        // owner-bound mutable copy so dynamic tooltip variables resolve safely.
+                        var tooltipPotion = potion.ToMutable();
+                        tooltipPotion.Owner = currentPlayer;
+
                         data.ItemName = potion.Title.GetRawText();
                         data.IconPath = potion.ImagePath;
+                        data.TooltipPotion = tooltipPotion;
                         data.GrantAction = async () => { return await GameUtility.GrantPotion(potion); };
                     }
                 }
@@ -911,8 +921,22 @@ namespace StS2AP.UI
                 vbox.AddChild(senderLabel);
             }
 
-            if (data.TooltipRelic != null)
-                AttachRelicHoverTips(btn, data.TooltipRelic);
+            if (data.TooltipRelic is { } tooltipRelic)
+            {
+                AttachModelHoverTips(
+                    btn,
+                    () => tooltipRelic.HoverTips,
+                    $"relic '{tooltipRelic.Id}'"
+                );
+            }
+            else if (data.TooltipPotion is { } tooltipPotion)
+            {
+                AttachModelHoverTips(
+                    btn,
+                    () => tooltipPotion.HoverTips,
+                    $"potion '{tooltipPotion.Id}'"
+                );
+            }
 
             if (customPressed != null)
             {
@@ -980,10 +1004,13 @@ namespace StS2AP.UI
         }
 
         /// <summary>
-        /// Shows the game's original relic description and any extra hover tips while a reward
-        /// button is hovered or keyboard-focused.
+        /// Shows a model's native description and any extra hover tips while a reward button is
+        /// hovered or keyboard-focused.
         /// </summary>
-        private static void AttachRelicHoverTips(Button button, RelicModel relic)
+        private static void AttachModelHoverTips(
+            Button button,
+            Func<IEnumerable<IHoverTip>> hoverTipsFactory,
+            string diagnosticSubject)
         {
             var isHovered = false;
             var isFocused = false;
@@ -996,12 +1023,12 @@ namespace StS2AP.UI
 
                 try
                 {
-                    var tipSet = NHoverTipSet.CreateAndShow(button, relic.HoverTips, HoverTipAlignment.Left);
+                    var tipSet = NHoverTipSet.CreateAndShow(button, hoverTipsFactory(), HoverTipAlignment.Left);
                     isTooltipVisible = tipSet != null;
                 }
                 catch (Exception ex)
                 {
-                    LogUtility.Warn($"Failed to show relic tooltip for '{relic.Id}': {ex.Message}");
+                    LogUtility.Warn($"Failed to show tooltip for {diagnosticSubject}: {ex.Message}");
                 }
             }
 
@@ -1016,7 +1043,7 @@ namespace StS2AP.UI
                 }
                 catch (Exception ex)
                 {
-                    LogUtility.Warn($"Failed to hide relic tooltip for '{relic.Id}': {ex.Message}");
+                    LogUtility.Warn($"Failed to hide tooltip for {diagnosticSubject}: {ex.Message}");
                 }
                 finally
                 {
