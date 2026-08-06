@@ -2,15 +2,15 @@
 using Archipelago.MultiClient.Net.Models;
 using Godot;
 using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.DevConsole.ConsoleCommands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
-using MegaCrit.Sts2.Core.Helpers;
+using MegaCrit.Sts2.Core.Factories;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Characters;
-using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
@@ -156,7 +156,7 @@ namespace StS2AP.Utils
 
             try
             {
-                var relic = RelicUtility.PullNextAllowedRelic(CurrentPlayer).ToMutable();
+                var relic = RelicFactory.PullNextRelicFromFront(CurrentPlayer).ToMutable();
                 await RelicCmd.Obtain(relic, CurrentPlayer);
                 LogUtility.Success($"Granted relic '{relic.Id}' to player");
             }
@@ -224,7 +224,7 @@ namespace StS2AP.Utils
         /// Returns the CardReward assigned to the given item index, creating and populating one if it hasn't been assigned yet.
         /// This ensures that even if the player skips a Card Reward, the same three cards are shown next time.
         /// </summary>
-        private static async Task<CardReward?> GetOrAssignCardReward(int index, Player player, bool rare)
+        private static CardReward? GetOrAssignCardReward(int index, Player player, bool rare)
         {
             if (ArchipelagoClient.Progress.CardAssignments.TryGetValue(index, out var existing))
             {
@@ -260,6 +260,11 @@ namespace StS2AP.Utils
         /// </summary>
         private static async Task AddCardRewardToCombatDrawPile(CardModel selectedCard, Player player)
         {
+            if (!CombatManager.Instance.IsInProgress || CombatManager.Instance.IsEnding)
+            {
+                return;
+            }
+
             var combatState = player.Creature.CombatState;
             if (combatState == null)
             {
@@ -268,11 +273,10 @@ namespace StS2AP.Utils
 
             try
             {
-                var combatCard = combatState.CreateCard(selectedCard.CanonicalInstance, player);
-                for (int level = 0; level < selectedCard.CurrentUpgradeLevel; level++)
-                {
-                    CardCmd.Upgrade(combatCard, CardPreviewStyle.None);
-                }
+                // Match Player.PopulateCombatState: clone the permanent deck card so upgrades,
+                // enchantments, and other mutable card state carry into combat.
+                var combatCard = combatState.CloneCard(selectedCard);
+                combatCard.DeckVersion = selectedCard;
 
                 var result = await CardPileCmd.AddGeneratedCardToCombat(
                     combatCard,
@@ -310,10 +314,14 @@ namespace StS2AP.Utils
         /// </summary>
         /// <param name="index">The Archipelago item index, used to look up / cache the CardReward in CardAssignments.</param>
         /// <param name="rare">If true, uses boss-encounter rarity odds (higher chance of rares).</param>
-        /// <returns>True if a card was actually added to the player's deck; false if the reward was skipped.</returns>
+        /// <returns>
+        /// True if the reward was consumed by selecting a card or a card-reward alternative;
+        /// false if the reward was skipped.
+        /// </returns>
         public static async Task<bool> GrantCardReward(int index, bool rare = false)
         {
-            if (CurrentPlayer == null)
+            var player = CurrentPlayer;
+            if (player == null)
             {
                 LogUtility.Warn("Cannot grant card reward: no active player (not in a run)");
                 return false;
@@ -322,75 +330,33 @@ namespace StS2AP.Utils
             try
             {
                 // Get or create the cached CardReward for this item index
-                var reward = await GetOrAssignCardReward(index, CurrentPlayer, rare);
+                var reward = GetOrAssignCardReward(index, player, rare);
                 if (reward == null)
                 {
                     LogUtility.Error($"Failed to get or assign card reward for index {index}");
                     return false;
                 }
 
-                // Track the reward contents before selection so we can identify the chosen card.
-                var cardsBeforeSelection = reward.Cards.ToList();
-                int cardCountBefore = reward.Cards.Count();
-
-                var paelsWing = CurrentPlayer.Relics.OfType<PaelsWing>().FirstOrDefault();
-                int sacrificesBefore = paelsWing?.RewardsSacrificed ?? 0;
-                LogUtility.Info($"[Debug] PaelsWing found: {paelsWing != null}, RewardsSacrificed: {sacrificesBefore}");
-
-                // OnSelectWrapper opens NCardRewardSelectionScreen and waits for the player to pick
-                try
-                {
-                    // Use reflection to invoke the protected OnSelect method:
-                    var onSelectMethod = reward.GetType()
-                        .GetMethod("OnSelect", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-                    if (onSelectMethod != null && onSelectMethod.ReturnType == typeof(Task<bool>))
-                    {
-                        var task = (Task<bool>)onSelectMethod.Invoke(reward, null)!;
-                        await task;
-                    }
-                    else
-                    {
-                        LogUtility.Error("They removed `CardReward.OnSelect()`, update the mod!");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    LogUtility.Error("Failed to invoke CardReward.OnSelect(): " + ex.Message);
-                }
-
-                // hopefully this fixes it, it took me a while to figure out
-                await Task.Yield();
-
-                // If the card count decreased, a card was picked (added to deck)
-                int cardCountAfter = reward.Cards.Count();
-                bool cardWasPicked = cardCountAfter < cardCountBefore;
-                CardModel? selectedCard = cardWasPicked
-                    ? cardsBeforeSelection.FirstOrDefault(
-                        card => !reward.Cards.Any(remaining => ReferenceEquals(card, remaining))
-                    )
-                    : null;
-                bool wasSacrificed = (paelsWing?.RewardsSacrificed ?? 0) > sacrificesBefore;
-                bool rewardConsumed = cardWasPicked || wasSacrificed;
+                // CardReward.OnSelect may replace the selected card while adding it to the deck
+                // (for example through an Egg relic), so identify the actual resulting deck card.
+                var deckCardsBeforeSelection = player.Deck.Cards.ToHashSet();
+                bool rewardConsumed = await reward.SelectUnsynchronized();
+                var selectedCards = player.Deck.Cards
+                    .Where(card => !deckCardsBeforeSelection.Contains(card))
+                    .ToList();
 
                 if (rewardConsumed)
                 {
                     ArchipelagoClient.Progress.CardAssignments.Remove(index);
 
-                    if (selectedCard != null)
+                    foreach (var selectedCard in selectedCards)
                     {
-                        await AddCardRewardToCombatDrawPile(selectedCard, CurrentPlayer);
-                    }
-                    else if (cardWasPicked)
-                    {
-                        LogUtility.Warn(
-                            "A card reward was selected, but the selected card model could not be identified"
-                        );
+                        await AddCardRewardToCombatDrawPile(selectedCard, player);
                     }
 
-                    LogUtility.Success(cardWasPicked
+                    LogUtility.Success(selectedCards.Count > 0
                         ? "Card reward selection completed — card added to deck"
-                        : "Card reward selection completed — sacrificed via Pael's Wing");
+                        : "Card reward selection completed — non-card option selected");
                 }
                 else
                 {

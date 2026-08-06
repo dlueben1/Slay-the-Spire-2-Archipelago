@@ -152,7 +152,7 @@ namespace StS2AP.Models
 
             try
             {
-                var relic = RelicUtility.PullNextAllowedRelic(player);
+                var relic = RelicFactory.PullNextRelicFromFront(player);
                 RelicAssignments[index] = relic;
                 LogUtility.Info($"Pre-assigned relic '{relic.Id}' for item w/ index {index}");
                 return relic;
