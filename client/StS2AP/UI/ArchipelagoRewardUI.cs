@@ -151,7 +151,8 @@ namespace StS2AP.UI
         private const int RewardSenderFontSize = 16;
         private const float IconSlotSize      = 48f;
         private const float ButtonHeight      = 74f;
-        private const float AncientChainSize  = 72f;
+        private const float AncientChainWidth = 104f;
+        private const float AncientChainHeight = 88f;
         private static readonly Color AncientButtonNormalColor = new(0.78f, 0.48f, 0.95f);
         private static readonly Color AncientButtonHoverColor = new(0.95f, 0.62f, 1f);
         private static readonly Color AncientButtonPressedColor = new(0.65f, 0.34f, 0.82f);
@@ -694,7 +695,7 @@ namespace StS2AP.UI
                 return CreateRewardButton(data);
 
             var chainTexture = GetLinkedRewardChainTexture();
-            const float choiceSeparation = 10f;
+            const float choiceSeparation = 18f;
             var group = new Control
             {
                 Name = $"AncientChoice_{data.Index}",
@@ -782,14 +783,15 @@ namespace StS2AP.UI
                         Texture = chainTexture,
                         ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
                         StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-                        MouseFilter = Control.MouseFilterEnum.Ignore,
-                        ZIndex = 1
+                        // Keep the chain in the reward screen's normal canvas order. Giving it
+                        // a positive ZIndex lets it render above the separately managed pause menu.
+                        MouseFilter = Control.MouseFilterEnum.Ignore
                     };
                     chain.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
-                    chain.OffsetLeft = -AncientChainSize / 2f;
-                    chain.OffsetTop = chainCenterY - AncientChainSize / 2f;
-                    chain.OffsetRight = AncientChainSize / 2f;
-                    chain.OffsetBottom = chainCenterY + AncientChainSize / 2f;
+                    chain.OffsetLeft = -AncientChainWidth / 2f;
+                    chain.OffsetTop = chainCenterY - AncientChainHeight / 2f;
+                    chain.OffsetRight = AncientChainWidth / 2f;
+                    chain.OffsetBottom = chainCenterY + AncientChainHeight / 2f;
                     group.AddChild(chain);
                 }
             }

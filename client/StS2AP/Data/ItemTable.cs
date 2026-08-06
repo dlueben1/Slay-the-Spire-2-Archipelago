@@ -132,7 +132,7 @@ namespace StS2AP.Data
               case APItem.Relic:
                     return true;
               case APItem.AncientUnlock:
-                    return (ArchipelagoClient.Settings?.AncientChaos ?? AncientChaosMode.Balanced) != AncientChaosMode.Balanced;
+                    return (ArchipelagoClient.Settings?.AncientRelicLocation ?? AncientRelicLocation.StartOfAct) == AncientRelicLocation.Anytime;
               case APItem.ProgressiveRest:
               case APItem.ProgressiveSmith:
               case APItem.ShopCardSlot:

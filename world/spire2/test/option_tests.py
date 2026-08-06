@@ -48,30 +48,37 @@ class Test48Floors(Spire2TestBase):
         self.assertFalse( "Ironclad Reached Floor 49" in self.world.get_locations())
 
 
-class TestAncientChaosBalanced(Spire2TestBase):
-    def test_balanced_by_default_and_sent_in_slot_data(self):
-        self.assertEqual(0, self.world.options.ancient_chaos.value)
-        self.assertEqual(0, self.world.fill_slot_data()["ancient_chaos"])
+class TestAncientRelicOptionsDefault(Spire2TestBase):
+    def test_start_of_act_and_balanced_by_default(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(0, self.world.options.ancient_relic_location.value)
+        self.assertEqual(0, slot_data["ancient_relic_location"])
+        self.assertEqual(0, self.world.options.ancient_relic_pool.value)
+        self.assertEqual(0, slot_data["ancient_relic_pool"])
 
 
-class TestAncientChaosActOrdered(Spire2TestBase):
+class TestAncientRelicOptionsAnytimeChaos(Spire2TestBase):
     options = {
-        "ancient_chaos": 1,
+        "ancient_relic_location": 1,
+        "ancient_relic_pool": 1,
     }
 
-    def test_act_ordered_value_is_sent_in_slot_data(self):
-        self.assertEqual(1, self.world.options.ancient_chaos.value)
-        self.assertEqual(1, self.world.fill_slot_data()["ancient_chaos"])
+    def test_anytime_and_chaos_values_are_sent_in_slot_data(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(1, self.world.options.ancient_relic_location.value)
+        self.assertEqual(1, slot_data["ancient_relic_location"])
+        self.assertEqual(1, self.world.options.ancient_relic_pool.value)
+        self.assertEqual(1, slot_data["ancient_relic_pool"])
 
 
-class TestAncientChaosFullPool(Spire2TestBase):
+class TestAncientRelicOptionsTrueChaos(Spire2TestBase):
     options = {
-        "ancient_chaos": 2,
+        "ancient_relic_pool": 2,
     }
 
-    def test_full_pool_value_is_sent_in_slot_data(self):
-        self.assertEqual(2, self.world.options.ancient_chaos.value)
-        self.assertEqual(2, self.world.fill_slot_data()["ancient_chaos"])
+    def test_true_chaos_value_is_sent_in_slot_data(self):
+        self.assertEqual(2, self.world.options.ancient_relic_pool.value)
+        self.assertEqual(2, self.world.fill_slot_data()["ancient_relic_pool"])
 
 
 class TestAscensionDowns(Spire2TestBase):

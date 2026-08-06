@@ -8,11 +8,17 @@ using System.Threading.Tasks;
 
 namespace StS2AP.Models
 {
-    public enum AncientChaosMode
+    public enum AncientRelicLocation
+    {
+        StartOfAct = 0,
+        Anytime = 1,
+    }
+
+    public enum AncientRelicPoolMode
     {
         Balanced = 0,
-        ActOrdered = 1,
-        FullPool = 2,
+        Chaos = 1,
+        TrueChaos = 2,
     }
 
     /// <summary>
@@ -57,10 +63,16 @@ namespace StS2AP.Models
         public bool NeowSanity { get; set; }
 
         /// <summary>
-        /// Controls whether Ancient Unlocks use the normal start-of-act rewards, ordered Act 2/3
-        /// AP reward pools, or the combined Act 2/3 AP reward pool.
+        /// Controls whether Progressive Ancient choices appear at the start of their act or
+        /// immediately in the Archipelago reward menu.
         /// </summary>
-        public AncientChaosMode AncientChaos { get; set; }
+        public AncientRelicLocation AncientRelicLocation { get; set; }
+
+        /// <summary>
+        /// Controls whether Ancient choices use the rolled Ancient, the appropriate act's
+        /// Ancient pool, or the combined Act 2 and Act 3 Ancient pool.
+        /// </summary>
+        public AncientRelicPoolMode AncientRelicPool { get; set; }
 
         public bool CampfireSanity { get; set; }
         public bool GoldSanity { get; set; }

@@ -758,7 +758,7 @@ namespace StS2AP
                 {
                     HandleThreshholdItem(item, Progress.AncientUnlocks, "Ancient Unlocks");
 
-                    if (Settings.AncientChaos != AncientChaosMode.Balanced)
+                    if (Settings.AncientRelicLocation == AncientRelicLocation.Anytime)
                     {
                         // NeowSanity's first progressive unlock still controls the normal Act 1 Neow reward.
                         // Every Act 2/3 unlock becomes a per-run, linked Ancient choice in the AP reward menu.
@@ -1048,7 +1048,8 @@ namespace StS2AP
             if (slotData.ContainsKey("neow_sanity"))
                 settings.NeowSanity = Convert.ToInt32(slotData["neow_sanity"]) != 0;
 
-            settings.AncientChaos = (AncientChaosMode)Convert.ToInt32(slotData["ancient_chaos"]);
+            settings.AncientRelicLocation = (AncientRelicLocation)Convert.ToInt32(slotData["ancient_relic_location"]);
+            settings.AncientRelicPool = (AncientRelicPoolMode)Convert.ToInt32(slotData["ancient_relic_pool"]);
 
             if (slotData.ContainsKey("campfire_sanity"))
                 settings.CampfireSanity = Convert.ToInt32(slotData["campfire_sanity"]) != 0;

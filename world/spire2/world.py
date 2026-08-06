@@ -672,7 +672,8 @@ class SlayTheSpire2World(World):
             "shuffle_all_cards",
             "include_floor_checks",
             "neow_sanity",
-            "ancient_chaos",
+            "ancient_relic_location",
+            "ancient_relic_pool",
             "shop_sanity",
             "potion_sanity",
             "gold_sanity",
@@ -713,7 +714,8 @@ class SlayTheSpire2World(World):
             self.options.shop_sanity.value = 0
         self.options.include_floor_checks.value = slot_data['include_floor_checks']
         self.options.neow_sanity.value = slot_data['neow_sanity']
-        self.options.ancient_chaos.value = slot_data['ancient_chaos']
+        self.options.ancient_relic_location.value = slot_data['ancient_relic_location']
+        self.options.ancient_relic_pool.value = slot_data['ancient_relic_pool']
         self.options.campfire_sanity.value = slot_data['campfire_sanity']
         self.options.shop_sanity.value = slot_data['shop_sanity']
         self.options.gold_sanity.value = slot_data['gold_sanity']

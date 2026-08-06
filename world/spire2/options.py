@@ -124,17 +124,30 @@ class NeowSanity(Toggle):
     display_name = "Neow Sanity"
     default = 0
 
-class AncientChaos(Choice):
-    """Controls how Ancient Unlock items grant Ancient relics.
 
-    Balanced progressively enables the normal start-of-act Ancient choices. Act Ordered
-    grants linked AP reward choices from Act 2, then Act 3. Full Pool grants each linked
-    AP reward choice from the combined Act 2 and Act 3 pool."""
-    display_name = "Ancient Chaos"
-    option_balanced = 0
-    option_act_ordered = 1
-    option_full_pool = 2
+class AncientRelicLocation(Choice):
+    """Controls when Progressive Ancient relic choices are offered.
+
+    Start Of Act presents them through the normal Ancient encounter. Anytime presents
+    them as linked choices in the Archipelago reward menu as soon as they are received."""
+    display_name = "Ancient Relic Location"
+    option_start_of_act = 0
+    option_anytime = 1
     default = 0
+
+
+class AncientRelicPool(Choice):
+    """Controls which Ancient relics can appear in each three-choice reward.
+
+    Balanced uses the specific Ancient rolled for that act. Chaos can use relics from
+    any Ancient in the appropriate act. True Chaos combines the Act 2 and Act 3 pools
+    for both Progressive Ancient rewards."""
+    display_name = "Ancient Relic Pool"
+    option_balanced = 0
+    option_chaos = 1
+    option_true_chaos = 2
+    default = 0
+
 
 class IncludeFloorChecks(Toggle):
     """Whether to include reaching new floors as a location.  Adds small amounts of gold as items."""
@@ -552,7 +565,8 @@ class Spire2Options(PerGameCommonOptions):
     # trap_chance: TrapChance
     # trap_weights: TrapWeights
     neow_sanity: NeowSanity
-    ancient_chaos: AncientChaos
+    ancient_relic_location: AncientRelicLocation
+    ancient_relic_pool: AncientRelicPool
     campfire_sanity: CampfireSanity
     gold_sanity: GoldSanity
     potion_sanity: PotionSanity

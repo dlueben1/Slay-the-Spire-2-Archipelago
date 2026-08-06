@@ -191,28 +191,54 @@ namespace StS2AP.Models
                 .Select(relic => relic.Id)
                 .ToHashSet();
 
-            int? ancientActIndex = null;
-            if (ArchipelagoClient.Settings?.AncientChaos == AncientChaosMode.ActOrdered)
-            {
-                var characterOffset = player.Character.GetCharacterOffset();
-                var orderedAncientItemIndices = AllReceivedItems
-                    .Where(item => item.Item.GetCharacterOffset() == characterOffset &&
-                                   item.Item.GetCharacterSpecificItemID() == APItem.AncientUnlock)
-                    .OrderBy(item => item.Index)
-                    .Select(item => item.Index)
-                    .ToList();
-                var rewardOrdinal = orderedAncientItemIndices.IndexOf(index);
-                if (rewardOrdinal is < 0 or > 1)
-                {
-                    LogUtility.Error($"Could not map Ancient reward item index {index} to its Act 2/3 progression");
-                    return Array.Empty<RelicModel>();
-                }
+            // AllReceivedItems contains only Ancient Unlocks that should be claimed through the
+            // AP reward menu. When Neow Sanity is enabled, ArchipelagoClient keeps the first
+            // Progressive Ancient unlock as Neow's start-of-run reward and does not add it here.
+            // After filtering to this character, sorting by AP item index therefore gives the
+            // two non-Neow rewards in server order: ordinal 0 is Act 2 and ordinal 1 is Act 3.
+            var characterOffset = player.Character.GetCharacterOffset();
+            var orderedAncientItemIndices = AllReceivedItems
+                .Where(item => item.Item.GetCharacterOffset() == characterOffset &&
+                               item.Item.GetCharacterSpecificItemID() == APItem.AncientUnlock)
+                .OrderBy(item => item.Index)
+                .Select(item => item.Index)
+                .ToList();
 
-                // ModelDb uses zero-based Act indices: 1 is Act 2 and 2 is Act 3.
-                ancientActIndex = rewardOrdinal + 1;
+            // This is the item's zero-based position in the ordered list above, not its AP item index.
+            var rewardOrdinal = orderedAncientItemIndices.IndexOf(index);
+            if (rewardOrdinal is < 0 or > 1)
+            {
+                LogUtility.Error($"Could not map Ancient reward item index {index} to its Act 2/3 progression");
+                return Array.Empty<RelicModel>();
             }
 
-            var choices = AncientRelicPool.CreateChoices(player, index, reservedRelicIds, ancientActIndex).ToList();
+            // ModelDb uses zero-based Act indices: 1 is Act 2 and 2 is Act 3.
+            var ancientActIndex = rewardOrdinal + 1;
+            var poolMode = ArchipelagoClient.Settings?.AncientRelicPool ?? AncientRelicPoolMode.Balanced;
+            var poolActIndex = (poolMode == AncientRelicPoolMode.TrueChaos) ? null : ancientActIndex;
+            var choiceKey = index.ToString();
+            AncientEventModel? specificAncient = null;
+            if (poolMode == AncientRelicPoolMode.Balanced)
+            {
+                // Balanced must choose from one Ancient, so prefer the Ancient already rolled
+                // into this run's ActModel and use a stable same-act fallback only if necessary.
+                specificAncient = AncientRelicPool.ResolveSpecificAncient(
+                    player,
+                    ancientActIndex,
+                    choiceKey,
+                    reservedRelicIds
+                );
+                if (specificAncient == null)
+                    return Array.Empty<RelicModel>();
+            }
+
+            var choices = AncientRelicPool.CreateChoices(
+                player,
+                choiceKey,
+                reservedRelicIds,
+                poolActIndex,
+                specificAncient
+            ).ToList();
             if (choices.Count != AncientRelicPool.ChoiceCount)
                 return Array.Empty<RelicModel>();
 
