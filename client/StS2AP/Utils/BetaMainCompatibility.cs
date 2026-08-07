@@ -9,43 +9,6 @@ namespace StS2AP.Utils;
 /// </summary>
 public static class BetaMainCompatibility
 {
-    private const string MainSaveCacheTypeName =
-        "MegaCrit.Sts2.Core.Saves.Runs.SavedPropertiesTypeCache";
-
-    private const string BetaSaveCacheTypeName =
-        "MegaCrit.Sts2.Core.Multiplayer.Serialization.ModelIdSerializationCache";
-
-    /// <summary>
-    /// Registers a model type containing saved properties with either the public-branch
-    /// SavedPropertiesTypeCache or the beta-branch ModelIdSerializationCache.
-    /// </summary>
-    public static void CacheSavedProperties(Type modelType)
-    {
-        // The public branch and beta branch moved this cache to different types.
-        // Resolve by capability so this assembly does not bind to either cache type directly.
-        Type cacheType = AccessTools.TypeByName(MainSaveCacheTypeName)
-            ?? AccessTools.TypeByName(BetaSaveCacheTypeName)
-            ?? throw new TypeLoadException(
-                $"Could not find {MainSaveCacheTypeName} or {BetaSaveCacheTypeName}."
-            );
-
-        // Public 0.107.1 takes only the model type. The beta method added two context
-        // parameters; BaseLib passes null for both when registering a standalone mod type.
-        object?[] arguments = cacheType.FullName == MainSaveCacheTypeName
-            ? [modelType]
-            : [modelType, null, null];
-
-        // CachePropertiesForType is private in the game, so use Harmony's reflection helper.
-        var cacheMethod = AccessTools.Method(cacheType, "CachePropertiesForType")
-            ?? throw new MissingMethodException(cacheType.FullName, "CachePropertiesForType");
-
-        cacheMethod.Invoke(null, arguments);
-        LogUtility.Info(
-            $"Registered saved properties for {modelType.FullName} through " +
-            $"{cacheType.Name}.{cacheMethod.Name}."
-        );
-    }
-
     /// <summary>
     /// Gets the selected local character without binding to LobbyPlayer, which was renamed
     /// to StartRunLobbyPlayer on the beta branch and changed StartRunLobby.LocalPlayer's

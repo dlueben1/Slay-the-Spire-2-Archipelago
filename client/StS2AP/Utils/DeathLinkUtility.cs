@@ -68,7 +68,7 @@ namespace StS2AP.Utils
 
             try
             {
-                // Permanently adds a clone (with the SavedProperty stamped) to the deck
+                // Permanently adds a clone with its saved attached state to the deck
                 await CardPileCmd.AddCursesToDeck(
                     new[] { ModelDb.Card<DeathLinkCurse>() },
                     GameUtility.CurrentPlayer!

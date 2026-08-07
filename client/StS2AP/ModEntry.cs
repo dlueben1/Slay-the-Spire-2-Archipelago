@@ -33,10 +33,6 @@ namespace StS2AP
 
             LogUtility.Info("Archipelago mod initializing...");
 
-            // Register the Death Link Curse's saved properties through the cache used by
-            // either the public branch or beta branch of the game.
-            BetaMainCompatibility.CacheSavedProperties(typeof(DeathLinkCurse));
-
             // Register with RitsuLib
             var assembly = Assembly.GetExecutingAssembly();
             ModTypeDiscoveryHub.RegisterModAssembly(ModId, assembly);
