@@ -119,7 +119,7 @@ namespace StS2AP.Patches
             public static bool intercept(NCharacterSelectScreen __instance)
             {
 
-                var charName = __instance.Lobby.LocalPlayer.character.Id.Entry;
+                var charName = BetaMainCompatibility.GetLocalCharacter(__instance.Lobby).Id.Entry;
                 foreach(var entry in GameUtility.APSaves)
                 {
                     if (entry.Value.Length > 0)
@@ -157,7 +157,7 @@ namespace StS2AP.Patches
                 {
                     NAudioManager.Instance?.StopMusic();
                     string saveStr;
-                    var charName = _charSelect.Lobby.LocalPlayer.character.Id.Entry;
+                    var charName = BetaMainCompatibility.GetLocalCharacter(_charSelect.Lobby).Id.Entry;
                     if (GameUtility.APSaves.TryGetValue(charName, out saveStr))
                     {
                         var unzipped = Patches_RunSaveManager.SaveRun.Unzip(saveStr);

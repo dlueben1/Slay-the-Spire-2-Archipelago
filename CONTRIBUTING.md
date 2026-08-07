@@ -14,7 +14,8 @@ You also need to:
 
 - Create a clone of Archipelago's repo should live in `../Archipelago` or Python will complain about the APWorld's `.py` files
 - Copy `client/StS2AP/local.props.template` to `client/StS2AP/local.props` and update `<STS2GamePath>` and `<GodotExePath>` to match your local installations
-  - `<STS2GamePath>` should point to the directory for the game in Steam
+  - `<STS2GamePath>` should point to the active Steam game directory used to launch the game and receive development builds
+  - For reproducible builds that support both game branches, uncomment `<STS2ReferenceDataDir>` and point it to a privately preserved Public Branch `0.107.1` `data_sts2_windows_x86_64` directory. This supplies `sts2.dll`, `0Harmony.dll`, and `GodotSharp.dll` at compile time even when the active Steam installation is on beta. Do not commit or distribute these game DLLs.
   - `<GodotExePath>` should point to the Godot Directory that has `Godot_v4.5.1-stable_mono_win64.exe`
 
 > [!CAUTION]

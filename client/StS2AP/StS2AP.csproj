@@ -28,6 +28,7 @@
 		<!-- Derived paths -->
 		<ModsOutputDir>$(STS2GamePath)\mods\$(ModName)</ModsOutputDir>
 		<GameDataDir>$(STS2GamePath)\data_sts2_windows_x86_64</GameDataDir>
+		<STS2ReferenceDataDir Condition="'$(STS2ReferenceDataDir)' == ''">$(GameDataDir)</STS2ReferenceDataDir>
 		<GodotProject>$(ProjectDir)godot</GodotProject>
 	</PropertyGroup>
 
@@ -38,13 +39,13 @@
 
 	<ItemGroup>
 		<Reference Include="0Harmony">
-			<HintPath>$(GameDataDir)\0Harmony.dll</HintPath>
+			<HintPath>$(STS2ReferenceDataDir)\0Harmony.dll</HintPath>
 		</Reference>
 		<Reference Include="GodotSharp">
-			<HintPath>$(GameDataDir)\GodotSharp.dll</HintPath>
+			<HintPath>$(STS2ReferenceDataDir)\GodotSharp.dll</HintPath>
 		</Reference>
 		<Reference Include="sts2">
-			<HintPath>$(GameDataDir)\sts2.dll</HintPath>
+			<HintPath>$(STS2ReferenceDataDir)\sts2.dll</HintPath>
 		</Reference>
 	</ItemGroup>
 

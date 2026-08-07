@@ -5,7 +5,7 @@ Archipelago Client & APWorld for STS2
 # Download the Latest Playable Release [Here](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest)
 
 > [!IMPORTANT]
-> We do **not** support the Beta Branch, only the Public Branch of the game! There can be breaking changes to the underlying game's code that makes supporting beta branches unrealistic.
+> The client targets both the Public Branch (`0.107.1`) and the current Beta Branch.
 
 ## Alpha Development
 
@@ -16,7 +16,7 @@ This mod is currently in Alpha, and is unfinished. It's not feature-complete to 
 
 # Installing the Mod
 
-1. Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) installed. The easiest way to obtain it is from Steam Workshop.
+1. Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) installed from Steam Workshop. Its loader selects the RitsuLib build matching the active game API, so no reinstall is needed when switching between the Public and Beta branches.
 2. Download the "sts2-client.zip" from the [Releases](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest) section of the Repo
 3. Go to your Slay the Spire II directory (In Steam, click "Browse Local Files")
 4. If a folder called `mods` does not exist, create it
