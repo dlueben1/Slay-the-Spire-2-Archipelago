@@ -4,6 +4,8 @@ using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Events;
+using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using StS2AP.Extensions;
 using StS2AP.Models;
@@ -14,6 +16,157 @@ using System.Linq;
 
 namespace StS2AP.Patches
 {
+    /// <summary>
+    /// Removes the vanilla Orobas upgrade relics that would bypass progressive starter tiers.
+    /// Orobas normally takes one option from each of three pools. If its pool-three upgrade relics
+    /// are blocked or unavailable, the third choice comes from the remaining first two pools.
+    /// A future advanced-Ancient pool implementation must apply the same exclusions to its pool.
+    /// </summary>
+    [HarmonyPatch(typeof(Orobas), "GenerateInitialOptions")]
+    internal static class Patches_OrobasProgressiveStarters
+    {
+        [HarmonyPrefix]
+        private static bool Prefix(Orobas __instance, ref IReadOnlyList<EventOption> __result)
+        {
+            if (__instance.Owner is null || !ShouldFilterProgressiveStarters())
+                return true;
+
+            try
+            {
+                var currentCharacter = __instance.Owner.Character;
+                var seaGlassCharacter = __instance.Rng.NextItem(
+                    __instance.Owner.UnlockState.Characters.Where(character =>
+                        character.Id != currentCharacter.Id)
+                ) ?? currentCharacter;
+
+                // Materialize Orobas's pools in the same order as the base method, without
+                // modifying the event model's property results.
+                var pool1 = GetPrivateProperty<IEnumerable<EventOption>>(__instance, "OptionPool1").ToList();
+
+                EventOption dynamicPool1Option;
+                if (__instance.Rng.NextFloat() < 0.3333333f)
+                {
+                    dynamicPool1Option = GetPrivateProperty<EventOption>(
+                        __instance,
+                        "PrismaticGemOption"
+                    );
+                }
+                else
+                {
+                    dynamicPool1Option = GetPrivateProperty<IEnumerable<EventOption>>(
+                        __instance,
+                        "SeaGlassOptions"
+                    ).FirstOrDefault(option =>
+                        option.Relic is SeaGlass seaGlass &&
+                        seaGlass.CharacterId == seaGlassCharacter.Id
+                    ) ?? throw new InvalidOperationException(
+                        $"Orobas has no Sea Glass option for {seaGlassCharacter.Id}."
+                    );
+                }
+
+                pool1.Add(dynamicPool1Option);
+                pool1.RemoveAll(IsBlocked);
+                var firstOption = PickRequired(
+                    __instance,
+                    pool1,
+                    "Orobas option pool 1 contains no valid options."
+                );
+
+                var pool2 = GetPrivateProperty<IEnumerable<EventOption>>(__instance, "OptionPool2").ToList();
+                pool2.RemoveAll(IsBlocked);
+                var secondOption = PickRequired(
+                    __instance,
+                    pool2,
+                    "Orobas option pool 2 contains no valid options."
+                );
+
+                var pool3 = GetPrivateProperty<IEnumerable<EventOption>>(__instance, "OptionPool3").ToList();
+                pool3.RemoveAll(option => IsBlocked(option) || option.Relic is null);
+                var thirdOptionPool = pool3.Count > 0
+                    ? pool3
+                    : BuildFallbackThirdPool(pool1, pool2, firstOption, secondOption);
+                var thirdOption = PickRequired(
+                    __instance,
+                    thirdOptionPool,
+                    "Orobas contains no valid option for its third reward."
+                );
+
+                __result = new[] { firstOption, secondOption, thirdOption };
+                return false;
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Error(
+                    $"Could not filter progressive starter relics from Orobas; " +
+                    $"falling back to the base-game options. {ex}"
+                );
+                return true;
+            }
+        }
+
+        private static bool IsBlocked(EventOption option)
+        {
+            return option.Relic switch
+            {
+                ArchaicTooth => ArchipelagoClient.Settings?.ProgressiveStarterCard == true,
+                TouchOfOrobas => ArchipelagoClient.Settings?.ProgressiveStarterRelic == true,
+                _ => false,
+            };
+        }
+
+        private static bool ShouldFilterProgressiveStarters() =>
+            ArchipelagoClient.Settings?.ProgressiveStarterCard == true ||
+            ArchipelagoClient.Settings?.ProgressiveStarterRelic == true;
+
+        private static List<EventOption> BuildFallbackThirdPool(
+            IEnumerable<EventOption> pool1,
+            IEnumerable<EventOption> pool2,
+            EventOption firstOption,
+            EventOption secondOption)
+        {
+            var selectedRelicIds = new HashSet<string>();
+            if (firstOption.Relic is not null)
+                selectedRelicIds.Add(firstOption.Relic.Id.ToString());
+            if (secondOption.Relic is not null)
+                selectedRelicIds.Add(secondOption.Relic.Id.ToString());
+
+            return pool1
+                .Concat(pool2)
+                .Where(option =>
+                    option.Relic is null || !selectedRelicIds.Contains(option.Relic.Id.ToString()))
+                .GroupBy(GetOptionIdentity)
+                .Select(group => group.First())
+                .ToList();
+        }
+
+        private static string GetOptionIdentity(EventOption option) =>
+            option.Relic?.Id.ToString() ?? $"EVENT_OPTION:{option.TextKey}";
+
+        private static EventOption PickRequired(
+            Orobas instance,
+            IReadOnlyList<EventOption> pool,
+            string errorMessage)
+        {
+            if (pool.Count == 0)
+                throw new InvalidOperationException(errorMessage);
+
+            return instance.Rng.NextItem(pool)
+                ?? throw new InvalidOperationException(errorMessage);
+        }
+
+        private static T GetPrivateProperty<T>(Orobas instance, string propertyName)
+            where T : class
+        {
+            var property = AccessTools.Property(instance.GetType(), propertyName)
+                ?? throw new MissingMemberException(instance.GetType().FullName, propertyName);
+
+            return property.GetValue(instance) as T
+                ?? throw new InvalidOperationException(
+                    $"{instance.GetType().Name}.{propertyName} did not contain a {typeof(T).FullName}."
+                );
+        }
+    }
+
     [HarmonyPatch(typeof(AncientEventModel), "GenerateInitialOptionsWrapper")]
     public static class Patches_AncientRelics
     {

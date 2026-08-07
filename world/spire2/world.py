@@ -69,6 +69,11 @@ class SlayTheSpire2World(World):
 
         if not self.characters:
             raise OptionError("At least one character must be configured")
+        if self.options.include_floor_checks.value == 0:
+            # Progressive starter items replace floor-check filler. Without those locations there
+            # is no filler budget for them, so normalize both global toggles to disabled.
+            self.options.progressive_starter_card.value = 0
+            self.options.progressive_starter_relic.value = 0
         names = set()
         for config in self.characters:
             # self.logger.info("StS: Got character configuration" + str(config))
@@ -541,6 +546,10 @@ class SlayTheSpire2World(World):
                     amount = 2 if self.options.neow_sanity.value == 0 else 3
                 elif ItemType.RELIC == data.type:
                     amount = 10
+                elif ItemType.PROGRESSIVE_STARTER_CARD == data.type:
+                    amount = 2 if self.options.progressive_starter_card.value else 0
+                elif ItemType.PROGRESSIVE_STARTER_RELIC == data.type:
+                    amount = 2 if self.options.progressive_starter_relic.value else 0
                 elif ItemType.CAMPFIRE == data.type:
                     if self.options.campfire_sanity.value != 0:
                         amount = 3
@@ -587,7 +596,11 @@ class SlayTheSpire2World(World):
                     remaining_checks += 1
 
                 # Generate filler items for floor checks using the weighted filler system
-                filler_num = remaining_checks
+                progressive_starter_items = (
+                    (2 if self.options.progressive_starter_card.value else 0) +
+                    (2 if self.options.progressive_starter_relic.value else 0)
+                )
+                filler_num = remaining_checks - progressive_starter_items
                 
                 for _ in range(filler_num):
                     filler_item_name = self.get_filler_item(character=config.name)
@@ -679,6 +692,8 @@ class SlayTheSpire2World(World):
             "potion_sanity",
             "gold_sanity",
             "campfire_sanity",
+            "progressive_starter_card",
+            "progressive_starter_relic",
             "death_link",
             "enable_death_fragments",
             "death_link_damage_percent",
@@ -719,6 +734,11 @@ class SlayTheSpire2World(World):
         self.options.ancient_relic_pool.value = slot_data['ancient_relic_pool']
         self.options.relic_choice_count.value = slot_data['relic_choice_count']
         self.options.campfire_sanity.value = slot_data['campfire_sanity']
+        self.options.progressive_starter_card.value = slot_data['progressive_starter_card']
+        self.options.progressive_starter_relic.value = slot_data['progressive_starter_relic']
+        if self.options.include_floor_checks.value == 0:
+            self.options.progressive_starter_card.value = 0
+            self.options.progressive_starter_relic.value = 0
         self.options.shop_sanity.value = slot_data['shop_sanity']
         self.options.gold_sanity.value = slot_data['gold_sanity']
         self.options.potion_sanity.value = slot_data['potion_sanity']

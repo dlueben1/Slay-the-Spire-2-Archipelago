@@ -40,6 +40,8 @@ namespace StS2AP.Data
             ToughEnemies = 26,
             DeadlyEnemies = 27,
             DoubleBoss = 28,
+            ProgressiveStarterCard = 29,
+            ProgressiveStarterRelic = 30,
 
             /// ── Ephemeral Buff items (universal / character-agnostic) ──────────────────
             /// These are one-time-use filler items that apply a temporary in-combat buff
@@ -93,6 +95,8 @@ namespace StS2AP.Data
             { 26, "Disable Tough Enemies" },
             { 27, "Disable Deadly Enemies" },
             { 28, "Disable Double Boss" },
+            { 29, "Progressive Starter Card" },
+            { 30, "Progressive Starter Relic" },
             { 500, "Free Attack" },
             { 501, "Free Power" },
             { 502, "Free Skill" },
@@ -141,6 +145,8 @@ namespace StS2AP.Data
               case APItem.ShopRelicSlot:
               case APItem.ShopPotionSlot:
               case APItem.ProgressiveShopRemove:
+              case APItem.ProgressiveStarterCard:
+              case APItem.ProgressiveStarterRelic:
                     return false;
               case APItem.Unlock:
                     return false;

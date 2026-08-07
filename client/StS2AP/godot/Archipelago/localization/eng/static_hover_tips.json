@@ -36,5 +36,9 @@
   "AP_REWARD_PROGRESSIVE_REST.title": "Progressive Rests",
   "AP_REWARD_PROGRESSIVE_REST.description": "The number of Progressive Rest rewards received for this character. The number of these represents the highest Act you can Heal at.",
   "AP_REWARD_PROGRESSIVE_SMITH.title": "Progressive Smiths",
-  "AP_REWARD_PROGRESSIVE_SMITH.description": "The number of Progressive Smith rewards received for this character. The number of these represents the highest Act you can Upgrade at."
+  "AP_REWARD_PROGRESSIVE_SMITH.description": "The number of Progressive Smith rewards received for this character. The number of these represents the highest Act you can Upgrade at.",
+  "AP_REWARD_PROGRESSIVE_STARTER_CARD.title": "Progressive Starter Card",
+  "AP_REWARD_PROGRESSIVE_STARTER_CARD.description": "The number of Progressive Starter Card items received for this character. For supported characters: none, the normal starter card, then its Archaic Tooth transformation.",
+  "AP_REWARD_PROGRESSIVE_STARTER_RELIC.title": "Progressive Starter Relic",
+  "AP_REWARD_PROGRESSIVE_STARTER_RELIC.description": "The number of Progressive Starter Relic items received for this character. For supported characters: none, the normal starter relic, then its Touch of Orobas refinement."
 }

@@ -782,6 +782,14 @@ namespace StS2AP
 
                     break;
                 }
+                case APItem.ProgressiveStarterCard:
+                    HandleThreshholdItem(item, Progress.ProgressiveStarterCards, "Progressive Starter Cards");
+                    ProgressiveStarterUtility.QueueReconcileCurrentPlayer();
+                    break;
+                case APItem.ProgressiveStarterRelic:
+                    HandleThreshholdItem(item, Progress.ProgressiveStarterRelics, "Progressive Starter Relics");
+                    ProgressiveStarterUtility.QueueReconcileCurrentPlayer();
+                    break;
                 // Gold is condensed into a single reward pool
                 case APItem.OneGold:
                 case APItem.FiveGold:
@@ -1075,6 +1083,11 @@ namespace StS2AP
 
             if (slotData.ContainsKey("include_floor_checks"))
                 settings.Floorsanity = Convert.ToInt32(slotData["include_floor_checks"]) != 0;
+
+            settings.ProgressiveStarterCard =
+                Convert.ToInt32(slotData["progressive_starter_card"]) != 0;
+            settings.ProgressiveStarterRelic =
+                Convert.ToInt32(slotData["progressive_starter_relic"]) != 0;
 
             if (slotData.ContainsKey("shop_sanity"))
                 settings.ShopSanity = Convert.ToInt32(slotData["shop_sanity"]) != 0;

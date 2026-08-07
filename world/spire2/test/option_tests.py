@@ -143,3 +143,52 @@ class TestBasicModdedChars(Spire2TestBase):
         },
         "modded_characters": ["WATCHER-WATCHER"]
     }
+
+
+class TestProgressiveStartersDisabled(Spire2TestBase):
+    def test_no_progressive_starters(self):
+        names = [item.name for item in self.world.multiworld.itempool]
+        self.assertNotIn("Ironclad Progressive Starter Card", names)
+        self.assertNotIn("Ironclad Progressive Starter Relic", names)
+
+
+class TestProgressiveStartersEnabled(Spire2TestBase):
+    options = {
+        "characters": ["ironclad", "silent"],
+        "progressive_starter_card": True,
+        "progressive_starter_relic": True,
+    }
+
+    def test_two_progressive_starters_per_character(self):
+        names = [item.name for item in self.world.multiworld.itempool]
+        for character in ("Ironclad", "Silent"):
+            self.assertEqual(names.count(f"{character} Progressive Starter Card"), 2)
+            self.assertEqual(names.count(f"{character} Progressive Starter Relic"), 2)
+
+    def test_normal_reward_counts_are_preserved(self):
+        names = [item.name for item in self.world.multiworld.itempool]
+        for character in ("Ironclad", "Silent"):
+            self.assertEqual(names.count(f"{character} Card Reward"), 10)
+            self.assertEqual(names.count(f"{character} Relic"), 10)
+
+    def test_progressive_starters_are_sent_to_the_client(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(slot_data["progressive_starter_card"], 1)
+        self.assertEqual(slot_data["progressive_starter_relic"], 1)
+
+
+class TestProgressiveStartersRequireFloorChecks(Spire2TestBase):
+    options = {
+        "progressive_starter_card": True,
+        "progressive_starter_relic": True,
+        "include_floor_checks": False,
+    }
+
+    def test_progressive_starters_are_disabled(self):
+        names = [item.name for item in self.world.multiworld.itempool]
+        self.assertNotIn("Ironclad Progressive Starter Card", names)
+        self.assertNotIn("Ironclad Progressive Starter Relic", names)
+
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(slot_data["progressive_starter_card"], 0)
+        self.assertEqual(slot_data["progressive_starter_relic"], 0)

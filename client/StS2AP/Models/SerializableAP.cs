@@ -43,6 +43,18 @@ namespace StS2AP.Models
         public List<int> UsedItems { get; set; } = new List<int>();
         [JsonPropertyName("gold_redeemed")]
         public int GoldRedeemed { get; set; }
+        [JsonPropertyName("progressive_starter_card_base_id")]
+        public string? ProgressiveStarterCardBaseId { get; set; }
+        [JsonPropertyName("progressive_starter_card_upgraded_id")]
+        public string? ProgressiveStarterCardUpgradedId { get; set; }
+        [JsonPropertyName("progressive_starter_card_tier")]
+        public ProgressiveStarterTier ProgressiveStarterCardTier { get; set; } = ProgressiveStarterTier.Unsupported;
+        [JsonPropertyName("progressive_starter_relic_base_id")]
+        public string? ProgressiveStarterRelicBaseId { get; set; }
+        [JsonPropertyName("progressive_starter_relic_upgraded_id")]
+        public string? ProgressiveStarterRelicUpgradedId { get; set; }
+        [JsonPropertyName("progressive_starter_relic_tier")]
+        public ProgressiveStarterTier ProgressiveStarterRelicTier { get; set; } = ProgressiveStarterTier.Unsupported;
         public List<int> Ascensions { get; set; } = new List<int>();
     }
 

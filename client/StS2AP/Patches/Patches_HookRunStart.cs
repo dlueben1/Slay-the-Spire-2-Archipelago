@@ -11,6 +11,7 @@ using StS2AP.UI;
 using StS2AP.Utils;
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using static Godot.HttpRequest;
 
 namespace StS2AP.Patches
@@ -78,6 +79,33 @@ namespace StS2AP.Patches
 
                 // Clear buffers
                 ArchipelagoClient.Progress.UsedItems.Clear();
+            }
+        }
+
+        /// <summary>
+        /// Reconciles progressive starters after the base game has finalized starting relic effects,
+        /// but before it launches the run scene. At this point each player has a real RunState and
+        /// relic removal can pair AfterRemoved with the base game's completed AfterObtained call.
+        /// </summary>
+        [HarmonyPatch(typeof(RunManager), nameof(RunManager.FinalizeStartingRelics))]
+        public static class OnStartingRelicsFinalized
+        {
+            [HarmonyPostfix]
+            public static void Postfix(ref Task __result)
+            {
+                __result = ReconcileProgressiveStarters(__result);
+            }
+
+            private static async Task ReconcileProgressiveStarters(Task finalizeTask)
+            {
+                await finalizeTask;
+
+                var player = GameUtility.CurrentPlayer;
+                var runState = RunManager.Instance.DebugOnlyGetState();
+                if (player == null || !ReferenceEquals(player.RunState, runState))
+                    return;
+
+                await ProgressiveStarterUtility.InitializeForRun(player);
             }
         }
 

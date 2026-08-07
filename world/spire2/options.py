@@ -160,6 +160,44 @@ class RelicChoiceCount(Range):
     default = 1
 
 
+class ProgressiveStarterCard(Toggle):
+    """Globally enables progressive special starter cards for every configured character.
+
+    Requires Include Floor Checks. Each character gets two Progressive Starter Card items, which
+    replace two floor-check filler items. With none received, the character
+    starts without the special starter card that Archaic Tooth would transform (Bash, Neutralize,
+    Dualcast, Unleash, Falling Star, or a compatible modded equivalent). The first item restores
+    the normal card and the second grants Archaic Tooth so its normal effect performs the
+    transformation. Archaic Tooth is unavailable from Orobas while this option is enabled.
+
+    Characters without an Archaic Tooth transformation are left unchanged, although their two
+    Progressive Starter Card items are still present in the multiworld.
+
+    WARNING: This can make the early game significantly harder for some characters. Logic does not
+    account for the missing or upgraded starter card."""
+    display_name = "Progressive Starter Card"
+    default = 0
+
+
+class ProgressiveStarterRelic(Toggle):
+    """Globally enables progressive starter relics for every configured character.
+
+    Requires Include Floor Checks. Each character gets two Progressive Starter Relic items, which
+    replace two floor-check filler items. With none received, the character
+    starts without the starter relic that Touch of Orobas would refine (such as Burning Blood, or a
+    compatible modded equivalent). The first item restores the normal relic and the second grants
+    Touch of Orobas so its normal effect performs the refinement. Touch of Orobas is unavailable
+    from Orobas while this option is enabled.
+
+    Characters without a Touch of Orobas refinement are left unchanged, although their two
+    Progressive Starter Relic items are still present in the multiworld.
+
+    WARNING: This can make the early game significantly harder for characters whose starting relic
+    is central to their early power. Logic does not account for the missing or upgraded starter relic."""
+    display_name = "Progressive Starter Relic"
+    default = 0
+
+
 class IncludeFloorChecks(Toggle):
     """Whether to include reaching new floors as a location. Adds various fillers as items."""
     display_name = "Include Floor Checks"
@@ -579,6 +617,8 @@ class Spire2Options(PerGameCommonOptions):
     # trap_chance: TrapChance
     # trap_weights: TrapWeights
     neow_sanity: NeowSanity
+    progressive_starter_card: ProgressiveStarterCard
+    progressive_starter_relic: ProgressiveStarterRelic
     campfire_sanity: CampfireSanity
     gold_sanity: GoldSanity
     potion_sanity: PotionSanity

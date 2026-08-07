@@ -6,7 +6,7 @@ from .options import (
     LockCharacters, UnlockedCharacter, Ascension,
     IncludeFloorChecks, CampfireSanity, GoldSanity, PotionSanity,
     AncientRelicLocation, AncientRelicPool, RelicChoiceCount,
-    CardReward,
+    CardReward, ProgressiveStarterCard, ProgressiveStarterRelic,
     OneGoldFillerWeight, FiveGoldFillerWeight,
     FreeAttackFillerWeight, FreePowerFillerWeight, FreeSkillFillerWeight,
     DexterityFillerWeight, StrengthFillerWeight, PlatingFillerWeight,
@@ -52,6 +52,10 @@ class SlayTheSpire2Web(WebWorld):
             DeathLink,
             EnableDeathFragments,
             DeathLinkDamagePercent,
+        ]),
+        OptionGroup("Progressive Starters", [
+            ProgressiveStarterCard,
+            ProgressiveStarterRelic,
         ]),
         OptionGroup("Filler Items", [
             OneGoldFillerWeight,

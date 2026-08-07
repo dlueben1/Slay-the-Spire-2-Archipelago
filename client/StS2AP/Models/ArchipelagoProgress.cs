@@ -326,6 +326,12 @@ namespace StS2AP.Models
             PotionAssignments.Clear();
             Ascensions.Reset();
             GoldRedeemed = 0;
+            ProgressiveStarterCardBaseId = null;
+            ProgressiveStarterCardUpgradedId = null;
+            ProgressiveStarterCardTier = ProgressiveStarterTier.Unsupported;
+            ProgressiveStarterRelicBaseId = null;
+            ProgressiveStarterRelicUpgradedId = null;
+            ProgressiveStarterRelicTier = ProgressiveStarterTier.Unsupported;
         }
 
 
@@ -491,6 +497,26 @@ namespace StS2AP.Models
         public Dictionary<long, int> ProgressiveAncients = new Dictionary<long, int>();
 
         /// <summary>
+        /// Counts the Progressive Starter Card and Relic items received for each character.
+        /// These are reconstructed from the Archipelago item history when a save is loaded.
+        /// </summary>
+        public Dictionary<long, int> ProgressiveStarterCards = new Dictionary<long, int>();
+        public Dictionary<long, int> ProgressiveStarterRelics = new Dictionary<long, int>();
+
+        /// <summary>
+        /// The Orobas-recognized starter models and authoritative applied tiers for the active run.
+        /// The IDs must be saved because tier zero removes the models that would otherwise be
+        /// rediscovered for modded characters. Keeping the tier separately distinguishes that state
+        /// from a player or another mod removing an already-unlocked starter.
+        /// </summary>
+        public string? ProgressiveStarterCardBaseId { get; set; }
+        public string? ProgressiveStarterCardUpgradedId { get; set; }
+        public ProgressiveStarterTier ProgressiveStarterCardTier { get; set; } = ProgressiveStarterTier.Unsupported;
+        public string? ProgressiveStarterRelicBaseId { get; set; }
+        public string? ProgressiveStarterRelicUpgradedId { get; set; }
+        public ProgressiveStarterTier ProgressiveStarterRelicTier { get; set; } = ProgressiveStarterTier.Unsupported;
+
+        /// <summary>
         /// Gets the highest Act that a character can rest at
         /// </summary>
         /// <param name="character">The Character's offset</param>
@@ -575,6 +601,12 @@ namespace StS2AP.Models
                         kv.Value.Select(relic => (relic.IsMutable ? relic : relic.ToMutable()).ToSerializable()).ToList()
                     )
                 ).ToDictionary(),
+                ProgressiveStarterCardBaseId = ProgressiveStarterCardBaseId,
+                ProgressiveStarterCardUpgradedId = ProgressiveStarterCardUpgradedId,
+                ProgressiveStarterCardTier = ProgressiveStarterCardTier,
+                ProgressiveStarterRelicBaseId = ProgressiveStarterRelicBaseId,
+                ProgressiveStarterRelicUpgradedId = ProgressiveStarterRelicUpgradedId,
+                ProgressiveStarterRelicTier = ProgressiveStarterRelicTier,
                 CardAssignments = CardAssignments.Select((KeyValuePair<int, CardReward> kv) => new KeyValuePair<int, SerializableReward>(kv.Key, kv.Value.ToSerializable())).ToDictionary(),
                 CardAssignmentModels = CardAssignments.Select((KeyValuePair<int, CardReward> kv) =>
                 new KeyValuePair<int, List<SerializableCard>>(kv.Key, kv.Value.Cards.Select(c => c.ToSerializable()).ToList())).ToDictionary(),
@@ -608,6 +640,12 @@ namespace StS2AP.Models
                         kv.Value.Select(RelicModel.FromSerializable).ToList()
                     )
                 ).ToDictionary(),
+                ProgressiveStarterCardBaseId = saveData.ProgressiveStarterCardBaseId,
+                ProgressiveStarterCardUpgradedId = saveData.ProgressiveStarterCardUpgradedId,
+                ProgressiveStarterCardTier = saveData.ProgressiveStarterCardTier,
+                ProgressiveStarterRelicBaseId = saveData.ProgressiveStarterRelicBaseId,
+                ProgressiveStarterRelicUpgradedId = saveData.ProgressiveStarterRelicUpgradedId,
+                ProgressiveStarterRelicTier = saveData.ProgressiveStarterRelicTier,
                 PotionAssignments = saveData.PotionAssignments.Select((KeyValuePair<int, SerializablePotion> kv) => new KeyValuePair<int, PotionModel>(kv.Key, PotionModel.FromSerializable(kv.Value).CanonicalInstance)).ToDictionary(),
             };
 

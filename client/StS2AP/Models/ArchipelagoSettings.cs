@@ -89,6 +89,8 @@ namespace StS2AP.Models
         public bool GoldSanity { get; set; }
         public bool PotionSanity { get; set; }
         public bool Floorsanity { get; set; }
+        public bool ProgressiveStarterCard { get; set; }
+        public bool ProgressiveStarterRelic { get; set; }
 
         #region Shop Sanity Settings
 

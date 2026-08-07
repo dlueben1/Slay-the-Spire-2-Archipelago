@@ -24,6 +24,8 @@ class ItemType(Enum):
     CHAR_UNLOCK = auto()
     POTION = auto()
     ASCENSION_DOWN = auto()
+    PROGRESSIVE_STARTER_CARD = auto()
+    PROGRESSIVE_STARTER_RELIC = auto()
     # TRAP = auto()
     CAW_CAW = auto()
     BUFF = auto()
@@ -63,6 +65,8 @@ base_item_table: Dict[str, ItemData] = {
     'Progressive Shop Remove': ItemData(13, ItemType.SHOP_REMOVE, ItemClassification.progression_deprioritized),
     'Unlock': ItemData(14, ItemType.CHAR_UNLOCK, ItemClassification.progression),
     'Potion': ItemData(18, ItemType.POTION, ItemClassification.useful),
+    'Progressive Starter Card': ItemData(29, ItemType.PROGRESSIVE_STARTER_CARD, ItemClassification.progression),
+    'Progressive Starter Relic': ItemData(30, ItemType.PROGRESSIVE_STARTER_RELIC, ItemClassification.progression),
 
     # Event Items
     'Victory': ItemData(None, ItemType.EVENT, ItemClassification.progression, True, True),

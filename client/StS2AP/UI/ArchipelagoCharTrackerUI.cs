@@ -2,6 +2,7 @@
 using MegaCrit.Sts2.addons.mega_text;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Potions;
+using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using StS2AP.UI.Components;
 using static StS2AP.Patches.Patches_APProgressOnCharSelect;
@@ -111,6 +112,12 @@ namespace StS2AP.UI
 
         /// <summary>Tracks the number of Progressive Smith rewards received.</summary>
         public static ItemCountLabel? ProgressiveSmithLabel { get; private set; }
+
+        /// <summary>Tracks the number of Progressive Starter Card rewards received.</summary>
+        public static ItemCountLabel? ProgressiveStarterCardLabel { get; private set; }
+
+        /// <summary>Tracks the number of Progressive Starter Relic rewards received.</summary>
+        public static ItemCountLabel? ProgressiveStarterRelicLabel { get; private set; }
 
         #endregion
 
@@ -244,6 +251,8 @@ namespace StS2AP.UI
                 GoldRewards          = null;
                 ProgressiveRestLabel = null;
                 ProgressiveSmithLabel = null;
+                ProgressiveStarterCardLabel = null;
+                ProgressiveStarterRelicLabel = null;
             }
         }
 
@@ -541,6 +550,26 @@ namespace StS2AP.UI
             // Progressive Smith Total
             ProgressiveSmithLabel = new ItemCountLabel("res://images/relics/whetstone.png", "(0 / 3)", "AP_REWARD_PROGRESSIVE_SMITH");
             AddItemRow(ProgressiveSmithLabel);
+
+            if (ArchipelagoClient.Settings.ProgressiveStarterCard)
+            {
+                ProgressiveStarterCardLabel = new ItemCountLabel(
+                    ModelDb.Relic<ArchaicTooth>().IconPath,
+                    "(0 / 2)",
+                    "AP_REWARD_PROGRESSIVE_STARTER_CARD"
+                );
+                AddItemRow(ProgressiveStarterCardLabel);
+            }
+
+            if (ArchipelagoClient.Settings.ProgressiveStarterRelic)
+            {
+                ProgressiveStarterRelicLabel = new ItemCountLabel(
+                    ModelDb.Relic<TouchOfOrobas>().IconPath,
+                    "(0 / 2)",
+                    "AP_REWARD_PROGRESSIVE_STARTER_RELIC"
+                );
+                AddItemRow(ProgressiveStarterRelicLabel);
+            }
 
             // Set initial values based on the first character from the select screen
             UpdateCharTrackerUI.UpdateCheckedLocations(character);
