@@ -149,6 +149,17 @@ class AncientRelicPool(Choice):
     default = 0
 
 
+class RelicChoiceCount(Range):
+    """How many relics you can choose from when claiming a Relic received from Archipelago.
+
+    This affects only Relic items received from Archipelago. Relics offered by the base game
+    and other mods are unchanged."""
+    display_name = "Relic Choice Count"
+    range_start = 1
+    range_end = 5
+    default = 1
+
+
 class IncludeFloorChecks(Toggle):
     """Whether to include reaching new floors as a location. Adds various fillers as items."""
     display_name = "Include Floor Checks"
@@ -544,6 +555,7 @@ class Spire2Options(PerGameCommonOptions):
     ascension_down: AscensionDown
     ancient_relic_location: AncientRelicLocation
     ancient_relic_pool: AncientRelicPool
+    relic_choice_count: RelicChoiceCount
     shuffle_all_cards: CardReward
     include_floor_checks: IncludeFloorChecks
     # Filler item weights

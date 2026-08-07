@@ -79,6 +79,12 @@ namespace StS2AP.Models
         /// </summary>
         public AncientRelicPoolMode AncientRelicPool { get; set; } = AncientRelicPoolMode.Balanced;
 
+        /// <summary>
+        /// Number of relics offered when claiming a Relic received from Archipelago.
+        /// This does not affect relic rewards created by the base game or other mods.
+        /// </summary>
+        public int RelicChoiceCount { get; set; } = 1;
+
         public bool CampfireSanity { get; set; }
         public bool GoldSanity { get; set; }
         public bool PotionSanity { get; set; }

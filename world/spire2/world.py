@@ -674,6 +674,7 @@ class SlayTheSpire2World(World):
             "neow_sanity",
             "ancient_relic_location",
             "ancient_relic_pool",
+            "relic_choice_count",
             "shop_sanity",
             "potion_sanity",
             "gold_sanity",
@@ -716,6 +717,7 @@ class SlayTheSpire2World(World):
         self.options.neow_sanity.value = slot_data['neow_sanity']
         self.options.ancient_relic_location.value = slot_data['ancient_relic_location']
         self.options.ancient_relic_pool.value = slot_data['ancient_relic_pool']
+        self.options.relic_choice_count.value = slot_data['relic_choice_count']
         self.options.campfire_sanity.value = slot_data['campfire_sanity']
         self.options.shop_sanity.value = slot_data['shop_sanity']
         self.options.gold_sanity.value = slot_data['gold_sanity']

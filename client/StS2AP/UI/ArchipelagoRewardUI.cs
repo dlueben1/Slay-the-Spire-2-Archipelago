@@ -74,10 +74,13 @@ namespace StS2AP.UI
         public Func<Task<bool>>? GrantAction { get; set; }
 
         /// <summary>
-        /// Three relics linked to one Ancient Unlock. When present, the UI renders a single
-        /// grouped reward and consumes the AP item only after one of these relics is granted.
+        /// Relics linked to one AP item. When present, the UI renders a single grouped reward
+        /// and consumes the AP item only after one of these relics is granted.
         /// </summary>
         public IReadOnlyList<RelicModel>? LinkedRelicChoices { get; set; }
+
+        /// <summary>Whether linked relic choices should use the Ancient-specific button tint.</summary>
+        public bool UseAncientRelicStyle { get; set; }
 
         /// <summary>The relic whose native hover tips should be shown for this reward row.</summary>
         public RelicModel? TooltipRelic { get; set; }
@@ -258,17 +261,23 @@ namespace StS2AP.UI
                     GrantAction = GetGrantAction(i.Item),
                 };
 
-                // For relic items, pre-assign a specific relic so the name is stable across open/close
+                // Relic items received from AP offer a stable, persisted choice. This does not
+                // affect relic rewards created by the base game or other mods.
                 var rawId = i.Item.GetCharacterSpecificItemID();
                 if (rawId == APItem.Relic)
                 {
-                    var relic = ArchipelagoClient.Progress.GetOrAssignRelic(i.Index, currentPlayer);
-                    if (relic != null)
+                    var choiceCount = ArchipelagoClient.Settings?.RelicChoiceCount ?? 1;
+                    var choices = ArchipelagoClient.Progress.GetOrAssignRelicChoices(i.Index, currentPlayer, choiceCount);
+                    if (choices.Count > 0)
                     {
-                        data.ItemName = relic.Title.GetRawText();
-                        data.IconPath = relic.IconPath;
-                        data.TooltipRelic = relic;
-                        data.GrantAction = () => GameUtility.TryGrantRelic(relic);
+                        data.ItemName = "Choose a Relic";
+                        data.LinkedRelicChoices = choices;
+                    }
+                    else
+                    {
+                        // Fail closed: do not consume the AP item if its choices could not be built.
+                        data.ItemName = "Relic Choice Unavailable";
+                        data.GrantAction = () => Task.FromResult(false);
                     }
                 }
 
@@ -279,6 +288,7 @@ namespace StS2AP.UI
                     {
                         data.ItemName = "Choose an Ancient Relic";
                         data.LinkedRelicChoices = choices;
+                        data.UseAncientRelicStyle = true;
                     }
                     else
                     {
@@ -494,8 +504,8 @@ namespace StS2AP.UI
         {
             if (_itemContainer == null || !IsInstanceValid(_itemContainer)) return;
 
-            var rewardControl = data.LinkedRelicChoices?.Count == AncientRelicPool.ChoiceCount
-                ? CreateAncientChoiceGroup(data)
+            var rewardControl = data.LinkedRelicChoices?.Count > 0
+                ? CreateRelicChoiceGroup(data)
                 : CreateRewardButton(data);
             _itemContainer.AddChild(rewardControl);
             _remainingRewards++;
@@ -698,22 +708,22 @@ namespace StS2AP.UI
         }
 
         /// <summary>
-        /// Creates three visually linked relic buttons which collectively represent one AP item.
+        /// Creates visually linked relic buttons which collectively represent one AP item.
         /// </summary>
-        private static Control CreateAncientChoiceGroup(ArchipelagoRewardData data)
+        private static Control CreateRelicChoiceGroup(ArchipelagoRewardData data)
         {
             // this is probably infinitely more complicated than it needs to be...
             // so im sorry if this hurts your brain or can be made simpler
             // i took inspiration from decompiled code of a similar mod that does this
             var choices = data.LinkedRelicChoices;
-            if (choices == null || choices.Count != AncientRelicPool.ChoiceCount)
+            if (choices == null || choices.Count == 0)
                 return CreateRewardButton(data);
 
             var chainTexture = GetLinkedRewardChainTexture();
             const float choiceSeparation = 18f;
             var group = new Control
             {
-                Name = $"AncientChoice_{data.Index}",
+                Name = $"RelicChoice_{data.Index}",
                 CustomMinimumSize = new Vector2(0, choices.Count * ButtonHeight + (choices.Count - 1) * choiceSeparation),
                 SizeFlagsHorizontal = Control.SizeFlags.Fill
             };
@@ -750,7 +760,7 @@ namespace StS2AP.UI
                         if (!granted)
                         {
                             if (!string.IsNullOrEmpty(failure))
-                                LogUtility.Error($"Ancient relic choice failed for '{relic.Id}': {failure}");
+                                LogUtility.Error($"Relic choice failed for '{relic.Id}': {failure}");
 
                             resolving = false;
                             foreach (var button in buttons.Where(button => GodotObject.IsInstanceValid(button)))
@@ -783,7 +793,7 @@ namespace StS2AP.UI
                     TooltipRelic = relic
                 };
 
-                var button = CreateRewardButton(choiceData, _ => ResolveChoice(relic), isAncientChoice: true);
+                var button = CreateRewardButton(choiceData, _ => ResolveChoice(relic), data.UseAncientRelicStyle);
                 buttons.Add(button);
                 buttonContainer.AddChild(button);
             }
@@ -826,7 +836,7 @@ namespace StS2AP.UI
                 if (!string.IsNullOrWhiteSpace(chainPath))
                     _linkedRewardChainTexture = PreloadManager.Cache.GetCompressedTexture2D(chainPath);
                 else
-                    LogUtility.Warn("Native linked-reward chain asset path was unavailable; using spacing-only Ancient choices");
+                    LogUtility.Warn("Native linked-reward chain asset path was unavailable; using spacing-only relic choices");
             }
             catch (Exception ex)
             {

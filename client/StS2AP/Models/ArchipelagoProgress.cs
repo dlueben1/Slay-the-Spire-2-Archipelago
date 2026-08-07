@@ -112,11 +112,11 @@ namespace StS2AP.Models
         public Dictionary<string, bool> CampfiresChecked { get; set; } = new Dictionary<string, bool>();
 
         /// <summary>
-        /// Maps an Archipelago item's index to the RelicModel that was pre-pulled from the RelicFactory for it.
-        /// This ensures that opening/closing the reward screen always shows the same relic for each relic reward.
+        /// Maps an Archipelago Relic item's index to the choices pre-pulled from the RelicFactory for it.
+        /// This ensures that opening/closing or saving/loading the reward screen always shows the same choices.
         /// Cleared on each new run via <see cref="ResetTrackers"/>.
         /// </summary>
-        public Dictionary<int, RelicModel> RelicAssignments { get; set; } = new Dictionary<int, RelicModel>();
+        public Dictionary<int, List<RelicModel>> RelicChoiceAssignments { get; set; } = new Dictionary<int, List<RelicModel>>();
 
         /// <summary>
         /// Maps an Ancient Unlock's AP item index to its three linked relic choices.
@@ -140,34 +140,40 @@ namespace StS2AP.Models
         public AscensionManager Ascensions = new AscensionManager();
 
         /// <summary>
-        /// Returns the relic assigned to the given location, pulling one from the RelicFactory if it hasn't been assigned yet.
-        /// This guarantees that the same relic is shown every time the reward screen is opened for the same item.
+        /// Returns the relic choices assigned to the given AP item, pulling them from the RelicFactory
+        /// if they have not been assigned yet. The complete choice is persisted by item index.
         /// </summary>
         /// <param name="index">The index of the specific item sent from the Multiworld.</param>
         /// <param name="player">The current player, needed by RelicFactory.</param>
-        /// <returns>The assigned RelicModel, or null if no player is provided or the factory fails.</returns>
-        public RelicModel? GetOrAssignRelic(int index, Player player)
+        /// <param name="choiceCount">The configured number of relics to offer.</param>
+        /// <returns>The assigned relic choices, or an empty list if no player is provided or the factory fails.</returns>
+        public IReadOnlyList<RelicModel> GetOrAssignRelicChoices(int index, Player player, int choiceCount)
         {
-            if (RelicAssignments.TryGetValue(index, out var existing))
+            if (RelicChoiceAssignments.TryGetValue(index, out var existing))
                 return existing;
 
             if (player == null)
             {
-                LogUtility.Warn($"Cannot assign relic for item w/ index {index}: no active player");
-                return null;
+                LogUtility.Warn($"Cannot assign relic choices for item w/ index {index}: no active player");
+                return Array.Empty<RelicModel>();
             }
 
             try
             {
-                var relic = RelicFactory.PullNextRelicFromFront(player);
-                RelicAssignments[index] = relic;
-                LogUtility.Info($"Pre-assigned relic '{relic.Id}' for item w/ index {index}");
-                return relic;
+                var choices = Enumerable.Range(0, choiceCount)
+                    .Select(_ => RelicFactory.PullNextRelicFromFront(player))
+                    .ToList();
+                RelicChoiceAssignments[index] = choices;
+                LogUtility.Info(
+                    $"Pre-assigned relic choices for item w/ index {index}: " +
+                    string.Join(", ", choices.Select(relic => relic.Id.ToString()))
+                );
+                return choices;
             }
             catch (Exception ex)
             {
-                LogUtility.Error($"Failed to pre-assign relic for item w/ index {index}: {ex.Message}");
-                return null;
+                LogUtility.Error($"Failed to pre-assign relic choices for item w/ index {index}: {ex.Message}");
+                return Array.Empty<RelicModel>();
             }
         }
 
@@ -314,7 +320,7 @@ namespace StS2AP.Models
             GoldRewardsAttempted = 0;
             PotionRewardsAttempted = 0;
             CampfiresChecked.Clear();
-            RelicAssignments.Clear();
+            RelicChoiceAssignments.Clear();
             AncientRelicChoiceAssignments.Clear();
             CardAssignments.Clear();
             PotionAssignments.Clear();
@@ -557,7 +563,12 @@ namespace StS2AP.Models
                 BossRewardsDistributed = BossRewardsDistributed,
                 UsedItems = UsedItems,
                 GoldRedeemed = GoldRedeemed,
-                RelicAssignments = RelicAssignments.Select((KeyValuePair<int, RelicModel> kv) => new KeyValuePair<int, SerializableRelic>(kv.Key, kv.Value.ToMutable().ToSerializable())).ToDictionary(),
+                RelicChoiceAssignments = RelicChoiceAssignments.Select(kv =>
+                    new KeyValuePair<int, List<SerializableRelic>>(
+                        kv.Key,
+                        kv.Value.Select(relic => (relic.IsMutable ? relic : relic.ToMutable()).ToSerializable()).ToList()
+                    )
+                ).ToDictionary(),
                 AncientRelicChoiceAssignments = AncientRelicChoiceAssignments.Select(kv =>
                     new KeyValuePair<int, List<SerializableRelic>>(
                         kv.Key,
@@ -585,7 +596,12 @@ namespace StS2AP.Models
                 BossRewardsDistributed = saveData.BossRewardsDistributed,
                 UsedItems = new List<int>(saveData.UsedItems),
                 GoldRedeemed = saveData.GoldRedeemed,
-                RelicAssignments = saveData.RelicAssignments.Select((KeyValuePair<int, SerializableRelic> kv) => new KeyValuePair<int, RelicModel>(kv.Key, RelicModel.FromSerializable(kv.Value).CanonicalInstance)).ToDictionary(),
+                RelicChoiceAssignments = saveData.RelicChoiceAssignments.Select(kv =>
+                    new KeyValuePair<int, List<RelicModel>>(
+                        kv.Key,
+                        kv.Value.Select(RelicModel.FromSerializable).ToList()
+                    )
+                ).ToDictionary(),
                 AncientRelicChoiceAssignments = (saveData.AncientRelicChoiceAssignments ?? new Dictionary<int, List<SerializableRelic>>()).Select(kv =>
                     new KeyValuePair<int, List<RelicModel>>(
                         kv.Key,

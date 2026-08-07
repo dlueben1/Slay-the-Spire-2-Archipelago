@@ -81,6 +81,22 @@ class TestAncientRelicOptionsTrueChaos(Spire2TestBase):
         self.assertEqual(2, self.world.fill_slot_data()["ancient_relic_pool"])
 
 
+class TestRelicChoiceCountDefault(Spire2TestBase):
+    def test_one_choice_by_default(self):
+        self.assertEqual(1, self.world.options.relic_choice_count.value)
+        self.assertEqual(1, self.world.fill_slot_data()["relic_choice_count"])
+
+
+class TestRelicChoiceCountConfigured(Spire2TestBase):
+    options = {
+        "relic_choice_count": 5,
+    }
+
+    def test_configured_count_is_sent_in_slot_data(self):
+        self.assertEqual(5, self.world.options.relic_choice_count.value)
+        self.assertEqual(5, self.world.fill_slot_data()["relic_choice_count"])
+
+
 class TestAscensionDowns(Spire2TestBase):
     options = {
         "characters": [
