@@ -87,7 +87,7 @@ logic_map: dict[PowerLevel, List[str]] = {
         *_create_floor_check(28, 32),
         *_create_combat_check(13, 14),
     ],
-    PowerLevel(draw=7, relic=4, ancient=1, rest=2, smith=2, shop=6, shop_remove=2, gold=5): [
+    PowerLevel(draw=6, relic=4, ancient=1, rest=2, smith=2, shop=6, shop_remove=2, gold=5): [
     # PowerLevel(draw=7, relic=4, boss_relic=1, rest=2, smith=2, shop=6, shop_remove=2, gold=5): [
         "Act 2 Boss",
         "Rare Card Reward 2",
@@ -197,6 +197,9 @@ class LogicTestBase(Spire2TestBase):
         relic = self.get_item_by_name(f"{self.prefix} Relic")
         relics = [relic for _ in range(power.relic)]
 
+        ancient = self.get_item_by_name(f"{self.prefix} Progressive Ancient")
+        ancients = [ancient for _ in range(power.ancient)]
+
         # boss_relic = self.get_item_by_name(f"{self.prefix} Boss Relic")
         # boss_relics = [boss_relic for _ in range(power.boss_relic)]
 
@@ -220,6 +223,8 @@ class LogicTestBase(Spire2TestBase):
             draws.pop()
         elif type == "Relic":
             relics.pop()
+        elif type == "Progressive Ancient":
+            ancients.pop()
         # elif type == "Boss Relic":
         #     boss_relics.pop()
         elif type == "Progressive Rest":
@@ -234,7 +239,7 @@ class LogicTestBase(Spire2TestBase):
             golds.pop()
 
 
-        for list in [draws, relics, rests, smiths, shops, removes, golds]:
+        for list in [draws, relics, ancients, rests, smiths, shops, removes, golds]:
         # for list in [draws, relics, boss_relics, rests, smiths, shops, removes, golds, keys]:
             for item in list:
                 state.collect(item)
@@ -243,9 +248,18 @@ class LogicTestBase(Spire2TestBase):
 
     def _test_inaccessible(self, power: PowerLevel, locations: Iterable[str]):
 
-        for i, type in enumerate([ x for x in ['Card Reward', 'Relic', 'Progressive Rest', 'Progressive Smith', "Shop Card Slot", "Progressive Shop Remove", "Elite Gold"]]):
-        # for i, type in enumerate([ x for x in ['Card Reward', 'Relic', 'Boss Relic', 'Progressive Rest', 'Progressive Smith', "Shop Card Slot", "Progressive Shop Remove", "Elite Gold", "Keys"]]):
-            if power[i] == 0:
+        requirements = [
+            ("Card Reward", power.draw),
+            ("Relic", power.relic),
+            ("Progressive Ancient", power.ancient),
+            ("Progressive Rest", power.rest),
+            ("Progressive Smith", power.smith),
+            ("Shop Card Slot", power.shop),
+            ("Progressive Shop Remove", power.shop_remove),
+            ("Elite Gold", power.gold),
+        ]
+        for type, count in requirements:
+            if count == 0:
                 continue
             state = self._setup_state_inaccessible(power, type)
 
