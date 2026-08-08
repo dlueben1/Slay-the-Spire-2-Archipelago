@@ -36,7 +36,6 @@ namespace StS2AP.Utils
             public NotificationType Type { get; set; }
             public double DisplayDuration { get; set; } = 3.0;
             public bool ForceIntoDevConsole { get; set; } = false;
-            public NotificationSize PresentationSize { get; set; } = NotificationSize.Standard;
             public NotificationPriority Priority { get; set; } = NotificationPriority.Normal;
 
             public ArchipelagoNotification(
@@ -62,12 +61,6 @@ namespace StS2AP.Utils
             Warning,
         }
 
-        public enum NotificationSize
-        {
-            Standard,
-            Large,
-        }
-
         public enum NotificationPriority
         {
             Normal,
@@ -88,7 +81,6 @@ namespace StS2AP.Utils
             bool devConsoleOnly = false,
             double timeout = 3.0,
             bool forceIntoDevConsole = false,
-            NotificationSize presentationSize = NotificationSize.Standard,
             NotificationPriority priority = NotificationPriority.Normal
         )
         {
@@ -96,7 +88,6 @@ namespace StS2AP.Utils
             var notification = new ArchipelagoNotification(message, type);
             notification.DisplayDuration = timeout;
             notification.ForceIntoDevConsole = forceIntoDevConsole;
-            notification.PresentationSize = presentationSize;
             notification.Priority = priority;
             if (!devConsoleOnly)
             {
@@ -359,7 +350,6 @@ namespace StS2AP.Utils
         /// <param name="msg">The message to display</param>
         public static void ShowRawText(
             string msg,
-            NotificationSize presentationSize = NotificationSize.Standard,
             double timeout = 3.0,
             NotificationPriority priority = NotificationPriority.Normal
         )
@@ -368,7 +358,6 @@ namespace StS2AP.Utils
                 msg,
                 NotificationType.Info,
                 timeout: timeout,
-                presentationSize: presentationSize,
                 priority: priority
             );
         }
