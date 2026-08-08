@@ -163,13 +163,15 @@ namespace StS2AP.Patches
                         var unzipped = Patches_RunSaveManager.SaveRun.Unzip(saveStr);
                         //LogUtility.Info($"JSON Save data{unzipped}");
                         SerializableAP? result = JsonSerializer.Deserialize<SerializableAP>(unzipped, SerializationUtility.CombinedOptions);
-                        if (result?.SaveData is not JsonElement saveData)
+                        JsonElement? saveData = result?.SaveData;
+                        if (result == null || saveData == null ||
+                            saveData.Value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
                         {
                             LogUtility.Error("Failed to load AP save: save_data was missing");
                             NotificationUtility.ShowRawText("Failed to load checkpoint. The checkpoint was preserved.");
                             return;
                         }
-                        ReadSaveResult<SerializableRun> runResult = JsonSerializationUtility.FromJson<SerializableRun>(saveData.GetRawText());
+                        ReadSaveResult<SerializableRun> runResult = JsonSerializationUtility.FromJson<SerializableRun>(saveData.Value.GetRawText());
                         if (!runResult.Success || runResult.SaveData == null)
                         {
                             LogUtility.Error($"Failed to deserialize AP run save: {runResult.ErrorMessage ?? runResult.Status.ToString()}");
