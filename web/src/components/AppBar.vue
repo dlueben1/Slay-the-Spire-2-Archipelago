@@ -13,8 +13,27 @@ const items = computed<NavigationMenuItem[]>(() => [
   },
   {
     label: "Setup",
-    to: "/setup",
     active: route.path.startsWith("/setup"),
+    class: "text-amber-500",
+    children: [
+      {
+        icon: "i-glyphs-signal-tower-bold",
+        label: "Hosting a Game",
+        description:
+          "Guide for hosting a game where one or more players are playing Slay the Spire II.",
+        to: "/setup/host",
+        active: route.path === "/setup/host",
+      },
+      {
+        icon: "i-glyphs-gamepad-bold",
+        label: "Joining a Game",
+        description:
+          "Guide for connecting Slay the Spire II to an Archipelago Multiworld game.",
+
+        to: "/setup/join",
+        active: route.path === "/setup/join",
+      },
+    ],
   },
   {
     label: "YAML Builder",
@@ -35,7 +54,15 @@ const items = computed<NavigationMenuItem[]>(() => [
       <img src="/logo.webp" alt="Slay the Spire 2 Archipelago" class="h-14" />
     </template>
 
-    <UNavigationMenu :items="items" color="primary" />
+    <UNavigationMenu
+      :items="items"
+      color="primary"
+      contentOrientation="vertical"
+      :ui="{
+        childLinkLabel: 'font-medium',
+        childLinkDescription: 'text-xs text-muted',
+      }"
+    />
 
     <template #right>
       <UTooltip text="Join our Discord Thread">
@@ -64,7 +91,7 @@ const items = computed<NavigationMenuItem[]>(() => [
         <UButton
           color="neutral"
           variant="ghost"
-          to="https://discord.com/channels/731205301247803413/1524232611654799540"
+          to="https://steamcommunity.com/sharedfiles/filedetails/?id=3748826296"
           target="_blank"
           icon="i-simple-icons-steam"
           aria-label="Steam Workshop"

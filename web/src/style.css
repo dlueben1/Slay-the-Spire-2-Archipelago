@@ -58,14 +58,24 @@ a {
   color: var(--color-amber-500);
 }
 
-/* shared layout */
+/* Alert Styling */
 .markdown-alert {
-  border: 1px solid;
-  border-radius: 0.5rem;
   padding: 0.5rem;
   display: flex;
   flex-direction: column;
-  background-color: transparent;
+  border: 1px solid;
+  border-radius: 0.5rem;
+  border-color: color-mix(
+    in oklab,
+    var(--alert-color, var(--ui-success)) 60%,
+    transparent
+  );
+  background-color: color-mix(
+    in oklab,
+    var(--alert-color, var(--ui-success)) 18%,
+    transparent
+  );
+  color: color-mix(in oklab, var(--alert-color, var(--ui-success)) 55%, #fff);
 }
 
 .markdown-alert-title {
@@ -76,10 +86,11 @@ a {
 }
 
 .markdown-alert-title svg {
+  fill: color-mix(in oklab, var(--alert-color, var(--ui-success)) 60%, #fff);
   flex-shrink: 0;
 }
 
-/* variant colors */
+/* Alert Variant Colors */
 .markdown-alert-tip {
   --alert-color: var(--ui-success);
 }
@@ -100,21 +111,11 @@ a {
   --alert-color: var(--ui-error);
 }
 
-/* apply shared color values from the custom property */
-.markdown-alert {
-  border-color: color-mix(
-    in oklab,
-    var(--alert-color, var(--ui-success)) 60%,
-    transparent
-  );
-  background-color: color-mix(
-    in oklab,
-    var(--alert-color, var(--ui-success)) 18%,
-    transparent
-  );
-  color: color-mix(in oklab, var(--alert-color, var(--ui-success)) 55%, #fff);
+/* Markdown Styling */
+h1 {
+  @apply font-bold text-lg;
 }
 
-.markdown-alert-title svg {
-  fill: color-mix(in oklab, var(--alert-color, var(--ui-success)) 60%, #fff);
+h2 {
+  @apply font-bold text-base;
 }
