@@ -1,6 +1,7 @@
 ﻿using Godot;
 using MegaCrit.Sts2.addons.mega_text;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Potions;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using StS2AP.UI.Components;
 using static StS2AP.Patches.Patches_APProgressOnCharSelect;
@@ -481,7 +482,7 @@ namespace StS2AP.UI
             // Potionsanity Checks Counter
             if(ArchipelagoClient.Settings.PotionSanity)
             {
-                PotionsanityChecks = new ItemCountLabel("res://images/potions/skill_potion.png", "(0 / 0)", "AP_REWARD_POTIONSANITY_CHECKS");
+                PotionsanityChecks = new ItemCountLabel(ModelDb.Potion<SkillPotion>().ImagePath, "(0 / 0)", "AP_REWARD_POTIONSANITY_CHECKS");
                 AddCheckRow(PotionsanityChecks);
             }
 
@@ -526,7 +527,7 @@ namespace StS2AP.UI
             AddItemRow(ProgressiveAncients);
     
             // Potions Counter
-            PotionRewards = new ItemCountLabel("res://images/potions/glowwater_potion.png", "0", "AP_REWARD_POTION_REWARDS");
+            PotionRewards = new ItemCountLabel(ModelDb.Potion<GlowwaterPotion>().ImagePath, "0", "AP_REWARD_POTION_REWARDS");
             AddItemRow(PotionRewards);
 
             // Gold Rewards Total
