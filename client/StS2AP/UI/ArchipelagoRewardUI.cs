@@ -158,9 +158,14 @@ namespace StS2AP.UI
         private const float IconSlotSize      = 48f;
         private const float ButtonHeight      = 74f;
         
+        // Linked relic choices mirror the base game's compact NLinkedRewardSet layout:
+        // buttons remain close together while the chain renders over both entries.
+        private const float LinkedChoiceSeparation = 3f;
+        private const float LinkedChoiceChainWidth = 104f;
+        private const float LinkedChoiceChainHeight = 88f;
+        private const int LinkedChoiceTextBottomBias = 8;
+
         // Ancient Relics related settings
-        private const float AncientChainWidth = 104f;
-        private const float AncientChainHeight = 88f;
         private static readonly Color AncientButtonNormalColor = new(0.78f, 0.48f, 0.95f);
         private static readonly Color AncientButtonHoverColor = new(0.95f, 0.62f, 1f);
         private static readonly Color AncientButtonPressedColor = new(0.65f, 0.34f, 0.82f);
@@ -720,16 +725,15 @@ namespace StS2AP.UI
                 return CreateRewardButton(data);
 
             var chainTexture = GetLinkedRewardChainTexture();
-            const float choiceSeparation = 18f;
             var group = new Control
             {
                 Name = $"RelicChoice_{data.Index}",
-                CustomMinimumSize = new Vector2(0, choices.Count * ButtonHeight + (choices.Count - 1) * choiceSeparation),
+                CustomMinimumSize = new Vector2(0, choices.Count * ButtonHeight + (choices.Count - 1) * LinkedChoiceSeparation),
                 SizeFlagsHorizontal = Control.SizeFlags.Fill
             };
             var buttonContainer = new VBoxContainer();
             buttonContainer.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-            buttonContainer.AddThemeConstantOverride("separation", (int)choiceSeparation);
+            buttonContainer.AddThemeConstantOverride("separation", (int)LinkedChoiceSeparation);
             group.AddChild(buttonContainer);
 
             var buttons = new List<Button>(choices.Count);
@@ -793,7 +797,12 @@ namespace StS2AP.UI
                     TooltipRelic = relic
                 };
 
-                var button = CreateRewardButton(choiceData, _ => ResolveChoice(relic), data.UseAncientRelicStyle);
+                var button = CreateRewardButton(
+                    choiceData,
+                    _ => ResolveChoice(relic),
+                    data.UseAncientRelicStyle,
+                    isLinkedChoice: true
+                );
                 buttons.Add(button);
                 buttonContainer.AddChild(button);
             }
@@ -802,7 +811,9 @@ namespace StS2AP.UI
             {
                 for (var index = 0; index < choices.Count - 1; index++)
                 {
-                    var chainCenterY = (index + 1) * ButtonHeight + index * choiceSeparation + choiceSeparation / 2f;
+                    var chainCenterY = (index + 1) * ButtonHeight
+                        + index * LinkedChoiceSeparation
+                        + LinkedChoiceSeparation / 2f;
                     var chain = new TextureRect
                     {
                         Texture = chainTexture,
@@ -813,10 +824,10 @@ namespace StS2AP.UI
                         MouseFilter = Control.MouseFilterEnum.Ignore
                     };
                     chain.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
-                    chain.OffsetLeft = -AncientChainWidth / 2f;
-                    chain.OffsetTop = chainCenterY - AncientChainHeight / 2f;
-                    chain.OffsetRight = AncientChainWidth / 2f;
-                    chain.OffsetBottom = chainCenterY + AncientChainHeight / 2f;
+                    chain.OffsetLeft = -LinkedChoiceChainWidth / 2f;
+                    chain.OffsetTop = chainCenterY - LinkedChoiceChainHeight / 2f;
+                    chain.OffsetRight = LinkedChoiceChainWidth / 2f;
+                    chain.OffsetBottom = chainCenterY + LinkedChoiceChainHeight / 2f;
                     group.AddChild(chain);
                 }
             }
@@ -854,10 +865,12 @@ namespace StS2AP.UI
         /// <param name="data">The reward entry to represent.</param>
         /// <param name="customPressed">Optional group-owned click handler.</param>
         /// <param name="isAncientChoice">Whether to apply the Ancient-specific button tint.</param>
+        /// <param name="isLinkedChoice">Whether this button belongs to an overlaid chain group.</param>
         private static Button CreateRewardButton(
             ArchipelagoRewardData data,
             Action<Button>? customPressed = null,
-            bool isAncientChoice = false)
+            bool isAncientChoice = false,
+            bool isLinkedChoice = false)
         {
             var btn = new Button { CustomMinimumSize = new Vector2(0, ButtonHeight) };
 
@@ -921,9 +934,27 @@ namespace StS2AP.UI
             }
 
             // Text column: item name (large) + sender (small)
-            var vbox = new VBoxContainer { SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
+            var vbox = new VBoxContainer();
             vbox.AddThemeConstantOverride("separation", 2);
-            hbox.AddChild(vbox);
+
+            if (isLinkedChoice)
+            {
+                // Move both text lines slightly upward so the larger chain can overlap
+                // the button edges without obscuring the source line.
+                var textMargin = new MarginContainer
+                {
+                    SizeFlagsHorizontal = Control.SizeFlags.Fill,
+                    SizeFlagsVertical = Control.SizeFlags.ShrinkCenter
+                };
+                textMargin.AddThemeConstantOverride("margin_bottom", LinkedChoiceTextBottomBias);
+                textMargin.AddChild(vbox);
+                hbox.AddChild(textMargin);
+            }
+            else
+            {
+                vbox.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+                hbox.AddChild(vbox);
+            }
 
             // Item name label
             var nameLabel = CreateTextLabel(data.ItemName, RewardNameFontSize, new Color(1f, 0.965f, 0.886f));
