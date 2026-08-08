@@ -304,7 +304,7 @@ namespace StS2AP.UI
                     {
                         ItemName = $"{offer.GrantedAmount} Gold",
                         SenderName = "",
-                        IconPath = IconCard,
+                        IconPath = IconGold,
                         GrantAction = async () =>
                         {
                             var amountToGrant = ArchipelagoClient.Progress.ConsumeGoldOffer(offer);
