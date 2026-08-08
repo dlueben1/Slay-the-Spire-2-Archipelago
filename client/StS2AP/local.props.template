@@ -6,6 +6,7 @@
     <!--
       Optional compile-time reference directory. For reproducible cross-branch release builds,
       point this at a preserved Public Branch 0.107.1 data_sts2_windows_x86_64 directory.
+      I recommend, copying that directory on main branch so you can better test the beta branch 
       If omitted, the build uses the active installation under STS2GamePath.
     -->
     <!-- <STS2ReferenceDataDir>???\sts2-reference\0.107.1\data_sts2_windows_x86_64</STS2ReferenceDataDir> -->

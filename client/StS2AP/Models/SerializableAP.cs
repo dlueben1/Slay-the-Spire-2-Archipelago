@@ -13,7 +13,10 @@ namespace StS2AP.Models
     public class SerializableAP
     {
         [JsonPropertyName("save_data")]
-        public SerializableRun? SaveData { get; set; }
+        // Keep the base-game save opaque to AP's source-generated serializer. The
+        // running game must serialize and deserialize this payload with its own
+        // MegaCritSerializerContext so public and beta save schemas can differ.
+        public JsonElement? SaveData { get; set; }
         [JsonPropertyName("card_rewards_attempted")]
         public int CardRewardsAttempted { get; set; }
         [JsonPropertyName("rare_card_rewards_attempted")]

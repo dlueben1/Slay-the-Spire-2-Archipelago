@@ -10,6 +10,7 @@ using MegaCrit.Sts2.Core.Saves;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Ascension;
 using AscensionManager = StS2AP.Utils.AscensionManager;
+using System.Text.Json;
 
 
 namespace StS2AP.Models
@@ -461,9 +462,10 @@ namespace StS2AP.Models
 
         public SerializableAP ToSerializable(SerializableRun run)
         {
+            using var runJson = JsonDocument.Parse(JsonSerializationUtility.ToJson(run));
             return new SerializableAP()
             {
-                SaveData = run,
+                SaveData = runJson.RootElement.Clone(),
                 CardRewardsAttempted = CardRewardsAttempted,
                 RareCardRewardsAttempted = RareCardRewardsAttempted,
                 RelicRewardsAttempted = RelicRewardsAttempted,

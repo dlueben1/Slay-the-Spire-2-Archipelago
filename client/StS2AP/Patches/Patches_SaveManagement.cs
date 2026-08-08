@@ -55,7 +55,7 @@ namespace StS2AP.Patches
                     return false;
                 }
 
-                LogUtility.Info("Saving to AP");
+                LogUtility.Info("Preparing AP checkpoint save");
                 SerializableRun saveMe = RunManager.Instance.ToSave(preFinishedRoom);
                 __result = asyncSave(saveMe);
                 return false;
@@ -163,13 +163,20 @@ namespace StS2AP.Patches
                         var unzipped = Patches_RunSaveManager.SaveRun.Unzip(saveStr);
                         //LogUtility.Info($"JSON Save data{unzipped}");
                         SerializableAP? result = JsonSerializer.Deserialize<SerializableAP>(unzipped, SerializationUtility.CombinedOptions);
-                        if (result == null)
+                        if (result?.SaveData is not JsonElement saveData)
                         {
-                            LogUtility.Error($"Failed to load save");
-                            _charSelect.Lobby.SetReady(ready: true);
+                            LogUtility.Error("Failed to load AP save: save_data was missing");
+                            NotificationUtility.ShowRawText("Failed to load checkpoint. The checkpoint was preserved.");
                             return;
                         }
-                        SerializableRun serializableRun = result.SaveData;
+                        ReadSaveResult<SerializableRun> runResult = JsonSerializationUtility.FromJson<SerializableRun>(saveData.GetRawText());
+                        if (!runResult.Success || runResult.SaveData == null)
+                        {
+                            LogUtility.Error($"Failed to deserialize AP run save: {runResult.ErrorMessage ?? runResult.Status.ToString()}");
+                            NotificationUtility.ShowRawText("Failed to load checkpoint. The checkpoint was preserved.");
+                            return;
+                        }
+                        SerializableRun serializableRun = runResult.SaveData;
                         RunState runState = RunState.FromSerializable(serializableRun);
                         await RunManager.Instance.SetUpSavedSingleplayer(runState, serializableRun);
                         Log.Info($"Continuing run with character: {serializableRun.Players[0].CharacterId}");
@@ -189,10 +196,12 @@ namespace StS2AP.Patches
                 }
                 catch (Exception ex)
                 {
-                    LogUtility.Error($"Failed to load AP save: {ex.Message}");
+                    LogUtility.Error($"Failed to load AP save: {ex}");
+                    NotificationUtility.ShowRawText("Failed to load checkpoint. The checkpoint was preserved.");
+                    return;
                 }
-                LogUtility.Error("Somehow got here, but we don't have a save, starting the run");
-                _charSelect.Lobby.SetReady(ready: true);
+                LogUtility.Error("AP save disappeared before it could be loaded; preserving the current run selection");
+                NotificationUtility.ShowRawText("The checkpoint could not be found.");
             }
         }
 
