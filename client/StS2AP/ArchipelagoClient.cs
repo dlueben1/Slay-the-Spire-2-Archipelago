@@ -7,7 +7,6 @@ using Archipelago.MultiClient.Net.Models;
 using Godot;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.Characters;
 using Newtonsoft.Json.Linq;
 using StS2AP.Data;
 using StS2AP.Models;
@@ -365,6 +364,10 @@ namespace StS2AP
             }
         }
 
+        /// <summary>
+        /// Initializes the character-select unlock state from authoritative slot data.
+        /// This must happen before the initial received-item queue is allowed to run.
+        /// </summary>
         private static void SetupUnlockedCharacters()
         {
             var characters = Settings.Characters;
@@ -372,20 +375,45 @@ namespace StS2AP
                 Progress.UnlockedCharacters.Select(c => c.Id.Entry),
                 StringComparer.InvariantCultureIgnoreCase
             );
-            bool someoneUnlocked = false;
-            foreach (var c in characters)
+
+            // Initial item callbacks are blocked by ConnectionLock until OnConnected
+            // completes, so the starting Unlock item has not been processed yet. Use
+            // the authoritative slot-data flag to initialize every starting character.
+            foreach (var config in characters.Values.Where(config => !config.Locked))
             {
-                if (ids.Contains(c.Key))
+                // The character may already be present after a reconnect or save restore.
+                if (ids.Contains(config.OfficialName))
                 {
-                    someoneUnlocked = true;
-                    break;
+                    continue;
                 }
+
+                // ModelDb should also work for modded characters to register here
+                var model = ModelDb.AllCharacters.FirstOrDefault(character =>
+                    string.Equals(
+                        character.Id.Entry,
+                        config.OfficialName,
+                        StringComparison.InvariantCultureIgnoreCase
+                    )
+                );
+                if (model == null)
+                {
+                    LogUtility.Warn(
+                        $"Could not resolve starting AP character '{config.OfficialName}'"
+                    );
+                    continue;
+                }
+
+                Progress.UnlockedCharacters.Add(model);
+                ids.Add(model.Id.Entry);
+                LogUtility.Info($"Unlocking starting character {model.Id.Entry} from slot data");
             }
+
+            bool someoneUnlocked = characters.Keys.Any(ids.Contains);
             if (!someoneUnlocked)
             {
-                // Probably someone didn't enter a modded character id correctly
-                // This is a failsafe to hopefully unlock *someone*
-                //var newResult = new List<CharacterModel>();
+                // A configured starting character could not be resolved, most likely
+                // because a modded character ID is wrong or its mod is not loaded.
+                // Keep the existing fail-safe so the character screen is still usable.
                 foreach (var c in ModelDb.AllCharacters)
                 {
                     if (characters.ContainsKey(c.Id.Entry))
@@ -407,7 +435,6 @@ namespace StS2AP
                         $"Force unlocking character {Progress.UnlockedCharacters.First().Id.Entry}"
                     );
                 }
-                //__result = newResult;
             }
         }
 
@@ -465,21 +492,6 @@ namespace StS2AP
                 ArchipelagoConnectionUI.SetCloseButtonEnabled(true);
                 ArchipelagoConnectionUI.SetStatus($"Failed to load settings: {ex.Message}");
                 return;
-            }
-
-            // If all characters should be unlocked, set that up
-            if (Settings.NoCharactersLocked)
-            {
-                CharacterModel[] characters = new CharacterModel[]
-                {
-                    ModelDb.Character<Ironclad>(),
-                    ModelDb.Character<Silent>(),
-                    ModelDb.Character<Regent>(),
-                    ModelDb.Character<Necrobinder>(),
-                    ModelDb.Character<Defect>(),
-                };
-                // TODO: need to include modded characters
-                Progress.UnlockedCharacters.AddRange(characters);
             }
 
             SetupUnlockedCharacters();
