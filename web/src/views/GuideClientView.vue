@@ -6,12 +6,7 @@ import { getMarkdownDocument } from "../services/MarkdownService";
 /**
  * The paths to the Markdown Documents we want to load for this file.
  */
-const markdownPaths = [
-  "/docs/setup-intro-host.md",
-  "/docs/setup-generate.md",
-  "/docs/setup-hosting.md",
-  "/docs/setup-outro-host.md",
-];
+const markdownPaths = ["/docs/setup-intro-client.md", "/docs/setup-client.md"];
 
 /**
  * The actual Markdown Documents that we load from the paths above.

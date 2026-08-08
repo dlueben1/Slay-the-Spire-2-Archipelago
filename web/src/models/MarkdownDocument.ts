@@ -77,7 +77,9 @@ export class MarkdownDocument {
       content = this.removeMarkdownTitle();
     }
 
-    const parsedHtml = await new Marked().use(markedAlert()).parse(content);
+    const parsedHtml = await new Marked()
+      .use(markedAlert())
+      .parse(content, { breaks: true, gfm: true });
 
     return DOMPurify.sanitize(parsedHtml);
   }

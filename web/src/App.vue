@@ -8,6 +8,6 @@ import AppBar from "./components/AppBar.vue";
     <AppBar />
 
     <!-- Content -->
-    <RouterView />
+    <RouterView class="mb-4" />
   </UApp>
 </template>

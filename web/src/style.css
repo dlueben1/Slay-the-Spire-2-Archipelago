@@ -61,6 +61,7 @@ a {
 /* Alert Styling */
 .markdown-alert {
   padding: 0.5rem;
+  margin: 1rem 0;
   display: flex;
   flex-direction: column;
   border: 1px solid;
@@ -112,10 +113,37 @@ a {
 }
 
 /* Markdown Styling */
-h1 {
+.markdown-content {
+  line-height: 1.6;
+}
+
+.markdown-content :deep(p) {
+  margin: 0 0 1rem;
+}
+
+.markdown-content :deep(br) {
+  line-height: 1.6;
+}
+
+.markdown-content h1 {
   @apply font-bold text-lg;
 }
 
-h2 {
+.markdown-content h2 {
   @apply font-bold text-base;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3 {
+  margin: 1rem 0;
+}
+
+.markdown-content p:not(.markdown-alert p) {
+  margin: 0.75rem 0;
+}
+
+.markdown-content ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
 }

@@ -30,8 +30,8 @@ const items = computed<NavigationMenuItem[]>(() => [
         description:
           "Guide for connecting Slay the Spire II to an Archipelago Multiworld game.",
 
-        to: "/setup/join",
-        active: route.path === "/setup/join",
+        to: "/setup/client",
+        active: route.path === "/setup/client",
       },
     ],
   },
@@ -40,11 +40,11 @@ const items = computed<NavigationMenuItem[]>(() => [
     to: "/builder",
     active: route.path.startsWith("/builder"),
   },
-  {
-    label: "Help",
-    to: "/help",
-    active: route.path.startsWith("/help"),
-  },
+  // {
+  //   label: "Help",
+  //   to: "/help",
+  //   active: route.path.startsWith("/help"),
+  // },
 ]);
 </script>
 
