@@ -23,6 +23,7 @@ namespace StS2AP.Utils
         /// <summary>
         /// The queue of messages to display.
         /// </summary>
+        private static readonly ConcurrentQueue<ArchipelagoNotification> _priorityQueue = new();
         private static readonly ConcurrentQueue<ArchipelagoNotification> _queue = new();
         private static readonly ConcurrentQueue<ArchipelagoNotification> _devQueue = new();
 
@@ -35,6 +36,8 @@ namespace StS2AP.Utils
             public NotificationType Type { get; set; }
             public double DisplayDuration { get; set; } = 3.0;
             public bool ForceIntoDevConsole { get; set; } = false;
+            public NotificationSize PresentationSize { get; set; } = NotificationSize.Standard;
+            public NotificationPriority Priority { get; set; } = NotificationPriority.Normal;
 
             public ArchipelagoNotification(
                 string message,
@@ -59,6 +62,18 @@ namespace StS2AP.Utils
             Warning,
         }
 
+        public enum NotificationSize
+        {
+            Standard,
+            Large,
+        }
+
+        public enum NotificationPriority
+        {
+            Normal,
+            High,
+        }
+
         #region Notification Queue
 
         /// <summary>
@@ -72,16 +87,27 @@ namespace StS2AP.Utils
             NotificationType type = NotificationType.Info,
             bool devConsoleOnly = false,
             double timeout = 3.0,
-            bool forceIntoDevConsole = false
+            bool forceIntoDevConsole = false,
+            NotificationSize presentationSize = NotificationSize.Standard,
+            NotificationPriority priority = NotificationPriority.Normal
         )
         {
             LogUtility.Info($"Attempting to enqueue notification {message} {type}");
             var notification = new ArchipelagoNotification(message, type);
             notification.DisplayDuration = timeout;
             notification.ForceIntoDevConsole = forceIntoDevConsole;
+            notification.PresentationSize = presentationSize;
+            notification.Priority = priority;
             if (!devConsoleOnly)
             {
-                _queue.Enqueue(notification);
+                if (priority == NotificationPriority.High)
+                {
+                    _priorityQueue.Enqueue(notification);
+                }
+                else
+                {
+                    _queue.Enqueue(notification);
+                }
             }
             _devQueue.Enqueue(notification);
             LogUtility.Info($"Notification queued ({type}): {message}");
@@ -92,6 +118,10 @@ namespace StS2AP.Utils
         /// </summary>
         public static ArchipelagoNotification? DequeueNotification()
         {
+            if (_priorityQueue.TryDequeue(out var priorityResult))
+            {
+                return priorityResult;
+            }
             if (_queue.TryDequeue(out var result))
             {
                 //LogUtility.Info($"Notification dequeued: {result.Message}");
@@ -127,7 +157,7 @@ namespace StS2AP.Utils
         /// </summary>
         public static int GetQueueCount()
         {
-            return _queue.Count;
+            return _priorityQueue.Count + _queue.Count;
         }
 
         /// <summary>
@@ -135,6 +165,7 @@ namespace StS2AP.Utils
         /// </summary>
         public static void ClearQueue()
         {
+            _priorityQueue.Clear();
             _queue.Clear();
             _devQueue.Clear();
             LogUtility.Info("Notification queue cleared");
@@ -326,9 +357,20 @@ namespace StS2AP.Utils
         /// Displays a notification as-is
         /// </summary>
         /// <param name="msg">The message to display</param>
-        public static void ShowRawText(string msg)
+        public static void ShowRawText(
+            string msg,
+            NotificationSize presentationSize = NotificationSize.Standard,
+            double timeout = 3.0,
+            NotificationPriority priority = NotificationPriority.Normal
+        )
         {
-            EnqueueNotification(msg, NotificationType.Info);
+            EnqueueNotification(
+                msg,
+                NotificationType.Info,
+                timeout: timeout,
+                presentationSize: presentationSize,
+                priority: priority
+            );
         }
 
         /// <summary>

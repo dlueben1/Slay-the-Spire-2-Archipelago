@@ -19,6 +19,8 @@ namespace StS2AP.UI
     {
         private static Control? _rootPanel;
         private static CanvasLayer? _canvasLayer;
+        private static HBoxContainer? _notificationContainer;
+        private static PanelContainer? _bubblePanel;
         private static MegaRichTextLabel? _messageLabel;
         private static TextureRect? _speakerIcon;
         private static System.Threading.Timer? _displayTimer;
@@ -29,8 +31,14 @@ namespace StS2AP.UI
         private const float BubblePadding = 12f;
         private const float LeftOffset = 16f;
         private const float TopOffset = 154f;
-        private const int FontSize = 20;
+        private const int StandardFontSize = 20;
+        private const int LargeFontSize = 24;
         private const float TailWidth = 16f;
+        private const float StandardBubbleWidth = 360f;
+        private const float LargeBubbleWidth = 480f;
+        private const float LargeBubbleHeight = 80f;
+        private static float _currentBubbleWidth = StandardBubbleWidth;
+        private static float _currentBubbleHeight = IconSize;
 
         /// <summary>
         /// Whether the UI is currently visible
@@ -111,6 +119,8 @@ namespace StS2AP.UI
                 _canvasLayer.QueueFree();
                 _canvasLayer = null;
                 _rootPanel = null;
+                _notificationContainer = null;
+                _bubblePanel = null;
                 _messageLabel = null;
                 _speakerIcon = null;
             }
@@ -179,7 +189,7 @@ namespace StS2AP.UI
         public static void ShowMessage(ArchipelagoNotification notification)
         {
             // Set the message text
-            SetMessage(notification.Message);
+            SetMessage(notification.Message, notification.PresentationSize);
 
             // Cancel any existing fade tween
             if (_fadeTween != null)
@@ -339,16 +349,63 @@ namespace StS2AP.UI
         /// <summary>
         /// Sets the notification message text
         /// </summary>
-        public static void SetMessage(string message)
+        public static void SetMessage(
+            string message,
+            NotificationSize presentationSize = NotificationSize.Standard
+        )
         {
             if (_messageLabel != null && IsInstanceValid(_messageLabel))
             {
+                bool isLarge = presentationSize == NotificationSize.Large;
+                _currentBubbleWidth = isLarge ? LargeBubbleWidth : StandardBubbleWidth;
+                _currentBubbleHeight = isLarge ? LargeBubbleHeight : IconSize;
+
                 // Odd bug-fix: We need to set the font manually EVERY time or it will randomly change
                 _messageLabel.RemoveThemeFontSizeOverride("normal_font_size");
-                _messageLabel.AddThemeFontSizeOverride("normal_font_size", FontSize);
+                _messageLabel.AddThemeFontSizeOverride(
+                    "normal_font_size",
+                    isLarge ? LargeFontSize : StandardFontSize
+                );
 
-                // Set the message text
+                // Clear and reset the shared label before assigning the next message.
+                // MegaRichTextLabel can otherwise retain a previous message's fitted
+                // size, especially when that message contained inline images.
+                _messageLabel.Text = string.Empty;
+                ResetMessageLayout();
                 _messageLabel.Text = message;
+                ResetMessageLayout();
+
+                // BBCode images and font metrics can finish resolving after the text
+                // assignment. Re-run the reset on the next frame to keep the bubble
+                // deterministic once those resources have updated the label.
+                Callable.From(ResetMessageLayout).CallDeferred();
+            }
+        }
+
+        private static void ResetMessageLayout()
+        {
+            if (_messageLabel == null || !IsInstanceValid(_messageLabel))
+            {
+                return;
+            }
+
+            _messageLabel.CustomMinimumSize = new Vector2(
+                _currentBubbleWidth - (BubblePadding * 2),
+                0
+            );
+            _messageLabel.ResetSize();
+
+            if (_bubblePanel != null && IsInstanceValid(_bubblePanel))
+            {
+                _bubblePanel.CustomMinimumSize = new Vector2(
+                    _currentBubbleWidth,
+                    _currentBubbleHeight
+                );
+                _bubblePanel.ResetSize();
+            }
+            if (_notificationContainer != null && IsInstanceValid(_notificationContainer))
+            {
+                _notificationContainer.ResetSize();
             }
         }
 
@@ -374,19 +431,19 @@ namespace StS2AP.UI
             root.MouseFilter = Control.MouseFilterEnum.Ignore;
 
             // Main container for the notification (positioned with offset from top-left)
-            var notificationContainer = new HBoxContainer();
-            notificationContainer.Name = "NotificationContainer";
-            notificationContainer.Position = new Vector2(LeftOffset, TopOffset);
-            notificationContainer.AddThemeConstantOverride("separation", 0); // No gap, tail connects them
-            root.AddChild(notificationContainer);
+            _notificationContainer = new HBoxContainer();
+            _notificationContainer.Name = "NotificationContainer";
+            _notificationContainer.Position = new Vector2(LeftOffset, TopOffset);
+            _notificationContainer.AddThemeConstantOverride("separation", 0); // No gap, tail connects them
+            root.AddChild(_notificationContainer);
 
             // Speaker icon container (left side)
             var iconContainer = CreateSpeakerIcon();
-            notificationContainer.AddChild(iconContainer);
+            _notificationContainer.AddChild(iconContainer);
 
             // Speech bubble with tail (right side)
             var speechBubble = CreateSpeechBubble();
-            notificationContainer.AddChild(speechBubble);
+            _notificationContainer.AddChild(speechBubble);
 
             // Start hidden until we have a message to show
             root.Visible = false;
@@ -432,19 +489,10 @@ namespace StS2AP.UI
             bubbleContainer.AddChild(tail);
 
             // Main bubble panel
-            var bubble = new PanelContainer();
-            bubble.Name = "ArchipelagoBubble";
-            bubble.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
-
-            // Get viewport width to calculate 25% width
-            var viewport = Engine.GetMainLoop() as SceneTree;
-            float maxBubbleWidth = 400f; // Default fallback
-            if (viewport?.Root != null)
-            {
-                maxBubbleWidth = viewport.Root.GetViewport().GetVisibleRect().Size.X * 0.25f;
-            }
-
-            bubble.CustomMinimumSize = new Vector2(100, IconSize);
+            _bubblePanel = new PanelContainer();
+            _bubblePanel.Name = "ArchipelagoBubble";
+            _bubblePanel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+            _bubblePanel.CustomMinimumSize = new Vector2(StandardBubbleWidth, IconSize);
 
             // Style the bubble like NAncientDialogueLine
             var bubbleStyle = new StyleBoxFlat();
@@ -455,20 +503,20 @@ namespace StS2AP.UI
             bubbleStyle.ContentMarginRight = BubblePadding;
             bubbleStyle.ContentMarginTop = BubblePadding;
             bubbleStyle.ContentMarginBottom = BubblePadding;
-            bubble.AddThemeStyleboxOverride("panel", bubbleStyle);
+            _bubblePanel.AddThemeStyleboxOverride("panel", bubbleStyle);
 
             // Container for centering the text vertically
             var textContainer = new CenterContainer();
             textContainer.Name = "ArchipelagoTextContainer";
             textContainer.SizeFlagsHorizontal = Control.SizeFlags.Fill;
             textContainer.SizeFlagsVertical = Control.SizeFlags.Fill;
-            bubble.AddChild(textContainer);
+            _bubblePanel.AddChild(textContainer);
 
             // Message label using MegaRichTextLabel (the in-game rich text label with effects support)
             _messageLabel = new MegaRichTextLabel();
             _messageLabel.Name = "ArchipelagoNotificationLabel";
             _messageLabel.CustomMinimumSize = new Vector2(
-                maxBubbleWidth - (BubblePadding * 2) - TailWidth,
+                StandardBubbleWidth - (BubblePadding * 2),
                 0
             );
             _messageLabel.SizeFlagsHorizontal = Control.SizeFlags.Fill;
@@ -500,7 +548,7 @@ namespace StS2AP.UI
 
             // Attach everything together
             textContainer.AddChild(_messageLabel);
-            bubbleContainer.AddChild(bubble);
+            bubbleContainer.AddChild(_bubblePanel);
 
             return bubbleContainer;
         }
