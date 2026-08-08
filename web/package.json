@@ -6,6 +6,7 @@
   "scripts": {
     "start": "vite",
     "build": "vite build && vue-tsc -b",
+    "test": "vitest run",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -33,6 +34,7 @@
     "prettier": "3.9.6",
     "typescript": "6.0.2",
     "typescript-eslint": "8.65.0",
+    "vitest": "4.0.18",
     "vite": "8.2.0",
     "vue-tsc": "3.3.8"
   }

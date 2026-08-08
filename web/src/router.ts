@@ -3,6 +3,7 @@ import { createRouter, createWebHashHistory } from "vue-router";
 import HomeView from "./views/HomeView.vue";
 import GuideHostView from "./views/GuideHostView.vue";
 import GuideClientView from "./views/GuideClientView.vue";
+import WizardView from "./views/WizardView.vue";
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
 
@@ -11,6 +12,11 @@ const router = createRouter({
       path: "/",
       name: "home",
       component: HomeView,
+    },
+    {
+      path: "/builder",
+      name: "builder",
+      component: WizardView,
     },
     {
       path: "/setup/host",

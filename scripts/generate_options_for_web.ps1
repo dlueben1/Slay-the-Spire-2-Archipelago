@@ -1,7 +1,7 @@
 <#
 Generate JSON metadata for the Vue YAML builder from the runtime Python world code.
 Reads world/spire2/options.py and world/spire2/web_world.py.
-Writes web/data/options_compiled.json.
+Writes web/src/generated/options_compiled.json.
 
 Run:
     powershell -ExecutionPolicy Bypass -File .\scripts\generate_options_for_web.ps1
@@ -17,7 +17,7 @@ Set-StrictMode -Version Latest
 $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..") | Select-Object -ExpandProperty Path
 $OptionsPath = Join-Path $RepoRoot "world\spire2\options.py"
 $WebWorldPath = Join-Path $RepoRoot "world\spire2\web_world.py"
-$OutPath = Join-Path $RepoRoot "web\data\options_compiled.json"
+$OutPath = Join-Path $RepoRoot "web\src\generated\options_compiled.json"
 $OutDirectory = Split-Path -Parent $OutPath
 
 $RepoParent = Split-Path -Parent $RepoRoot

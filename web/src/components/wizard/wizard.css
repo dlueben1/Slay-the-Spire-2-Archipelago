@@ -1,0 +1,101 @@
+/*
+ * Shared guided-wizard presentation primitives.
+ *
+ * Use BEM-style `wizard-*` classes from step components instead of inventing local
+ * versions of question titles, choice cards, nested controls, and errors. Add a shared
+ * class here when a pattern appears in more than one question or step. Truly unique
+ * review/layout styles may remain scoped in their owning component.
+ */
+
+.wizard-question__title {
+  color: white;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.wizard-question__help {
+  margin: 0.3rem 0 1rem;
+  color: var(--ui-text-muted);
+  font-size: 0.9rem;
+}
+
+.character-portrait-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 1rem;
+}
+
+.character-portrait-button {
+  position: relative;
+  display: flex;
+  height: 18rem;
+  min-width: 0;
+  padding: 0.4rem;
+  overflow: hidden;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0;
+  border-radius: 0.75rem;
+  box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+
+.character-portrait-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.6;
+  filter: saturate(0.75) contrast(1.08);
+}
+
+.character-portrait-label {
+  z-index: 1;
+  width: calc(100% + 0.8rem);
+  margin: 0 -0.4rem -0.4rem;
+  padding: 0.8rem 0.5rem;
+  color: white;
+  font-size: 1rem;
+  font-weight: 800;
+  text-align: center;
+  text-shadow: 0 2px 5px black;
+  background: linear-gradient(transparent, rgba(10, 6, 2, 0.95) 45%);
+}
+
+.character-portrait-check {
+  position: absolute;
+  z-index: 2;
+  top: 0.65rem;
+  right: 0.65rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--color-amber-200);
+  filter: drop-shadow(0 2px 3px black);
+}
+
+.wizard-nested-field {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.8rem 0 0 2rem;
+}
+
+.wizard-number-input,
+.wizard-select-input {
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--ui-border);
+  border-radius: 0.4rem;
+  background: var(--ui-bg);
+}
+
+.wizard-number-input {
+  width: 8rem;
+}
+
+.wizard-error {
+  margin-top: 0.5rem;
+  color: var(--ui-error);
+  font-size: 0.9rem;
+}

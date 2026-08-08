@@ -7,6 +7,11 @@ import DOMPurify from "dompurify";
  */
 export class MarkdownDocument {
   /**
+   * The content of the Markdown document, as a string.
+   */
+  private readonly content: string;
+
+  /**
    * The title of the Markdown Document, extracted from the first heading
    */
   private _header: string | null;
@@ -24,7 +29,8 @@ export class MarkdownDocument {
    * Builds the Markdown Document from the raw text
    * @param content - The raw content of the Markdown Document
    */
-  constructor(private readonly content: string) {
+  constructor(content: string) {
+    this.content = content;
     this._header = this.extractMarkdownTitle();
   }
 
