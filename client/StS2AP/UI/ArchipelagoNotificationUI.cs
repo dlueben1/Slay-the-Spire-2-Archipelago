@@ -413,10 +413,11 @@ namespace StS2AP.UI
         /// </summary>
         private static Control CreateUI()
         {
-            // Full-viewport root gives the notification a stable screen-space frame.
+            // Keep the root pinned to the known-good top-left layout. The child
+            // container owns the notification's fixed screen-space offset.
             var root = new Control();
             root.Name = "ArchipelagoNotificationUI";
-            root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+            root.SetAnchorsPreset(Control.LayoutPreset.TopLeft);
             root.MouseFilter = Control.MouseFilterEnum.Ignore;
 
             // Main container for the notification (positioned with offset from top-left)
