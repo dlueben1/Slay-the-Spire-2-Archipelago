@@ -287,6 +287,10 @@ namespace StS2AP.Utils
 
                 if (result.success)
                 {
+                    // Primary use is to update the draw pile UI so it displays the correct
+                    // number of cards in our draw pile. Without it, it's display is too small
+                    result.cardAdded.Pile?.InvokeCardAddFinished();
+
                     LogUtility.Success(
                         $"Added selected AP reward card '{selectedCard.Id}' to the combat draw pile"
                     );
@@ -340,6 +344,10 @@ namespace StS2AP.Utils
                 // CardReward.OnSelect may replace the selected card while adding it to the deck
                 // (for example through an Egg relic), so identify the actual resulting deck card.
                 var deckCardsBeforeSelection = player.Deck.Cards.ToHashSet();
+                
+                // well the decompiled code say we should probably not use this but it seems to work well for our
+                // use case. this replaces the manual card counting we were doing for relics such as pael's wing
+                // but this may impact how easy it is to port to multiplayer
                 bool rewardConsumed = await reward.SelectUnsynchronized();
                 var selectedCards = player.Deck.Cards
                     .Where(card => !deckCardsBeforeSelection.Contains(card))
