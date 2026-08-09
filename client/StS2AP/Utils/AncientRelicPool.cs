@@ -37,11 +37,11 @@ namespace StS2AP.Utils
             int? ancientActIndex = null,
             AncientEventModel? specificAncient = null)
         {
-            var ownedRelicIds = player.Relics.Select(relic => relic.Id).ToHashSet();
+            var ownedOrReservedRelicIds = player.Relics.Select(relic => relic.Id).ToHashSet();
             if (reservedRelicIds != null)
-                ownedRelicIds.UnionWith(reservedRelicIds);
+                ownedOrReservedRelicIds.UnionWith(reservedRelicIds);
             var eligibleAncients = GetEligibleAncients(ancientActIndex, specificAncient);
-            var candidatesById = CollectCandidateRelics(eligibleAncients, ownedRelicIds, logFailures: true);
+            var candidatesById = CollectCandidateRelics(eligibleAncients, ownedOrReservedRelicIds, logFailures: true);
 
             if (candidatesById.Count < ChoiceCount)
             {
@@ -134,13 +134,13 @@ namespace StS2AP.Utils
             string choiceKey,
             IReadOnlyCollection<ModelId>? reservedRelicIds = null)
         {
-            var excludedRelicIds = player.Relics.Select(relic => relic.Id).ToHashSet();
+            var ownedOrReservedRelicIds = player.Relics.Select(relic => relic.Id).ToHashSet();
             if (reservedRelicIds != null)
-                excludedRelicIds.UnionWith(reservedRelicIds);
+                ownedOrReservedRelicIds.UnionWith(reservedRelicIds);
 
             var rolledAncient = TryGetRolledAncient(player, ancientActIndex);
             if (rolledAncient != null &&
-                CollectCandidateRelics(new[] { rolledAncient }, excludedRelicIds, logFailures: false).Count >= ChoiceCount)
+                CollectCandidateRelics(new[] { rolledAncient }, ownedOrReservedRelicIds, logFailures: false).Count >= ChoiceCount)
             {
                 LogUtility.Info($"Using rolled Act {ancientActIndex + 1} Ancient '{rolledAncient.Id}' for '{choiceKey}'");
                 return rolledAncient;
@@ -156,7 +156,7 @@ namespace StS2AP.Utils
 
             var runSeed = ResolveRunSeed(player);
             var fallback = GetFallbackAncients(player, ancientActIndex)
-                .Where(ancient => CollectCandidateRelics(new[] { ancient }, excludedRelicIds, logFailures: false).Count >= ChoiceCount)
+                .Where(ancient => CollectCandidateRelics(new[] { ancient }, ownedOrReservedRelicIds, logFailures: false).Count >= ChoiceCount)
                 .OrderBy(ancient => StableChoiceKey(runSeed, $"{choiceKey}|ancient", ancient.Id))
                 .FirstOrDefault();
 
@@ -231,7 +231,7 @@ namespace StS2AP.Utils
         /// <summary>Extracts unique, eligible relic models from the supplied Ancients.</summary>
         private static Dictionary<ModelId, RelicModel> CollectCandidateRelics(
             IEnumerable<AncientEventModel> ancients,
-            IReadOnlySet<ModelId> excludedRelicIds,
+            IReadOnlySet<ModelId> ownedOrReservedRelicIds,
             bool logFailures)
         {
             var candidatesById = new Dictionary<ModelId, RelicModel>();
@@ -247,7 +247,7 @@ namespace StS2AP.Utils
                         extractedForAncient++;
                         // TODO: do model selection in a better way than this
                         if (relic.Id == ModelId.none ||
-                            excludedRelicIds.Contains(relic.Id) ||
+                            ownedOrReservedRelicIds.Contains(relic.Id) ||
                             IsBlacklisted(relic))
                         {
                             continue;
