@@ -9,7 +9,10 @@
 
 import { describe, expect, it } from "vitest";
 import { optionCatalog } from "../../generated/optionCatalog";
+import { optionsToYaml } from "../../services/YamlService";
+import { canDeselectBuiltInCharacter } from "../CharacterRoster";
 import { createDefaultFillerAnswers } from "../FillerItem";
+import { selectGuidedOptions } from "../GuidedOption";
 import { createDefaultWizardAnswers } from "../WizardAnswers";
 import { compileWizardAnswers } from "../compiler/compileWizardAnswers";
 import { summarizeCharacterAnswers } from "../review";
@@ -26,7 +29,11 @@ function createTestAnswers(availableCharacters: readonly string[]) {
   const fillerAnswers = createDefaultFillerAnswers(optionCatalog);
 
   // Delegate Character defaults to the same public initializer used by the view.
-  return createDefaultWizardAnswers(availableCharacters, fillerAnswers);
+  return createDefaultWizardAnswers(
+    availableCharacters,
+    fillerAnswers,
+    optionCatalog,
+  );
 }
 
 /**
@@ -40,6 +47,7 @@ function compilesRandomCharacterSetup(): void {
     optionCatalog.options.characters!.valid_keys!,
   );
   answers.characters = {
+    ...answers.characters,
     selectedCharacters: ["Ironclad", "Silent", "Defect"],
     selectionMode: "random",
     randomCharacterCount: 2,
@@ -74,6 +82,7 @@ function compilesFixedStartingCharacter(): void {
   // Arrange a setup that exercises both zero-sentinel and fixed-choice mappings.
   const answers = createTestAnswers(["Ironclad", "Silent"]);
   answers.characters = {
+    ...answers.characters,
     selectedCharacters: ["Ironclad", "Silent"],
     selectionMode: "all",
     randomCharacterCount: 1,
@@ -88,6 +97,135 @@ function compilesFixedStartingCharacter(): void {
   expect(result.num_chars_goal).toBe(0);
   expect(result.lock_characters).toBe("locked_fixed");
   expect(result.unlocked_character).toBe("silent");
+}
+
+/**
+ * Verifies standard mode combines built-in and modded names with shared Ascensions.
+ *
+ * @returns Nothing; Vitest records assertion failures.
+ */
+function compilesSharedModdedCharacterSetup(): void {
+  // Arrange one built-in and one modded character under the standard YAML system.
+  const answers = createTestAnswers(["Ironclad"]);
+  answers.characters.moddedCharacters = [
+    {
+      name: "HermitMod",
+      ascensions: { enabled: [1], downs: [] },
+    },
+  ];
+  answers.characters.sharedAscensions = {
+    enabled: [1, 3, 10],
+    downs: [3],
+  };
+  answers.characters.availability = "fixed";
+  answers.characters.startingCharacter = "HermitMod";
+
+  // Compile the standard path through the complete validation pipeline.
+  const result = compileWizardAnswers(answers, optionCatalog);
+  const guided = selectGuidedOptions(result);
+
+  // Built-in and modded arrays remain separate only at the Archipelago boundary.
+  expect(result.characters).toEqual(["Ironclad"]);
+  expect(result.modded_characters).toEqual(["HermitMod"]);
+  expect(result.use_advanced_characters).toBe(false);
+  expect(result.advanced_characters).toEqual({});
+  expect(result.ascension).toEqual(["SwarmingElites", "Poverty", "DoubleBoss"]);
+  expect(result.ascension_down).toEqual(["Poverty"]);
+  expect(result.unlocked_character).toBe("HermitMod");
+
+  // Review YAML should omit the advanced dictionary ignored by standard mode.
+  expect(guided).toHaveProperty("modded_characters");
+  expect(guided).not.toHaveProperty("advanced_characters");
+}
+
+/**
+ * Verifies advanced mode writes one independent dictionary entry per roster member.
+ *
+ * @returns Nothing; Vitest records assertion failures.
+ */
+function compilesIndividualAscensionSetup(): void {
+  // Arrange distinct settings for two built-ins and one modded character.
+  const answers = createTestAnswers(["Ironclad", "Silent"]);
+  answers.characters.selectedCharacters = ["Ironclad", "Silent"];
+  answers.characters.ascensionMode = "individual";
+  answers.characters.individualAscensions.Ironclad = {
+    enabled: [1, 2],
+    downs: [2],
+  };
+  answers.characters.individualAscensions.Silent = {
+    enabled: [],
+    downs: [],
+  };
+  answers.characters.moddedCharacters = [
+    {
+      name: "HermitMod",
+      ascensions: { enabled: [10], downs: [10] },
+    },
+  ];
+
+  // Compile the advanced path and select only active guided YAML fields.
+  const result = compileWizardAnswers(answers, optionCatalog);
+  const guided = selectGuidedOptions(result);
+  const yaml = optionsToYaml(guided);
+
+  // Ignored standard inputs are cleared and the dictionary preserves each setup.
+  expect(result.use_advanced_characters).toBe(true);
+  expect(result.characters).toEqual([]);
+  expect(result.modded_characters).toEqual([]);
+  expect(result.ascension).toEqual([]);
+  expect(result.ascension_down).toEqual([]);
+  expect(result.advanced_characters).toEqual({
+    Ironclad: {
+      ascension: ["SwarmingElites", "WearyTraveler"],
+      ascension_down: ["WearyTraveler"],
+    },
+    Silent: {
+      ascension: [],
+      ascension_down: [],
+    },
+    HermitMod: {
+      ascension: ["DoubleBoss"],
+      ascension_down: ["DoubleBoss"],
+    },
+  });
+
+  // Review YAML exposes only the active advanced representation.
+  expect(guided).toHaveProperty("advanced_characters");
+  expect(guided).not.toHaveProperty("characters");
+  expect(guided).not.toHaveProperty("modded_characters");
+  expect(guided).not.toHaveProperty("ascension");
+  expect(guided).not.toHaveProperty("ascension_down");
+
+  // Nested dictionaries and intentionally empty lists must remain valid YAML shapes.
+  expect(yaml).toContain('  "Ironclad":\n    "ascension":');
+  expect(yaml).toContain('  "Silent":\n    "ascension": []');
+  expect(yaml).toContain('    "ascension_down": []');
+}
+
+/**
+ * Verifies an allocated modded slot can replace the final built-in character.
+ *
+ * @returns Nothing; Vitest records assertion failures.
+ */
+function allowsModdedOnlyCharacterSelection(): void {
+  // The final built-in remains protected while no replacement slot exists.
+  const answers = createTestAnswers(["Ironclad"]);
+  expect(canDeselectBuiltInCharacter(answers.characters, "Ironclad")).toBe(
+    false,
+  );
+
+  // Allocate the same blank row produced by the Modded Characters plus button.
+  answers.characters.moddedCharacters = [
+    {
+      name: "",
+      ascensions: { enabled: [], downs: [] },
+    },
+  ];
+
+  // The vanilla portrait may now be removed while the visible row is completed.
+  expect(canDeselectBuiltInCharacter(answers.characters, "Ironclad")).toBe(
+    true,
+  );
 }
 
 /**
@@ -125,6 +263,69 @@ function rejectsInvalidCharacterAnswers(): void {
 }
 
 /**
+ * Verifies invalid modded names and impossible Ascension Downs fail clearly.
+ *
+ * @returns Nothing; Vitest records assertion failures.
+ */
+function rejectsInvalidModdedAndAscensionAnswers(): void {
+  // An allocated modded row cannot compile until its internal ID is entered.
+  const answers = createTestAnswers(["Ironclad"]);
+  answers.characters.moddedCharacters = [
+    { name: "", ascensions: { enabled: [1], downs: [] } },
+  ];
+
+  /** Compiles the deliberately incomplete modded-character row. */
+  function compileEmptyModdedName(): void {
+    // Exercise the public root compiler and its player-facing error contract.
+    compileWizardAnswers(answers, optionCatalog);
+  }
+
+  expect(compileEmptyModdedName).toThrow("internal ID");
+
+  // Modded names cannot collide with built-in names under case-insensitive lookup.
+  answers.characters.moddedCharacters[0]!.name = "ironclad";
+
+  /** Compiles the deliberately duplicated character roster. */
+  function compileDuplicateCharacter(): void {
+    // Exercise duplicate detection before an advanced dictionary could overwrite data.
+    compileWizardAnswers(answers, optionCatalog);
+  }
+
+  expect(compileDuplicateCharacter).toThrow("must be unique");
+
+  // An Ascension Down has no valid target when its matching Ascension is disabled.
+  answers.characters.moddedCharacters = [];
+  answers.characters.sharedAscensions = { enabled: [], downs: [1] };
+
+  /** Compiles the deliberately orphaned Ascension Down. */
+  function compileOrphanedAscensionDown(): void {
+    // Exercise semantic validation owned by the character compiler.
+    compileWizardAnswers(answers, optionCatalog);
+  }
+
+  expect(compileOrphanedAscensionDown).toThrow("requires Ascension A1");
+
+  // The current Python world reserves no more than five custom character slots.
+  answers.characters.sharedAscensions = { enabled: [1], downs: [] };
+  answers.characters.moddedCharacters = [];
+
+  for (let index = 1; index <= 6; index += 1) {
+    answers.characters.moddedCharacters.push({
+      name: `Modded${index}`,
+      ascensions: { enabled: [1], downs: [] },
+    });
+  }
+
+  /** Compiles the deliberately oversized modded-character roster. */
+  function compileTooManyModdedCharacters(): void {
+    // Exercise the same hard limit enforced by the portrait card's plus button.
+    compileWizardAnswers(answers, optionCatalog);
+  }
+
+  expect(compileTooManyModdedCharacters).toThrow("no more than 5");
+}
+
+/**
  * Registers Character Setup compiler cases with Vitest.
  *
  * @returns Nothing; test registration occurs as a module-load side effect.
@@ -140,8 +341,24 @@ function registerCharacterCompilerTests(): void {
     compilesFixedStartingCharacter,
   );
   it(
+    "compiles modded characters with shared Ascensions",
+    compilesSharedModdedCharacterSetup,
+  );
+  it(
+    "compiles independent advanced character Ascensions",
+    compilesIndividualAscensionSetup,
+  );
+  it(
+    "allows a modded slot to replace the final built-in character",
+    allowsModdedOnlyCharacterSelection,
+  );
+  it(
     "rejects invalid schema-backed character and count values",
     rejectsInvalidCharacterAnswers,
+  );
+  it(
+    "rejects invalid modded names and Ascension relationships",
+    rejectsInvalidModdedAndAscensionAnswers,
   );
 }
 
@@ -157,12 +374,33 @@ function revealsConditionalCharacterQuestions(): void {
   expect(visibleCharacterQuestionIds(answers)).not.toContain(
     "starting-character",
   );
+  expect(visibleCharacterQuestionIds(answers)).toContain("shared-ascensions");
+  expect(visibleCharacterQuestionIds(answers)).not.toContain(
+    "individual-ascensions",
+  );
+  expect(visibleCharacterQuestionIds(answers)).not.toContain(
+    "modded-characters",
+  );
 
-  // Activate both controlling modes and confirm both prompts enter the flow.
+  // Activate every controlling mode and confirm its dependent prompts enter the flow.
   answers.characters.selectionMode = "random";
   answers.characters.availability = "fixed";
+  answers.characters.ascensionMode = "individual";
+  answers.characters.moddedCharacters = [
+    {
+      name: "HermitMod",
+      ascensions: { enabled: [1], downs: [] },
+    },
+  ];
   expect(visibleCharacterQuestionIds(answers)).toContain("random-count");
   expect(visibleCharacterQuestionIds(answers)).toContain("starting-character");
+  expect(visibleCharacterQuestionIds(answers)).toContain("modded-characters");
+  expect(visibleCharacterQuestionIds(answers)).toContain(
+    "individual-ascensions",
+  );
+  expect(visibleCharacterQuestionIds(answers)).not.toContain(
+    "shared-ascensions",
+  );
 }
 
 /**

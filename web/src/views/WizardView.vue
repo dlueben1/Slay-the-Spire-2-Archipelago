@@ -2,39 +2,82 @@
 import type { TabsItem } from "@nuxt/ui";
 import { computed, reactive, ref } from "vue";
 import CharacterSetupStep from "../components/wizard/CharacterSetupStep.vue";
-import FillerStep from "../components/wizard/FillerStep.vue";
+import CheckSetupStep from "../components/wizard/CheckSetupStep.vue";
+import DeathLinkStep from "../components/wizard/DeathLinkStep.vue";
 import ReviewStep from "../components/wizard/ReviewStep.vue";
+import RunSettingsStep from "../components/wizard/RunSettingsStep.vue";
 import { optionCatalog } from "../generated/optionCatalog";
-import { optionsToYaml } from "../services/YamlService";
+import { buildWizardYaml } from "../services/YamlService";
 import { createDefaultWizardAnswers } from "../wizard/WizardAnswers";
+import { getConfiguredCharacterNames } from "../wizard/CharacterRoster";
 import {
   createDefaultFillerAnswers,
   createFillerDisplayItems,
-  FILLER_ITEM_DEFINITIONS,
 } from "../wizard/FillerItem";
-import { compileWizardAnswers } from "../wizard/compiler/compileWizardAnswers";
+import { selectGuidedOptions } from "../wizard/GuidedOption";
 import {
-  summarizeCharacterAnswers,
-  summarizeFillerAnswers,
-} from "../wizard/review";
-import { fillerSetupStep, wizardSteps } from "../wizard/WizardStep";
+  DEATH_LINK_OPTION_KEYS,
+  getGeneratedNumberRange,
+  RUN_OPTION_KEYS,
+  SHOP_OPTION_KEYS,
+} from "../wizard/WizardOptionKey";
+import { compileWizardAnswers } from "../wizard/compiler/compileWizardAnswers";
+import { buildWizardReviewSections } from "../wizard/review";
+import { wizardSteps } from "../wizard/WizardStep";
 
 const availableCharacters = optionCatalog.options.characters?.valid_keys ?? [];
 const fillerItems = createFillerDisplayItems(optionCatalog);
 const defaultFillerAnswers = createDefaultFillerAnswers(optionCatalog);
 const answers = reactive(
-  createDefaultWizardAnswers(availableCharacters, defaultFillerAnswers),
+  createDefaultWizardAnswers(
+    availableCharacters,
+    defaultFillerAnswers,
+    optionCatalog,
+  ),
 );
 const stepIndex = ref(0);
 const error = ref("");
 
-const CHARACTER_OPTION_KEYS: readonly string[] = [
-  "characters",
-  "pick_num_characters",
-  "num_chars_goal",
-  "lock_characters",
-  "unlocked_character",
-] as const;
+/**
+ * Checks whether Character Setup currently contains any complete roster entry.
+ *
+ * @returns Whether navigation may leave the first step for compiler validation.
+ * @remarks Empty modded rows do not count until their required internal ID is entered.
+ */
+function getHasConfiguredCharacters(): boolean {
+  // Treat built-in portraits and named modded characters as one player-facing roster.
+  return getConfiguredCharacterNames(answers.characters).length > 0;
+}
+
+const hasConfiguredCharacters = computed(getHasConfiguredCharacters);
+
+const relicChoiceRange = getGeneratedNumberRange(
+  optionCatalog,
+  RUN_OPTION_KEYS.relicChoiceCount,
+);
+const progressionBalancingRange = getGeneratedNumberRange(
+  optionCatalog,
+  RUN_OPTION_KEYS.progressionBalancing,
+);
+const shopSlotRanges = {
+  cardSlots: getGeneratedNumberRange(optionCatalog, SHOP_OPTION_KEYS.cardSlots),
+  neutralCardSlots: getGeneratedNumberRange(
+    optionCatalog,
+    SHOP_OPTION_KEYS.neutralCardSlots,
+  ),
+  relicSlots: getGeneratedNumberRange(
+    optionCatalog,
+    SHOP_OPTION_KEYS.relicSlots,
+  ),
+  potionSlots: getGeneratedNumberRange(
+    optionCatalog,
+    SHOP_OPTION_KEYS.potionSlots,
+  ),
+};
+const deathLinkDamageRange = getGeneratedNumberRange(
+  optionCatalog,
+  DEATH_LINK_OPTION_KEYS.damagePercent,
+);
 
 /**
  * Compiles the current player-facing answer snapshot for Vue reactivity.
@@ -51,49 +94,59 @@ function compileCurrentAnswers() {
 const compiled = computed(compileCurrentAnswers);
 
 /**
- * Selects options owned by all currently implemented guided sections.
+ * Selects options owned by every implemented guided section.
  *
- * @returns A record containing canonical Character and Filler option values.
- * @remarks The full compiled configuration remains available in `compiled`; this subset
- * prevents unrelated default options from overwhelming the review screen.
+ * @returns A record containing canonical values in wizard step order.
+ * @remarks The central ownership registry prevents the view from duplicating keys.
  */
 function getGuidedSettings() {
-  // Pair each Character Setup key with its value from the complete compiled snapshot.
-  const guidedEntries = [];
-
-  for (const key of CHARACTER_OPTION_KEYS) {
-    guidedEntries.push([key, compiled.value[key]!] as const);
-  }
-
-  // Include every option owned by the Filler Setup section compiler.
-  for (const definition of FILLER_ITEM_DEFINITIONS) {
-    guidedEntries.push([
-      definition.optionKey,
-      compiled.value[definition.optionKey]!,
-    ] as const);
-  }
-
-  // Convert ordered key-value pairs into the record expected by the YAML service.
-  return Object.fromEntries(guidedEntries);
+  // Delegate ordered key selection to the registry shared with section compilers.
+  return selectGuidedOptions(compiled.value);
 }
 
 const guidedSettings = computed(getGuidedSettings);
 
 /**
- * Builds the complete player-facing summary for all implemented guided sections.
+ * Builds the exact complete YAML required to enter Review.
  *
- * @returns Character and filler summaries joined as one readable review paragraph.
+ * @returns Validated Archipelago YAML containing metadata and guided game settings.
+ * @throws When the player name or compiled option snapshot is invalid.
  */
-function getReviewSummary(): string {
-  // Derive each section independently from player-facing answers.
-  const characterSummary = summarizeCharacterAnswers(answers.characters);
-  const fillerSummary = summarizeFillerAnswers(answers.filler);
-
-  // Preserve section order from the wizard flow in the combined review copy.
-  return `${characterSummary} ${fillerSummary}`;
+function buildCurrentYaml(): string {
+  // Use one service result for every delivery path so metadata cannot diverge.
+  return buildWizardYaml(answers.playerName, guidedSettings.value);
 }
 
-const reviewSummary = computed(getReviewSummary);
+/**
+ * Gets render-safe YAML for an already-open Review step.
+ *
+ * @returns The complete current YAML, or an empty string while input is invalid.
+ * @remarks A player may edit the persistent name field while Review is open. Returning
+ * an empty preview prevents a render exception; navigation still uses strict validation.
+ */
+function getYamlPreview(): string {
+  try {
+    // Reuse the strict builder so a valid preview is always production-ready.
+    return buildCurrentYaml();
+  } catch {
+    // Let Review show its inline invalid-state prompt until the name is corrected.
+    return "";
+  }
+}
+
+const yamlPreview = computed(getYamlPreview);
+
+/**
+ * Builds player-facing review sections for all implemented guided answers.
+ *
+ * @returns Titled summaries in wizard navigation order.
+ */
+function getReviewSections() {
+  // Keep prose composition in the review layer rather than the Vue template.
+  return buildWizardReviewSections(answers);
+}
+
+const reviewSections = computed(getReviewSections);
 
 /**
  * Determines whether current answers can safely open the review step.
@@ -103,8 +156,8 @@ const reviewSummary = computed(getReviewSummary);
  */
 function canCompileForReview(): boolean {
   try {
-    // Accessing the computed value runs the full compiler and validation pipeline.
-    void compiled.value;
+    // The strict builder runs option compilation plus player-metadata validation.
+    void buildCurrentYaml();
 
     // A successful read means review data can be rendered safely.
     return true;
@@ -192,8 +245,14 @@ function setActiveStep(value: string | number): void {
  */
 function next(): void {
   try {
-    // Force compilation before moving to a step that consumes compiled output.
-    void compiled.value;
+    // Review additionally requires valid document metadata; other steps need options only.
+    const nextStep = wizardSteps[stepIndex.value + 1];
+
+    if (nextStep?.id === "review") {
+      void buildCurrentYaml();
+    } else {
+      void compiled.value;
+    }
 
     // Clear any previous failure and advance only after successful validation.
     error.value = "";
@@ -216,6 +275,20 @@ function next(): void {
         Answer gameplay questions; the builder derives and validates the
         Archipelago options.
       </p>
+
+      <UFormField
+        label="Player name"
+        description="This becomes the top-level name in your generated Archipelago YAML."
+        required
+        class="mt-6 max-w-md"
+      >
+        <UInput
+          v-model="answers.playerName"
+          placeholder="Enter your Archipelago player name"
+          autocomplete="name"
+          class="w-full"
+        />
+      </UFormField>
     </div>
     <UTabs
       :model-value="activeStepId"
@@ -226,7 +299,7 @@ function next(): void {
       size="lg"
       class="mb-6"
       :ui="{
-        list: 'bg-black/45 ring-1 ring-amber-500/20 shadow-lg shadow-black/30',
+        list: 'overflow-x-auto bg-black/45 ring-1 ring-amber-500/20 shadow-lg shadow-black/30',
         trigger: 'cursor-pointer data-[state=active]:font-bold',
       }"
       aria-label="Wizard progress"
@@ -249,16 +322,28 @@ function next(): void {
         v-model="answers.characters"
         :available-characters="availableCharacters"
       />
-      <FillerStep
-        v-else-if="activeStepId === 'filler'"
-        v-model="answers.filler"
-        :items="fillerItems"
-        :question-title="fillerSetupStep.questions[0]!.title"
+      <RunSettingsStep
+        v-else-if="activeStepId === 'run'"
+        v-model="answers.run"
+        :relic-choice-range="relicChoiceRange"
+        :progression-balancing-range="progressionBalancingRange"
+      />
+      <CheckSetupStep
+        v-else-if="activeStepId === 'checks'"
+        v-model="answers.checksAndRewards"
+        :filler-items="fillerItems"
+        :shop-slot-ranges="shopSlotRanges"
+      />
+      <DeathLinkStep
+        v-else-if="activeStepId === 'death-link'"
+        v-model="answers.deathLink"
+        :damage-range="deathLinkDamageRange"
       />
       <ReviewStep
         v-else
-        :summary="reviewSummary"
-        :yaml="optionsToYaml(guidedSettings)"
+        :sections="reviewSections"
+        :yaml="yamlPreview"
+        :player-name="answers.playerName"
       />
       <template #footer
         ><div class="flex items-center justify-between gap-4">
@@ -272,11 +357,11 @@ function next(): void {
               >Back</UButton
             ><UButton
               v-if="stepIndex < wizardSteps.length - 1"
-              :disabled="!answers.characters.selectedCharacters.length"
+              :disabled="!hasConfiguredCharacters"
               trailing-icon="i-glyphs-arrow-right-bold"
               @click="next"
               >{{
-                activeStepId === "filler" ? "Review settings" : "Continue"
+                activeStepId === "death-link" ? "Review settings" : "Continue"
               }}</UButton
             >
           </div>

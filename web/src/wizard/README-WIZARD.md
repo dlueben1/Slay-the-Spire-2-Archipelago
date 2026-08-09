@@ -3,13 +3,37 @@
 The wizard deliberately separates what the player means from what Archipelago accepts:
 
 1. `generated/optionCatalog.ts` types and imports the generated technical schema.
-2. `WizardAnswers.ts` stores only player-facing intent.
-3. `WizardStep.ts` declares step order, question copy, and conditional visibility.
-4. `components/wizard` renders those questions and emits answer-model changes.
-5. `compiler/compileWizardAnswers.ts` starts with every generated default.
-6. Section compilers, such as `compiler/applyCharacterOptions.ts`, translate answers into the option keys they own.
-7. `validation/validateOptions.ts` checks the complete result against the generated schema.
-8. `review.ts` and `services/YamlService.ts` independently turn valid answers and options into review output.
+2. `WizardAnswers.ts` stores player-facing intent plus document-only input such as the player name.
+3. `WizardOptionKey.ts` records the generated keys owned by each guided section.
+4. `WizardStep.ts` declares step order, question copy, and conditional visibility.
+5. `components/wizard` renders those questions and emits answer-model changes.
+6. `compiler/compileWizardAnswers.ts` starts with every generated default.
+7. Section compilers, such as `compiler/applyCharacterOptions.ts`, translate answers into the option keys they own.
+8. `validation/validateOptions.ts` checks the complete result against the generated schema, while `validation/validateWizardMetadata.ts` validates values outside the game option mapping.
+9. `GuidedOption.ts` selects implemented settings for the review YAML.
+10. `review.ts` derives the prose summary, and `services/YamlService.ts` wraps selected options in the final Archipelago metadata and game mapping used by preview, copy, and download.
+
+## Current guided coverage
+
+The first-pass flow is organized as:
+
+1. Character Setup
+2. Run Rules
+3. Checks & Rewards
+4. Death Link
+5. Review
+
+Character Setup presents one roster model for built-in and modded characters. Shared Ascensions compile through `characters`, `modded_characters`, `ascension`, and `ascension_down`. Individual Ascensions compile through `use_advanced_characters` and `advanced_characters`; ignored standard fields are removed from guided YAML. Random roster selection, unlock behavior, starting character, and completion goal apply to both modes.
+
+The Run Rules section owns Ancient reward timing and pools, Relic choice count, Neow Sanity, seeded runs, progression balancing, and accessibility. Its final subsection contains the two common Archipelago settings so they remain visually distinct from game-specific run rules. Progression balancing is an integral 0-99 value; the named Disabled, Normal, and Extreme buttons are presentation shortcuts for 0, 50, and 99 rather than separate compiler concepts.
+
+Checks & Rewards owns floor, campfire, gold, potion, and card-reward shuffling. It also owns the Shop Slots toggle, the conditional Shop Sanity subsection, and the existing Filler Items table at the bottom of the step. Shop details remain hidden until Shop Slots is enabled.
+
+Death Link hides received-effect controls until its controlling option is enabled. The wizard deliberately models Death Fragment, nonlethal Max HP damage, and Be killed as distinct answers. Python exposes only `enable_death_fragments` and `death_link_damage_percent`, so `applyDeathLinkOptions.ts` maps disabled damage to 0 and Be killed to 100 while suppressing the mutually exclusive fragment setting. Do not reproduce that technical coupling in the Vue component.
+
+The player name is not a game option and must never be added to a section compiler or `GuidedOption.ts`. `buildWizardYaml` validates it, adds the fixed builder description and `Slay the Spire II` game identifier, and nests the selected guided settings under the game-name mapping. `WizardView.vue` computes one shared document, and Review uses that exact string for preview, clipboard, and download behavior.
+
+Inherited Archipelago template fields such as item links, plando, start inventory, and location overrides remain generated defaults because the guided UI does not ask about them yet.
 
 ## Adding a guided question
 
@@ -22,15 +46,17 @@ When a new question only affects an existing section:
 5. Translate the answer in that section's compiler. Do not write Archipelago keys from the component or question definition.
 6. Add tests for the mapping and any conditional visibility.
 
-For a new section, also create a dedicated answer interface, step component, section compiler, and review-summary builder. Register its compiler in `compileWizardAnswers` before final validation.
+For a new section, also create a dedicated answer interface, step component, section compiler, and review-summary builder. Register its generated keys in `WizardOptionKey.ts`, register its compiler in `compileWizardAnswers` before final validation, and include its keys in `GuidedOption.ts`. When one visible step contains several meaningful option families, follow Checks & Rewards: keep focused family compilers behind one step-level compiler facade.
 
-The Filler Setup slice is a concrete example of this pattern: `FillerItem.ts` owns the semantic-ID-to-option-key mapping and schema-derived display data, `FillerStep.vue` edits only `FillerAnswers`, and `compiler/applyFillerOptions.ts` converts its four slider levels to canonical generated choice names. The filler compiler tests compare this mapping with the generated `Filler Items` group so newly generated filler options require an explicit UX decision.
+The Filler Items subsection is a concrete example of this pattern: `FillerItem.ts` owns the semantic-ID-to-option-key mapping and schema-derived display data, `FillerStep.vue` edits only `FillerAnswers`, and `compiler/applyFillerOptions.ts` converts its four slider levels to canonical generated choice names. `compiler/applyChecksAndRewardsOptions.ts` composes that focused compiler with the ordinary-check and Shop compilers. The filler compiler tests compare the mapping with the generated `Filler Items` group so newly generated filler options require an explicit UX decision.
+
+Character Setup demonstrates one player model targeting competing generated systems. `AscensionModifier.ts` documents the A1-A10 display catalog and canonical option names. `CharacterRoster.ts` merges built-in and modded entries for shared questions. `compiler/applyCharacterOptions.ts` selects the standard or advanced YAML representation, while `GuidedOption.ts` removes fields ignored by the active mode from the review YAML. `ModdedCharacterTable.vue` loads its player instructions from `docs/modded-characters.md` through the same sanitized Markdown pipeline and Vite public-doc sync as the setup guides.
 
 ## Compiler versus validation
 
 A compiler understands meaning. For example, it knows that the player's “all characters must finish” answer becomes `num_chars_goal: 0`, and that fixed character availability affects both `lock_characters` and `unlocked_character`.
 
-Validation understands the generated schema. It knows that a choice must use a generated choice name, a range must stay between generated boundaries, every output key must exist, and the final configuration must contain every generated option. It should not decide what a player's answer means.
+Validation understands accepted shapes. Generated-option validation knows that a choice must use a generated choice name, a range must be a whole number between generated boundaries, every output key must exist, and the final configuration must contain every generated option. Metadata validation separately knows that the final player name is non-empty and single-line. Neither validator should decide what a gameplay answer means.
 
 ## Styling questions
 

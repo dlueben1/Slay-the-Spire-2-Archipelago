@@ -21,14 +21,14 @@
 
 .character-portrait-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 0.75rem;
 }
 
 .character-portrait-button {
   position: relative;
   display: flex;
-  height: 18rem;
+  height: 15.5rem;
   min-width: 0;
   padding: 0.4rem;
   overflow: hidden;
@@ -62,9 +62,9 @@
   z-index: 1;
   width: calc(100% + 0.8rem);
   margin: 0 -0.4rem -0.4rem;
-  padding: 0.8rem 0.5rem;
+  padding: 0.7rem 0.35rem;
   color: white;
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 800;
   text-align: center;
   text-shadow: 0 2px 5px black;
@@ -74,12 +74,42 @@
 .character-portrait-check {
   position: absolute;
   z-index: 2;
-  top: 0.65rem;
-  right: 0.65rem;
-  width: 1.5rem;
-  height: 1.5rem;
+  top: 0.55rem;
+  right: 0.55rem;
+  width: 1.25rem;
+  height: 1.25rem;
   color: var(--color-green-400);
   filter: drop-shadow(0 2px 3px black);
+}
+
+.character-portrait-button--modded {
+  cursor: default;
+}
+
+.character-modded-control {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  box-shadow: 0 0.35rem 0.9rem rgba(0, 0, 0, 0.5);
+  transform: translateX(-50%);
+}
+
+.character-modded-control--add {
+  top: 0.7rem;
+}
+
+.character-modded-control--remove {
+  bottom: 3.5rem;
+}
+
+.character-modded-count {
+  position: absolute;
+  z-index: 3;
+  top: 0.75rem;
+  right: 0.75rem;
+  min-width: 1.5rem;
+  justify-content: center;
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.45);
 }
 
 .wizard-nested-field {
@@ -104,5 +134,62 @@
 .wizard-error {
   margin-top: 0.5rem;
   color: var(--ui-error);
+  font-size: 0.9rem;
+}
+
+.wizard-toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0.8rem;
+}
+
+.wizard-number-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.8rem;
+}
+
+.wizard-number-card {
+  display: flex;
+  min-width: 0;
+  padding: 0.85rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--ui-text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid var(--ui-border-muted);
+  border-radius: 0.6rem;
+  background: color-mix(in oklab, var(--ui-bg-elevated) 82%, transparent);
+}
+
+.wizard-number-with-suffix {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--ui-text-muted);
+  font-weight: 700;
+}
+
+.wizard-subsection {
+  padding-top: 1.5rem;
+  border-top: 1px solid
+    color-mix(in oklab, var(--color-amber-500) 24%, transparent);
+}
+
+.wizard-subsection__header {
+  margin-bottom: 1.5rem;
+}
+
+.wizard-subsection__header h3 {
+  color: var(--color-amber-300);
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.wizard-subsection__header p {
+  margin-top: 0.25rem;
+  color: var(--ui-text-muted);
   font-size: 0.9rem;
 }

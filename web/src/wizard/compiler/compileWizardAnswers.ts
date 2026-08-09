@@ -15,7 +15,9 @@ import {
   applyCharacterOptions,
   type CompiledOptions,
 } from "./applyCharacterOptions";
-import { applyFillerOptions } from "./applyFillerOptions";
+import { applyChecksAndRewardsOptions } from "./applyChecksAndRewardsOptions";
+import { applyDeathLinkOptions } from "./applyDeathLinkOptions";
+import { applyRunOptions } from "./applyRunOptions";
 
 /**
  * Compiles all guided answers into a complete Archipelago option configuration.
@@ -49,7 +51,9 @@ export function compileWizardAnswers(
 
   // Section compilers own the only mapping from player concepts to option keys.
   applyCharacterOptions(options, answers.characters, catalog);
-  applyFillerOptions(options, answers.filler, catalog);
+  applyRunOptions(options, answers.run, catalog);
+  applyChecksAndRewardsOptions(options, answers.checksAndRewards, catalog);
+  applyDeathLinkOptions(options, answers.deathLink, catalog);
 
   // Validation is deliberately last: it checks the final product, not player intent.
   validateOptions(options, catalog);

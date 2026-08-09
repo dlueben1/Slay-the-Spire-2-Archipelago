@@ -32,6 +32,11 @@ function validateValue(option: GeneratedOption, value: OptionValue): string[] {
     (option.kind === "range" || option.kind === "named_range") &&
     typeof value === "number"
   ) {
+    // Python Range options accept integral values even when JavaScript can store decimals.
+    if (!Number.isInteger(value)) {
+      errors.push("must be a whole number");
+    }
+
     if (option.minimum !== undefined && value < option.minimum) {
       errors.push(`must be at least ${option.minimum}`);
     }

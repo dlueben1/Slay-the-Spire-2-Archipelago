@@ -426,7 +426,7 @@ dist-ssr
 auto-imports.d.ts
 components.d.ts
 
-# Web - Auto-Synced docs (May want to remove depending on how we host GitHub Pages)
+# Web - Generated copy of tracked repository docs, synchronized by Vite
 web/public/docs/
 
 # Slay the Spire / Godot Local Props

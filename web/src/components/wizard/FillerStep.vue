@@ -127,7 +127,7 @@ function getWeightBadgeColor(itemId: FillerItemId): FillerBadgeColor {
         </div>
 
         <UTooltip
-          :content="{ side: 'bottom', sideOffset: 4 }"
+          :content="{ side: 'bottom', sideOffset: 9 }"
           class="filler-row__slider-tooltip"
         >
           <div class="filler-row__slider-wrap">
@@ -281,10 +281,10 @@ function getWeightBadgeColor(itemId: FillerItemId): FillerBadgeColor {
 
 .filler-slider-notches {
   position: absolute;
-  top: calc(50% + 0.2rem);
+  top: calc(50% + 0.7rem);
   right: 0.5625rem;
   left: 0.5625rem;
-  height: 0.4rem;
+  height: 0.3rem;
   pointer-events: none;
 }
 
@@ -294,8 +294,8 @@ function getWeightBadgeColor(itemId: FillerItemId): FillerBadgeColor {
   width: 0.15rem;
   height: 100%;
   border-radius: 9999px;
-  background: var(--color-amber-500);
-  opacity: 0.9;
+  background: var(--ui-text-muted);
+  opacity: 0.85;
   transform: translateX(-50%);
 }
 
@@ -304,7 +304,7 @@ function getWeightBadgeColor(itemId: FillerItemId): FillerBadgeColor {
   width: 18rem;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.35rem;
-  color: var(--color-amber-500);
+  color: var(--ui-text-muted);
   font-size: 0.65rem;
   font-weight: 700;
   line-height: 1.1;
@@ -312,18 +312,7 @@ function getWeightBadgeColor(itemId: FillerItemId): FillerBadgeColor {
 }
 
 .filler-slider-label {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.2rem;
-}
-
-.filler-slider-label::before {
-  width: 0.15rem;
-  height: 0.4rem;
-  border-radius: 9999px;
-  background: var(--color-amber-500);
-  content: "";
+  min-width: 0;
 }
 
 .filler-row__value {

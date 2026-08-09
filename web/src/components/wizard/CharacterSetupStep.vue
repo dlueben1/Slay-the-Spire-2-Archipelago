@@ -1,14 +1,32 @@
 <script setup lang="ts">
-import type { RadioGroupItem, SelectItem } from "@nuxt/ui";
+import type { AccordionItem, RadioGroupItem, SelectItem } from "@nuxt/ui";
 import { computed, watch } from "vue";
+import {
+  canDeselectBuiltInCharacter,
+  copyAscensionConfiguration,
+  getConfiguredCharacterNames,
+  MAX_MODDED_CHARACTERS,
+} from "../../wizard/CharacterRoster";
 import type {
+  AscensionConfigurationAnswers,
   CharacterAnswers,
+  CharacterAscensionMode,
   CharacterAvailability,
   CharacterGoal,
   CharacterSelectionMode,
+  ModdedCharacterAnswers,
 } from "../../wizard/WizardAnswers";
 import { characterSetupStep } from "../../wizard/WizardStep";
+import AscensionChecklist from "./AscensionChecklist.vue";
+import ModdedCharacterTable from "./ModdedCharacterTable.vue";
 import WizardQuestion from "./WizardQuestion.vue";
+
+interface CharacterAscensionAccordionItem extends AccordionItem {
+  kind: "built-in" | "modded";
+  characterName: string;
+  moddedIndex?: number;
+  configuration: AscensionConfigurationAnswers;
+}
 
 const props = defineProps<{
   modelValue: CharacterAnswers;
@@ -54,6 +72,21 @@ const availabilityItems: RadioGroupItem[] = [
   },
 ];
 
+const ascensionModeItems: RadioGroupItem[] = [
+  {
+    label: "Use one setup for every character",
+    description:
+      "Every built-in and modded character uses the same Ascensions and Ascension Downs.",
+    value: "shared",
+  },
+  {
+    label: "Configure each character separately",
+    description:
+      "Give every selected character its own Ascensions and Ascension Down item pool.",
+    value: "individual",
+  },
+];
+
 // Resolve question copy by ID so the declarative flow remains the copy source of truth.
 const questionTitles: Record<string, string> = {};
 
@@ -78,6 +111,18 @@ function getCharacterPortraitSource(character: string): string {
 }
 
 /**
+ * Builds the complete named roster used by every shared Character Setup question.
+ *
+ * @returns Selected built-in names followed by complete modded character IDs.
+ */
+function getConfiguredRoster(): string[] {
+  // Delegate the two-source merge to the semantic helper shared with the compiler.
+  return getConfiguredCharacterNames(props.modelValue);
+}
+
+const configuredRoster = computed(getConfiguredRoster);
+
+/**
  * Calculates how many characters will exist after optional random selection.
  *
  * @returns The current effective generated-character count.
@@ -89,7 +134,7 @@ function getGeneratedCharacterCount(): number {
   }
 
   // All mode generates every character in the selected pool.
-  return props.modelValue.selectedCharacters.length;
+  return configuredRoster.value.length;
 }
 
 const generatedCharacterCount = computed(getGeneratedCharacterCount);
@@ -114,15 +159,15 @@ function getGoalOptions(): number[] {
 const goalOptions = computed(getGoalOptions);
 
 /**
- * Builds Nuxt UI select items for the currently selected starting roster.
+ * Builds Nuxt UI select items for the complete built-in and modded roster.
  *
  * @returns One labeled select item for every selected character.
  */
 function getStartingCharacterItems(): SelectItem[] {
-  // Preserve schema ordering so this dropdown matches the portrait grid.
+  // Preserve portrait and modded-table ordering in the starting-character dropdown.
   const items: SelectItem[] = [];
 
-  for (const character of props.modelValue.selectedCharacters) {
+  for (const character of configuredRoster.value) {
     items.push({ label: character, value: character });
   }
 
@@ -158,6 +203,55 @@ function getGoalSelectItems(): SelectItem[] {
 const goalSelectItems = computed(getGoalSelectItems);
 
 /**
+ * Builds Nuxt UI accordion items for every selected character's advanced settings.
+ *
+ * @returns Built-in entries followed by modded rows in visible roster order.
+ * @remarks Empty modded rows remain visible with a placeholder label so Ascension
+ * choices can be configured before the required internal ID is entered.
+ */
+function getIndividualAscensionItems(): CharacterAscensionAccordionItem[] {
+  // Build stable built-in entries from their persistent name-keyed configurations.
+  const items: CharacterAscensionAccordionItem[] = [];
+
+  for (const character of props.modelValue.selectedCharacters) {
+    const configuration =
+      props.modelValue.individualAscensions[character] ??
+      props.modelValue.sharedAscensions;
+
+    items.push({
+      label: character,
+      value: `built-in:${character}`,
+      kind: "built-in",
+      characterName: character,
+      configuration,
+    });
+  }
+
+  // Modded rows own their configuration so editing a name cannot discard checkboxes.
+  for (
+    let index = 0;
+    index < props.modelValue.moddedCharacters.length;
+    index += 1
+  ) {
+    const moddedCharacter = props.modelValue.moddedCharacters[index]!;
+    const characterName = moddedCharacter.name.trim();
+
+    items.push({
+      label: characterName || `Modded character ${index + 1} — name required`,
+      value: `modded:${index}`,
+      kind: "modded",
+      characterName,
+      moddedIndex: index,
+      configuration: moddedCharacter.ascensions,
+    });
+  }
+
+  return items;
+}
+
+const individualAscensionItems = computed(getIndividualAscensionItems);
+
+/**
  * Emits a new Character Setup answer object with selected fields replaced.
  *
  * @param patch - Answer fields changed by one presentation control.
@@ -183,6 +277,11 @@ function updateAnswers(patch: Partial<CharacterAnswers>): void {
  * @returns Nothing; emits a new selected-character answer through `updateAnswers`.
  */
 function toggleCharacter(character: string, checked: boolean): void {
+  // Keep at least one character slot, while treating modded rows as valid replacements.
+  if (!checked && !canDeselectBuiltInCharacter(props.modelValue, character)) {
+    return;
+  }
+
   // Build a new array so Vue and the parent answer model receive an immutable update.
   const selectedCharacters = [...props.modelValue.selectedCharacters];
 
@@ -198,6 +297,130 @@ function toggleCharacter(character: string, checked: boolean): void {
 
   // Persist only the player-facing character selection.
   updateAnswers({ selectedCharacters });
+}
+
+/**
+ * Adds one empty modded-character row from the sixth portrait card.
+ *
+ * @returns Nothing; emits a new row unless the five-character limit is reached.
+ */
+function addModdedCharacter(): void {
+  // Enforce the Python world's hard custom-character limit in the presentation layer.
+  if (props.modelValue.moddedCharacters.length >= MAX_MODDED_CHARACTERS) {
+    return;
+  }
+
+  // Seed the new row from shared settings so either mode starts predictably.
+  const moddedCharacter: ModdedCharacterAnswers = {
+    name: "",
+    ascensions: copyAscensionConfiguration(props.modelValue.sharedAscensions),
+  };
+
+  // Append without mutating the persistent array owned by the parent view.
+  updateAnswers({
+    moddedCharacters: [...props.modelValue.moddedCharacters, moddedCharacter],
+  });
+}
+
+/**
+ * Removes the final modded-character row from the sixth portrait card.
+ *
+ * @returns Nothing; preserves earlier rows and their independent Ascension settings.
+ */
+function removeModdedCharacter(): void {
+  // Ignore the minus button when no modded rows exist.
+  if (!props.modelValue.moddedCharacters.length) {
+    return;
+  }
+
+  // The requested counter interaction removes the most recently added slot.
+  updateAnswers({
+    moddedCharacters: props.modelValue.moddedCharacters.slice(0, -1),
+  });
+}
+
+/**
+ * Accepts edited internal IDs from the focused modded-character table.
+ *
+ * @param moddedCharacters - Complete immutable collection emitted by the table.
+ * @returns Nothing; replaces only the modded-character portion of the answer model.
+ */
+function setModdedCharacters(moddedCharacters: ModdedCharacterAnswers[]): void {
+  // Keep internal-name editing separate from generated YAML fields.
+  updateAnswers({ moddedCharacters });
+}
+
+/**
+ * Updates whether Ascensions are shared or configured for each character.
+ *
+ * @param value - Semantic mode emitted by Nuxt UI's radio group.
+ * @returns Nothing; ignores values outside the two supported UI strategies.
+ */
+function setAscensionMode(value: unknown): void {
+  // Narrow the generic component event to Character Setup's explicit mode union.
+  if (value !== "shared" && value !== "individual") {
+    return;
+  }
+
+  // The character compiler owns the translation to `use_advanced_characters`.
+  updateAnswers({ ascensionMode: value as CharacterAscensionMode });
+}
+
+/**
+ * Replaces the Ascension setup shared by every character in standard mode.
+ *
+ * @param sharedAscensions - Complete enabled and Ascension Down checkbox state.
+ * @returns Nothing; emits the updated shared configuration immutably.
+ */
+function setSharedAscensions(
+  sharedAscensions: AscensionConfigurationAnswers,
+): void {
+  // Preserve per-character settings for players who switch modes and return later.
+  updateAnswers({ sharedAscensions });
+}
+
+/**
+ * Replaces one built-in or modded character's advanced Ascension configuration.
+ *
+ * @param item - Accordion entry identifying the persistent configuration owner.
+ * @param configuration - Complete updated enabled and Ascension Down selections.
+ * @returns Nothing; updates only the matching character entry.
+ */
+function setIndividualAscensions(
+  item: CharacterAscensionAccordionItem,
+  configuration: AscensionConfigurationAnswers,
+): void {
+  // Built-in configurations are keyed by generated display name for stable toggling.
+  if (item.kind === "built-in") {
+    updateAnswers({
+      individualAscensions: {
+        ...props.modelValue.individualAscensions,
+        [item.characterName]: configuration,
+      },
+    });
+    return;
+  }
+
+  // Modded rows retain their settings by slot while their internal ID is edited.
+  const moddedIndex = item.moddedIndex;
+
+  if (moddedIndex === undefined) {
+    return;
+  }
+
+  const moddedCharacters = [...props.modelValue.moddedCharacters];
+  const moddedCharacter = moddedCharacters[moddedIndex];
+
+  if (!moddedCharacter) {
+    return;
+  }
+
+  moddedCharacters[moddedIndex] = {
+    ...moddedCharacter,
+    ascensions: configuration,
+  };
+
+  updateAnswers({ moddedCharacters });
 }
 
 /**
@@ -284,38 +507,38 @@ function setGoal(value: unknown): void {
 }
 
 /**
- * Returns the selected-character array observed by the reconciliation watcher.
+ * Returns the unified roster observed by the reconciliation watcher.
  *
- * @returns The current selected-character answer array.
+ * @returns Current built-in names and complete modded character IDs.
  */
-function getSelectedCharacters(): string[] {
-  // Keep the watcher source focused on changes that can invalidate dependent answers.
-  return props.modelValue.selectedCharacters;
+function getRosterForReconciliation(): string[] {
+  // Keep the watcher focused on names that can invalidate dependent roster answers.
+  return getConfiguredCharacterNames(props.modelValue);
 }
 
 /**
- * Reconciles dependent answers after the selected-character pool changes.
+ * Reconciles dependent answers after the built-in or modded roster changes.
  *
- * @param selectedCharacters - Newly selected schema-provided characters.
+ * @param roster - Newly selected built-in names and complete modded IDs.
  * @returns Nothing; emits one patch only when a dependent answer became stale.
  * @remarks This improves form ergonomics. The compiler still performs authoritative
  * semantic checks and must not rely on this presentation-layer cleanup.
  */
-function reconcileDependentAnswers(selectedCharacters: string[]): void {
+function reconcileDependentAnswers(roster: string[]): void {
   // Accumulate every required correction before emitting, avoiding partial UI states.
   const patch: Partial<CharacterAnswers> = {};
 
   // Clamp random selection when its previous count exceeds the smaller pool.
-  if (props.modelValue.randomCharacterCount > selectedCharacters.length) {
-    patch.randomCharacterCount = Math.max(1, selectedCharacters.length);
+  if (props.modelValue.randomCharacterCount > roster.length) {
+    patch.randomCharacterCount = Math.max(1, roster.length);
   }
 
   // Replace a fixed starting character that the player just deselected.
   if (
     props.modelValue.startingCharacter &&
-    !selectedCharacters.includes(props.modelValue.startingCharacter)
+    !roster.includes(props.modelValue.startingCharacter)
   ) {
-    patch.startingCharacter = selectedCharacters[0] ?? null;
+    patch.startingCharacter = roster[0] ?? null;
   }
 
   // Resolve the post-patch generated count before checking a numeric completion goal.
@@ -324,7 +547,7 @@ function reconcileDependentAnswers(selectedCharacters: string[]): void {
   const reconciledGeneratedCount =
     props.modelValue.selectionMode === "random"
       ? reconciledRandomCount
-      : selectedCharacters.length;
+      : roster.length;
 
   // Fall back to "all" when a previous numeric goal no longer fits the setup.
   if (
@@ -340,8 +563,8 @@ function reconcileDependentAnswers(selectedCharacters: string[]): void {
   }
 }
 
-// Keep conditional answers coherent when a player removes a selected character.
-watch(getSelectedCharacters, reconcileDependentAnswers, { deep: true });
+// Keep dependent answers coherent when built-in selections or modded IDs change.
+watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
 </script>
 
 <template>
@@ -388,10 +611,137 @@ watch(getSelectedCharacters, reconcileDependentAnswers, { deep: true });
             class="character-portrait-check"
           />
         </UButton>
+
+        <div
+          class="character-portrait-button character-portrait-button--modded"
+          :class="{
+            'character-portrait-button--selected':
+              modelValue.moddedCharacters.length > 0,
+          }"
+          role="group"
+          aria-label="Add or remove modded characters"
+        >
+          <img
+            src="/icons/char_select_random.webp"
+            alt=""
+            class="character-portrait-image"
+          />
+
+          <UButton
+            type="button"
+            icon="i-glyphs-plus-bold"
+            color="primary"
+            variant="solid"
+            size="sm"
+            class="character-modded-control character-modded-control--add cursor-pointer"
+            :disabled="
+              modelValue.moddedCharacters.length >= MAX_MODDED_CHARACTERS
+            "
+            aria-label="Add a modded character"
+            @click="addModdedCharacter"
+          />
+
+          <UBadge
+            v-if="modelValue.moddedCharacters.length"
+            color="success"
+            variant="solid"
+            class="character-modded-count"
+          >
+            {{ modelValue.moddedCharacters.length }}
+          </UBadge>
+
+          <UButton
+            type="button"
+            icon="i-glyphs-minus-bold"
+            color="neutral"
+            variant="solid"
+            size="sm"
+            class="character-modded-control character-modded-control--remove cursor-pointer"
+            :disabled="!modelValue.moddedCharacters.length"
+            aria-label="Remove the last modded character"
+            @click="removeModdedCharacter"
+          />
+
+          <span class="character-portrait-label">Modded Characters</span>
+        </div>
       </div>
 
-      <p v-if="!modelValue.selectedCharacters.length" class="wizard-error">
+      <p v-if="!configuredRoster.length" class="wizard-error">
         Select at least one character.
+      </p>
+
+      <p class="mt-3 text-xs text-muted">
+        Add up to {{ MAX_MODDED_CHARACTERS }} Steam Workshop characters with the
+        plus and minus controls.
+      </p>
+    </WizardQuestion>
+
+    <WizardQuestion
+      v-if="modelValue.moddedCharacters.length"
+      :title="questionTitles['modded-characters']!"
+    >
+      <ModdedCharacterTable
+        :model-value="modelValue.moddedCharacters"
+        @update:model-value="setModdedCharacters"
+      />
+    </WizardQuestion>
+
+    <WizardQuestion :title="questionTitles['ascension-mode']!">
+      <URadioGroup
+        :model-value="modelValue.ascensionMode"
+        :items="ascensionModeItems"
+        value-key="value"
+        label-key="label"
+        description-key="description"
+        color="primary"
+        variant="table"
+        :ui="{ item: 'cursor-pointer' }"
+        @update:model-value="setAscensionMode"
+      />
+    </WizardQuestion>
+
+    <WizardQuestion
+      v-if="modelValue.ascensionMode === 'shared'"
+      :title="questionTitles['shared-ascensions']!"
+    >
+      <AscensionChecklist
+        :model-value="modelValue.sharedAscensions"
+        @update:model-value="setSharedAscensions"
+      />
+    </WizardQuestion>
+
+    <WizardQuestion v-else :title="questionTitles['individual-ascensions']!">
+      <template #help>
+        These settings compile to Archipelago's advanced character dictionary;
+        the standard roster and shared Ascension options are omitted from the
+        generated YAML.
+      </template>
+
+      <UAccordion
+        type="multiple"
+        :items="individualAscensionItems"
+        :unmount-on-hide="false"
+        :default-value="
+          individualAscensionItems[0]?.value
+            ? [individualAscensionItems[0].value]
+            : []
+        "
+        :ui="{
+          item: 'border border-default rounded-lg mb-3 overflow-hidden bg-black/15',
+          trigger: 'cursor-pointer px-4 font-bold text-highlighted',
+          body: 'px-4 pb-4',
+        }"
+      >
+        <template #body="{ item }">
+          <AscensionChecklist
+            :model-value="item.configuration"
+            @update:model-value="setIndividualAscensions(item, $event)"
+          />
+        </template>
+      </UAccordion>
+
+      <p v-if="!individualAscensionItems.length" class="wizard-error">
+        Select or name at least one character before configuring Ascensions.
       </p>
     </WizardQuestion>
 
@@ -418,7 +768,7 @@ watch(getSelectedCharacters, reconcileDependentAnswers, { deep: true });
           color="primary"
           variant="outline"
           :min="1"
-          :max="Math.max(1, modelValue.selectedCharacters.length)"
+          :max="Math.max(1, configuredRoster.length)"
           class="wizard-number-input"
           @update:model-value="setRandomCharacterCount"
         />

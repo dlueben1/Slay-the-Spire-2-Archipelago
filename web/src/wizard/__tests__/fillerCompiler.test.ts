@@ -14,7 +14,7 @@ import {
   FILLER_WEIGHT_NAMES,
 } from "../FillerItem";
 import { createDefaultWizardAnswers } from "../WizardAnswers";
-import { wizardSteps } from "../WizardStep";
+import { checkSetupStep, wizardSteps } from "../WizardStep";
 import { compileWizardAnswers } from "../compiler/compileWizardAnswers";
 
 /**
@@ -27,7 +27,7 @@ function createTestAnswers() {
   const fillerAnswers = createDefaultFillerAnswers(optionCatalog);
 
   // Keep the unrelated Character Setup section valid with one schema character.
-  return createDefaultWizardAnswers(["Ironclad"], fillerAnswers);
+  return createDefaultWizardAnswers(["Ironclad"], fillerAnswers, optionCatalog);
 }
 
 /**
@@ -59,7 +59,8 @@ function compilesEveryFillerWeightLevel(): void {
 
   for (let level = 0; level <= 3; level += 1) {
     const definition = FILLER_ITEM_DEFINITIONS[level]!;
-    answers.filler.weights[definition.id] = level as 0 | 1 | 2 | 3;
+    answers.checksAndRewards.filler.weights[definition.id] = level as
+      0 | 1 | 2 | 3;
   }
 
   // Compile the semantic levels to canonical YAML choice names.
@@ -80,7 +81,7 @@ function rejectsInvalidFillerWeightLevels(): void {
   // Force a value outside the UI slider's supported bounds.
   const answers = createTestAnswers();
   const firstDefinition = FILLER_ITEM_DEFINITIONS[0]!;
-  answers.filler.weights[firstDefinition.id] = 4 as 0;
+  answers.checksAndRewards.filler.weights[firstDefinition.id] = 4 as 0;
 
   /** Compiles the deliberately invalid filler answer. */
   function compileInvalidFillerAnswers(): void {
@@ -120,11 +121,11 @@ function coversEveryGeneratedFillerOption(): void {
 }
 
 /**
- * Verifies Filler Setup remains between Character Setup and Review.
+ * Verifies Filler Items remain the final Checks & Rewards subsection.
  *
  * @returns Nothing; Vitest records assertion failures.
  */
-function preservesFillerStepOrder(): void {
+function preservesCombinedFillerPlacement(): void {
   // Extract stable IDs because labels and descriptions may change independently.
   const stepIds: string[] = [];
 
@@ -132,8 +133,17 @@ function preservesFillerStepOrder(): void {
     stepIds.push(step.id);
   }
 
-  // Protect the requested second-vertical-slice navigation order.
-  expect(stepIds).toEqual(["characters", "filler", "review"]);
+  // Protect the condensed navigation order with no standalone Shop or Filler tabs.
+  expect(stepIds).toEqual([
+    "characters",
+    "run",
+    "checks",
+    "death-link",
+    "review",
+  ]);
+
+  // Keep the existing Filler UI appended after conditional Shop questions.
+  expect(checkSetupStep.questions.at(-1)?.id).toBe("filler-weights");
 }
 
 /**
@@ -147,7 +157,10 @@ function registerFillerCompilerTests(): void {
   it("compiles all four filler weight levels", compilesEveryFillerWeightLevel);
   it("rejects invalid filler weight levels", rejectsInvalidFillerWeightLevels);
   it("covers every generated filler option", coversEveryGeneratedFillerOption);
-  it("appears between Character Setup and Review", preservesFillerStepOrder);
+  it(
+    "appears at the bottom of condensed Checks & Rewards",
+    preservesCombinedFillerPlacement,
+  );
 }
 
 // Register the documented test callbacks as one focused vertical-slice suite.
