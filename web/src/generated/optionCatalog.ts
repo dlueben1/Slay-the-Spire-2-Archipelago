@@ -40,6 +40,7 @@ export interface GeneratedOption {
   maximum?: number;
   valid_keys?: string[];
   allow_custom_values?: boolean;
+  group?: string;
 }
 
 export interface OptionCatalog {

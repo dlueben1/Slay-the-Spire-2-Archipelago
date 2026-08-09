@@ -9,10 +9,25 @@
 
 import { describe, expect, it } from "vitest";
 import { optionCatalog } from "../../generated/optionCatalog";
+import { createDefaultFillerAnswers } from "../FillerItem";
 import { createDefaultWizardAnswers } from "../WizardAnswers";
 import { compileWizardAnswers } from "../compiler/compileWizardAnswers";
 import { summarizeCharacterAnswers } from "../review";
 import { visibleCharacterQuestionIds } from "../WizardStep";
+
+/**
+ * Creates a complete wizard answer model for Character Setup tests.
+ *
+ * @param availableCharacters - Character names to expose to the test arrangement.
+ * @returns Complete answers with schema-derived filler defaults.
+ */
+function createTestAnswers(availableCharacters: readonly string[]) {
+  // Keep unrelated Filler Setup state valid while Character behavior is isolated.
+  const fillerAnswers = createDefaultFillerAnswers(optionCatalog);
+
+  // Delegate Character defaults to the same public initializer used by the view.
+  return createDefaultWizardAnswers(availableCharacters, fillerAnswers);
+}
 
 /**
  * Verifies the representative random-character setup from the feature specification.
@@ -21,7 +36,7 @@ import { visibleCharacterQuestionIds } from "../WizardStep";
  */
 function compilesRandomCharacterSetup(): void {
   // Arrange player intent without referencing canonical option values.
-  const answers = createDefaultWizardAnswers(
+  const answers = createTestAnswers(
     optionCatalog.options.characters!.valid_keys!,
   );
   answers.characters = {
@@ -57,7 +72,7 @@ function compilesRandomCharacterSetup(): void {
  */
 function compilesFixedStartingCharacter(): void {
   // Arrange a setup that exercises both zero-sentinel and fixed-choice mappings.
-  const answers = createDefaultWizardAnswers(["Ironclad", "Silent"]);
+  const answers = createTestAnswers(["Ironclad", "Silent"]);
   answers.characters = {
     selectedCharacters: ["Ironclad", "Silent"],
     selectionMode: "all",
@@ -82,7 +97,7 @@ function compilesFixedStartingCharacter(): void {
  */
 function rejectsInvalidCharacterAnswers(): void {
   // Arrange an unknown character not present in generated valid keys.
-  const answers = createDefaultWizardAnswers(["Ironclad"]);
+  const answers = createTestAnswers(["Ironclad"]);
   answers.characters.selectedCharacters = ["Watcher"];
 
   /** Compiles the current deliberately unknown-character answer. */
@@ -137,7 +152,7 @@ function registerCharacterCompilerTests(): void {
  */
 function revealsConditionalCharacterQuestions(): void {
   // Begin with modes whose dependent questions have no meaning.
-  const answers = createDefaultWizardAnswers(["Ironclad", "Silent"]);
+  const answers = createTestAnswers(["Ironclad", "Silent"]);
   expect(visibleCharacterQuestionIds(answers)).not.toContain("random-count");
   expect(visibleCharacterQuestionIds(answers)).not.toContain(
     "starting-character",

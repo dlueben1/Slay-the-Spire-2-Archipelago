@@ -41,6 +41,13 @@
   cursor: pointer;
 }
 
+.character-portrait-button--selected {
+  border-color: var(--color-green-500) !important;
+  box-shadow:
+    0 0 0 1px var(--color-green-500),
+    0 0.75rem 2rem rgba(0, 0, 0, 0.35);
+}
+
 .character-portrait-image {
   position: absolute;
   inset: 0;
@@ -71,7 +78,7 @@
   right: 0.65rem;
   width: 1.5rem;
   height: 1.5rem;
-  color: var(--color-amber-200);
+  color: var(--color-green-400);
   filter: drop-shadow(0 2px 3px black);
 }
 

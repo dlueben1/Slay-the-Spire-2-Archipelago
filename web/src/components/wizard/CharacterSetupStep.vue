@@ -54,13 +54,27 @@ const availabilityItems: RadioGroupItem[] = [
   },
 ];
 
-const CHARACTER_PORTRAIT_PLACEHOLDER = "/logo_game.webp";
-
 // Resolve question copy by ID so the declarative flow remains the copy source of truth.
 const questionTitles: Record<string, string> = {};
 
 for (const question of characterSetupStep.questions) {
   questionTitles[question.id] = question.title;
+}
+
+/**
+ * Builds the public asset path for a schema-provided character's selection portrait.
+ *
+ * @param character - Generated character display name used by the selection control.
+ * @returns The matching character-select WebP path in the public icons directory.
+ * @remarks Asset names use lowercase words joined by underscores, while the generated
+ * catalog remains responsible for the display names shown to players.
+ */
+function getCharacterPortraitSource(character: string): string {
+  // Normalize catalog display text to the repository's public asset naming convention.
+  const assetName = character.toLowerCase().replaceAll(" ", "_");
+
+  // Return a root-relative public path so Vite preserves it for development and builds.
+  return `/icons/char_select_${assetName}.webp`;
 }
 
 /**
@@ -344,13 +358,13 @@ watch(getSelectedCharacters, reconcileDependentAnswers, { deep: true });
           v-for="character in availableCharacters"
           :key="character"
           type="button"
-          color="primary"
-          :variant="
-            modelValue.selectedCharacters.includes(character)
-              ? 'solid'
-              : 'outline'
-          "
+          color="neutral"
+          variant="outline"
           class="character-portrait-button cursor-pointer"
+          :class="{
+            'character-portrait-button--selected':
+              modelValue.selectedCharacters.includes(character),
+          }"
           :aria-pressed="modelValue.selectedCharacters.includes(character)"
           :aria-label="`Toggle ${character}`"
           @click="
@@ -361,7 +375,7 @@ watch(getSelectedCharacters, reconcileDependentAnswers, { deep: true });
           "
         >
           <img
-            :src="CHARACTER_PORTRAIT_PLACEHOLDER"
+            :src="getCharacterPortraitSource(character)"
             alt=""
             class="character-portrait-image"
           />

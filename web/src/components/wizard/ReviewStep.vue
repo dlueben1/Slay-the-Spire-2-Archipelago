@@ -14,7 +14,7 @@ defineProps<{
     </section>
 
     <section>
-      <h2 class="review-heading">Generated character settings</h2>
+      <h2 class="review-heading">Generated guided settings</h2>
       <pre class="yaml-output"><code>{{ yaml }}</code></pre>
     </section>
   </div>

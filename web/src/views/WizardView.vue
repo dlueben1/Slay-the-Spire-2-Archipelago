@@ -2,20 +2,33 @@
 import type { TabsItem } from "@nuxt/ui";
 import { computed, reactive, ref } from "vue";
 import CharacterSetupStep from "../components/wizard/CharacterSetupStep.vue";
+import FillerStep from "../components/wizard/FillerStep.vue";
 import ReviewStep from "../components/wizard/ReviewStep.vue";
 import { optionCatalog } from "../generated/optionCatalog";
 import { optionsToYaml } from "../services/YamlService";
 import { createDefaultWizardAnswers } from "../wizard/WizardAnswers";
+import {
+  createDefaultFillerAnswers,
+  createFillerDisplayItems,
+  FILLER_ITEM_DEFINITIONS,
+} from "../wizard/FillerItem";
 import { compileWizardAnswers } from "../wizard/compiler/compileWizardAnswers";
-import { summarizeCharacterAnswers } from "../wizard/review";
-import { wizardSteps } from "../wizard/WizardStep";
+import {
+  summarizeCharacterAnswers,
+  summarizeFillerAnswers,
+} from "../wizard/review";
+import { fillerSetupStep, wizardSteps } from "../wizard/WizardStep";
 
 const availableCharacters = optionCatalog.options.characters?.valid_keys ?? [];
-const answers = reactive(createDefaultWizardAnswers(availableCharacters));
+const fillerItems = createFillerDisplayItems(optionCatalog);
+const defaultFillerAnswers = createDefaultFillerAnswers(optionCatalog);
+const answers = reactive(
+  createDefaultWizardAnswers(availableCharacters, defaultFillerAnswers),
+);
 const stepIndex = ref(0);
 const error = ref("");
 
-const CHARACTER_OPTION_KEYS = [
+const CHARACTER_OPTION_KEYS: readonly string[] = [
   "characters",
   "pick_num_characters",
   "num_chars_goal",
@@ -38,25 +51,49 @@ function compileCurrentAnswers() {
 const compiled = computed(compileCurrentAnswers);
 
 /**
- * Selects the Character Setup options shown by the first review vertical slice.
+ * Selects options owned by all currently implemented guided sections.
  *
- * @returns A record containing only the five canonical character option values.
+ * @returns A record containing canonical Character and Filler option values.
  * @remarks The full compiled configuration remains available in `compiled`; this subset
- * prevents unrelated default options from overwhelming the initial review screen.
+ * prevents unrelated default options from overwhelming the review screen.
  */
-function getCharacterSettings() {
-  // Pair each compiler-owned key with its value from the complete compiled snapshot.
-  const characterEntries = [];
+function getGuidedSettings() {
+  // Pair each Character Setup key with its value from the complete compiled snapshot.
+  const guidedEntries = [];
 
   for (const key of CHARACTER_OPTION_KEYS) {
-    characterEntries.push([key, compiled.value[key]!] as const);
+    guidedEntries.push([key, compiled.value[key]!] as const);
+  }
+
+  // Include every option owned by the Filler Setup section compiler.
+  for (const definition of FILLER_ITEM_DEFINITIONS) {
+    guidedEntries.push([
+      definition.optionKey,
+      compiled.value[definition.optionKey]!,
+    ] as const);
   }
 
   // Convert ordered key-value pairs into the record expected by the YAML service.
-  return Object.fromEntries(characterEntries);
+  return Object.fromEntries(guidedEntries);
 }
 
-const characterSettings = computed(getCharacterSettings);
+const guidedSettings = computed(getGuidedSettings);
+
+/**
+ * Builds the complete player-facing summary for all implemented guided sections.
+ *
+ * @returns Character and filler summaries joined as one readable review paragraph.
+ */
+function getReviewSummary(): string {
+  // Derive each section independently from player-facing answers.
+  const characterSummary = summarizeCharacterAnswers(answers.characters);
+  const fillerSummary = summarizeFillerAnswers(answers.filler);
+
+  // Preserve section order from the wizard flow in the combined review copy.
+  return `${characterSummary} ${fillerSummary}`;
+}
+
+const reviewSummary = computed(getReviewSummary);
 
 /**
  * Determines whether current answers can safely open the review step.
@@ -147,7 +184,7 @@ function setActiveStep(value: string | number): void {
 }
 
 /**
- * Validates current answers and advances from Character Setup to review.
+ * Validates current answers and advances to the next wizard step.
  *
  * @returns Nothing; updates navigation or exposes the compiler error to the player.
  * @remarks This is navigation coordination only. All technical validation remains in
@@ -160,7 +197,7 @@ function next(): void {
 
     // Clear any previous failure and advance only after successful validation.
     error.value = "";
-    stepIndex.value = 1;
+    stepIndex.value = Math.min(stepIndex.value + 1, wizardSteps.length - 1);
   } catch (cause) {
     // Normalize unknown thrown values into text suitable for the form footer.
     error.value = cause instanceof Error ? cause.message : String(cause);
@@ -208,14 +245,20 @@ function next(): void {
         </p></template
       >
       <CharacterSetupStep
-        v-if="stepIndex === 0"
+        v-if="activeStepId === 'characters'"
         v-model="answers.characters"
         :available-characters="availableCharacters"
       />
+      <FillerStep
+        v-else-if="activeStepId === 'filler'"
+        v-model="answers.filler"
+        :items="fillerItems"
+        :question-title="fillerSetupStep.questions[0]!.title"
+      />
       <ReviewStep
         v-else
-        :summary="summarizeCharacterAnswers(answers.characters)"
-        :yaml="optionsToYaml(characterSettings)"
+        :summary="reviewSummary"
+        :yaml="optionsToYaml(guidedSettings)"
       />
       <template #footer
         ><div class="flex items-center justify-between gap-4">
@@ -228,11 +271,13 @@ function next(): void {
               @click="stepIndex--"
               >Back</UButton
             ><UButton
-              v-if="stepIndex === 0"
+              v-if="stepIndex < wizardSteps.length - 1"
               :disabled="!answers.characters.selectedCharacters.length"
               trailing-icon="i-glyphs-arrow-right-bold"
               @click="next"
-              >Review settings</UButton
+              >{{
+                activeStepId === "filler" ? "Review settings" : "Continue"
+              }}</UButton
             >
           </div>
         </div></template

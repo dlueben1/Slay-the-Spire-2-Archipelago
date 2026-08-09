@@ -7,7 +7,7 @@
  * of Vue templates and keeps the compiler focused on technical values.
  */
 
-import type { CharacterAnswers } from "./WizardAnswers";
+import type { CharacterAnswers, FillerAnswers } from "./WizardAnswers";
 
 /**
  * Formats a list of names as natural English with an Oxford comma.
@@ -96,4 +96,38 @@ export function summarizeCharacterAnswers(answers: CharacterAnswers): string {
 
   // Join the independently derived clauses into the final review paragraph.
   return `${selection} ${availability} ${goal}`;
+}
+
+/**
+ * Summarizes the distribution selected in the Filler Setup step.
+ *
+ * @param answers - Valid current filler-weight answers.
+ * @returns A short sentence describing enabled items and their relative levels.
+ * @remarks The summary intentionally describes relative odds rather than percentages.
+ */
+export function summarizeFillerAnswers(answers: FillerAnswers): string {
+  // Count each semantic level without depending on generated option names or raw weights.
+  let disabledCount = 0;
+  let lowCount = 0;
+  let mediumCount = 0;
+  let highCount = 0;
+
+  for (const level of Object.values(answers.weights)) {
+    if (level === 0) {
+      disabledCount += 1;
+    } else if (level === 1) {
+      lowCount += 1;
+    } else if (level === 2) {
+      mediumCount += 1;
+    } else {
+      highCount += 1;
+    }
+  }
+
+  // Derive the enabled total so the first clause is easy to scan.
+  const totalCount = Object.keys(answers.weights).length;
+  const enabledCount = totalCount - disabledCount;
+
+  // Explain the relative distribution without promising exact random percentages.
+  return `Your filler pool enables ${enabledCount} of ${totalCount} reward types: ${lowCount} at low odds, ${mediumCount} at medium odds, and ${highCount} at high odds.`;
 }

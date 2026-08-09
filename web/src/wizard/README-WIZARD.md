@@ -24,6 +24,8 @@ When a new question only affects an existing section:
 
 For a new section, also create a dedicated answer interface, step component, section compiler, and review-summary builder. Register its compiler in `compileWizardAnswers` before final validation.
 
+The Filler Setup slice is a concrete example of this pattern: `FillerItem.ts` owns the semantic-ID-to-option-key mapping and schema-derived display data, `FillerStep.vue` edits only `FillerAnswers`, and `compiler/applyFillerOptions.ts` converts its four slider levels to canonical generated choice names. The filler compiler tests compare this mapping with the generated `Filler Items` group so newly generated filler options require an explicit UX decision.
+
 ## Compiler versus validation
 
 A compiler understands meaning. For example, it knows that the player's “all characters must finish” answer becomes `num_chars_goal: 0`, and that fixed character availability affects both `lock_characters` and `unlocked_character`.

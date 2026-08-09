@@ -70,9 +70,24 @@ export const characterSetupStep: WizardStep = {
   ],
 };
 
+/** Filler Setup definition consumed by its component and wizard navigation. */
+export const fillerSetupStep: WizardStep = {
+  id: "filler",
+  title: "Filler Items",
+  description:
+    "Choose how often each helpful filler reward appears relative to the others.",
+  questions: [
+    {
+      id: "filler-weights",
+      title: "How often should each filler item appear?",
+    },
+  ],
+};
+
 /** Declarative step and question ordering for the guided wizard. */
 export const wizardSteps: WizardStep[] = [
   characterSetupStep,
+  fillerSetupStep,
   {
     id: "review",
     title: "Review",
