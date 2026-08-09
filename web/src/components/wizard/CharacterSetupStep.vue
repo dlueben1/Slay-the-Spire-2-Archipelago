@@ -37,6 +37,9 @@ const emit = defineEmits<{
   "update:modelValue": [value: CharacterAnswers];
 }>();
 
+/** Keeps wizard dropdowns open without temporarily locking and hiding page scrolling. */
+const nonBlockingSelectContent = { bodyLock: false };
+
 const selectionModeItems: RadioGroupItem[] = [
   {
     label: "Use all selected characters",
@@ -796,6 +799,7 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
         <USelect
           :model-value="modelValue.startingCharacter ?? undefined"
           :items="startingCharacterItems"
+          :content="nonBlockingSelectContent"
           value-key="value"
           label-key="label"
           color="primary"
@@ -810,6 +814,7 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
       <USelect
         :model-value="String(modelValue.goal)"
         :items="goalSelectItems"
+        :content="nonBlockingSelectContent"
         value-key="value"
         label-key="label"
         color="primary"
