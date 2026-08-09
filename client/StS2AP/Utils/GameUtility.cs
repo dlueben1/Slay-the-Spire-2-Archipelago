@@ -235,10 +235,12 @@ namespace StS2AP.Utils
             try
             {
                 var rarity = rare ? CardRarityOddsType.BossEncounter : CardRarityOddsType.RegularEncounter;
-                var options = new CardCreationOptions(
-                    new[] { player.Character.CardPool },
-                    CardCreationSource.Encounter,
-                    rarity);
+                var options = BetaMainCompatibility.WithCombatRewardCompatibility(
+                    new CardCreationOptions(
+                        new[] { player.Character.CardPool },
+                        CardCreationSource.Encounter,
+                        rarity)
+                );
 
                 var reward = new CardReward(options, 3, player);
                 reward.Populate();

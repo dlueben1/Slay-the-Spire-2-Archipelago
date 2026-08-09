@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Runs;
 
 namespace StS2AP.Utils;
 
@@ -9,6 +10,17 @@ namespace StS2AP.Utils;
 /// </summary>
 public static class BetaMainCompatibility
 {
+    /// <summary>
+    /// Marks an Encounter card reward as combat-sourced on beta branches. The flag does not
+    /// exist on the public branch, so resolve it by name to preserve public compatibility.
+    /// </summary>
+    public static CardCreationOptions WithCombatRewardCompatibility(CardCreationOptions options)
+    {
+        return Enum.TryParse("IsFromCombat", out CardCreationFlags isFromCombat)
+            ? options.WithFlags(isFromCombat)
+            : options;
+    }
+
     /// <summary>
     /// Gets the selected local character without binding to LobbyPlayer, which was renamed
     /// to StartRunLobbyPlayer on the beta branch and changed StartRunLobby.LocalPlayer's

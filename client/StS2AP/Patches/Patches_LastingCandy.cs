@@ -26,15 +26,31 @@ public static class Patches_LastingCandy
     private static readonly MethodInfo? s_doActivateVisualsMethod =
         AccessTools.Method(typeof(LastingCandy), "DoActivateVisuals");
 
+    // DeclaredMethod is intentional: beta inherits AbstractModel.AfterCombatEnd but no longer
+    // overrides it. Treating that inherited no-op as the public hook would patch every model.
+    private static readonly MethodInfo? s_afterCombatEndMethod =
+        AccessTools.DeclaredMethod(typeof(LastingCandy), nameof(LastingCandy.AfterCombatEnd));
+
+    private static readonly MethodInfo? s_beforeCombatRewardOfferedMethod =
+        AccessTools.DeclaredMethod(typeof(LastingCandy), "BeforeCombatRewardOffered");
+
+    private static readonly PropertyInfo? s_rewardCountProperty =
+        AccessTools.Property(typeof(LastingCandy), nameof(LastingCandy.CombatsSeen))
+        ?? AccessTools.Property(typeof(LastingCandy), "CombatRewardsSeen");
+
     private static readonly MethodInfo? s_invokeDisplayAmountChangedMethod =
         AccessTools.Method(typeof(RelicModel), "InvokeDisplayAmountChanged");
 
     private static bool s_missingRewardStateLogged;
 
+    private static bool UsesLegacyCombatCadence =>
+        s_afterCombatEndMethod != null;
+
     private static bool CanUseRewardCadence =>
         s_hasBeenRerolledField != null
         && s_optionsProperty != null
         && s_doActivateVisualsMethod != null
+        && s_rewardCountProperty != null
         && s_invokeDisplayAmountChangedMethod != null;
 
     private static bool IsOwnedByCurrentArchipelagoPlayer(LastingCandy lastingCandy)
@@ -57,10 +73,12 @@ public static class Patches_LastingCandy
         );
     }
 
-    private static void UpdateCounterVisuals(LastingCandy lastingCandy)
+    private static void AdvanceRewardCadence(LastingCandy lastingCandy)
     {
-        bool isTriggeringReward =
-            lastingCandy.CombatsSeen > 0 && lastingCandy.CombatsSeen % 2 == 0;
+        int rewardsSeen = (int)s_rewardCountProperty!.GetValue(lastingCandy)! + 1;
+        s_rewardCountProperty.SetValue(lastingCandy, rewardsSeen);
+
+        bool isTriggeringReward = rewardsSeen > 0 && rewardsSeen % 2 == 0;
 
         try
         {
@@ -92,9 +110,20 @@ public static class Patches_LastingCandy
         }
     }
 
-    [HarmonyPatch(typeof(LastingCandy), nameof(LastingCandy.AfterCombatEnd))]
+    [HarmonyPatch]
     public static class SuppressCombatCadenceForArchipelago
     {
+        // Beta replaced AfterCombatEnd with BeforeCombatRewardOffered. Patch whichever native
+        // cadence hook exists so AP card-reward population remains the single counting boundary.
+        [HarmonyTargetMethod]
+        private static MethodBase TargetMethod() =>
+            s_afterCombatEndMethod
+            ?? s_beforeCombatRewardOfferedMethod
+            ?? throw new MissingMethodException(
+                typeof(LastingCandy).FullName,
+                "AfterCombatEnd or BeforeCombatRewardOffered"
+            );
+
         [HarmonyPrefix]
         private static bool Prefix(LastingCandy __instance, ref Task __result)
         {
@@ -118,8 +147,10 @@ public static class Patches_LastingCandy
     public static class AdvanceCadenceForEncounterCardRewards
     {
         [HarmonyPrefix]
-        private static void Prefix(CardReward __instance)
+        private static void Prefix(CardReward __instance, out LastingCandy? __state)
         {
+            __state = null;
+
             try
             {
                 var currentPlayer = GameUtility.CurrentPlayer;
@@ -151,19 +182,49 @@ public static class Patches_LastingCandy
                     return;
                 }
 
-                // Advance before CardReward.Populate runs so its normal creation hook sees the
-                // new count and adds the Power option on every second Encounter reward.
-                lastingCandy.CombatsSeen++;
-                UpdateCounterVisuals(lastingCandy);
+                if (!UsesLegacyCombatCadence)
+                {
+                    // Beta checks CombatRewardsSeen before its former native increment. Advance in
+                    // the postfix so every second reward still sees the triggering odd value here.
+                    __state = lastingCandy;
+                    return;
+                }
+
+                // Public checks CombatsSeen during Populate, so advance before its creation hook.
+                AdvanceRewardCadence(lastingCandy);
 
                 LogUtility.Info(
-                    $"Lasting Candy advanced to {lastingCandy.CombatsSeen} "
+                    $"Lasting Candy advanced to {s_rewardCountProperty!.GetValue(lastingCandy)} "
                         + "for an Encounter card reward"
                 );
             }
             catch (Exception ex)
             {
                 // Compatibility failure must not prevent the underlying reward from populating.
+                LogUtility.Warn(
+                    $"Failed to advance Lasting Candy for an Encounter card reward: {ex.Message}"
+                );
+            }
+        }
+
+        [HarmonyPostfix]
+        private static void Postfix(LastingCandy? __state)
+        {
+            if (__state == null)
+            {
+                return;
+            }
+
+            try
+            {
+                AdvanceRewardCadence(__state);
+                LogUtility.Info(
+                    $"Lasting Candy advanced to {s_rewardCountProperty!.GetValue(__state)} "
+                        + "for an Encounter card reward"
+                );
+            }
+            catch (Exception ex)
+            {
                 LogUtility.Warn(
                     $"Failed to advance Lasting Candy for an Encounter card reward: {ex.Message}"
                 );
