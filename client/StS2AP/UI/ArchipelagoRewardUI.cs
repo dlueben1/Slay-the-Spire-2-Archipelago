@@ -1,10 +1,12 @@
 using Godot;
 using HarmonyLib;
+using MegaCrit.Sts2.Core.ControllerInput;
 using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.HoverTips;
+using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Screens.Capstones;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
@@ -26,6 +28,8 @@ namespace StS2AP.UI
 {
     public partial class APRewardScreenNode : Control, IOverlayScreen
     {
+        private bool _hotkeysRegistered;
+
         public Button? DefaultFocus { get; set; }
         public NetScreenType ScreenType => NetScreenType.Rewards; 
         public bool UseSharedBackstop => true; 
@@ -34,10 +38,12 @@ namespace StS2AP.UI
         public void AfterOverlayOpened()
         {
             ArchipelagoRewardUI.RaiseOverlayAboveMap();
+            RegisterHotkeys();
         }
 
         public void AfterOverlayClosed()
         {
+            UnregisterHotkeys();
             ArchipelagoRewardUI.RestoreOverlayLayer();
             QueueFree();
         }
@@ -66,6 +72,38 @@ namespace StS2AP.UI
                 Visible = ReferenceEquals(NOverlayStack.Instance?.Peek(), this) &&
                     NMapScreen.Instance?.IsOpen == true;
             }).CallDeferred();
+        }
+
+        internal void UnregisterHotkeys()
+        {
+            if (!_hotkeysRegistered)
+            {
+                return;
+            }
+
+            var hotkeyManager = NHotkeyManager.Instance;
+            hotkeyManager?.RemoveHotkeyPressedBinding(MegaInput.cancel, ArchipelagoRewardUI.Hide);
+            hotkeyManager?.RemoveHotkeyPressedBinding(MegaInput.pauseAndBack, ArchipelagoRewardUI.Hide);
+            hotkeyManager?.RemoveHotkeyReleasedBinding(MegaInput.viewMap, ArchipelagoRewardUI.HideAndShowMap);
+            hotkeyManager?.RemoveBlockingScreen(this);
+            _hotkeysRegistered = false;
+        }
+
+        private void RegisterHotkeys()
+        {
+            var hotkeyManager = NHotkeyManager.Instance;
+            if (_hotkeysRegistered || hotkeyManager == null)
+            {
+                return;
+            }
+
+            // Block room/map shortcuts below this overlay, then add only the
+            // actions the AP reward screen intentionally supports on top.
+            hotkeyManager.AddBlockingScreen(this);
+            hotkeyManager.PushHotkeyPressedBinding(MegaInput.cancel, ArchipelagoRewardUI.Hide);
+            hotkeyManager.PushHotkeyPressedBinding(MegaInput.pauseAndBack, ArchipelagoRewardUI.Hide);
+            hotkeyManager.PushHotkeyReleasedBinding(MegaInput.viewMap, ArchipelagoRewardUI.HideAndShowMap);
+            _hotkeysRegistered = true;
         }
     }
         /// <summary>
@@ -136,6 +174,7 @@ namespace StS2AP.UI
         private static VBoxContainer? _itemContainer;
         private static Button? _proceedButton;
         private static Tween? _fadeTween;
+        private static bool _isClosing;
         private static Texture2D? _linkedRewardChainTexture;
         private static bool _linkedRewardChainTextureResolved;
         private static readonly PropertyInfo? ChainImagePathProperty =
@@ -527,8 +566,10 @@ namespace StS2AP.UI
         {
             LogUtility.Debug("Reward UI Hide() called");
 
-            if (_rootPanel == null || !IsInstanceValid(_rootPanel))
+            if (_isClosing || _rootPanel == null || !IsInstanceValid(_rootPanel))
                 return;
+
+            _isClosing = true;
 
             // Fade out the rewards window, then hide the layer
             if (_rootPanel != null && IsInstanceValid(_rootPanel))
@@ -543,6 +584,7 @@ namespace StS2AP.UI
                     if (_rootPanel != null && IsInstanceValid(_rootPanel))
                         _rootPanel.Modulate = new Color(1f, 1f, 1f, 1f);
                     _rootPanel = null;
+                    _isClosing = false;
                 }));
             }
             else
@@ -554,6 +596,21 @@ namespace StS2AP.UI
         }
 
         /// <summary>
+        /// Closes AP rewards and leaves the player on the map. If the map is
+        /// already open behind the rewards, it is deliberately not toggled off.
+        /// </summary>
+        internal static void HideAndShowMap()
+        {
+            var mapScreen = NMapScreen.Instance;
+            Hide();
+
+            if (mapScreen?.IsOpen == false)
+            {
+                mapScreen.Open(isOpenedFromTopBar: true);
+            }
+        }
+
+        /// <summary>
         /// Removes the reward UI from the scene tree entirely and frees resources
         /// </summary>
         public static void RemoveUI()
@@ -562,6 +619,7 @@ namespace StS2AP.UI
             
             _fadeTween?.Kill();
             _fadeTween = null;
+            (_rootPanel as APRewardScreenNode)?.UnregisterHotkeys();
             RestoreOverlayLayer();
 
             if (_rootPanel != null && IsInstanceValid(_rootPanel))
@@ -571,6 +629,7 @@ namespace StS2AP.UI
             _itemContainer    = null;
             _proceedButton    = null;
             _remainingRewards = 0;
+            _isClosing        = false;
         }
 
         #endregion
@@ -663,6 +722,7 @@ namespace StS2AP.UI
                 var root = sceneTree.Root;
 
                 // Full-screen root panel (blocks input to the game while open)
+                _isClosing = false;
                 _rootPanel = new APRewardScreenNode { Name = "APRewardsScreen" };
                 _rootPanel.SetAnchorsPreset(Control.LayoutPreset.FullRect);
                 _rootPanel.MouseFilter = Control.MouseFilterEnum.Stop;
