@@ -124,8 +124,44 @@ class NeowSanity(Toggle):
     display_name = "Neow Sanity"
     default = 0
 
+
+class AncientRelicLocation(Choice):
+    """Controls when Progressive Ancient relic choices are offered.
+
+    Start Of Act presents them through the normal Ancient encounter. Anytime presents
+    them as linked choices in the Archipelago reward menu as soon as they are received."""
+    display_name = "Ancient Relic Location"
+    option_start_of_act = 0
+    option_anytime = 1
+    default = 1
+
+
+class AncientRelicPool(Choice):
+    """Controls which Ancient relics can appear in each three-choice reward.
+
+    Balanced uses the natural Ancient rolled for that act. Chaos can use relics from
+    any Ancient in the appropriate act. True Chaos combines the Act 2 and Act 3 pools
+    for both Progressive Ancient rewards."""
+    display_name = "Ancient Relic Pool"
+    option_balanced = 0
+    option_chaos = 1
+    option_true_chaos = 2
+    default = 0
+
+
+class RelicChoiceCount(Range):
+    """How many relics you can choose from when claiming a Relic received from Archipelago.
+
+    This affects only Relic items received from Archipelago. Relics offered by the base game
+    and other mods are unchanged."""
+    display_name = "Relic Choice Count"
+    range_start = 1
+    range_end = 5
+    default = 1
+
+
 class IncludeFloorChecks(Toggle):
-    """Whether to include reaching new floors as a location.  Adds small amounts of gold as items."""
+    """Whether to include reaching new floors as a location. Adds various fillers as items."""
     display_name = "Include Floor Checks"
     default = 1
 
@@ -517,6 +553,9 @@ class Spire2Options(PerGameCommonOptions):
     # final_act: FinalAct
     ascension: Ascension
     ascension_down: AscensionDown
+    ancient_relic_location: AncientRelicLocation
+    ancient_relic_pool: AncientRelicPool
+    relic_choice_count: RelicChoiceCount
     shuffle_all_cards: CardReward
     include_floor_checks: IncludeFloorChecks
     # Filler item weights

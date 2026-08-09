@@ -5,6 +5,7 @@ from .options import (
     Characters, DeathLinkDamagePercent, EnableDeathFragments, PickNumberCharacters, GoalNumChar,
     LockCharacters, UnlockedCharacter, Ascension,
     IncludeFloorChecks, CampfireSanity, GoldSanity, PotionSanity,
+    AncientRelicLocation, AncientRelicPool, RelicChoiceCount,
     CardReward,
     OneGoldFillerWeight, FiveGoldFillerWeight,
     FreeAttackFillerWeight, FreePowerFillerWeight, FreeSkillFillerWeight,
@@ -34,6 +35,11 @@ class SlayTheSpire2Web(WebWorld):
             GoalNumChar,
             LockCharacters,
             UnlockedCharacter,
+        ]),
+        OptionGroup("Game Options", [
+            AncientRelicLocation,
+            AncientRelicPool,
+            RelicChoiceCount,
         ]),
         OptionGroup("Sanities", [
             IncludeFloorChecks,

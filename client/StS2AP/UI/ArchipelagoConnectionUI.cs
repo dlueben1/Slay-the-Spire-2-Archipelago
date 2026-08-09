@@ -1,5 +1,4 @@
 using Godot;
-using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using Newtonsoft.Json;
 using StS2AP.Utils;
 using System;
@@ -504,6 +503,10 @@ namespace StS2AP.UI
             ArchipelagoClient.ServerAddress = url;
             ArchipelagoClient.ServerPassword = password;
             ArchipelagoClient.PlayerName = slotName;
+
+            // A connection attempt has exactly one terminal result. Remove any
+            // stale registration defensively before subscribing for this attempt.
+            ArchipelagoClient.ConnectionStateChanged -= OnConnectionResult;
             ArchipelagoClient.ConnectionStateChanged += OnConnectionResult;
             ArchipelagoClient.Connect();
 
@@ -525,6 +528,15 @@ namespace StS2AP.UI
         /// </summary>
         private static void OnConnectionResult(ConnectionState state)
         {
+            if (state is not ConnectionState.Connected and not ConnectionState.Disconnected)
+            {
+                return;
+            }
+
+            // Connected and Disconnected are terminal results for this attempt.
+            // Do not let this callback accumulate across retries or reconnects.
+            ArchipelagoClient.ConnectionStateChanged -= OnConnectionResult;
+
             // Did we connect?
             if (state == ConnectionState.Connected)
             {
@@ -532,9 +544,7 @@ namespace StS2AP.UI
                 SetStatus("Connected successfully!");
 
                 // Enter the game
-                var _charSelectScreen = MenuUtility.SubmenuStack.GetSubmenuType<NCharacterSelectScreen>();
-                _charSelectScreen?.InitializeSingleplayer();
-                MenuUtility.SubmenuStack.Push(_charSelectScreen);
+                MenuUtility.OpenCharacterSelect();
 
                 // Hide the connection UI
                 Hide();

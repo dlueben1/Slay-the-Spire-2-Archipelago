@@ -1,5 +1,6 @@
 ﻿using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Models;
+using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Localization;
@@ -37,18 +38,38 @@ namespace StS2AP.Patches
                 LogUtility.Info($"Current Map node type {RunManager.Instance.DebugOnlyGetState()?.CurrentMapPoint?.PointType}");
                 LogUtility.Info($"Game thinks we should save: {RunManager.Instance.ShouldSave}");
 
-                var maxSaveAct = ArchipelagoClient.Progress.MaxAncientUnlock(GameUtility.CurrentConfig?.CharOffset ?? -1);
+                var maxSaveAct = ArchipelagoClient.Progress.MaxProgressiveAncientLevel(
+                    GameUtility.CurrentConfig?.CharOffset ?? -1
+                );
                 var currentAct = (GameUtility.CurrentPlayer?.RunState.CurrentActIndex ?? 0) + 1;
-                
-                LogUtility.Info($"Max Act: {maxSaveAct} Current Act: {currentAct}");
-                // Goal is to just save on boss kills, treasure rooms, and after ancient selections
+                var currentMapPointType = RunManager
+                    .Instance.DebugOnlyGetState()
+                    ?.CurrentMapPoint?.PointType;
+                var isBossAutosave = preFinishedRoom?.RoomType == RoomType.Boss;
+                var isTreasureAutosave = currentMapPointType == MapPointType.Treasure;
+                var isEligibleSaveLocation =
+                    isBossAutosave
+                    || isTreasureAutosave
+                    || (
+                        preFinishedRoom?.RoomType == RoomType.Event
+                        && currentMapPointType == MapPointType.Ancient
+                    );
+                var ancientRelicLocation = ArchipelagoClient.Settings?.AncientRelicLocation
+                    ?? AncientRelicLocation.Anytime;
+                var ancientIsLocked =
+                    ancientRelicLocation == AncientRelicLocation.StartOfAct
+                    && currentAct > 1
+                    && maxSaveAct < currentAct;
+
+                LogUtility.Info(
+                    $"Max Act: {maxSaveAct} Current Act: {currentAct} " +
+                    $"AncientRelicLocation: {ancientRelicLocation}"
+                );
+                // Save after boss kills, in treasure rooms, and after ancient selections.
                 if (!RunManager.Instance.ShouldSave ||
                     (RunManager.Instance.NetService.Type != MegaCrit.Sts2.Core.Multiplayer.Game.NetGameType.Singleplayer && RunManager.Instance.NetService.Type != MegaCrit.Sts2.Core.Multiplayer.Game.NetGameType.Host)
-                    || (preFinishedRoom?.RoomType != RoomType.Boss
-                    && RunManager.Instance.DebugOnlyGetState()?.CurrentMapPoint?.PointType != MapPointType.Treasure
-                    && !(preFinishedRoom?.RoomType == RoomType.Event && RunManager.Instance.DebugOnlyGetState()?.CurrentMapPoint?.PointType == MapPointType.Ancient))
-                    // Always save on Act 1; otherwise check to see if we have enough ancient unlocks
-                    || (maxSaveAct < currentAct && currentAct > 1))
+                    || !isEligibleSaveLocation
+                    || ancientIsLocked)
                 {
                     LogUtility.Info($"Skipping save {preFinishedRoom?.RoomType}");
                     __result = Task.CompletedTask;
@@ -57,11 +78,14 @@ namespace StS2AP.Patches
 
                 LogUtility.Info("Preparing AP checkpoint save");
                 SerializableRun saveMe = RunManager.Instance.ToSave(preFinishedRoom);
-                __result = asyncSave(saveMe);
+                __result = asyncSave(saveMe, isBossAutosave || isTreasureAutosave);
                 return false;
             }
 
-            public static async Task asyncSave(SerializableRun vanillaSave)
+            public static async Task asyncSave(
+                SerializableRun vanillaSave,
+                bool showAutosaveNotification = false
+            )
             {
                 var saveMe = ArchipelagoClient.Progress.ToSerializable(vanillaSave);
                 var result = JsonSerializer.Serialize(saveMe, SerializationUtility.CombinedOptions.GetTypeInfo(typeof(SerializableAP)));
@@ -72,8 +96,28 @@ namespace StS2AP.Patches
                 }
                 var saveDict = new Dictionary<string, string>();
                 saveDict[GameUtility.CurrentPlayer.getInternalName()] = zipped;
-                ArchipelagoClient.Session.DataStorage[Scope.Slot, $"StS2AP_Saves"]
-                    += Operation.Update(saveDict);
+                const string saveStorageKey = "StS2AP_Saves";
+                var saveOperation = ArchipelagoClient.Session.DataStorage[
+                    Scope.Slot,
+                    saveStorageKey
+                ];
+                saveOperation += Operation.Update(saveDict);
+                if (showAutosaveNotification)
+                {
+                    saveOperation += Callback.Add(
+                        (_, _, _) =>
+                        {
+                            Callable.From(
+                                () => NotificationUtility.ShowRawText(
+                                    "Game autosaved.",
+                                    timeout: 3.5,
+                                    priority: NotificationUtility.NotificationPriority.High
+                                )
+                            ).CallDeferred();
+                        }
+                    );
+                }
+                ArchipelagoClient.Session.DataStorage[Scope.Slot, saveStorageKey] = saveOperation;
             }
 
             public static string Zip(string str)

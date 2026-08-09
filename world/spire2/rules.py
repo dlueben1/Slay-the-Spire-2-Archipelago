@@ -140,7 +140,7 @@ class SpireHasShop(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
                     state.count(f"{self.char} Shop Potion Slot", self.player) >= min(self.shop, self.max_shop))
 
 @dataclasses.dataclass(frozen=True)
-class NumberOfAncientUnlocks(FieldResolver, game="Slay the Spire II"):
+class NumberOfProgressiveAncients(FieldResolver, game="Slay the Spire II"):
     default_amount: int
     @typing.override
     def resolve(self, world: 'SlayTheSpire2World') -> typing.Any:
@@ -163,13 +163,13 @@ def _set_rules(world: 'SlayTheSpire2World', config: CharacterConfig) -> None:
     world.set_rule(world.get_entrance(f"{prefix} Early Act 1"), Has(f"{prefix} Unlock"))
     world.set_rule(world.get_entrance(f"{prefix} Mid Act 1"), SpireHasPower(offset,3) &
                    Has(f"{prefix} Progressive Rest", options=[OptionFilter(CampfireSanity, 1)], filtered_resolution=True) &
-                   Has(f"{prefix} Ancient Unlock", count=NumberOfAncientUnlocks(0))
+                   Has(f"{prefix} Progressive Ancient", count=NumberOfProgressiveAncients(0))
                    )
     if world.options.neow_sanity:
         neow_loc = world.get_location(f"{prefix} Ancient Act 1")
-        # Blocking Ancient Unlocks on Neow, because that would just be annoying.  The others
+        # Blocking Progressive Ancients on Neow, because that would just be annoying.  The others
         # should be blocked by the regular logic gates
-        neow_loc.item_rule = lambda item: item.game != "Slay the Spire II" or item.item_data.type != ItemType.ANCIENT_UNLOCK
+        neow_loc.item_rule = lambda item: item.game != "Slay the Spire II" or item.item_data.type != ItemType.PROGRESSIVE_ANCIENT
     world.set_rule(world.get_entrance(f"{prefix} Late Act 1"),SpireHasPower(offset,6) &
                    SpireHasShop(prefix, 2, options=[OptionFilter(ShopSanity,1)], filtered_resolution=True)
                    )
@@ -180,7 +180,7 @@ def _set_rules(world: 'SlayTheSpire2World', config: CharacterConfig) -> None:
                     SpireHasGold(prefix, 50, options=[OptionFilter(GoldSanity, 1)], filtered_resolution=True)
     )
     world.set_rule(world.get_entrance(f"{prefix} Early Act 2"), SpireHasPower(offset,10) &
-                   Has(f"{prefix} Ancient Unlock", count=NumberOfAncientUnlocks(1))
+                   Has(f"{prefix} Progressive Ancient", count=NumberOfProgressiveAncients(1))
                    )
     world.set_rule(world.get_entrance(f"{prefix} Mid Act 2"), SpireHasPower(offset,12) &
                     Has(f"{prefix} Progressive Rest", count=2, options=[OptionFilter(CampfireSanity, 1)], filtered_resolution=True) &
@@ -196,7 +196,7 @@ def _set_rules(world: 'SlayTheSpire2World', config: CharacterConfig) -> None:
                     SpireHasGold(prefix, 150, options=[OptionFilter(GoldSanity, 1)], filtered_resolution=True)
     )
     world.set_rule(world.get_entrance(f"{prefix} Early Act 3"), SpireHasPower(offset,19) &
-                   Has(f"{prefix} Ancient Unlock", count=NumberOfAncientUnlocks(2))
+                   Has(f"{prefix} Progressive Ancient", count=NumberOfProgressiveAncients(2))
                    )
     world.set_rule(world.get_entrance(f"{prefix} Mid Act 3"), SpireHasPower(offset,21) &
                    Has(f"{prefix} Progressive Rest", count=3, options=[OptionFilter(CampfireSanity, 1)], filtered_resolution=True) &
@@ -221,4 +221,3 @@ def _set_rules(world: 'SlayTheSpire2World', config: CharacterConfig) -> None:
 
         world.set_rule(world.get_entrance(f"{prefix} Act 2 Shop"),
                        SpireHasGold(prefix, 270))
-

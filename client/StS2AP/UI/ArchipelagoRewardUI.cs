@@ -1,5 +1,11 @@
 using Godot;
+using HarmonyLib;
+using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.HoverTips;
+using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Nodes.HoverTips;
+using MegaCrit.Sts2.Core.Nodes.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Screens.Capstones;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
@@ -14,6 +20,7 @@ using static StS2AP.Data.ItemTable;
 using ItemInfo = Archipelago.MultiClient.Net.Models.ItemInfo;
 using MegaCrit.Sts2.Core.Entities.Multiplayer;
 using StS2AP.Models;
+using System.Reflection;
 
 namespace StS2AP.UI
 {
@@ -66,6 +73,21 @@ namespace StS2AP.UI
         /// </summary>
         public Func<Task<bool>>? GrantAction { get; set; }
 
+        /// <summary>
+        /// Relics linked to one AP item. When present, the UI renders a single grouped reward
+        /// and consumes the AP item only after one of these relics is granted.
+        /// </summary>
+        public IReadOnlyList<RelicModel>? LinkedRelicChoices { get; set; }
+
+        /// <summary>Whether linked relic choices should use the Ancient-specific button tint.</summary>
+        public bool UseAncientRelicStyle { get; set; }
+
+        /// <summary>The relic whose native hover tips should be shown for this reward row.</summary>
+        public RelicModel? TooltipRelic { get; set; }
+
+        /// <summary>The potion whose native hover tips should be shown for this reward row.</summary>
+        public PotionModel? TooltipPotion { get; set; }
+
         /// <summary>Optional sync callback invoked after the grant completes (e.g. for cleanup)</summary>
         public Action? OnClaimed { get; set; }
     }
@@ -82,6 +104,10 @@ namespace StS2AP.UI
         private static VBoxContainer? _itemContainer;
         private static Button? _proceedButton;
         private static Tween? _fadeTween;
+        private static Texture2D? _linkedRewardChainTexture;
+        private static bool _linkedRewardChainTextureResolved;
+        private static readonly PropertyInfo? ChainImagePathProperty =
+            AccessTools.Property(typeof(NLinkedRewardSet), "ChainImagePath");
 
         // UI resource paths sourced from rewards_screen.tscn
         private const string PanelPath   = "res://images/ui/reward_screen/reward_panel.png";
@@ -131,6 +157,19 @@ namespace StS2AP.UI
         private const int RewardSenderFontSize = 16;
         private const float IconSlotSize      = 48f;
         private const float ButtonHeight      = 74f;
+        
+        // Linked relic choices mirror the base game's compact NLinkedRewardSet layout:
+        // buttons remain close together while the chain renders over both entries.
+        private const float LinkedChoiceSeparation = 3f;
+        private const float LinkedChoiceChainWidth = 104f;
+        private const float LinkedChoiceChainHeight = 88f;
+        private const int LinkedChoiceTextBottomBias = 8;
+
+        // Ancient Relics related settings
+        private static readonly Color AncientButtonNormalColor = new(0.78f, 0.48f, 0.95f);
+        private static readonly Color AncientButtonHoverColor = new(0.95f, 0.62f, 1f);
+        private static readonly Color AncientButtonPressedColor = new(0.65f, 0.34f, 0.82f);
+        private static readonly Color AncientButtonDisabledColor = new(0.45f, 0.30f, 0.55f, 0.8f);
 
         private static int _remainingRewards = 0;
 
@@ -205,7 +244,8 @@ namespace StS2AP.UI
         public static void ShowRewards()
         {
             // Ignore if current player is null
-            if (GameUtility.CurrentPlayer == null) return;
+            var currentPlayer = GameUtility.CurrentPlayer;
+            if (currentPlayer == null) return;
 
 
             // Get Unused items from the Multiworld for our current character
@@ -226,16 +266,40 @@ namespace StS2AP.UI
                     GrantAction = GetGrantAction(i.Item),
                 };
 
-                // For relic items, pre-assign a specific relic so the name is stable across open/close
+                // Relic items received from AP offer a stable, persisted choice. This does not
+                // affect relic rewards created by the base game or other mods.
                 var rawId = i.Item.GetCharacterSpecificItemID();
                 if (rawId == APItem.Relic)
                 {
-                    var relic = ArchipelagoClient.Progress.GetOrAssignRelic(i.Index, GameUtility.CurrentPlayer);
-                    if (relic != null)
+                    var choiceCount = ArchipelagoClient.Settings?.RelicChoiceCount ?? 1;
+                    var choices = ArchipelagoClient.Progress.GetOrAssignRelicChoices(i.Index, currentPlayer, choiceCount);
+                    if (choices.Count > 0)
                     {
-                        data.ItemName = relic.Title.GetRawText();
-                        data.IconPath = relic.IconPath;
-                        data.GrantAction = async () => { await GameUtility.GrantRelic(relic); return true; };
+                        data.ItemName = "Choose a Relic";
+                        data.LinkedRelicChoices = choices;
+                    }
+                    else
+                    {
+                        // Fail closed: do not consume the AP item if its choices could not be built.
+                        data.ItemName = "Relic Choice Unavailable";
+                        data.GrantAction = () => Task.FromResult(false);
+                    }
+                }
+
+                if (rawId == APItem.ProgressiveAncient)
+                {
+                    var choices = ArchipelagoClient.Progress.GetOrAssignAncientRelicChoices(i.Index, currentPlayer);
+                    if (choices.Count == AncientRelicPool.ChoiceCount)
+                    {
+                        data.ItemName = "Choose an Ancient Relic";
+                        data.LinkedRelicChoices = choices;
+                        data.UseAncientRelicStyle = true;
+                    }
+                    else
+                    {
+                        // Fail closed: do not consume the AP item if its choice pool could not be built.
+                        data.ItemName = "Ancient Relic Choice Unavailable";
+                        data.GrantAction = () => Task.FromResult(false);
                     }
                 }
 
@@ -249,11 +313,17 @@ namespace StS2AP.UI
 
                 if(rawId == APItem.Potion)
                 {
-                    var potion = ArchipelagoClient.Progress.GetOrAssignPotion(i.Index, GameUtility.CurrentPlayer);
+                    var potion = ArchipelagoClient.Progress.GetOrAssignPotion(i.Index, currentPlayer);
                     if(potion != null)
                     {
+                        // Potion assignments stay canonical for persistence/granting. Use an
+                        // owner-bound mutable copy so dynamic tooltip variables resolve safely.
+                        var tooltipPotion = potion.ToMutable();
+                        tooltipPotion.Owner = currentPlayer;
+
                         data.ItemName = potion.Title.GetRawText();
                         data.IconPath = potion.ImagePath;
+                        data.TooltipPotion = tooltipPotion;
                         data.GrantAction = async () => { return await GameUtility.GrantPotion(potion); };
                     }
                 }
@@ -439,7 +509,10 @@ namespace StS2AP.UI
         {
             if (_itemContainer == null || !IsInstanceValid(_itemContainer)) return;
 
-            _itemContainer.AddChild(CreateRewardButton(data));
+            var rewardControl = data.LinkedRelicChoices?.Count > 0
+                ? CreateRelicChoiceGroup(data)
+                : CreateRewardButton(data);
+            _itemContainer.AddChild(rewardControl);
             _remainingRewards++;
             UpdateProceedButton();
         }
@@ -640,24 +713,188 @@ namespace StS2AP.UI
         }
 
         /// <summary>
+        /// Creates visually linked relic buttons which collectively represent one AP item.
+        /// </summary>
+        private static Control CreateRelicChoiceGroup(ArchipelagoRewardData data)
+        {
+            // this is probably infinitely more complicated than it needs to be...
+            // so im sorry if this hurts your brain or can be made simpler
+            // i took inspiration from decompiled code of a similar mod that does this
+            var choices = data.LinkedRelicChoices;
+            if (choices == null || choices.Count == 0)
+                return CreateRewardButton(data);
+
+            var chainTexture = GetLinkedRewardChainTexture();
+            var group = new Control
+            {
+                Name = $"RelicChoice_{data.Index}",
+                CustomMinimumSize = new Vector2(0, choices.Count * ButtonHeight + (choices.Count - 1) * LinkedChoiceSeparation),
+                SizeFlagsHorizontal = Control.SizeFlags.Fill
+            };
+            var buttonContainer = new VBoxContainer();
+            buttonContainer.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+            buttonContainer.AddThemeConstantOverride("separation", (int)LinkedChoiceSeparation);
+            group.AddChild(buttonContainer);
+
+            var buttons = new List<Button>(choices.Count);
+            var resolving = false;
+
+            void ResolveChoice(RelicModel relic)
+            {
+                if (resolving)
+                    return;
+
+                resolving = true;
+                foreach (var button in buttons)
+                    button.Disabled = true;
+
+                GameUtility.TryGrantRelic(relic).ContinueWith(task =>
+                {
+                    var granted = task.Status == TaskStatus.RanToCompletion && task.Result;
+                    var failure = task.Exception?.InnerException?.Message ?? task.Exception?.Message;
+
+                    Callable.From(() =>
+                    {
+                        if (granted)
+                            data.OnClaimed?.Invoke();
+
+                        if (!GodotObject.IsInstanceValid(group))
+                            return;
+
+                        if (!granted)
+                        {
+                            if (!string.IsNullOrEmpty(failure))
+                                LogUtility.Error($"Relic choice failed for '{relic.Id}': {failure}");
+
+                            resolving = false;
+                            foreach (var button in buttons.Where(button => GodotObject.IsInstanceValid(button)))
+                                button.Disabled = false;
+                            return;
+                        }
+
+                        group.QueueFree();
+                        _remainingRewards--;
+                        UpdateProceedButton();
+                        ArchipelagoTopBarUI.SetCount(ArchipelagoClient.Progress.UnusedItemCount);
+
+                        if (_remainingRewards <= 0)
+                            Hide();
+                    }).CallDeferred();
+                });
+            }
+
+            for (var index = 0; index < choices.Count; index++)
+            {
+                var relic = choices[index];
+                var choiceData = new ArchipelagoRewardData
+                {
+                    Index = data.Index,
+                    ItemOriginID = data.ItemOriginID,
+                    ItemName = relic.Title.GetRawText(),
+                    SenderName = data.SenderName,
+                    FoundLocation = data.FoundLocation,
+                    IconPath = relic.IconPath,
+                    TooltipRelic = relic
+                };
+
+                var button = CreateRewardButton(
+                    choiceData,
+                    _ => ResolveChoice(relic),
+                    data.UseAncientRelicStyle,
+                    isLinkedChoice: true
+                );
+                buttons.Add(button);
+                buttonContainer.AddChild(button);
+            }
+
+            if (chainTexture != null)
+            {
+                for (var index = 0; index < choices.Count - 1; index++)
+                {
+                    var chainCenterY = (index + 1) * ButtonHeight
+                        + index * LinkedChoiceSeparation
+                        + LinkedChoiceSeparation / 2f;
+                    var chain = new TextureRect
+                    {
+                        Texture = chainTexture,
+                        ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+                        StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+                        // Keep the chain in the reward screen's normal canvas order. Giving it
+                        // a positive ZIndex lets it render above the separately managed pause menu.
+                        MouseFilter = Control.MouseFilterEnum.Ignore
+                    };
+                    chain.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
+                    chain.OffsetLeft = -LinkedChoiceChainWidth / 2f;
+                    chain.OffsetTop = chainCenterY - LinkedChoiceChainHeight / 2f;
+                    chain.OffsetRight = LinkedChoiceChainWidth / 2f;
+                    chain.OffsetBottom = chainCenterY + LinkedChoiceChainHeight / 2f;
+                    group.AddChild(chain);
+                }
+            }
+
+            return group;
+        }
+
+        private static Texture2D? GetLinkedRewardChainTexture()
+        {
+            if (_linkedRewardChainTextureResolved)
+                return _linkedRewardChainTexture;
+
+            _linkedRewardChainTextureResolved = true;
+            try
+            {
+                var chainPath = ChainImagePathProperty?.GetValue(null) as string;
+                if (!string.IsNullOrWhiteSpace(chainPath))
+                    _linkedRewardChainTexture = PreloadManager.Cache.GetCompressedTexture2D(chainPath);
+                else
+                    LogUtility.Warn("Native linked-reward chain asset path was unavailable; using spacing-only relic choices");
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Warn($"Failed to load native linked-reward chain asset: {ex.Message}");
+            }
+
+            return _linkedRewardChainTexture;
+        }
+
+        /// <summary>
         /// Creates a single reward row button for the given reward data.
         /// The button shows an icon on the left, the item name prominently,
         /// and the sender's name in smaller text below.
         /// </summary>
         /// <param name="data">The reward entry to represent.</param>
-        private static Button CreateRewardButton(ArchipelagoRewardData data)
+        /// <param name="customPressed">Optional group-owned click handler.</param>
+        /// <param name="isAncientChoice">Whether to apply the Ancient-specific button tint.</param>
+        /// <param name="isLinkedChoice">Whether this button belongs to an overlaid chain group.</param>
+        private static Button CreateRewardButton(
+            ArchipelagoRewardData data,
+            Action<Button>? customPressed = null,
+            bool isAncientChoice = false,
+            bool isLinkedChoice = false)
         {
             var btn = new Button { CustomMinimumSize = new Vector2(0, ButtonHeight) };
 
             // Apply the in-game reward button texture as the button style
             try
             {
-                var normalStyle = new StyleBoxTexture { Texture = GD.Load<Texture2D>(ItemBtnPath) };
-                var hoverStyle  = new StyleBoxTexture { Texture = GD.Load<Texture2D>(ItemBtnPath) };
+                var buttonTexture = GD.Load<Texture2D>(ItemBtnPath);
+                var normalColor = isAncientChoice ? AncientButtonNormalColor : Colors.White;
+                var hoverColor = isAncientChoice ? AncientButtonHoverColor : Colors.White;
+                var pressedColor = isAncientChoice ? AncientButtonPressedColor : Colors.White;
+                var disabledColor = isAncientChoice ? AncientButtonDisabledColor : Colors.White;
+
+                StyleBoxTexture CreateButtonStyle(Color color) => new()
+                {
+                    Texture = buttonTexture,
+                    ModulateColor = color
+                };
+
+                var normalStyle = CreateButtonStyle(normalColor);
                 btn.AddThemeStyleboxOverride("normal",  normalStyle);
-                btn.AddThemeStyleboxOverride("hover",   hoverStyle);
-                btn.AddThemeStyleboxOverride("pressed", normalStyle);
+                btn.AddThemeStyleboxOverride("hover",   CreateButtonStyle(hoverColor));
+                btn.AddThemeStyleboxOverride("pressed", CreateButtonStyle(pressedColor));
                 btn.AddThemeStyleboxOverride("focus",   normalStyle);
+                btn.AddThemeStyleboxOverride("disabled", CreateButtonStyle(disabledColor));
             }
             catch (Exception ex)
             {
@@ -697,9 +934,27 @@ namespace StS2AP.UI
             }
 
             // Text column: item name (large) + sender (small)
-            var vbox = new VBoxContainer { SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
+            var vbox = new VBoxContainer();
             vbox.AddThemeConstantOverride("separation", 2);
-            hbox.AddChild(vbox);
+
+            if (isLinkedChoice)
+            {
+                // Move both text lines slightly upward so the larger chain can overlap
+                // the button edges without obscuring the source line.
+                var textMargin = new MarginContainer
+                {
+                    SizeFlagsHorizontal = Control.SizeFlags.Fill,
+                    SizeFlagsVertical = Control.SizeFlags.ShrinkCenter
+                };
+                textMargin.AddThemeConstantOverride("margin_bottom", LinkedChoiceTextBottomBias);
+                textMargin.AddChild(vbox);
+                hbox.AddChild(textMargin);
+            }
+            else
+            {
+                vbox.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+                hbox.AddChild(vbox);
+            }
 
             // Item name label
             var nameLabel = CreateTextLabel(data.ItemName, RewardNameFontSize, new Color(1f, 0.965f, 0.886f));
@@ -710,6 +965,29 @@ namespace StS2AP.UI
             {
                 var senderLabel = CreateTextLabel($"from {data.SenderName} ({data.FoundLocation})", RewardSenderFontSize, new Color(0.7f, 0.85f, 1f));
                 vbox.AddChild(senderLabel);
+            }
+
+            if (data.TooltipRelic is { } tooltipRelic)
+            {
+                AttachModelHoverTips(
+                    btn,
+                    () => tooltipRelic.HoverTips,
+                    $"relic '{tooltipRelic.Id}'"
+                );
+            }
+            else if (data.TooltipPotion is { } tooltipPotion)
+            {
+                AttachModelHoverTips(
+                    btn,
+                    () => tooltipPotion.HoverTips,
+                    $"potion '{tooltipPotion.Id}'"
+                );
+            }
+
+            if (customPressed != null)
+            {
+                btn.Pressed += () => customPressed(btn);
+                return btn;
             }
 
             // Grant the item and dismiss the button on click
@@ -769,6 +1047,85 @@ namespace StS2AP.UI
             };
 
             return btn;
+        }
+
+        /// <summary>
+        /// Shows a model's native description and any extra hover tips while a reward button is
+        /// hovered or keyboard-focused.
+        /// </summary>
+        private static void AttachModelHoverTips(
+            Button button,
+            Func<IEnumerable<IHoverTip>> hoverTipsFactory,
+            string diagnosticSubject)
+        {
+            var isHovered = false;
+            var isFocused = false;
+            var isTooltipVisible = false;
+
+            void ShowTooltip()
+            {
+                if (isTooltipVisible)
+                    return;
+
+                try
+                {
+                    var tipSet = NHoverTipSet.CreateAndShow(button, hoverTipsFactory(), HoverTipAlignment.Left);
+                    isTooltipVisible = tipSet != null;
+                }
+                catch (Exception ex)
+                {
+                    LogUtility.Warn($"Failed to show tooltip for {diagnosticSubject}: {ex.Message}");
+                }
+            }
+
+            void HideTooltip()
+            {
+                if (!isTooltipVisible)
+                    return;
+
+                try
+                {
+                    NHoverTipSet.Remove(button);
+                }
+                catch (Exception ex)
+                {
+                    LogUtility.Warn($"Failed to hide tooltip for {diagnosticSubject}: {ex.Message}");
+                }
+                finally
+                {
+                    isTooltipVisible = false;
+                }
+            }
+
+            void RefreshTooltip()
+            {
+                if (isHovered || isFocused)
+                    ShowTooltip();
+                else
+                    HideTooltip();
+            }
+
+            button.MouseEntered += () =>
+            {
+                isHovered = true;
+                RefreshTooltip();
+            };
+            button.MouseExited += () =>
+            {
+                isHovered = false;
+                RefreshTooltip();
+            };
+            button.FocusEntered += () =>
+            {
+                isFocused = true;
+                RefreshTooltip();
+            };
+            button.FocusExited += () =>
+            {
+                isFocused = false;
+                RefreshTooltip();
+            };
+            button.Pressed += HideTooltip;
         }
 
         /// <summary>
@@ -836,6 +1193,9 @@ namespace StS2AP.UI
                 case APItem.EliteGold:    return async () => { await GameUtility.GrantGold(40); return true; };
                 case APItem.BossGold:     return async () => { await GameUtility.GrantGold(100); return true; };
                 case APItem.Relic:        return async () => { await GameUtility.GrantRelic(); return true; };
+                // Ancient choices require the received-item index and are built in ShowRewards().
+                // Keep the obsolete AddReward(ItemInfo) path from consuming one as display-only.
+                case APItem.ProgressiveAncient: return () => Task.FromResult(false);
                     // Need to do potion lookup before granting; see ShowRewards
                 case APItem.Potion:       return async () => {  return false; };
                 default:
@@ -868,7 +1228,7 @@ namespace StS2AP.UI
                     return IconCard;
 
                 case APItem.Relic:
-                case APItem.AncientUnlock:
+                case APItem.ProgressiveAncient:
                     return IconRelic;
 
 

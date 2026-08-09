@@ -213,7 +213,7 @@ namespace StS2AP.Patches
 			        throw new InvalidOperationException("Attempted to start new relic picking session while one was already occurring!");
                 }
 
-                if(ArchipelagoClient.Progress.RelicAssignments.Count <= ArchipelagoProgress._maxRelicRewards)
+                if(ArchipelagoClient.Progress.RelicChoiceAssignments.Count < ArchipelagoProgress._maxRelicRewards)
                 {
                     ____currentRelics = new List<RelicModel>();
                     ____predictedVote = new PlayerVote()

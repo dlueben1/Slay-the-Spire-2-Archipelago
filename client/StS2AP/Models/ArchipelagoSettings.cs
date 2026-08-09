@@ -8,6 +8,24 @@ using System.Threading.Tasks;
 
 namespace StS2AP.Models
 {
+    
+    // Where you can receive Ancient Relics
+    public enum AncientRelicLocation
+    {
+        StartOfAct = 0,
+        Anytime = 1,
+    }
+
+    // Balanced = Relics from a specific act 2 ancient followed by Relics from a specific act 3 ancient
+    // Chaos = Any act 2 ancient relic followed by any act 3 ancient relic
+    // TrueChaos = Any act 2 or act 3 ancient relic always.
+    public enum AncientRelicPoolMode
+    {
+        Balanced = 0,
+        Chaos = 1,
+        TrueChaos = 2,
+    }
+
     /// <summary>
     /// The settings that a player has configured for their Archipelago Slot.
     /// 
@@ -48,6 +66,25 @@ namespace StS2AP.Models
         public IDictionary<string, CharacterConfig> UnrecognizedCharacters { get; set; } = new ConcurrentDictionary<string, CharacterConfig>(StringComparer.InvariantCultureIgnoreCase);
 
         public bool NeowSanity { get; set; }
+
+        /// <summary>
+        /// Controls whether Progressive Ancient choices appear at the start of their act or
+        /// immediately in the Archipelago reward menu.
+        /// </summary>
+        public AncientRelicLocation AncientRelicLocation { get; set; } = AncientRelicLocation.Anytime;
+
+        /// <summary>
+        /// Controls whether Ancient choices use the rolled Ancient, the appropriate act's
+        /// Ancient pool, or the combined Act 2 and Act 3 Ancient pool.
+        /// </summary>
+        public AncientRelicPoolMode AncientRelicPool { get; set; } = AncientRelicPoolMode.Balanced;
+
+        /// <summary>
+        /// Number of relics offered when claiming a Relic received from Archipelago.
+        /// This does not affect relic rewards created by the base game or other mods.
+        /// </summary>
+        public int RelicChoiceCount { get; set; } = 1;
+
         public bool CampfireSanity { get; set; }
         public bool GoldSanity { get; set; }
         public bool PotionSanity { get; set; }

@@ -264,11 +264,7 @@ namespace StS2AP.Patches
                 // If we are connected, dive directly into the game
                 if (ArchipelagoClient.IsConnected)
                 {
-                    var charSelectScreen =
-                        MenuUtility.SubmenuStack.GetSubmenuType<NCharacterSelectScreen>();
-
-                    charSelectScreen?.InitializeSingleplayer();
-                    MenuUtility.SubmenuStack.Push(charSelectScreen!);
+                    MenuUtility.OpenCharacterSelect();
                 }
                 // Inject the custom Archipelago UIs if we're not connected
                 else
@@ -345,10 +341,21 @@ namespace StS2AP.Patches
         [HarmonyPatch(typeof(NSubmenuStack), nameof(NSubmenuStack.Pop))]
         public static class BackOutFromCharSelectToMainMenu
         {
-            public static void Postfix(NSubmenuStack __instance)
+            [HarmonyPrefix]
+            public static void Prefix(NSubmenuStack __instance, out bool __state)
             {
-                // Only pop again if NCharacterSelectScreen was on top
-                if (__instance.Peek() is NSingleplayerSubmenu)
+                // Capture what is being popped. Looking only at what remains in
+                // the postfix can mistake any submenu above Single Player for
+                // the character-select screen.
+                __state = __instance.Peek() is NCharacterSelectScreen;
+            }
+
+            [HarmonyPostfix]
+            public static void Postfix(NSubmenuStack __instance, bool __state)
+            {
+                // Only skip the hidden Single Player submenu after successfully
+                // popping character select.
+                if (__state && __instance.Peek() is NSingleplayerSubmenu)
                 {
                     // Go back to the main menu
                     __instance.Pop();

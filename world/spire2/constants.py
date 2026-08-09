@@ -4,16 +4,16 @@ CHAR_OFFSET = 10000
 NUM_CUSTOM = 5
 
 ASCENSIONS = {
-    'SwarmingElites': 'Swarming Elites',
-    'WearyTraveler': 'Weary Traveler',
-    'Poverty':'Poverty',
-    'TightBelt':'Tight Belt',
-    "AscendersBane":"Ascender's Bane",
-    'Inflation': 'Inflation',
-    'Scarcity': 'Scarcity',
-    'ToughEnemies': 'Tough Enemies',
-    'DeadlyEnemies': 'Deadly Enemies',
-    'DoubleBoss':'Double Boss'
+    'SwarmingElites': 'Disable Swarming Elites',
+    'WearyTraveler': 'Disable Weary Traveler',
+    'Poverty': 'Disable Poverty',
+    'TightBelt': 'Disable Tight Belt',
+    "AscendersBane": "Disable Ascender's Bane",
+    'Inflation': 'Disable Inflation',
+    'Scarcity': 'Disable Scarcity',
+    'ToughEnemies': 'Disable Tough Enemies',
+    'DeadlyEnemies': 'Disable Deadly Enemies',
+    'DoubleBoss': 'Disable Double Boss',
 }
 
 ASCENSION_LIST = list(ASCENSIONS.keys())

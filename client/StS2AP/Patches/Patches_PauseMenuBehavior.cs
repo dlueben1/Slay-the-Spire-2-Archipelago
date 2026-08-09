@@ -25,8 +25,8 @@ namespace StS2AP.Patches
         // The subpath to the vanilla Settings button.
         private const string SettingsButtonPath = ButtonContainerPath + "/Settings";
 
-        // The subpath to the vanilla Give Up button.
-        private const string GiveUpButtonPath = ButtonContainerPath + "/GiveUp";
+        // The subpath to the vanilla Save & Quit button.
+        private const string SaveAndQuitButtonPath = ButtonContainerPath + "/SaveAndQuit";
 
         // The new name of our injected Archipelago Settings button.
         private const string PauseMenuArchipelagoSettingsButtonName = "ArchipelagoSettingsButton";
@@ -103,6 +103,15 @@ namespace StS2AP.Patches
             if (settingsLabel != null)
             {
                 settingsLabel.SetTextAutoSize("Game Settings");
+            }
+
+            // AP saves automatically, so the pause-menu action only needs to describe quitting.
+            var saveAndQuitLabel = pauseMenu
+                .GetNodeOrNull<NPauseMenuButton>(SaveAndQuitButtonPath)
+                ?.GetNodeOrNull<MegaLabel>("Label");
+            if (saveAndQuitLabel != null)
+            {
+                saveAndQuitLabel.SetTextAutoSize("Quit");
             }
 
             // OnSubmenuOpened can run repeatedly, so refresh an existing button rather than injecting another copy if possible
