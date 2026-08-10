@@ -11,6 +11,7 @@
 import type { OptionCatalog } from "../../generated/optionCatalog";
 import type { ChecksAndRewardsAnswers } from "../WizardAnswers";
 import type { CompiledOptions } from "./applyCharacterOptions";
+import { applyAncientOptions } from "./applyAncientOptions";
 import { applyCheckOptions } from "./applyCheckOptions";
 import { applyFillerOptions } from "./applyFillerOptions";
 import { applyShopOptions } from "./applyShopOptions";
@@ -32,7 +33,10 @@ export function applyChecksAndRewardsOptions(
   answers: ChecksAndRewardsAnswers,
   catalog: OptionCatalog,
 ): void {
-  // Compile the always-visible independent check and reward toggles first.
+  // Keep Ancient choices above the additional-check controls in the wizard and YAML.
+  applyAncientOptions(target, answers.ancients, catalog);
+
+  // Compile the always-visible independent check and reward toggles next.
   applyCheckOptions(target, answers.checks, catalog);
 
   // Compile the conditional Shop Sanity family as one dependent subsection.

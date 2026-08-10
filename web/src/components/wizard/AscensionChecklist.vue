@@ -76,29 +76,6 @@ function setAscensionDownsEnabled(value: unknown): void {
 }
 
 /**
- * Enables or disables every Ascension checkbox in the current configuration.
- *
- * @param value - Whether all supported modifiers should be selected.
- * @returns Nothing; emits complete ordered Ascension and optional Down collections.
- * @remarks When the Down column is enabled, bulk selection applies to both columns.
- */
-function setAllAscensions(value: boolean): void {
-  // Build fresh arrays so neither parent state nor the immutable catalog is mutated.
-  const enabled = value
-    ? ASCENSION_MODIFIERS.map((modifier) => modifier.level)
-    : [];
-  const downs =
-    value && props.modelValue.ascensionDownsEnabled ? [...enabled] : [];
-
-  // Preserve the user's Down-column visibility while changing all row selections.
-  emit("update:modelValue", {
-    enabled,
-    ascensionDownsEnabled: props.modelValue.ascensionDownsEnabled,
-    downs,
-  });
-}
-
-/**
  * Applies the A1-through-AN preset represented by one level button.
  *
  * @param maximumLevel - Clicked badge level that becomes the inclusive upper bound.

@@ -146,7 +146,6 @@ const generatedCharacterCount = computed(getGeneratedCharacterCount);
 
 /**
  * Builds concrete completion-goal choices for the current generated count.
- *
  * @returns Consecutive one-based counts that can be displayed beside the `all` option.
  */
 function getGoalOptions(): number[] {
@@ -664,6 +663,7 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
       />
     </WizardQuestion>
 
+    <!-- Ascensions for All -->
     <WizardQuestion
       v-if="modelValue.ascensionMode === 'shared'"
       :question="questionsById['shared-ascensions']!"
@@ -674,6 +674,7 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
       />
     </WizardQuestion>
 
+    <!-- Ascensions for each Character -->
     <WizardQuestion v-else :question="questionsById['individual-ascensions']!">
       <UAccordion
         type="multiple"
@@ -703,6 +704,7 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
       </p>
     </WizardQuestion>
 
+    <!-- Controls selection mode, whether characters are all included or only a random subset -->
     <WizardQuestion :question="questionsById.selection!">
       <URadioGroup
         :model-value="modelValue.selectionMode"
@@ -733,6 +735,7 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
       </label>
     </WizardQuestion>
 
+    <!-- Character Unlock Configuration -->
     <WizardQuestion :question="questionsById.availability!">
       <URadioGroup
         :model-value="modelValue.availability"
@@ -759,12 +762,13 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
           label-key="label"
           color="primary"
           variant="outline"
-          class="wizard-select-input cursor-pointer"
+          class="wizard-select-input cursor-pointer min-w-64"
           @update:model-value="setStartingCharacter"
         />
       </label>
     </WizardQuestion>
 
+    <!-- Goal Selection: May move in the future if more goals exist -->
     <WizardQuestion :question="questionsById.goal!">
       <USelect
         :model-value="String(modelValue.goal)"
@@ -774,11 +778,11 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
         label-key="label"
         color="primary"
         variant="outline"
-        class="wizard-select-input cursor-pointer"
+        class="wizard-select-input cursor-pointer min-w-64"
         @update:model-value="setGoal"
       />
     </WizardQuestion>
   </div>
 </template>
 
-<style scoped src="./wizard.css"></style>
+<style scoped src="./wizard.css" />

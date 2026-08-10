@@ -168,8 +168,8 @@ function setCosts(value: unknown): void {
     <WizardQuestion :question="questionsById['shop-removal']!">
       <UCheckbox
         :model-value="modelValue.removeSlots"
-        label="Shuffle card removal"
-        description="Add one progressive card-removal unlock per act; Act 4 uses the Act 3 unlock."
+        label="Shuffle Card Removal"
+        description="If enabled, you can only remove a card at a shop if you've unlocked enough Progressive Card Removal Unlocks for that Act."
         color="primary"
         variant="card"
         class="cursor-pointer"
@@ -182,11 +182,6 @@ function setCosts(value: unknown): void {
     </WizardQuestion>
 
     <WizardQuestion :question="questionsById['shop-costs']!">
-      <template #help>
-        Logic does not account for these prices, so high costs can make an
-        unlucky shop less convenient.
-      </template>
-
       <URadioGroup
         :model-value="modelValue.costs"
         :items="shopCostItems"

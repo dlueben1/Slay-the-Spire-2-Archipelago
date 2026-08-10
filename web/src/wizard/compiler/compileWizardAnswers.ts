@@ -17,6 +17,7 @@ import {
 } from "./applyCharacterOptions";
 import { applyChecksAndRewardsOptions } from "./applyChecksAndRewardsOptions";
 import { applyDeathLinkOptions } from "./applyDeathLinkOptions";
+import { applyProgressionOptions } from "./applyProgressionOptions";
 import { applyRunOptions } from "./applyRunOptions";
 
 /**
@@ -54,6 +55,7 @@ export function compileWizardAnswers(
   applyRunOptions(options, answers.run, catalog);
   applyChecksAndRewardsOptions(options, answers.checksAndRewards, catalog);
   applyDeathLinkOptions(options, answers.deathLink, catalog);
+  applyProgressionOptions(options, answers.progression, catalog);
 
   // Validation is deliberately last: it checks the final product, not player intent.
   validateOptions(options, catalog);

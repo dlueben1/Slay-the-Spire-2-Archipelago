@@ -45,6 +45,15 @@ export function applyDeathLinkOptions(
     throw new Error("Death Link damage must be a whole number from 1 to 100.");
   }
 
+  if (
+    answers.enabled &&
+    !answers.beKilled &&
+    !answers.receiveFragment &&
+    !answers.receiveDamage
+  ) {
+    throw new Error("Select at least one received Death Link effect.");
+  }
+
   // Lethal mode maps to Python's documented 100% damage representation.
   const compiledDamagePercent = answers.beKilled
     ? 100

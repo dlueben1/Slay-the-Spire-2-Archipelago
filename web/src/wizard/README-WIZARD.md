@@ -18,18 +18,19 @@ The wizard deliberately separates what the player means from what Archipelago ac
 The first-pass flow is organized as:
 
 1. Character Setup
-2. Run Rules
+2. Gameplay Modifiers
 3. Checks & Rewards
 4. Death Link
-5. Review
+5. Progression
+6. Review
 
 Character Setup presents one roster model for built-in and modded characters. Shared Ascensions compile through `characters`, `modded_characters`, `ascension`, and `ascension_down`. Individual Ascensions compile through `use_advanced_characters` and `advanced_characters`; ignored standard fields are removed from guided YAML. Random roster selection, unlock behavior, starting character, and completion goal apply to both modes.
 
-The Run Rules section owns Ancient reward timing and pools, Relic choice count, Neow Sanity, seeded runs, progression balancing, and accessibility. Its final subsection contains the two common Archipelago settings so they remain visually distinct from game-specific run rules. Progression balancing is an integral 0-99 value; the named Disabled, Normal, and Extreme buttons are presentation shortcuts for 0, 50, and 99 rather than separate compiler concepts.
+Gameplay Modifiers owns Relic choice count and seeded runs. Checks & Rewards begins with the two Progressive Ancient choices, then provides the additional checks and rewards including Neow Sanity, floor, campfire, gold, potion, and card-reward shuffling. It also owns the Shop Slots toggle, the conditional Shop Sanity subsection, and the existing Filler Items table at the bottom of the step. Shop details remain hidden until Shop Slots is enabled.
 
-Checks & Rewards owns floor, campfire, gold, potion, and card-reward shuffling. It also owns the Shop Slots toggle, the conditional Shop Sanity subsection, and the existing Filler Items table at the bottom of the step. Shop details remain hidden until Shop Slots is enabled.
+Progression contains the shared Archipelago settings: progression balancing and accessibility. Progression balancing is an integral 0-99 value; the named Disabled, Normal, and Extreme buttons are presentation shortcuts for 0, 50, and 99 rather than separate compiler concepts.
 
-Death Link hides received-effect controls until its controlling option is enabled. The wizard deliberately models Death Fragment, nonlethal Max HP damage, and Be killed as distinct answers. Python exposes only `enable_death_fragments` and `death_link_damage_percent`, so `applyDeathLinkOptions.ts` maps disabled damage to 0 and Be killed to 100 while suppressing the mutually exclusive fragment setting. Do not reproduce that technical coupling in the Vue component.
+Death Link hides received-effect controls until its controlling option is enabled. The wizard requires one received effect: Death Fragment, nonlethal Max HP damage, or Die. Selecting Die clears both nonlethal effects. Python exposes only `enable_death_fragments` and `death_link_damage_percent`, so `applyDeathLinkOptions.ts` maps disabled damage to 0 and Die to 100 while suppressing the mutually exclusive fragment setting. Do not reproduce that technical coupling in the Vue component.
 
 The player name is not a game option and must never be added to a section compiler or `GuidedOption.ts`. `buildWizardYaml` validates it, adds the fixed builder description and `Slay the Spire II` game identifier, and nests the selected guided settings under the game-name mapping. `WizardView.vue` computes one shared document, and Review uses that exact string for preview, clipboard, and download behavior.
 

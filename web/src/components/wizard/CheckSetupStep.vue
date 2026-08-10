@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import type { RadioGroupItem } from "@nuxt/ui";
 import type { FillerDisplayItem } from "../../wizard/FillerItem";
 import type {
+  AncientAnswers,
   CheckAnswers,
   ChecksAndRewardsAnswers,
   FillerAnswers,
@@ -14,6 +16,7 @@ import {
 import FillerStep from "./FillerStep.vue";
 import ShopSetupStep from "./ShopSetupStep.vue";
 import WizardQuestion from "./WizardQuestion.vue";
+import { MarkdownDocument } from "../../models/MarkdownDocument.ts";
 
 type ShopSlotAnswerKey =
   "cardSlots" | "neutralCardSlots" | "relicSlots" | "potionSlots";
@@ -34,40 +37,81 @@ interface CheckToggleDefinition {
   description: string;
 }
 
+const ancientLocationItems: RadioGroupItem[] = [
+  {
+    label: "At the start of each act",
+    description:
+      "Claim the reward through that act's normal Ancient encounter.",
+    value: "start_of_act",
+  },
+  {
+    label: "As soon as it arrives",
+    description:
+      "Claim linked choices from the Archipelago reward menu at any time.",
+    value: "anytime",
+  },
+];
+
+const ancientPoolItems: RadioGroupItem[] = [
+  {
+    label: "Vanilla",
+    description:
+      "Use the base game behavior: Visiting an Ancient provides relics from their own relic pool.",
+    value: "balanced",
+  },
+  {
+    label: "Chaos",
+    description:
+      "Ancient Relic Rewards are comprised of any relic an Ancient from that Act can give you.",
+    value: "chaos",
+  },
+  {
+    label: "True Chaos",
+    description:
+      "Ancient Relic Rewards are comprised of any relic from any Ancient in the game, regardless of Act (except Neow)",
+    value: "true_chaos",
+  },
+];
+
 /**
- * Player-facing rows for the five independent check and reward toggles.
+ * Player-facing rows for the independent additional check and reward toggles.
  *
  * @remarks Add a new row here only after its semantic answer, generated-key registry,
  * compiler assignment, and generated schema entry have also been added.
  */
 const checkToggleDefinitions: readonly CheckToggleDefinition[] = [
   {
+    key: "neowSanity",
+    label: "Neow's Blessing",
+    description:
+      "Include Neow's Blessing as a third Progressive Ancient reward.",
+  },
+  {
     key: "includeFloorChecks",
-    label: "Floor checks",
+    label: "Floor Checks",
     description:
       "Make reaching new floors into locations and add helpful filler items to fill them.",
   },
   {
     key: "campfireSanity",
-    label: "Campfire actions",
+    label: "Campfire Actions",
     description:
-      "Shuffle progressive Rest and Smith access, with campsite locations in each act.",
+      "Shuffle Progressive Rest and Smith items into the Multiworld, per character, per Act.",
   },
   {
     key: "goldSanity",
-    label: "Gold rewards",
+    label: "Gold Rewards",
     description:
-      "Move combat, elite, and boss gold rewards into the multiworld as checks and items.",
+      "Move combat, elite, and boss gold rewards into the Multiworld.",
   },
   {
     key: "potionSanity",
-    label: "Potion drops",
-    description:
-      "Move potion rewards into the multiworld, adding nine locations per generated character.",
+    label: "Potion Drops",
+    description: "Move potion rewards into the Multiworld.",
   },
   {
     key: "shuffleAllCards",
-    label: "Every card reward",
+    label: "All Card Rewards",
     description:
       "Shuffle every card reward instead of the default behavior of shuffling every other reward.",
   },
@@ -120,6 +164,25 @@ function setCheckToggle(answerKey: keyof CheckAnswers, value: unknown): void {
   updateAnswers({ checks });
 }
 
+/** Updates one Ancient reward setting above the additional checks subsection. */
+function setAncientAnswers(patch: Partial<AncientAnswers>): void {
+  updateAnswers({ ancients: { ...props.modelValue.ancients, ...patch } });
+}
+
+/** Narrows and updates the selected Progressive Ancient reward timing. */
+function setAncientLocation(value: unknown): void {
+  if (value === "start_of_act" || value === "anytime") {
+    setAncientAnswers({ relicLocation: value });
+  }
+}
+
+/** Narrows and updates the selected pool for Progressive Ancient rewards. */
+function setAncientPool(value: unknown): void {
+  if (value === "balanced" || value === "chaos" || value === "true_chaos") {
+    setAncientAnswers({ relicPool: value });
+  }
+}
+
 /**
  * Updates whether Shop Slots and their dependent subsection are enabled.
  *
@@ -167,6 +230,51 @@ function setFillerAnswers(filler: FillerAnswers): void {
 
 <template>
   <div class="space-y-10">
+    <WizardMarkdownDocument
+      source="docs/faq-progressive.md"
+      fallback-title="Progressive Items"
+    />
+
+    <section class="wizard-subsection border-t-0! pt-0!">
+      <div class="wizard-subsection__header">
+        <h3>Ancients</h3>
+        <p>
+          Configure the behavior of unlocking Ancients and receiving their
+          relics.
+        </p>
+      </div>
+
+      <WizardQuestion :question="questionsById['ancient-location']!">
+        <URadioGroup
+          :model-value="modelValue.ancients.relicLocation"
+          :items="ancientLocationItems"
+          value-key="value"
+          label-key="label"
+          description-key="description"
+          color="primary"
+          variant="table"
+          :ui="{ item: 'cursor-pointer' }"
+          @update:model-value="setAncientLocation"
+        />
+      </WizardQuestion>
+
+      <WizardQuestion :question="questionsById['ancient-pool']!" class="mt-6">
+        <URadioGroup
+          :model-value="modelValue.ancients.relicPool"
+          :items="ancientPoolItems"
+          value-key="value"
+          label-key="label"
+          description-key="description"
+          color="primary"
+          variant="table"
+          :ui="{ item: 'cursor-pointer' }"
+          @update:model-value="setAncientPool"
+        />
+      </WizardQuestion>
+    </section>
+
+    <USeparator color="primary" class="opacity-40" />
+
     <WizardQuestion :question="questionsById['check-types']!">
       <template #help>
         Each enabled option adds or changes locations and items for every
@@ -192,8 +300,8 @@ function setFillerAnswers(filler: FillerAnswers): void {
 
         <UCheckbox
           :model-value="modelValue.shop.enabled"
-          label="Shop slots"
-          description="Shuffle selected shop inventory slots and their availability into the multiworld."
+          label="Shop Slots"
+          description="Parts of the Shop can be shuffled into the Multiworld."
           color="primary"
           variant="card"
           class="cursor-pointer"
@@ -210,8 +318,8 @@ function setFillerAnswers(filler: FillerAnswers): void {
       <div class="wizard-subsection__header">
         <h3>Shop Sanity</h3>
         <p>
-          Configure which shop slots become checks and how their AP purchases
-          behave.
+          Configure which parts of the Shop are shuffled into the Multiworld,
+          and how much AP Items cost.
         </p>
       </div>
 
@@ -241,4 +349,4 @@ function setFillerAnswers(filler: FillerAnswers): void {
   </div>
 </template>
 
-<style scoped src="./wizard.css"></style>
+<style scoped src="./wizard.css" />

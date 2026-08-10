@@ -166,34 +166,24 @@ export const characterSetupStep: WizardStep = {
   ],
 };
 
-/** Run Rules definition consumed by its component and wizard navigation. */
+/** Gameplay Modifiers definition consumed by its component and wizard navigation. */
 export const runSetupStep: WizardStep = {
   id: "run",
-  title: "Run Rules",
+  title: "Gameplay Modifiers",
   description:
-    "Configure climb rules plus Archipelago's progression and accessibility defaults.",
+    "Configure your experience, how Archipelago Rewards are handled, and what gets randomized.",
   questions: [
     {
-      id: "ancient-location",
-      title: "When should Progressive Ancient rewards be available?",
-    },
-    {
-      id: "ancient-pool",
-      title: "Which Ancient relics may appear in each reward?",
-    },
-    {
       id: "relic-choice-count",
-      title: "How many relic choices should Archipelago rewards offer?",
-    },
-    { id: "neow", title: "Should Neow's starting blessing be shuffled?" },
-    { id: "seeded", title: "Should each character use a fixed run seed?" },
-    {
-      id: "progression-balancing",
-      title: "How strongly should Archipelago balance progression items?",
+      title:
+        "When claiming a Relic from the Multiworld, how many choices should you choose from?",
+      description:
+        "In the Vanilla game, the option for this is 1, but you can choose from up to 5 relics",
     },
     {
-      id: "accessibility",
-      title: "Which locations must be reachable?",
+      id: "seeded",
+      title: "Should each run be unique or use a fixed seed?",
+      description: "In the Vanilla game, runs are randomized.",
     },
   ],
 };
@@ -203,8 +193,16 @@ export const checkSetupStep: WizardStep = {
   id: "checks",
   title: "Checks & Rewards",
   description:
-    "Choose shuffled checks, optional Shop slots, and the filler reward pool.",
+    "Select what locations (checks) and items are enabled and available in your world.",
   questions: [
+    {
+      id: "ancient-location",
+      title: "When should Progressive Ancient rewards be available?",
+    },
+    {
+      id: "ancient-pool",
+      title: "Which Ancient relics may appear in each reward?",
+    },
     {
       id: "check-types",
       title: "Which additional checks and rewards should be shuffled?",
@@ -222,6 +220,8 @@ export const checkSetupStep: WizardStep = {
     {
       id: "shop-costs",
       title: "How expensive should shuffled shop slots be?",
+      description:
+        "Logic does not account for these prices, so high costs can make an unlucky shop less convenient.",
       isVisible: usesShopSanity,
     },
     {
@@ -253,12 +253,33 @@ export const deathLinkSetupStep: WizardStep = {
   ],
 };
 
+/** Progression definition consumed by its component and wizard navigation. */
+export const progressionSetupStep: WizardStep = {
+  id: "progression",
+  title: "Progression",
+  description:
+    "Configure Archipelago's progression-balancing and accessibility settings.",
+  questions: [
+    {
+      id: "progression-balancing",
+      title: "How strongly should Archipelago balance progression items?",
+      description:
+        "Lower values permit more early-game droughts. Higher values move progression earlier; 0 disables balancing, 50 is normal, and 99 is extreme.",
+    },
+    {
+      id: "accessibility",
+      title: "Which locations must be reachable?",
+    },
+  ],
+};
+
 /** Declarative step and question ordering for the guided wizard. */
 export const wizardSteps: WizardStep[] = [
   characterSetupStep,
   runSetupStep,
   checkSetupStep,
   deathLinkSetupStep,
+  progressionSetupStep,
   {
     id: "review",
     title: "Review",

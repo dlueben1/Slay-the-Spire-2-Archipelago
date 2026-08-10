@@ -12,8 +12,10 @@ import { createDefaultFillerAnswers } from "../FillerItem";
 import { getGuidedOptionKeys } from "../GuidedOption";
 import { createDefaultWizardAnswers } from "../WizardAnswers";
 import {
+  ANCIENT_OPTION_KEYS,
   CHECK_OPTION_KEYS,
   DEATH_LINK_OPTION_KEYS,
+  PROGRESSION_OPTION_KEYS,
   RUN_OPTION_KEYS,
   SHOP_OPTION_KEYS,
 } from "../WizardOptionKey";
@@ -46,9 +48,11 @@ function compilesGeneratedGameplayDefaults(): void {
   const options = compileWizardAnswers(createTestAnswers(), optionCatalog);
   const optionKeys = [
     ...Object.values(RUN_OPTION_KEYS),
+    ...Object.values(ANCIENT_OPTION_KEYS),
     ...Object.values(CHECK_OPTION_KEYS),
     ...Object.values(SHOP_OPTION_KEYS),
     ...Object.values(DEATH_LINK_OPTION_KEYS),
+    ...Object.values(PROGRESSION_OPTION_KEYS),
   ];
 
   // Every compiled field should still equal its regenerated source-of-truth default.
@@ -68,20 +72,24 @@ function compilesConfiguredGameplaySections(): void {
   // Arrange non-default intent in each new player-facing answer section.
   const answers = createTestAnswers();
   answers.run = {
-    ancientRelicLocation: "start_of_act",
-    ancientRelicPool: "true_chaos",
     relicChoiceCount: 5,
-    neowSanity: true,
     seeded: true,
-    progressionBalancing: 99,
-    accessibility: "minimal",
+  };
+  answers.checksAndRewards.ancients = {
+    relicLocation: "start_of_act",
+    relicPool: "true_chaos",
   };
   answers.checksAndRewards.checks = {
+    neowSanity: true,
     includeFloorChecks: false,
     campfireSanity: true,
     goldSanity: true,
     potionSanity: true,
     shuffleAllCards: true,
+  };
+  answers.progression = {
+    progressionBalancing: 99,
+    accessibility: "minimal",
   };
   answers.checksAndRewards.shop = {
     enabled: true,
@@ -172,6 +180,26 @@ function compilesDeathLinkWithoutDamage(): void {
   expect(options.death_link_damage_percent).toBe(0);
 }
 
+/** Verifies enabled Death Link always has a selected received-link effect. */
+function rejectsDeathLinkWithoutReceivedEffect(): void {
+  const answers = createTestAnswers();
+  answers.deathLink = {
+    enabled: true,
+    receiveFragment: false,
+    receiveDamage: false,
+    damagePercent: 1,
+    beKilled: false,
+  };
+
+  function compileWithoutReceivedEffect(): void {
+    compileWizardAnswers(answers, optionCatalog);
+  }
+
+  expect(compileWithoutReceivedEffect).toThrow(
+    "Select at least one received Death Link effect.",
+  );
+}
+
 /**
  * Verifies enabled Shop Sanity cannot silently produce zero locations.
  *
@@ -205,7 +233,7 @@ function rejectsEmptyEnabledShop(): void {
 function rejectsFractionalRangeAnswers(): void {
   // Exercise generic generated-schema validation through progression balancing.
   const fractionalProgressionAnswers = createTestAnswers();
-  fractionalProgressionAnswers.run.progressionBalancing = 50.5;
+  fractionalProgressionAnswers.progression.progressionBalancing = 50.5;
 
   /** Compiles the deliberately fractional progression value. */
   function compileFractionalProgression(): void {
@@ -241,6 +269,8 @@ function revealsDependentGameplayQuestions(): void {
   // Defaults disable both sections, leaving only their controlling questions visible.
   const answers = createTestAnswers();
   expect(visibleCheckQuestionIds(answers)).toEqual([
+    "ancient-location",
+    "ancient-pool",
     "check-types",
     "filler-weights",
   ]);
@@ -250,6 +280,8 @@ function revealsDependentGameplayQuestions(): void {
   answers.checksAndRewards.shop.enabled = true;
   answers.deathLink.enabled = true;
   expect(visibleCheckQuestionIds(answers)).toEqual([
+    "ancient-location",
+    "ancient-pool",
     "check-types",
     "shop-slots",
     "shop-removal",
@@ -294,7 +326,7 @@ function keepsGuidedOptionOwnershipUnique(): void {
  * Verifies every game-specific generated option is owned by the guided wizard.
  *
  * @returns Nothing; Vitest records assertion failures.
- * @remarks The two guided Archipelago defaults are checked separately from this set.
+ * @remarks Shared Archipelago options remain in the guided ownership registry.
  */
 function coversEveryGameSpecificOption(): void {
   // Collect all generated options except inherited generic Archipelago template fields.
@@ -341,6 +373,10 @@ function registerGameplayCompilerTests(): void {
   it(
     "compiles Death Link without damage as 0%",
     compilesDeathLinkWithoutDamage,
+  );
+  it(
+    "requires a received Death Link effect when enabled",
+    rejectsDeathLinkWithoutReceivedEffect,
   );
   it("rejects enabled Shop Sanity with no locations", rejectsEmptyEnabledShop);
   it("rejects fractional Range answers", rejectsFractionalRangeAnswers);

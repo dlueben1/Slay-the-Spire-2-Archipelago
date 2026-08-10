@@ -9,11 +9,13 @@
 
 import type {
   AscensionConfigurationAnswers,
+  AncientAnswers,
   CharacterAnswers,
   CheckAnswers,
   ChecksAndRewardsAnswers,
   DeathLinkAnswers,
   FillerAnswers,
+  ProgressionAnswers,
   RunAnswers,
   ShopAnswers,
   WizardAnswers,
@@ -228,15 +230,25 @@ export function summarizeFillerAnswers(answers: FillerAnswers): string {
 }
 
 /**
- * Summarizes Ancient reward, Neow, relic-choice, and seed behavior.
+ * Summarizes the gameplay modifiers that affect an individual climb.
  *
- * @param answers - Valid current Run Rules answers.
- * @returns A compact paragraph describing the resulting climb rules.
+ * @param answers - Valid current Gameplay Modifiers answers.
+ * @returns A compact paragraph describing relic rewards and seed behavior.
  */
 export function summarizeRunAnswers(answers: RunAnswers): string {
+  const relicChoices = `Archipelago Relic items offer ${countWord(answers.relicChoiceCount)} ${answers.relicChoiceCount === 1 ? "choice" : "choices"}.`;
+  const seeded = answers.seeded
+    ? "Each character uses a fixed seed."
+    : "Runs are not assigned fixed seeds.";
+
+  return `${relicChoices} ${seeded}`;
+}
+
+/** Summarizes the Ancient choices displayed above additional checks. */
+export function summarizeAncientAnswers(answers: AncientAnswers): string {
   // Translate Ancient timing into language about how the player claims rewards.
   const timing =
-    answers.ancientRelicLocation === "anytime"
+    answers.relicLocation === "anytime"
       ? "Progressive Ancient rewards can be claimed as soon as they arrive."
       : "Progressive Ancient rewards wait for the normal start-of-act encounter.";
 
@@ -246,24 +258,22 @@ export function summarizeRunAnswers(answers: RunAnswers): string {
     chaos: "Ancient choices may come from any appropriate Ancient in that act.",
     true_chaos:
       "Act 2 and Act 3 Ancient pools are combined for both progressive rewards.",
-  }[answers.ancientRelicPool];
+  }[answers.relicPool];
 
-  // Summarize the remaining scalar and binary run choices.
-  const relicChoices = `Archipelago Relic items offer ${countWord(answers.relicChoiceCount)} ${answers.relicChoiceCount === 1 ? "choice" : "choices"}.`;
-  const neow = answers.neowSanity
-    ? "Neow's blessing is shuffled."
-    : "Neow's blessing remains vanilla.";
-  const seeded = answers.seeded
-    ? "Each character uses a fixed seed."
-    : "Runs are not assigned fixed seeds.";
+  return `${timing} ${pool}`;
+}
+
+/** Summarizes the common Archipelago settings on the Progression step. */
+export function summarizeProgressionAnswers(
+  answers: ProgressionAnswers,
+): string {
   const progression = `Progression balancing is set to ${answers.progressionBalancing}.`;
   const accessibility =
     answers.accessibility === "full"
       ? "All locations must remain reachable."
       : "Only goal-required locations must remain reachable.";
 
-  // Preserve question order so the paragraph matches the step the player completed.
-  return `${timing} ${pool} ${relicChoices} ${neow} ${seeded} ${progression} ${accessibility}`;
+  return `${progression} ${accessibility}`;
 }
 
 /**
@@ -275,6 +285,10 @@ export function summarizeRunAnswers(answers: RunAnswers): string {
 export function summarizeCheckAnswers(answers: CheckAnswers): string {
   // Collect only enabled categories using concise review labels.
   const enabled: string[] = [];
+
+  if (answers.neowSanity) {
+    enabled.push("Neow's Blessing");
+  }
 
   if (answers.includeFloorChecks) {
     enabled.push("floor checks");
@@ -349,11 +363,12 @@ export function summarizeChecksAndRewardsAnswers(
 ): string {
   // Summarize each independently compiled family through its focused prose helper.
   const checks = summarizeCheckAnswers(answers.checks);
+  const ancients = summarizeAncientAnswers(answers.ancients);
   const shop = summarizeShopAnswers(answers.shop);
   const filler = summarizeFillerAnswers(answers.filler);
 
   // Preserve the visible subsection order in the final combined review paragraph.
-  return `${checks} ${shop} ${filler}`;
+  return `${ancients} ${checks} ${shop} ${filler}`;
 }
 
 /**
@@ -410,7 +425,7 @@ export function buildWizardReviewSections(
       title: "Character Setup",
       summary: summarizeCharacterAnswers(answers.characters),
     },
-    { title: "Run Rules", summary: summarizeRunAnswers(answers.run) },
+    { title: "Gameplay Modifiers", summary: summarizeRunAnswers(answers.run) },
     {
       title: "Checks & Rewards",
       summary: summarizeChecksAndRewardsAnswers(answers.checksAndRewards),
@@ -418,6 +433,10 @@ export function buildWizardReviewSections(
     {
       title: "Death Link",
       summary: summarizeDeathLinkAnswers(answers.deathLink),
+    },
+    {
+      title: "Progression",
+      summary: summarizeProgressionAnswers(answers.progression),
     },
   ];
 

@@ -56,8 +56,15 @@ function setEnabled(value: unknown): void {
     return;
   }
 
-  // Preserve dependent answers while the section is disabled for lossless toggling.
-  updateAnswers({ enabled: value });
+  // Enabling Death Link must also leave one incoming effect selected.
+  updateAnswers(
+    value &&
+      !props.modelValue.receiveFragment &&
+      !props.modelValue.receiveDamage &&
+      !props.modelValue.beKilled
+      ? { enabled: true, receiveFragment: true }
+      : { enabled: value },
+  );
 }
 
 /**
@@ -67,12 +74,23 @@ function setEnabled(value: unknown): void {
  * @returns Nothing; ignores updates while lethal mode disables this control.
  */
 function setReceiveFragment(value: unknown): void {
-  // Lethal mode is mutually exclusive with both nonlethal received effects.
-  if (props.modelValue.beKilled || typeof value !== "boolean") {
+  if (typeof value !== "boolean") {
     return;
   }
 
-  // Store the semantic Curse-card preference for the Death Link compiler.
+  // Selecting a nonlethal effect replaces Die just as Die replaces these effects.
+  if (props.modelValue.beKilled) {
+    if (value) {
+      updateAnswers({ beKilled: false, receiveFragment: true });
+    }
+    return;
+  }
+
+  // Never allow the last selected received-link effect to be cleared.
+  if (!value && !props.modelValue.receiveDamage) {
+    return;
+  }
+
   updateAnswers({ receiveFragment: value });
 }
 
@@ -83,12 +101,23 @@ function setReceiveFragment(value: unknown): void {
  * @returns Nothing; ignores updates while lethal mode disables this control.
  */
 function setReceiveDamage(value: unknown): void {
-  // Lethal mode owns the generated damage field and blocks its nonlethal counterpart.
-  if (props.modelValue.beKilled || typeof value !== "boolean") {
+  if (typeof value !== "boolean") {
     return;
   }
 
-  // Preserve the last percentage so toggling damage off and back on is lossless.
+  // Selecting a nonlethal effect replaces Die just as Die replaces these effects.
+  if (props.modelValue.beKilled) {
+    if (value) {
+      updateAnswers({ beKilled: false, receiveDamage: true });
+    }
+    return;
+  }
+
+  // Never allow the last selected received-link effect to be cleared.
+  if (!value && !props.modelValue.receiveFragment) {
+    return;
+  }
+
   updateAnswers({ receiveDamage: value });
 }
 
@@ -126,15 +155,19 @@ function setBeKilled(value: unknown): void {
     return;
   }
 
-  // The compiler suppresses the preserved fragment and nonlethal damage preferences.
-  updateAnswers({ beKilled: value });
+  // Die replaces both nonlethal choices. Turning it off restores a valid default.
+  updateAnswers(
+    value
+      ? { beKilled: true, receiveFragment: false, receiveDamage: false }
+      : { beKilled: false, receiveFragment: true },
+  );
 }
 </script>
 
 <template>
   <div class="space-y-8">
     <WizardMarkdownDocument
-      source="docs/deathlink-faq.md"
+      source="docs/faq-deathlink.md"
       fallback-title="Death Link Help"
     />
     <WizardQuestion :question="questionsById['death-link-enabled']!">
@@ -156,50 +189,29 @@ function setBeKilled(value: unknown): void {
     <template v-if="modelValue.enabled">
       <WizardQuestion :question="questionsById['death-link-effects']!">
         <template #help>
-          Select any combination of nonlethal effects, or choose Be killed to
-          replace and disable them.
+          Select one or both nonlethal effects, or choose Die to replace them.
         </template>
 
         <div class="space-y-3">
           <UCheckbox
             :model-value="modelValue.receiveFragment"
-            :disabled="modelValue.beKilled"
             label="Receive a Death Fragment"
             description="Add a Curse card to your run when another linked player dies."
             color="primary"
             variant="card"
-            :class="
-              modelValue.beKilled ? 'cursor-not-allowed' : 'cursor-pointer'
-            "
-            :ui="{
-              label: modelValue.beKilled
-                ? 'cursor-not-allowed'
-                : 'cursor-pointer',
-              description: modelValue.beKilled
-                ? 'cursor-not-allowed'
-                : 'cursor-pointer',
-            }"
+            class="cursor-pointer"
+            :ui="{ label: 'cursor-pointer', description: 'cursor-pointer' }"
             @update:model-value="setReceiveFragment"
           />
 
           <UCheckbox
             :model-value="modelValue.receiveDamage"
-            :disabled="modelValue.beKilled"
             label="Take Max HP damage"
             description="Lose a configurable percentage of your maximum health."
             color="primary"
             variant="card"
-            :class="
-              modelValue.beKilled ? 'cursor-not-allowed' : 'cursor-pointer'
-            "
-            :ui="{
-              label: modelValue.beKilled
-                ? 'cursor-not-allowed'
-                : 'cursor-pointer',
-              description: modelValue.beKilled
-                ? 'cursor-not-allowed'
-                : 'cursor-pointer',
-            }"
+            class="cursor-pointer"
+            :ui="{ label: 'cursor-pointer', description: 'cursor-pointer' }"
             @update:model-value="setReceiveDamage"
           />
 

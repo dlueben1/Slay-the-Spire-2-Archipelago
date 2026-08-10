@@ -139,6 +139,7 @@ function preservesCombinedFillerPlacement(): void {
     "run",
     "checks",
     "death-link",
+    "progression",
     "review",
   ]);
 

@@ -11,8 +11,10 @@ import type { OptionValue } from "../generated/optionCatalog";
 import { FILLER_ITEM_DEFINITIONS } from "./FillerItem";
 import {
   CHARACTER_OPTION_KEYS,
+  ANCIENT_OPTION_KEYS,
   CHECK_OPTION_KEYS,
   DEATH_LINK_OPTION_KEYS,
+  PROGRESSION_OPTION_KEYS,
   RUN_OPTION_KEYS,
   SHOP_OPTION_KEYS,
 } from "./WizardOptionKey";
@@ -33,14 +35,14 @@ const ADVANCED_CHARACTER_OPTION_KEY = "advanced_characters";
  *
  * @returns A fresh ordered list covering every implemented section compiler.
  * @remarks Character Setup owns both standard and advanced generated representations,
- * while inherited Archipelago template options without controls remain absent. Run
- * Rules explicitly owns the common `progression_balancing` and `accessibility` options.
+ * while inherited Archipelago template options without controls remain absent.
  */
 export function getGuidedOptionKeys(): string[] {
   // Begin with each fixed section registry in navigation order.
   const optionKeys: string[] = [
     ...CHARACTER_OPTION_KEYS,
     ...Object.values(RUN_OPTION_KEYS),
+    ...Object.values(ANCIENT_OPTION_KEYS),
     ...Object.values(CHECK_OPTION_KEYS),
     ...Object.values(SHOP_OPTION_KEYS),
   ];
@@ -52,6 +54,9 @@ export function getGuidedOptionKeys(): string[] {
 
   // Death Link follows the combined Checks & Rewards ownership group.
   optionKeys.push(...Object.values(DEATH_LINK_OPTION_KEYS));
+
+  // Common Archipelago settings close the dedicated Progression step.
+  optionKeys.push(...Object.values(PROGRESSION_OPTION_KEYS));
 
   // Return the complete ordered ownership snapshot.
   return optionKeys;

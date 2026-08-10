@@ -24,19 +24,27 @@ export const CHARACTER_OPTION_KEYS = [
   "ascension_down",
 ] as const;
 
-/** Generated option keys owned by the Run Rules compiler. */
+/** Generated option keys owned by the Gameplay Modifiers compiler. */
 export const RUN_OPTION_KEYS = {
-  ancientRelicLocation: "ancient_relic_location",
-  ancientRelicPool: "ancient_relic_pool",
   relicChoiceCount: "relic_choice_count",
-  neowSanity: "neow_sanity",
   seeded: "seeded",
+} as const;
+
+/** Generated option keys owned by the Ancient subsection of Checks & Rewards. */
+export const ANCIENT_OPTION_KEYS = {
+  relicLocation: "ancient_relic_location",
+  relicPool: "ancient_relic_pool",
+} as const;
+
+/** Generated option keys owned by the Progression compiler. */
+export const PROGRESSION_OPTION_KEYS = {
   progressionBalancing: "progression_balancing",
   accessibility: "accessibility",
 } as const;
 
 /** Generated option keys owned by the Checks & Rewards compiler. */
 export const CHECK_OPTION_KEYS = {
+  neowSanity: "neow_sanity",
   includeFloorChecks: "include_floor_checks",
   campfireSanity: "campfire_sanity",
   goldSanity: "gold_sanity",

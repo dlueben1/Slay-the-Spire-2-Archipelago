@@ -4,6 +4,7 @@ import { computed, reactive, ref } from "vue";
 import CharacterSetupStep from "../components/wizard/CharacterSetupStep.vue";
 import CheckSetupStep from "../components/wizard/CheckSetupStep.vue";
 import DeathLinkStep from "../components/wizard/DeathLinkStep.vue";
+import ProgressionStep from "../components/wizard/ProgressionStep.vue";
 import ReviewStep from "../components/wizard/ReviewStep.vue";
 import RunSettingsStep from "../components/wizard/RunSettingsStep.vue";
 import { optionCatalog } from "../generated/optionCatalog";
@@ -18,6 +19,7 @@ import { selectGuidedOptions } from "../wizard/GuidedOption";
 import {
   DEATH_LINK_OPTION_KEYS,
   getGeneratedNumberRange,
+  PROGRESSION_OPTION_KEYS,
   RUN_OPTION_KEYS,
   SHOP_OPTION_KEYS,
 } from "../wizard/WizardOptionKey";
@@ -57,7 +59,7 @@ const relicChoiceRange = getGeneratedNumberRange(
 );
 const progressionBalancingRange = getGeneratedNumberRange(
   optionCatalog,
-  RUN_OPTION_KEYS.progressionBalancing,
+  PROGRESSION_OPTION_KEYS.progressionBalancing,
 );
 const shopSlotRanges = {
   cardSlots: getGeneratedNumberRange(optionCatalog, SHOP_OPTION_KEYS.cardSlots),
@@ -246,6 +248,11 @@ function setActiveStep(value: string | number): void {
  * the pure compiler and validation modules.
  */
 function next(): void {
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
+
   try {
     // Review additionally requires valid document metadata; other steps need options only.
     const nextStep = wizardSteps[stepIndex.value + 1];
@@ -329,7 +336,6 @@ function next(): void {
         v-else-if="activeStepId === 'run'"
         v-model="answers.run"
         :relic-choice-range="relicChoiceRange"
-        :progression-balancing-range="progressionBalancingRange"
       />
       <CheckSetupStep
         v-else-if="activeStepId === 'checks'"
@@ -341,6 +347,11 @@ function next(): void {
         v-else-if="activeStepId === 'death-link'"
         v-model="answers.deathLink"
         :damage-range="deathLinkDamageRange"
+      />
+      <ProgressionStep
+        v-else-if="activeStepId === 'progression'"
+        v-model="answers.progression"
+        :progression-balancing-range="progressionBalancingRange"
       />
       <ReviewStep
         v-else
@@ -364,7 +375,9 @@ function next(): void {
               class="cursor-pointer"
               @click="next"
               >{{
-                activeStepId === "death-link" ? "Review & Download" : "Continue"
+                activeStepId === "progression"
+                  ? "Review & Download"
+                  : "Continue"
               }}</UButton
             >
           </div>

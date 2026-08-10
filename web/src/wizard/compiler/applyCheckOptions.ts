@@ -2,7 +2,7 @@
  * @file Translates Checks & Rewards answers into generated sanity options.
  *
  * These toggles decide which ordinary game events become Archipelago locations and
- * rewards. Floor, campfire, gold, potion, and card-reward behavior is kept together so
+ * rewards. Neow, floor, campfire, gold, potion, and card-reward behavior is kept together so
  * maintainers can compare this mapping directly with location and item creation in the
  * Python world. Cross-section defaults remain the root compiler's responsibility.
  */
@@ -34,6 +34,7 @@ export function applyCheckOptions(
   }
 
   // Write each independent toggle without coupling UI state to Python option names.
+  target[CHECK_OPTION_KEYS.neowSanity] = answers.neowSanity;
   target[CHECK_OPTION_KEYS.includeFloorChecks] = answers.includeFloorChecks;
   target[CHECK_OPTION_KEYS.campfireSanity] = answers.campfireSanity;
   target[CHECK_OPTION_KEYS.goldSanity] = answers.goldSanity;

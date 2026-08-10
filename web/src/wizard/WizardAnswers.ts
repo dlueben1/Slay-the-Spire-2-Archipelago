@@ -16,6 +16,8 @@ import {
 import {
   CHECK_OPTION_KEYS,
   DEATH_LINK_OPTION_KEYS,
+  ANCIENT_OPTION_KEYS,
+  PROGRESSION_OPTION_KEYS,
   RUN_OPTION_KEYS,
   SHOP_OPTION_KEYS,
 } from "./WizardOptionKey";
@@ -83,16 +85,22 @@ export interface FillerAnswers {
 }
 
 export interface RunAnswers {
-  ancientRelicLocation: AncientRelicLocation;
-  ancientRelicPool: AncientRelicPool;
   relicChoiceCount: number;
-  neowSanity: boolean;
   seeded: boolean;
+}
+
+export interface AncientAnswers {
+  relicLocation: AncientRelicLocation;
+  relicPool: AncientRelicPool;
+}
+
+export interface ProgressionAnswers {
   progressionBalancing: number;
   accessibility: AccessibilityMode;
 }
 
 export interface CheckAnswers {
+  neowSanity: boolean;
   includeFloorChecks: boolean;
   campfireSanity: boolean;
   goldSanity: boolean;
@@ -111,6 +119,7 @@ export interface ShopAnswers {
 }
 
 export interface ChecksAndRewardsAnswers {
+  ancients: AncientAnswers;
   checks: CheckAnswers;
   shop: ShopAnswers;
   filler: FillerAnswers;
@@ -130,6 +139,7 @@ export interface WizardAnswers {
   run: RunAnswers;
   checksAndRewards: ChecksAndRewardsAnswers;
   deathLink: DeathLinkAnswers;
+  progression: ProgressionAnswers;
 }
 
 /**
@@ -285,33 +295,26 @@ export function createDefaultWizardAnswers(
       goal: "all",
     },
     run: {
-      ancientRelicLocation: getChoiceDefault(
-        catalog,
-        RUN_OPTION_KEYS.ancientRelicLocation,
-        ["start_of_act", "anytime"],
-      ),
-      ancientRelicPool: getChoiceDefault(
-        catalog,
-        RUN_OPTION_KEYS.ancientRelicPool,
-        ["balanced", "chaos", "true_chaos"],
-      ),
       relicChoiceCount: getNumberDefault(
         catalog,
         RUN_OPTION_KEYS.relicChoiceCount,
       ),
-      neowSanity: getBooleanDefault(catalog, RUN_OPTION_KEYS.neowSanity),
       seeded: getBooleanDefault(catalog, RUN_OPTION_KEYS.seeded),
-      progressionBalancing: getNumberDefault(
-        catalog,
-        RUN_OPTION_KEYS.progressionBalancing,
-      ),
-      accessibility: getChoiceDefault(catalog, RUN_OPTION_KEYS.accessibility, [
-        "full",
-        "minimal",
-      ]),
     },
     checksAndRewards: {
+      ancients: {
+        relicLocation: getChoiceDefault(catalog, ANCIENT_OPTION_KEYS.relicLocation, [
+          "start_of_act",
+          "anytime",
+        ]),
+        relicPool: getChoiceDefault(catalog, ANCIENT_OPTION_KEYS.relicPool, [
+          "balanced",
+          "chaos",
+          "true_chaos",
+        ]),
+      },
       checks: {
+        neowSanity: getBooleanDefault(catalog, CHECK_OPTION_KEYS.neowSanity),
         includeFloorChecks: getBooleanDefault(
           catalog,
           CHECK_OPTION_KEYS.includeFloorChecks,
@@ -348,6 +351,16 @@ export function createDefaultWizardAnswers(
         ]),
       },
       filler,
+    },
+    progression: {
+      progressionBalancing: getNumberDefault(
+        catalog,
+        PROGRESSION_OPTION_KEYS.progressionBalancing,
+      ),
+      accessibility: getChoiceDefault(catalog, PROGRESSION_OPTION_KEYS.accessibility, [
+        "full",
+        "minimal",
+      ]),
     },
     deathLink: {
       enabled: getBooleanDefault(catalog, DEATH_LINK_OPTION_KEYS.enabled),
