@@ -16,7 +16,6 @@ import {
 import FillerStep from "./FillerStep.vue";
 import ShopSetupStep from "./ShopSetupStep.vue";
 import WizardQuestion from "./WizardQuestion.vue";
-import { MarkdownDocument } from "../../models/MarkdownDocument.ts";
 
 type ShopSlotAnswerKey =
   "cardSlots" | "neutralCardSlots" | "relicSlots" | "potionSlots";
