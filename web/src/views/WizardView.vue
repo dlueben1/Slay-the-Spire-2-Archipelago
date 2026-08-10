@@ -91,20 +91,22 @@ function compileCurrentAnswers() {
   return compileWizardAnswers(answers, optionCatalog);
 }
 
-const compiled = computed(compileCurrentAnswers);
-
 /**
  * Selects options owned by every implemented guided section.
  *
  * @returns A record containing canonical values in wizard step order.
- * @remarks The central ownership registry prevents the view from duplicating keys.
+ * @throws When in-progress answers cannot be compiled into generated options.
+ * @remarks Call only from an explicit validation boundary such as `next` or
+ * `buildCurrentYaml`; running strict compilation in an unguarded template computed
+ * would turn an incomplete form row into an unhandled Vue render error.
  */
 function getGuidedSettings() {
-  // Delegate ordered key selection to the registry shared with section compilers.
-  return selectGuidedOptions(compiled.value);
-}
+  // Compile at the strict boundary before selecting the player-facing option subset.
+  const compiledOptions = compileCurrentAnswers();
 
-const guidedSettings = computed(getGuidedSettings);
+  // Delegate ordered key selection to the registry shared with section compilers.
+  return selectGuidedOptions(compiledOptions);
+}
 
 /**
  * Builds the exact complete YAML required to enter Review.
@@ -114,7 +116,7 @@ const guidedSettings = computed(getGuidedSettings);
  */
 function buildCurrentYaml(): string {
   // Use one service result for every delivery path so metadata cannot diverge.
-  return buildWizardYaml(answers.playerName, guidedSettings.value);
+  return buildWizardYaml(answers.playerName, getGuidedSettings());
 }
 
 /**
@@ -251,7 +253,7 @@ function next(): void {
     if (nextStep?.id === "review") {
       void buildCurrentYaml();
     } else {
-      void compiled.value;
+      void compileCurrentAnswers();
     }
 
     // Clear any previous failure and advance only after successful validation.
@@ -271,24 +273,25 @@ function next(): void {
         Guided setup
       </p>
       <h1 class="mt-2 text-3xl font-bold text-white">Online YAML Builder</h1>
-      <p class="mt-2 text-muted">
-        Answer gameplay questions; the builder derives and validates the
-        Archipelago options.
+      <p class="mt-2 mb-6 text-muted">
+        Answer gameplay questions to generate the YAML file required by
+        Archipelago.
       </p>
 
-      <UFormField
-        label="Player name"
-        description="This becomes the top-level name in your generated Archipelago YAML."
-        required
-        class="mt-6 max-w-md"
-      >
-        <UInput
-          v-model="answers.playerName"
-          placeholder="Enter your Archipelago player name"
-          autocomplete="name"
-          class="w-full"
-        />
-      </UFormField>
+      <UPageCard variant="subtle">
+        <UFormField
+          label="Player Name"
+          description="This is the name you'll be referred to as when sending/receiving items in Archipelago, and it's the Slot name you'll connect to your Archipelago session with."
+          required
+        >
+          <UInput
+            v-model="answers.playerName"
+            placeholder="Enter your Archipelago player name"
+            autocomplete="name"
+            class="w-full"
+          />
+        </UFormField>
+      </UPageCard>
     </div>
     <UTabs
       :model-value="activeStepId"
@@ -358,10 +361,10 @@ function next(): void {
             ><UButton
               v-if="stepIndex < wizardSteps.length - 1"
               :disabled="!hasConfiguredCharacters"
-              trailing-icon="i-glyphs-arrow-right-bold"
+              class="cursor-pointer"
               @click="next"
               >{{
-                activeStepId === "death-link" ? "Review settings" : "Continue"
+                activeStepId === "death-link" ? "Review & Download" : "Continue"
               }}</UButton
             >
           </div>

@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import type { DeathLinkAnswers } from "../../wizard/WizardAnswers";
 import type { GeneratedNumberRange } from "../../wizard/WizardOptionKey";
-import { deathLinkSetupStep } from "../../wizard/WizardStep";
+import {
+  deathLinkSetupStep,
+  type WizardQuestion as WizardQuestionDefinition,
+} from "../../wizard/WizardStep";
 import WizardQuestion from "./WizardQuestion.vue";
 
 const props = defineProps<{
@@ -17,11 +20,11 @@ const emit = defineEmits<{
 const damageMinimum = Math.max(1, props.damageRange.minimum);
 const damageMaximum = Math.min(100, props.damageRange.maximum);
 
-// Resolve question copy by ID so flow definitions remain the copy source of truth.
-const questionTitles: Record<string, string> = {};
+// Resolve full question definitions by ID so flow definitions remain the copy source of truth.
+const questionsById: Record<string, WizardQuestionDefinition> = {};
 
 for (const question of deathLinkSetupStep.questions) {
-  questionTitles[question.id] = question.title;
+  questionsById[question.id] = question;
 }
 
 /**
@@ -130,7 +133,11 @@ function setBeKilled(value: unknown): void {
 
 <template>
   <div class="space-y-8">
-    <WizardQuestion :title="questionTitles['death-link-enabled']!">
+    <WizardMarkdownDocument
+      source="docs/deathlink-faq.md"
+      fallback-title="Death Link Help"
+    />
+    <WizardQuestion :question="questionsById['death-link-enabled']!">
       <UCheckbox
         :model-value="modelValue.enabled"
         label="Enable Death Link"
@@ -147,7 +154,7 @@ function setBeKilled(value: unknown): void {
     </WizardQuestion>
 
     <template v-if="modelValue.enabled">
-      <WizardQuestion :title="questionTitles['death-link-effects']!">
+      <WizardQuestion :question="questionsById['death-link-effects']!">
         <template #help>
           Select any combination of nonlethal effects, or choose Be killed to
           replace and disable them.
@@ -198,8 +205,8 @@ function setBeKilled(value: unknown): void {
 
           <UCheckbox
             :model-value="modelValue.beKilled"
-            label="Be killed"
-            description="Compile the received effect as 100% of your maximum health in damage."
+            label="Die"
+            description="Die immediately when another linked player dies. (Not Recommended)"
             color="primary"
             variant="card"
             class="cursor-pointer"
@@ -214,7 +221,7 @@ function setBeKilled(value: unknown): void {
 
       <WizardQuestion
         v-if="modelValue.receiveDamage && !modelValue.beKilled"
-        :title="questionTitles['death-link-damage']!"
+        :question="questionsById['death-link-damage']!"
       >
         <template #help>
           Choose a whole percentage from 1% through 100%. This damage is not the

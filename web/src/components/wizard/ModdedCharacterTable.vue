@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import {
+  copyAscensionConfiguration,
+  MAX_MODDED_CHARACTERS,
+} from "../../wizard/CharacterRoster";
 import type { ModdedCharacterAnswers } from "../../wizard/WizardAnswers";
 import WizardMarkdownDocument from "./WizardMarkdownDocument.vue";
 
@@ -9,6 +13,64 @@ const props = defineProps<{
 const emit = defineEmits<{
   "update:modelValue": [value: ModdedCharacterAnswers[]];
 }>();
+
+/**
+ * Adds one blank modded-character row with copied Ascension settings.
+ *
+ * @returns Nothing; emits a new row when the table has a source row and is below the
+ * configured maximum.
+ * @remarks The parent mounts this table only after creating its mandatory first row.
+ * New rows copy the final existing row so the independent Ascension configuration is
+ * never shared by reference between characters.
+ */
+function addModdedCharacter(): void {
+  // Respect the Python world's hard limit before creating another editable row.
+  if (props.modelValue.length >= MAX_MODDED_CHARACTERS) {
+    return;
+  }
+
+  // The mounted table should always have one row; keep corrupted empty input inert.
+  const sourceCharacter = props.modelValue.at(-1);
+
+  if (!sourceCharacter) {
+    return;
+  }
+
+  // Give the new character an independent copy of the last visible Ascension setup.
+  const moddedCharacter: ModdedCharacterAnswers = {
+    name: "",
+    ascensions: copyAscensionConfiguration(sourceCharacter.ascensions),
+  };
+
+  // Emit an immutable collection so Character Setup remains the state owner.
+  emit("update:modelValue", [...props.modelValue, moddedCharacter]);
+}
+
+/**
+ * Removes one requested modded-character row without allowing an empty table.
+ *
+ * @param index - Zero-based row index selected for removal.
+ * @returns Nothing; emits the remaining rows unless it would remove the mandatory row.
+ */
+function removeModdedCharacter(index: number): void {
+  // Keep one row available while the Modded Characters portrait remains selected.
+  if (props.modelValue.length <= 1) {
+    return;
+  }
+
+  // Ignore stale control events rather than accidentally altering another row.
+  if (index < 0 || index >= props.modelValue.length) {
+    return;
+  }
+
+  // Rebuild the collection without the chosen row and preserve all other settings.
+  const moddedCharacters = props.modelValue.filter(
+    (_, characterIndex) => characterIndex !== index,
+  );
+
+  // Keep the Character Setup parent as the sole owner of persistent state.
+  emit("update:modelValue", moddedCharacters);
+}
 
 /**
  * Updates the internal ID stored by one modded character row.
@@ -49,8 +111,42 @@ function setModdedCharacterName(index: number, value: unknown): void {
       aria-label="Modded characters"
     >
       <div class="modded-character-table__header" role="row">
-        <span role="columnheader">Slot</span>
+        <span role="columnheader">
+          <div class="flex flex-row">
+            <span>Archipelago Name</span>
+            <UTooltip
+              :content="{
+                align: 'center',
+                side: 'bottom',
+                sideOffset: 8,
+              }"
+              :delay-duration="0"
+              text="When in-game, items and locations for this character will use this name."
+            >
+              <UIcon
+                name="i-glyphs-question-circle-bold"
+                class="size-4 shrink-0"
+              />
+            </UTooltip>
+          </div>
+        </span>
         <span role="columnheader">Internal character ID</span>
+        <div class="modded-character-table__action" role="columnheader">
+          <UTooltip text="Add modded character">
+            <UButton
+              type="button"
+              icon="i-glyphs-plus-bold"
+              color="primary"
+              variant="soft"
+              size="sm"
+              square
+              class="cursor-pointer"
+              :disabled="modelValue.length >= MAX_MODDED_CHARACTERS"
+              aria-label="Add modded character"
+              @click="addModdedCharacter"
+            />
+          </UTooltip>
+        </div>
       </div>
 
       <div
@@ -60,7 +156,7 @@ function setModdedCharacterName(index: number, value: unknown): void {
         role="row"
       >
         <span class="modded-character-table__slot" role="cell">
-          Modded {{ index + 1 }}
+          Custom Character {{ index + 1 }}
         </span>
 
         <div role="cell">
@@ -74,12 +170,36 @@ function setModdedCharacterName(index: number, value: unknown): void {
             @update:model-value="setModdedCharacterName(index, $event)"
           />
         </div>
+
+        <div class="modded-character-table__action" role="cell">
+          <UTooltip
+            :text="
+              modelValue.length <= 1
+                ? 'At least one modded character is required while this section is enabled'
+                : 'Remove modded character'
+            "
+          >
+            <UButton
+              type="button"
+              icon="i-glyphs-minus-bold"
+              color="error"
+              variant="ghost"
+              size="sm"
+              square
+              class="cursor-pointer"
+              :disabled="modelValue.length <= 1"
+              :aria-label="`Remove modded character ${index + 1}`"
+              @click="removeModdedCharacter(index)"
+            />
+          </UTooltip>
+        </div>
       </div>
     </div>
 
     <WizardMarkdownDocument
       source="/docs/modded-characters.md"
       fallback-title="Finding a modded character ID"
+      startsOpen
     />
   </div>
 </template>
@@ -100,7 +220,7 @@ function setModdedCharacterName(index: number, value: unknown): void {
 .modded-character-table__header,
 .modded-character-table__row {
   display: grid;
-  grid-template-columns: 8rem minmax(0, 1fr);
+  grid-template-columns: 14rem minmax(0, 1fr) auto;
   align-items: center;
   gap: 1rem;
   padding: 0.75rem 1rem;
@@ -129,6 +249,11 @@ function setModdedCharacterName(index: number, value: unknown): void {
   color: var(--ui-text-highlighted);
   font-size: 0.85rem;
   font-weight: 700;
+}
+
+.modded-character-table__action {
+  display: flex;
+  justify-content: flex-end;
 }
 
 @media (max-width: 36rem) {

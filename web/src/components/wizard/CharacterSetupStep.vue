@@ -5,7 +5,6 @@ import {
   canDeselectBuiltInCharacter,
   copyAscensionConfiguration,
   getConfiguredCharacterNames,
-  MAX_MODDED_CHARACTERS,
 } from "../../wizard/CharacterRoster";
 import type {
   AscensionConfigurationAnswers,
@@ -16,7 +15,10 @@ import type {
   CharacterSelectionMode,
   ModdedCharacterAnswers,
 } from "../../wizard/WizardAnswers";
-import { characterSetupStep } from "../../wizard/WizardStep";
+import {
+  characterSetupStep,
+  type WizardQuestion as WizardQuestionDefinition,
+} from "../../wizard/WizardStep";
 import AscensionChecklist from "./AscensionChecklist.vue";
 import ModdedCharacterTable from "./ModdedCharacterTable.vue";
 import WizardQuestion from "./WizardQuestion.vue";
@@ -44,13 +46,13 @@ const selectionModeItems: RadioGroupItem[] = [
   {
     label: "Use all selected characters",
     description:
-      "Every portrait selected above will be included in your world.",
+      "Every character configured above will be included in your world.",
     value: "all",
   },
   {
     label: "Randomly select some",
     description:
-      "The generator will choose a smaller roster from your selected characters.",
+      "The Archipelago Randomizer will choose a smaller roster from the characters you selected above.",
     value: "random",
   },
 ];
@@ -90,11 +92,11 @@ const ascensionModeItems: RadioGroupItem[] = [
   },
 ];
 
-// Resolve question copy by ID so the declarative flow remains the copy source of truth.
-const questionTitles: Record<string, string> = {};
+// Resolve full question definitions by ID so the declarative flow remains the copy source of truth.
+const questionsById: Record<string, WizardQuestionDefinition> = {};
 
 for (const question of characterSetupStep.questions) {
-  questionTitles[question.id] = question.title;
+  questionsById[question.id] = question;
 }
 
 /**
@@ -303,42 +305,29 @@ function toggleCharacter(character: string, checked: boolean): void {
 }
 
 /**
- * Adds one empty modded-character row from the sixth portrait card.
+ * Toggles the modded-character section represented by the sixth portrait card.
  *
- * @returns Nothing; emits a new row unless the five-character limit is reached.
+ * @returns Nothing; enabling seeds the required first row from shared Ascension
+ * settings, while disabling clears every row maintained by the table.
+ * @remarks Additional rows are managed inside `ModdedCharacterTable` after the
+ * section is enabled.
  */
-function addModdedCharacter(): void {
-  // Enforce the Python world's hard custom-character limit in the presentation layer.
-  if (props.modelValue.moddedCharacters.length >= MAX_MODDED_CHARACTERS) {
+function toggleModdedCharacters(): void {
+  // Turning the selected portrait off must remove its associated configuration.
+  if (props.modelValue.moddedCharacters.length) {
+    updateAnswers({ moddedCharacters: [] });
     return;
   }
 
-  // Seed the new row from shared settings so either mode starts predictably.
+  // Seed the initially enabled slot from the shared settings for predictable output.
   const moddedCharacter: ModdedCharacterAnswers = {
     name: "",
     ascensions: copyAscensionConfiguration(props.modelValue.sharedAscensions),
   };
 
-  // Append without mutating the persistent array owned by the parent view.
+  // Persist one new row without mutating the persistent array owned by the parent view.
   updateAnswers({
-    moddedCharacters: [...props.modelValue.moddedCharacters, moddedCharacter],
-  });
-}
-
-/**
- * Removes the final modded-character row from the sixth portrait card.
- *
- * @returns Nothing; preserves earlier rows and their independent Ascension settings.
- */
-function removeModdedCharacter(): void {
-  // Ignore the minus button when no modded rows exist.
-  if (!props.modelValue.moddedCharacters.length) {
-    return;
-  }
-
-  // The requested counter interaction removes the most recently added slot.
-  updateAnswers({
-    moddedCharacters: props.modelValue.moddedCharacters.slice(0, -1),
+    moddedCharacters: [moddedCharacter],
   });
 }
 
@@ -566,20 +555,18 @@ function reconcileDependentAnswers(roster: string[]): void {
   }
 }
 
-// Keep dependent answers coherent when built-in selections or modded IDs change.
+// Listens for changes to the roster and reconciles dependent answers to avoid stale selections.
 watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
 </script>
 
 <template>
   <div class="space-y-8">
-    <!-- Add new top-level questions with this wrapper for shared layout and styling. -->
-    <WizardQuestion :title="questionTitles.characters!">
-      <template #help>
-        Choose one or more. This list comes from the current generated world
-        schema.
-      </template>
+    <!-- Character Selection -->
+    <WizardQuestion :question="questionsById.characters!">
+      <template #help> </template>
 
       <div class="character-portrait-grid">
+        <!-- Vanilla Characters -->
         <UButton
           v-for="character in availableCharacters"
           :key="character"
@@ -615,14 +602,19 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
           />
         </UButton>
 
-        <div
-          class="character-portrait-button character-portrait-button--modded"
+        <!-- Toggle for Modded Characters -->
+        <UButton
+          type="button"
+          color="neutral"
+          variant="outline"
+          class="character-portrait-button cursor-pointer"
           :class="{
             'character-portrait-button--selected':
               modelValue.moddedCharacters.length > 0,
           }"
-          role="group"
-          aria-label="Add or remove modded characters"
+          :aria-pressed="modelValue.moddedCharacters.length > 0"
+          aria-label="Toggle Modded Characters"
+          @click="toggleModdedCharacters"
         >
           <img
             src="/icons/char_select_random.webp"
@@ -630,58 +622,26 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
             class="character-portrait-image"
           />
 
-          <UButton
-            type="button"
-            icon="i-glyphs-plus-bold"
-            color="primary"
-            variant="solid"
-            size="sm"
-            class="character-modded-control character-modded-control--add cursor-pointer"
-            :disabled="
-              modelValue.moddedCharacters.length >= MAX_MODDED_CHARACTERS
-            "
-            aria-label="Add a modded character"
-            @click="addModdedCharacter"
-          />
-
-          <UBadge
-            v-if="modelValue.moddedCharacters.length"
-            color="success"
-            variant="solid"
-            class="character-modded-count"
-          >
-            {{ modelValue.moddedCharacters.length }}
-          </UBadge>
-
-          <UButton
-            type="button"
-            icon="i-glyphs-minus-bold"
-            color="neutral"
-            variant="solid"
-            size="sm"
-            class="character-modded-control character-modded-control--remove cursor-pointer"
-            :disabled="!modelValue.moddedCharacters.length"
-            aria-label="Remove the last modded character"
-            @click="removeModdedCharacter"
-          />
-
           <span class="character-portrait-label">Modded Characters</span>
-        </div>
+
+          <UIcon
+            v-if="modelValue.moddedCharacters.length"
+            name="i-glyphs-check-circle-bold"
+            class="character-portrait-check"
+          />
+        </UButton>
       </div>
 
+      <!-- Validate: Need 1+ Characters -->
       <p v-if="!configuredRoster.length" class="wizard-error">
         Select at least one character.
       </p>
-
-      <p class="mt-3 text-xs text-muted">
-        Add up to {{ MAX_MODDED_CHARACTERS }} Steam Workshop characters with the
-        plus and minus controls.
-      </p>
     </WizardQuestion>
 
+    <!-- Modded Character Setup -->
     <WizardQuestion
       v-if="modelValue.moddedCharacters.length"
-      :title="questionTitles['modded-characters']!"
+      :question="questionsById['modded-characters']!"
     >
       <ModdedCharacterTable
         :model-value="modelValue.moddedCharacters"
@@ -689,7 +649,8 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
       />
     </WizardQuestion>
 
-    <WizardQuestion :title="questionTitles['ascension-mode']!">
+    <!-- Ascension Per Character (Toggles `advanced_characters`) -->
+    <WizardQuestion :question="questionsById['ascension-mode']!">
       <URadioGroup
         :model-value="modelValue.ascensionMode"
         :items="ascensionModeItems"
@@ -705,7 +666,7 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
 
     <WizardQuestion
       v-if="modelValue.ascensionMode === 'shared'"
-      :title="questionTitles['shared-ascensions']!"
+      :question="questionsById['shared-ascensions']!"
     >
       <AscensionChecklist
         :model-value="modelValue.sharedAscensions"
@@ -713,13 +674,7 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
       />
     </WizardQuestion>
 
-    <WizardQuestion v-else :title="questionTitles['individual-ascensions']!">
-      <template #help>
-        These settings compile to Archipelago's advanced character dictionary;
-        the standard roster and shared Ascension options are omitted from the
-        generated YAML.
-      </template>
-
+    <WizardQuestion v-else :question="questionsById['individual-ascensions']!">
       <UAccordion
         type="multiple"
         :items="individualAscensionItems"
@@ -748,7 +703,7 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
       </p>
     </WizardQuestion>
 
-    <WizardQuestion :title="questionTitles.selection!">
+    <WizardQuestion :question="questionsById.selection!">
       <URadioGroup
         :model-value="modelValue.selectionMode"
         :items="selectionModeItems"
@@ -765,7 +720,7 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
         v-if="modelValue.selectionMode === 'random'"
         class="wizard-nested-field"
       >
-        {{ questionTitles["random-count"] }}
+        {{ questionsById["random-count"]!.title }}
         <UInputNumber
           :model-value="modelValue.randomCharacterCount"
           color="primary"
@@ -778,7 +733,7 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
       </label>
     </WizardQuestion>
 
-    <WizardQuestion :title="questionTitles.availability!">
+    <WizardQuestion :question="questionsById.availability!">
       <URadioGroup
         :model-value="modelValue.availability"
         :items="availabilityItems"
@@ -795,7 +750,7 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
         v-if="modelValue.availability === 'fixed'"
         class="wizard-nested-field"
       >
-        {{ questionTitles["starting-character"] }}
+        {{ questionsById["starting-character"]!.title }}
         <USelect
           :model-value="modelValue.startingCharacter ?? undefined"
           :items="startingCharacterItems"
@@ -810,7 +765,7 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
       </label>
     </WizardQuestion>
 
-    <WizardQuestion :title="questionTitles.goal!">
+    <WizardQuestion :question="questionsById.goal!">
       <USelect
         :model-value="String(modelValue.goal)"
         :items="goalSelectItems"

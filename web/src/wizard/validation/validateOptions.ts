@@ -66,7 +66,17 @@ function validateValue(option: GeneratedOption, value: OptionValue): string[] {
       const invalid: unknown[] = [];
 
       for (const entry of value) {
-        if (typeof entry !== "string" || !option.valid_keys.includes(entry)) {
+        // Generated OptionSet keys are strings, but numeric YAML scalars are valid
+        // whenever their canonical string representation is an accepted key.
+        const normalizedEntry =
+          typeof entry === "number" && Number.isInteger(entry)
+            ? String(entry)
+            : entry;
+
+        if (
+          typeof normalizedEntry !== "string" ||
+          !option.valid_keys.includes(normalizedEntry)
+        ) {
           invalid.push(entry);
         }
       }

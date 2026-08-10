@@ -54,6 +54,7 @@ export type FillerItemId =
 /** Explicit checkbox state for one shared or character-specific Ascension setup. */
 export interface AscensionConfigurationAnswers {
   enabled: AscensionLevel[];
+  ascensionDownsEnabled: boolean;
   downs: AscensionLevel[];
 }
 
@@ -239,9 +240,15 @@ export function createDefaultWizardAnswers(
   const selectedCharacters = available.slice(0, 1);
 
   // Normalize Archipelago's mixed Ascension syntax to explicit checkbox selections.
+  const enabledAscensions = getDefaultAscensionLevels(catalog, "ascension");
+  const enabledAscensionDowns = getDefaultAscensionLevels(
+    catalog,
+    "ascension_down",
+  );
   const sharedAscensions: AscensionConfigurationAnswers = {
-    enabled: getDefaultAscensionLevels(catalog, "ascension"),
-    downs: getDefaultAscensionLevels(catalog, "ascension_down"),
+    enabled: enabledAscensions,
+    ascensionDownsEnabled: enabledAscensionDowns.length > 0,
+    downs: enabledAscensionDowns,
   };
 
   // Give every built-in character independent state before advanced mode is enabled.
@@ -251,6 +258,7 @@ export function createDefaultWizardAnswers(
   for (const character of available) {
     individualAscensions[character] = {
       enabled: [...sharedAscensions.enabled],
+      ascensionDownsEnabled: sharedAscensions.ascensionDownsEnabled,
       downs: [...sharedAscensions.downs],
     };
   }

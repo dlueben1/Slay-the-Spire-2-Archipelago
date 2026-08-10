@@ -5,12 +5,13 @@ import type {
   FillerItemId,
   FillerWeightLevel,
 } from "../../wizard/WizardAnswers";
+import type { WizardQuestion as WizardQuestionDefinition } from "../../wizard/WizardStep";
 import WizardQuestion from "./WizardQuestion.vue";
 
 const props = defineProps<{
   modelValue: FillerAnswers;
   items: FillerDisplayItem[];
-  questionTitle: string;
+  question: WizardQuestionDefinition;
 }>();
 
 const emit = defineEmits<{
@@ -93,7 +94,7 @@ function getWeightBadgeColor(itemId: FillerItemId): FillerBadgeColor {
 </script>
 
 <template>
-  <WizardQuestion :title="questionTitle">
+  <WizardQuestion :question="question">
     <template #help>
       Weights are relative to one another. Raising one filler makes it more
       likely than fillers with lower settings; it does not guarantee an exact

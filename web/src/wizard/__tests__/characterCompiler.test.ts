@@ -110,11 +110,16 @@ function compilesSharedModdedCharacterSetup(): void {
   answers.characters.moddedCharacters = [
     {
       name: "HermitMod",
-      ascensions: { enabled: [1], downs: [] },
+      ascensions: {
+        enabled: [1],
+        ascensionDownsEnabled: false,
+        downs: [],
+      },
     },
   ];
   answers.characters.sharedAscensions = {
     enabled: [1, 3, 10],
+    ascensionDownsEnabled: true,
     downs: [3],
   };
   answers.characters.availability = "fixed";
@@ -139,6 +144,30 @@ function compilesSharedModdedCharacterSetup(): void {
 }
 
 /**
+ * Verifies complete Ascension prefixes use Python's concise numeric syntax.
+ *
+ * @returns Nothing; Vitest records assertion failures.
+ */
+function compilesSequentialAscensionShorthand(): void {
+  // Arrange the state produced by clicking the A5 threshold while Downs are enabled.
+  const answers = createTestAnswers(["Ironclad"]);
+  answers.characters.sharedAscensions = {
+    enabled: [1, 2, 3, 4, 5],
+    ascensionDownsEnabled: true,
+    downs: [1, 2, 3, 4, 5],
+  };
+
+  // Compile through the complete path so numeric OptionSet validation is exercised.
+  const result = compileWizardAnswers(answers, optionCatalog);
+  const yaml = optionsToYaml(selectGuidedOptions(result));
+
+  // One number expands to the complete prefix, and five Downs cover all five actives.
+  expect(result.ascension).toEqual([5]);
+  expect(result.ascension_down).toEqual([5]);
+  expect(yaml).toContain("  - 5");
+}
+
+/**
  * Verifies advanced mode writes one independent dictionary entry per roster member.
  *
  * @returns Nothing; Vitest records assertion failures.
@@ -150,16 +179,22 @@ function compilesIndividualAscensionSetup(): void {
   answers.characters.ascensionMode = "individual";
   answers.characters.individualAscensions.Ironclad = {
     enabled: [1, 2],
+    ascensionDownsEnabled: true,
     downs: [2],
   };
   answers.characters.individualAscensions.Silent = {
     enabled: [],
+    ascensionDownsEnabled: false,
     downs: [],
   };
   answers.characters.moddedCharacters = [
     {
       name: "HermitMod",
-      ascensions: { enabled: [10], downs: [10] },
+      ascensions: {
+        enabled: [10],
+        ascensionDownsEnabled: true,
+        downs: [10],
+      },
     },
   ];
 
@@ -176,7 +211,7 @@ function compilesIndividualAscensionSetup(): void {
   expect(result.ascension_down).toEqual([]);
   expect(result.advanced_characters).toEqual({
     Ironclad: {
-      ascension: ["SwarmingElites", "WearyTraveler"],
+      ascension: [2],
       ascension_down: ["WearyTraveler"],
     },
     Silent: {
@@ -185,7 +220,7 @@ function compilesIndividualAscensionSetup(): void {
     },
     HermitMod: {
       ascension: ["DoubleBoss"],
-      ascension_down: ["DoubleBoss"],
+      ascension_down: [1],
     },
   });
 
@@ -218,7 +253,11 @@ function allowsModdedOnlyCharacterSelection(): void {
   answers.characters.moddedCharacters = [
     {
       name: "",
-      ascensions: { enabled: [], downs: [] },
+      ascensions: {
+        enabled: [],
+        ascensionDownsEnabled: false,
+        downs: [],
+      },
     },
   ];
 
@@ -271,7 +310,14 @@ function rejectsInvalidModdedAndAscensionAnswers(): void {
   // An allocated modded row cannot compile until its internal ID is entered.
   const answers = createTestAnswers(["Ironclad"]);
   answers.characters.moddedCharacters = [
-    { name: "", ascensions: { enabled: [1], downs: [] } },
+    {
+      name: "",
+      ascensions: {
+        enabled: [1],
+        ascensionDownsEnabled: false,
+        downs: [],
+      },
+    },
   ];
 
   /** Compiles the deliberately incomplete modded-character row. */
@@ -295,7 +341,11 @@ function rejectsInvalidModdedAndAscensionAnswers(): void {
 
   // An Ascension Down has no valid target when its matching Ascension is disabled.
   answers.characters.moddedCharacters = [];
-  answers.characters.sharedAscensions = { enabled: [], downs: [1] };
+  answers.characters.sharedAscensions = {
+    enabled: [],
+    ascensionDownsEnabled: true,
+    downs: [1],
+  };
 
   /** Compiles the deliberately orphaned Ascension Down. */
   function compileOrphanedAscensionDown(): void {
@@ -306,13 +356,21 @@ function rejectsInvalidModdedAndAscensionAnswers(): void {
   expect(compileOrphanedAscensionDown).toThrow("requires Ascension A1");
 
   // The current Python world reserves no more than five custom character slots.
-  answers.characters.sharedAscensions = { enabled: [1], downs: [] };
+  answers.characters.sharedAscensions = {
+    enabled: [1],
+    ascensionDownsEnabled: false,
+    downs: [],
+  };
   answers.characters.moddedCharacters = [];
 
   for (let index = 1; index <= 6; index += 1) {
     answers.characters.moddedCharacters.push({
       name: `Modded${index}`,
-      ascensions: { enabled: [1], downs: [] },
+      ascensions: {
+        enabled: [1],
+        ascensionDownsEnabled: false,
+        downs: [],
+      },
     });
   }
 
@@ -343,6 +401,10 @@ function registerCharacterCompilerTests(): void {
   it(
     "compiles modded characters with shared Ascensions",
     compilesSharedModdedCharacterSetup,
+  );
+  it(
+    "compacts sequential Ascension and Ascension Down selections",
+    compilesSequentialAscensionShorthand,
   );
   it(
     "compiles independent advanced character Ascensions",
@@ -389,7 +451,11 @@ function revealsConditionalCharacterQuestions(): void {
   answers.characters.moddedCharacters = [
     {
       name: "HermitMod",
-      ascensions: { enabled: [1], downs: [] },
+      ascensions: {
+        enabled: [1],
+        ascensionDownsEnabled: false,
+        downs: [],
+      },
     },
   ];
   expect(visibleCharacterQuestionIds(answers)).toContain("random-count");

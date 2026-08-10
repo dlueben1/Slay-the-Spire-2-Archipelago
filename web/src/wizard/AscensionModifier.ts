@@ -149,7 +149,8 @@ function parseGeneratedAscensionEntry(entry: unknown): AscensionLevel {
  * @throws When the option is absent, its default is not a list, or a value is unknown.
  * @remarks A lone numeric value uses Archipelago's shorthand and expands to every
  * level from one through that number. Wizard compilation always writes explicit names
- * afterward, avoiding ambiguity between shorthand and individually selected levels.
+ * afterward. The compiler may restore numeric shorthand when the selected levels form
+ * an exact prefix, while preserving explicit names for arbitrary combinations.
  */
 export function getDefaultAscensionLevels(
   catalog: OptionCatalog,

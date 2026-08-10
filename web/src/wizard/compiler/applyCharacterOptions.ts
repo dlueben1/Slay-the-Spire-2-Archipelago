@@ -28,16 +28,70 @@ import { CHARACTER_OPTION_KEYS } from "../WizardOptionKey";
 export type CompiledOptions = Record<string, OptionValue>;
 
 interface CompiledAscensionConfiguration {
-  ascension: string[];
-  ascension_down: string[];
+  ascension: Array<string | number>;
+  ascension_down: Array<string | number>;
+}
+
+/**
+ * Finds the numeric shorthand for an exact A1-through-AN selection.
+ *
+ * @param levels - Validated, deduplicated Ascension levels to inspect.
+ * @returns The highest sequential level, or `null` for empty or irregular selections.
+ * @remarks Python expands a lone numeric Ascension entry to every modifier below it.
+ */
+function getSequentialAscensionMaximum(
+  levels: ReadonlySet<AscensionLevel>,
+): AscensionLevel | null {
+  // An empty list has no numeric shorthand and must remain an empty YAML list.
+  if (!levels.size) {
+    return null;
+  }
+
+  // A prefix contains every level from A1 through the number of selected entries.
+  for (let level = 1; level <= levels.size; level += 1) {
+    if (!levels.has(level as AscensionLevel)) {
+      return null;
+    }
+  }
+
+  // Validated input cannot exceed A10, so the set size is a supported level here.
+  return levels.size as AscensionLevel;
+}
+
+/**
+ * Checks whether every active Ascension also has its matching Down selected.
+ *
+ * @param enabledLevels - Active Ascension modifiers for the configuration.
+ * @param downLevels - Modifiers whose Ascension Down items are shuffled.
+ * @returns Whether both non-empty sets contain exactly the same levels.
+ * @remarks Python interprets a lone numeric Ascension Down as the highest N active
+ * modifiers, so using the active count is exact when every active modifier is selected.
+ */
+function hasDownForEveryEnabledAscension(
+  enabledLevels: ReadonlySet<AscensionLevel>,
+  downLevels: ReadonlySet<AscensionLevel>,
+): boolean {
+  // Empty Down selections should remain an empty YAML list.
+  if (!downLevels.size || downLevels.size !== enabledLevels.size) {
+    return false;
+  }
+
+  // Equal sizes need only one membership pass to prove set equality.
+  for (const level of enabledLevels) {
+    if (!downLevels.has(level)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /**
  * Compiles explicit Ascension checkbox levels to generated canonical names.
  *
- * @param configuration - Player-facing enabled and Ascension Down selections.
+ * @param configuration - Player-facing Ascension, Down-mode, and checkbox selections.
  * @param catalog - Generated schema used to verify accepted set members.
- * @returns Explicit named arrays for standard or advanced character YAML.
+ * @returns Canonical named arrays or an exact numeric shorthand for character YAML.
  * @throws When levels are invalid, an Ascension Down is not enabled, or schema drift
  * removes one of the hand-authored canonical option names.
  */
@@ -71,8 +125,13 @@ function compileAscensionConfiguration(
     enabledLevels.add(level);
   }
 
+  // A disabled Ascension Down section compiles as empty even if stale state is injected.
+  const configuredDowns = configuration.ascensionDownsEnabled
+    ? configuration.downs
+    : [];
+
   // Ascension Downs can disable only modifiers that are part of the same setup.
-  for (const level of configuration.downs) {
+  for (const level of configuredDowns) {
     if (!isAscensionLevel(level)) {
       throw new Error(
         `Ascension Down level '${String(level)}' must be from 1 through 10.`,
@@ -89,8 +148,8 @@ function compileAscensionConfiguration(
   }
 
   // Emit names in level order regardless of the order controls were toggled.
-  const ascension: string[] = [];
-  const ascensionDown: string[] = [];
+  let ascension: Array<string | number> = [];
+  let ascensionDown: Array<string | number> = [];
 
   for (let level = 1; level <= 10; level += 1) {
     const ascensionLevel = level as AscensionLevel;
@@ -115,6 +174,24 @@ function compileAscensionConfiguration(
     if (downLevels.has(ascensionLevel)) {
       ascensionDown.push(modifier.optionName);
     }
+  }
+
+  // Restore the concise single-number form only for an exact A1-through-AN prefix.
+  const sequentialMaximum = getSequentialAscensionMaximum(enabledLevels);
+
+  if (
+    sequentialMaximum !== null &&
+    validAscensions.has(String(sequentialMaximum))
+  ) {
+    ascension = [sequentialMaximum];
+  }
+
+  // A numeric Down is a count of the highest active modifiers, not a level threshold.
+  if (
+    hasDownForEveryEnabledAscension(enabledLevels, downLevels) &&
+    validAscensionDowns.has(String(downLevels.size))
+  ) {
+    ascensionDown = [downLevels.size];
   }
 
   return {

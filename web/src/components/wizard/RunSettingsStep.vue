@@ -7,7 +7,10 @@ import type {
   RunAnswers,
 } from "../../wizard/WizardAnswers";
 import type { GeneratedNumberRange } from "../../wizard/WizardOptionKey";
-import { runSetupStep } from "../../wizard/WizardStep";
+import {
+  runSetupStep,
+  type WizardQuestion as WizardQuestionDefinition,
+} from "../../wizard/WizardStep";
 import WizardQuestion from "./WizardQuestion.vue";
 
 const props = defineProps<{
@@ -85,11 +88,11 @@ const accessibilityItems: RadioGroupItem[] = [
   },
 ];
 
-// Resolve question copy by ID so flow definitions remain the copy source of truth.
-const questionTitles: Record<string, string> = {};
+// Resolve full question definitions by ID so flow definitions remain the copy source of truth.
+const questionsById: Record<string, WizardQuestionDefinition> = {};
 
 for (const question of runSetupStep.questions) {
-  questionTitles[question.id] = question.title;
+  questionsById[question.id] = question;
 }
 
 /**
@@ -258,7 +261,7 @@ function setAccessibility(value: unknown): void {
 
 <template>
   <div class="space-y-8">
-    <WizardQuestion :title="questionTitles['ancient-location']!">
+    <WizardQuestion :question="questionsById['ancient-location']!">
       <template #help>
         Progressive Ancient items provide linked relic choices independently of
         normal relic rewards.
@@ -277,7 +280,7 @@ function setAccessibility(value: unknown): void {
       />
     </WizardQuestion>
 
-    <WizardQuestion :title="questionTitles['ancient-pool']!">
+    <WizardQuestion :question="questionsById['ancient-pool']!">
       <URadioGroup
         :model-value="modelValue.ancientRelicPool"
         :items="ancientPoolItems"
@@ -291,7 +294,7 @@ function setAccessibility(value: unknown): void {
       />
     </WizardQuestion>
 
-    <WizardQuestion :title="questionTitles['relic-choice-count']!">
+    <WizardQuestion :question="questionsById['relic-choice-count']!">
       <template #help>
         This affects Relic items received from Archipelago, not ordinary game or
         mod relic rewards.
@@ -308,7 +311,7 @@ function setAccessibility(value: unknown): void {
       />
     </WizardQuestion>
 
-    <WizardQuestion :title="questionTitles.neow!">
+    <WizardQuestion :question="questionsById.neow!">
       <UCheckbox
         :model-value="modelValue.neowSanity"
         label="Shuffle Neow's blessing"
@@ -324,7 +327,7 @@ function setAccessibility(value: unknown): void {
       />
     </WizardQuestion>
 
-    <WizardQuestion :title="questionTitles.seeded!">
+    <WizardQuestion :question="questionsById.seeded!">
       <UCheckbox
         :model-value="modelValue.seeded"
         label="Use fixed seeds"
@@ -347,7 +350,7 @@ function setAccessibility(value: unknown): void {
       </div>
 
       <div class="space-y-8">
-        <WizardQuestion :title="questionTitles['progression-balancing']!">
+        <WizardQuestion :question="questionsById['progression-balancing']!">
           <template #help>
             Lower values permit more early-game droughts. Higher values move
             progression earlier; 0 disables balancing, 50 is normal, and 99 is
@@ -398,7 +401,7 @@ function setAccessibility(value: unknown): void {
           </div>
         </WizardQuestion>
 
-        <WizardQuestion :title="questionTitles.accessibility!">
+        <WizardQuestion :question="questionsById.accessibility!">
           <URadioGroup
             :model-value="modelValue.accessibility"
             :items="accessibilityItems"

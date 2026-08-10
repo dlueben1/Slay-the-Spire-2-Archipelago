@@ -19,8 +19,8 @@ export const MAX_MODDED_CHARACTERS = 5;
 /**
  * Copies an Ascension configuration for immutable answer-model updates.
  *
- * @param configuration - Existing enabled and Ascension Down selections.
- * @returns A deep-enough copy with new arrays for both checkbox collections.
+ * @param configuration - Existing Ascension, Ascension Down mode, and selections.
+ * @returns A deep-enough copy with the mode preserved and new checkbox arrays.
  */
 export function copyAscensionConfiguration(
   configuration: AscensionConfigurationAnswers,
@@ -28,6 +28,7 @@ export function copyAscensionConfiguration(
   // Clone both arrays because Vue controls replace, sort, and filter them independently.
   return {
     enabled: [...configuration.enabled],
+    ascensionDownsEnabled: configuration.ascensionDownsEnabled,
     downs: [...configuration.downs],
   };
 }

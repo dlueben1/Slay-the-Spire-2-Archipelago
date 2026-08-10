@@ -7,7 +7,10 @@ import type {
   ShopAnswers,
 } from "../../wizard/WizardAnswers";
 import type { GeneratedNumberRange } from "../../wizard/WizardOptionKey";
-import { checkSetupStep } from "../../wizard/WizardStep";
+import {
+  checkSetupStep,
+  type WizardQuestion as WizardQuestionDefinition,
+} from "../../wizard/WizardStep";
 import FillerStep from "./FillerStep.vue";
 import ShopSetupStep from "./ShopSetupStep.vue";
 import WizardQuestion from "./WizardQuestion.vue";
@@ -70,11 +73,11 @@ const checkToggleDefinitions: readonly CheckToggleDefinition[] = [
   },
 ];
 
-// Resolve nested subsection copy by ID from the combined declarative step.
-const questionTitles: Record<string, string> = {};
+// Resolve full nested question definitions by ID from the combined declarative step.
+const questionsById: Record<string, WizardQuestionDefinition> = {};
 
 for (const question of checkSetupStep.questions) {
-  questionTitles[question.id] = question.title;
+  questionsById[question.id] = question;
 }
 
 /**
@@ -164,7 +167,7 @@ function setFillerAnswers(filler: FillerAnswers): void {
 
 <template>
   <div class="space-y-10">
-    <WizardQuestion :title="questionTitles['check-types']!">
+    <WizardQuestion :question="questionsById['check-types']!">
       <template #help>
         Each enabled option adds or changes locations and items for every
         generated character.
@@ -231,7 +234,7 @@ function setFillerAnswers(filler: FillerAnswers): void {
       <FillerStep
         :model-value="modelValue.filler"
         :items="fillerItems"
-        :question-title="questionTitles['filler-weights']!"
+        :question="questionsById['filler-weights']!"
         @update:model-value="setFillerAnswers"
       />
     </section>

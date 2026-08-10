@@ -2,7 +2,10 @@
 import type { RadioGroupItem } from "@nuxt/ui";
 import type { ShopAnswers, ShopCostMode } from "../../wizard/WizardAnswers";
 import type { GeneratedNumberRange } from "../../wizard/WizardOptionKey";
-import { checkSetupStep } from "../../wizard/WizardStep";
+import {
+  checkSetupStep,
+  type WizardQuestion as WizardQuestionDefinition,
+} from "../../wizard/WizardStep";
 import WizardQuestion from "./WizardQuestion.vue";
 
 type ShopSlotAnswerKey =
@@ -52,11 +55,11 @@ const shopCostItems: RadioGroupItem[] = [
   },
 ];
 
-// Resolve question copy by ID so flow definitions remain the copy source of truth.
-const questionTitles: Record<string, string> = {};
+// Resolve full question definitions by ID so flow definitions remain the copy source of truth.
+const questionsById: Record<string, WizardQuestionDefinition> = {};
 
 for (const question of checkSetupStep.questions) {
-  questionTitles[question.id] = question.title;
+  questionsById[question.id] = question;
 }
 
 /**
@@ -136,7 +139,7 @@ function setCosts(value: unknown): void {
 
 <template>
   <div class="space-y-8">
-    <WizardQuestion :title="questionTitles['shop-slots']!">
+    <WizardQuestion :question="questionsById['shop-slots']!">
       <template #help>
         Each count controls how many slots of that type are unavailable until
         their corresponding AP items arrive.
@@ -162,7 +165,7 @@ function setCosts(value: unknown): void {
       </div>
     </WizardQuestion>
 
-    <WizardQuestion :title="questionTitles['shop-removal']!">
+    <WizardQuestion :question="questionsById['shop-removal']!">
       <UCheckbox
         :model-value="modelValue.removeSlots"
         label="Shuffle card removal"
@@ -178,7 +181,7 @@ function setCosts(value: unknown): void {
       />
     </WizardQuestion>
 
-    <WizardQuestion :title="questionTitles['shop-costs']!">
+    <WizardQuestion :question="questionsById['shop-costs']!">
       <template #help>
         Logic does not account for these prices, so high costs can make an
         unlucky shop less convenient.

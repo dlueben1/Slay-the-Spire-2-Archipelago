@@ -35,6 +35,89 @@ function getOrderedLevels(
 }
 
 /**
+ * Builds the ordered A1-through-AN prefix represented by a level button.
+ *
+ * @param maximumLevel - Highest Ascension that should remain enabled.
+ * @returns Every supported level from A1 through the requested maximum.
+ */
+function getLevelsThrough(maximumLevel: AscensionLevel): AscensionLevel[] {
+  // Filter the shared catalog so the result follows canonical game order.
+  const levels: AscensionLevel[] = [];
+
+  for (const modifier of ASCENSION_MODIFIERS) {
+    if (modifier.level <= maximumLevel) {
+      levels.push(modifier.level);
+    }
+  }
+
+  return levels;
+}
+
+/**
+ * Shows or hides Ascension Down controls for this configuration.
+ *
+ * @param value - Boolean-like value emitted by Nuxt UI's card checkbox.
+ * @returns Nothing; emits the updated mode and clears Downs when disabling them.
+ * @remarks Turning the feature back on starts with no Downs selected, preventing hidden
+ * stale choices from unexpectedly re-entering the generated item pool.
+ */
+function setAscensionDownsEnabled(value: unknown): void {
+  // Binary answers never store Nuxt UI's optional indeterminate state.
+  if (typeof value !== "boolean") {
+    return;
+  }
+
+  // Preserve active Ascensions while making the dependent Down state explicit.
+  emit("update:modelValue", {
+    enabled: [...props.modelValue.enabled],
+    ascensionDownsEnabled: value,
+    downs: value ? [...props.modelValue.downs] : [],
+  });
+}
+
+/**
+ * Enables or disables every Ascension checkbox in the current configuration.
+ *
+ * @param value - Whether all supported modifiers should be selected.
+ * @returns Nothing; emits complete ordered Ascension and optional Down collections.
+ * @remarks When the Down column is enabled, bulk selection applies to both columns.
+ */
+function setAllAscensions(value: boolean): void {
+  // Build fresh arrays so neither parent state nor the immutable catalog is mutated.
+  const enabled = value
+    ? ASCENSION_MODIFIERS.map((modifier) => modifier.level)
+    : [];
+  const downs =
+    value && props.modelValue.ascensionDownsEnabled ? [...enabled] : [];
+
+  // Preserve the user's Down-column visibility while changing all row selections.
+  emit("update:modelValue", {
+    enabled,
+    ascensionDownsEnabled: props.modelValue.ascensionDownsEnabled,
+    downs,
+  });
+}
+
+/**
+ * Applies the A1-through-AN preset represented by one level button.
+ *
+ * @param maximumLevel - Clicked badge level that becomes the inclusive upper bound.
+ * @returns Nothing; emits the selected prefix and applies it to visible Downs as well.
+ */
+function setAscensionThreshold(maximumLevel: AscensionLevel): void {
+  // A numbered preset enables its complete prefix and disables all later levels.
+  const enabled = getLevelsThrough(maximumLevel);
+  const downs = props.modelValue.ascensionDownsEnabled ? [...enabled] : [];
+
+  // Keep the two visible columns aligned when Ascension Downs are in use.
+  emit("update:modelValue", {
+    enabled,
+    ascensionDownsEnabled: props.modelValue.ascensionDownsEnabled,
+    downs,
+  });
+}
+
+/**
  * Updates whether one Ascension modifier is active for this configuration.
  *
  * @param level - Ascension row changed by the player.
@@ -62,6 +145,7 @@ function setAscensionEnabled(level: AscensionLevel, value: unknown): void {
   // Emit canonical order so persistent state does not depend on click sequence.
   emit("update:modelValue", {
     enabled: getOrderedLevels(enabledLevels),
+    ascensionDownsEnabled: props.modelValue.ascensionDownsEnabled,
     downs: getOrderedLevels(downLevels),
   });
 }
@@ -75,7 +159,11 @@ function setAscensionEnabled(level: AscensionLevel, value: unknown): void {
  */
 function setAscensionDown(level: AscensionLevel, value: unknown): void {
   // Ignore indeterminate values and disabled rows defensively.
-  if (typeof value !== "boolean" || !props.modelValue.enabled.includes(level)) {
+  if (
+    typeof value !== "boolean" ||
+    !props.modelValue.ascensionDownsEnabled ||
+    !props.modelValue.enabled.includes(level)
+  ) {
     return;
   }
 
@@ -91,6 +179,7 @@ function setAscensionDown(level: AscensionLevel, value: unknown): void {
   // Preserve the enabled collection while normalizing Down checkbox order.
   emit("update:modelValue", {
     enabled: [...props.modelValue.enabled],
+    ascensionDownsEnabled: props.modelValue.ascensionDownsEnabled,
     downs: getOrderedLevels(downLevels),
   });
 }
@@ -98,21 +187,53 @@ function setAscensionDown(level: AscensionLevel, value: unknown): void {
 
 <template>
   <div class="ascension-editor">
+    <div class="ascension-editor__controls">
+      <UCheckbox
+        :model-value="modelValue.ascensionDownsEnabled"
+        label="Enable Ascension Downs"
+        description="Adds items to the item pool that disable selected Ascension modifiers when obtained."
+        color="primary"
+        variant="card"
+        class="cursor-pointer"
+        :ui="{
+          label: 'cursor-pointer',
+          description: 'cursor-pointer',
+        }"
+        @update:model-value="setAscensionDownsEnabled"
+      />
+    </div>
+
     <div class="ascension-editor__help">
       <p>
-        Every row is independent; leaving every Ascension unchecked is valid.
+        You can turn on any combination of Ascension Levels, or you can select
+        an A-level button on the left-hand side to enable every modifier up to
+        that level. Leaving every Ascension unchecked is valid.
       </p>
       <p>
-        Ascension Down items disable their matching modifier and enter the pool
-        only when Floor checks are enabled.
+        We recommend enabling Ascension Level 1, since it provides more
+        opportunities to fight Elites and earn Relic Checks. If this Ascension
+        is off, you may not be able to obtain all in-logic Relics until you've
+        beat the game as your character.
+      </p>
+      <p v-if="modelValue.ascensionDownsEnabled">
+        Ascension Down items disable their matching modifier when obtained.
       </p>
     </div>
 
-    <div class="ascension-table" role="table" aria-label="Ascension settings">
+    <div
+      class="ascension-table"
+      :class="{
+        'ascension-table--without-downs': !modelValue.ascensionDownsEnabled,
+      }"
+      role="table"
+      aria-label="Ascension settings"
+    >
       <div class="ascension-table__header" role="row">
         <span role="columnheader">Modifier</span>
-        <span role="columnheader">Active</span>
-        <span role="columnheader">Shuffle Down</span>
+        <span role="columnheader">Enabled</span>
+        <span v-if="modelValue.ascensionDownsEnabled" role="columnheader">
+          Add Item to Disable
+        </span>
       </div>
 
       <div
@@ -122,9 +243,17 @@ function setAscensionDown(level: AscensionLevel, value: unknown): void {
         role="row"
       >
         <div class="ascension-table__modifier" role="cell">
-          <UBadge color="primary" variant="subtle"
-            >A{{ modifier.level }}</UBadge
+          <UButton
+            type="button"
+            color="primary"
+            variant="subtle"
+            size="xs"
+            class="ascension-table__level-button cursor-pointer"
+            :aria-label="`Enable every Ascension through A${modifier.level}`"
+            @click="setAscensionThreshold(modifier.level)"
           >
+            A{{ modifier.level }}
+          </UButton>
 
           <div>
             <strong>{{ modifier.name }}</strong>
@@ -142,7 +271,11 @@ function setAscensionDown(level: AscensionLevel, value: unknown): void {
           />
         </div>
 
-        <div class="ascension-table__checkbox" role="cell">
+        <div
+          v-if="modelValue.ascensionDownsEnabled"
+          class="ascension-table__checkbox"
+          role="cell"
+        >
           <UCheckbox
             :model-value="modelValue.downs.includes(modifier.level)"
             :disabled="!modelValue.enabled.includes(modifier.level)"
@@ -172,6 +305,24 @@ function setAscensionDown(level: AscensionLevel, value: unknown): void {
   margin-top: 0.25rem;
 }
 
+.ascension-editor__controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 1rem;
+}
+
+.ascension-editor__bulk-actions {
+  display: flex;
+  padding: 0.75rem;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  border: 1px solid var(--ui-border-muted);
+  border-radius: 0.5rem;
+  background: color-mix(in oklab, var(--ui-bg-elevated) 78%, transparent);
+}
+
 .ascension-table {
   overflow: hidden;
   border: 1px solid var(--ui-border-muted);
@@ -184,6 +335,11 @@ function setAscensionDown(level: AscensionLevel, value: unknown): void {
   display: grid;
   grid-template-columns: minmax(14rem, 1fr) 5.5rem 7.5rem;
   align-items: center;
+}
+
+.ascension-table--without-downs .ascension-table__header,
+.ascension-table--without-downs .ascension-table__row {
+  grid-template-columns: minmax(14rem, 1fr) 5.5rem;
 }
 
 .ascension-table__header {
@@ -234,12 +390,22 @@ function setAscensionDown(level: AscensionLevel, value: unknown): void {
   font-size: 0.78rem;
 }
 
+.ascension-table__level-button {
+  min-width: 2.15rem;
+  justify-content: center;
+  border-radius: 9999px;
+}
+
 .ascension-table__checkbox {
   display: flex;
   justify-content: center;
 }
 
 @media (max-width: 42rem) {
+  .ascension-editor__controls {
+    grid-template-columns: 1fr;
+  }
+
   .ascension-table {
     overflow-x: auto;
   }
@@ -247,6 +413,11 @@ function setAscensionDown(level: AscensionLevel, value: unknown): void {
   .ascension-table__header,
   .ascension-table__row {
     min-width: 35rem;
+  }
+
+  .ascension-table--without-downs .ascension-table__header,
+  .ascension-table--without-downs .ascension-table__row {
+    min-width: 27rem;
   }
 }
 </style>

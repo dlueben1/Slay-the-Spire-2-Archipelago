@@ -6,11 +6,13 @@
  * Archipelago option keys; `wizard/compiler` owns that translation.
  */
 
+import { MAX_MODDED_CHARACTERS } from "./CharacterRoster";
 import type { WizardAnswers } from "./WizardAnswers";
 
 export interface WizardQuestion {
   id: string;
-  title: string;
+  title?: string;
+  description?: string;
   isVisible?: (answers: WizardAnswers) => boolean;
 }
 
@@ -50,7 +52,7 @@ function usesFixedStartingCharacter(answers: WizardAnswers): boolean {
  * @returns Whether at least one modded character row exists.
  */
 function hasModdedCharacters(answers: WizardAnswers): boolean {
-  // The table is mounted only after the portrait card's plus button creates a row.
+  // The table is mounted only after the Modded Characters portrait is toggled on.
   return answers.characters.moddedCharacters.length > 0;
 }
 
@@ -118,12 +120,17 @@ export const characterSetupStep: WizardStep = {
   id: "characters",
   title: "Character Setup",
   description:
-    "Choose built-in or modded characters, their Ascensions, and roster progression.",
+    "Select which characters you want to play as, how they become available, and their Ascension settings.",
   questions: [
-    { id: "characters", title: "Which characters do you want to play?" },
+    {
+      id: "characters",
+      title: "Which characters do you want to play as?",
+      description: `Choose at least one character. You can have a mix of Vanilla and Modded characters.`,
+    },
     {
       id: "modded-characters",
-      title: "Which modded character IDs should be used?",
+      title: "Setup Modded Characters",
+      description: `Enter each modded character's unique ID so that the Archipelago mod can find them and use them properly in-game. You can have up to ${MAX_MODDED_CHARACTERS} modded characters.`,
       isVisible: hasModdedCharacters,
     },
     {
@@ -132,7 +139,7 @@ export const characterSetupStep: WizardStep = {
     },
     {
       id: "shared-ascensions",
-      title: "Which Ascensions should every character use?",
+      title: "Select your desired Ascensions",
       isVisible: usesSharedAscensions,
     },
     {
@@ -231,7 +238,7 @@ export const deathLinkSetupStep: WizardStep = {
   description:
     "Choose whether deaths are shared and what happens when another player dies.",
   questions: [
-    { id: "death-link-enabled", title: "Should Death Link be enabled?" },
+    { id: "death-link-enabled" },
     {
       id: "death-link-effects",
       title: "What should happen when a Death Link is received?",

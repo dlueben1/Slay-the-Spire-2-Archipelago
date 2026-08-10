@@ -94,8 +94,10 @@ function summarizeAscensionConfiguration(
     enabledLabels.push(`A${level}`);
   }
 
-  for (const level of configuration.downs) {
-    downLabels.push(`A${level}`);
+  if (configuration.ascensionDownsEnabled) {
+    for (const level of configuration.downs) {
+      downLabels.push(`A${level}`);
+    }
   }
 
   // Ascension Downs are a dependent suffix only when at least one is shuffled.

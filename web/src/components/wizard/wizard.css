@@ -82,36 +82,6 @@
   filter: drop-shadow(0 2px 3px black);
 }
 
-.character-portrait-button--modded {
-  cursor: default;
-}
-
-.character-modded-control {
-  position: absolute;
-  z-index: 3;
-  left: 50%;
-  box-shadow: 0 0.35rem 0.9rem rgba(0, 0, 0, 0.5);
-  transform: translateX(-50%);
-}
-
-.character-modded-control--add {
-  top: 0.7rem;
-}
-
-.character-modded-control--remove {
-  bottom: 3.5rem;
-}
-
-.character-modded-count {
-  position: absolute;
-  z-index: 3;
-  top: 0.75rem;
-  right: 0.75rem;
-  min-width: 1.5rem;
-  justify-content: center;
-  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.45);
-}
-
 .wizard-nested-field {
   display: flex;
   align-items: center;
