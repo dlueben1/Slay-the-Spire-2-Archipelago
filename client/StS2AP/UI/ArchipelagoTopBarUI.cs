@@ -283,15 +283,22 @@ namespace StS2AP.UI
         /// </summary>
         private static void OnButtonFocused()
         {
-            if (_button == null) return;
+            if (_button == null || !GodotObject.IsInstanceValid(_button)) return;
 
             // Show the tooltip anchored below the button
             try
             {
+                // MouseEntered and FocusEntered can both fire for one click. Replace any
+                // existing tooltip for this owner before adding a new one
+                // This prevents the 2 Numbers sometimes appearing on the AP menu on the top bar
+                NHoverTipSet.Remove(_button);
                 var tipSet = NHoverTipSet.CreateAndShow(_button, _hoverTip);
-                tipSet.GlobalPosition = _button.GlobalPosition + new Vector2(
-                    _button.Size.X - tipSet.Size.X,
-                    _button.Size.Y + TooltipOffsetY);
+                if (tipSet != null)
+                {
+                    tipSet.GlobalPosition = _button.GlobalPosition + new Vector2(
+                        _button.Size.X - tipSet.Size.X,
+                        _button.Size.Y + TooltipOffsetY);
+                }
             }
             catch (Exception ex)
             {
@@ -307,7 +314,7 @@ namespace StS2AP.UI
         /// </summary>
         private static void OnButtonUnfocused()
         {
-            if (_button == null) return;
+            if (_button == null || !GodotObject.IsInstanceValid(_button)) return;
 
             try
             {
