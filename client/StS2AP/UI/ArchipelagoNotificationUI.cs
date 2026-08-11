@@ -346,56 +346,12 @@ namespace StS2AP.UI
         /// </summary>
         public static void SetMessage(string message)
         {
-            if (_messageLabel != null && IsInstanceValid(_messageLabel))
-            {
-                // Odd bug-fix: We need to set the font manually EVERY time or it will randomly change
-                _messageLabel.RemoveThemeFontSizeOverride("normal_font_size");
-                _messageLabel.AddThemeFontSizeOverride("normal_font_size", FontSize);
-
-                // Clear and reset the shared label before assigning the next message.
-                // MegaRichTextLabel can otherwise retain a previous message's fitted
-                // size, especially when that message contained inline images.
-                _messageLabel.Text = string.Empty;
-                ResetMessageLayout();
-                _messageLabel.Text = message;
-                ResetMessageLayout();
-
-                // BBCode images and font metrics can finish resolving after the text
-                // assignment. Re-run the reset on the next frame to keep the bubble
-                // deterministic once those resources have updated the label.
-                Callable.From(ResetMessageLayout).CallDeferred();
-            }
-        }
-
-        private static void ResetMessageLayout()
-        {
             if (_messageLabel == null || !IsInstanceValid(_messageLabel))
             {
                 return;
             }
 
-            _messageLabel.CustomMinimumSize = new Vector2(
-                BubbleWidth - (BubblePadding * 2),
-                0
-            );
-            _messageLabel.ResetSize();
-
-            if (_bubblePanel != null && IsInstanceValid(_bubblePanel))
-            {
-                _bubblePanel.CustomMinimumSize = new Vector2(
-                    BubbleWidth,
-                    IconSize
-                );
-                _bubblePanel.ResetSize();
-            }
-            if (_notificationContainer != null && IsInstanceValid(_notificationContainer))
-            {
-                _notificationContainer.ResetSize();
-                // Containers recalculate their minimum size as rich text and inline
-                // images resolve. Reassert the screen-space origin so every message
-                // grows down from the same point instead of drifting vertically.
-                _notificationContainer.Position = new Vector2(LeftOffset, TopOffset);
-            }
+            _messageLabel.Text = message;
         }
 
         /// <summary>
@@ -512,17 +468,22 @@ namespace StS2AP.UI
             _bubblePanel.AddChild(textContainer);
 
             // Message label using MegaRichTextLabel (the in-game rich text label with effects support)
-            _messageLabel = new MegaRichTextLabel();
-            _messageLabel.Name = "ArchipelagoNotificationLabel";
-            _messageLabel.CustomMinimumSize = new Vector2(
-                BubbleWidth - (BubblePadding * 2),
-                0
-            );
-            _messageLabel.SizeFlagsHorizontal = Control.SizeFlags.Fill;
-            _messageLabel.FitContent = true; // Allows height to grow with content
-            _messageLabel.AutowrapMode = TextServer.AutowrapMode.Word; // Word wrap for long text
-            _messageLabel.BbcodeEnabled = true; // BBCode must be enabled for MegaRichTextLabel effects (e.g. [sine]) to work
-            _messageLabel.MouseFilter = Control.MouseFilterEnum.Ignore;
+            // MegaRichTextLabel defaults to AutoSizeEnabled=true so explicitly set it to false.
+            // Notifications instead use a fixed font size and let FitContent grow only their height.
+            // MegaCrit's spaghetti code forces AutoSizeEnabled to be false only if you try assign it AFTER
+            // FitContent is true, very annoying.
+            _messageLabel = new MegaRichTextLabel
+            {
+                Name = "ArchipelagoNotificationLabel",
+                CustomMinimumSize = new Vector2(BubbleWidth - BubblePadding * 2, 0),
+                SizeFlagsHorizontal = Control.SizeFlags.Fill,
+                AutoSizeEnabled = false,
+                FitContent = true,
+                AutowrapMode = TextServer.AutowrapMode.Word,
+                BbcodeEnabled = true,
+                MouseFilter = Control.MouseFilterEnum.Ignore,
+            };
+            _messageLabel.AddThemeFontSizeOverride("normal_font_size", FontSize);
 
             /// MegaRichTextLabel._Ready() calls AssertThemeFontOverride with ThemeConstants.RichTextLabel.normalFont,
             /// which is the "normal_font" theme property on RichTextLabel.

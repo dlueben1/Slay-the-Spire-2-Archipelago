@@ -109,7 +109,7 @@ namespace StS2AP.Patches
                         {
                             Callable.From(
                                 () => NotificationUtility.ShowRawText(
-                                    "Game autosaved.",
+                                    "[font_size=60]Game autosaved.[/font_size]",
                                     timeout: 3.5,
                                     priority: NotificationUtility.NotificationPriority.High
                                 )
