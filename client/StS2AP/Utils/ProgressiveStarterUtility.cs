@@ -130,16 +130,32 @@ namespace StS2AP.Utils
                     return;
 
                 if (ArchipelagoClient.Settings?.ProgressiveStarterCard == true)
-                    await ReconcileCardAsync(player);
+                {
+                    try
+                    {
+                        await ReconcileCardAsync(player);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogUtility.Error(
+                            $"Failed to reconcile progressive starter card for {player.Character.Id.Entry}: {ex}"
+                        );
+                    }
+                }
 
                 if (ArchipelagoClient.Settings?.ProgressiveStarterRelic == true)
-                    await ReconcileRelicAsync(player);
-            }
-            catch (Exception ex)
-            {
-                LogUtility.Error(
-                    $"Failed to reconcile progressive starters for {player.Character.Id.Entry}: {ex}"
-                );
+                {
+                    try
+                    {
+                        await ReconcileRelicAsync(player);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogUtility.Error(
+                            $"Failed to reconcile progressive starter relic for {player.Character.Id.Entry}: {ex}"
+                        );
+                    }
+                }
             }
             finally
             {
