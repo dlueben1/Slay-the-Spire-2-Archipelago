@@ -14,7 +14,6 @@ using StS2AP.UI;
 using StS2AP.Utils;
 using STS2RitsuLib;
 using STS2RitsuLib.Data;
-using static StS2AP.Data.CharTable;
 using static StS2AP.Data.ItemTable;
 
 namespace StS2AP
@@ -129,6 +128,68 @@ namespace StS2AP
         /// Spinlock for processing incoming items to ensure that we don't have multiple threads trying to process items at the same time
         /// </summary>
         private static readonly object _itemLock = new();
+
+        // RitsuLib polls top-bar counts every frame. Cache the derived reward count and only
+        // re-enumerate item history when one of its inexpensive inputs changes.
+        private static ArchipelagoProgress? _rewardCountProgress;
+        private static long? _rewardCountCharacterOffset;
+        private static int _rewardCountReceivedItems = -1;
+        private static int _rewardCountUsedItems = -1;
+        private static int _rewardCountGoldRemaining = int.MinValue;
+        private static int _cachedAvailableRewardCount;
+
+        /// <summary>
+        /// Safely reads whether a character has enough of the requested progressive campfire item
+        /// for the supplied one-based Act. Incoming AP items may be processed off the Godot main
+        /// thread, so top-bar UI reads share the item-processing lock.
+        /// TODO: @Platando: if/once there's clear separation between consumption and producing:
+        /// this lock will stay here but most likely can be removed later
+        /// </summary>
+        internal static bool HasProgressiveCampfireAccess(long characterOffset, int act, bool smith)
+        {
+            lock (_itemLock)
+            {
+                var source = smith ? Progress.ProgressiveSmiths : Progress.ProgressiveRests;
+                return source.TryGetValue(characterOffset, out var maxAct) && maxAct >= act;
+            }
+        }
+
+        /// <summary>
+        /// Returns the number shown on the RitsuLib Archipelago Rewards button. RitsuLib polls
+        /// this from the Godot main thread while incoming items may be processed in the background.
+        /// @Platando same with this stuff as above, lock can probably be removed in the future
+        /// </summary>
+        internal static int GetAvailableRewardCount()
+        {
+            lock (_itemLock)
+            {
+                long? characterOffset = GameUtility.CurrentConfig?.CharOffset;
+                int receivedItems = Progress.AllReceivedItems.Count;
+                int usedItems = Progress.UsedItems.Count;
+                int goldRemaining = Progress.GoldRemaining;
+
+                if (ReferenceEquals(_rewardCountProgress, Progress) &&
+                    _rewardCountCharacterOffset == characterOffset &&
+                    _rewardCountReceivedItems == receivedItems &&
+                    _rewardCountUsedItems == usedItems &&
+                    _rewardCountGoldRemaining == goldRemaining)
+                {
+                    return _cachedAvailableRewardCount;
+                }
+
+                int count = Progress.UnusedItemCount;
+                if (goldRemaining > 0)
+                    count++;
+
+                _rewardCountProgress = Progress;
+                _rewardCountCharacterOffset = characterOffset;
+                _rewardCountReceivedItems = receivedItems;
+                _rewardCountUsedItems = usedItems;
+                _rewardCountGoldRemaining = goldRemaining;
+                _cachedAvailableRewardCount = count;
+                return _cachedAvailableRewardCount;
+            }
+        }
 
         /// <summary>
         /// Fires when the connection state changes
@@ -712,7 +773,7 @@ namespace StS2AP
         /// </summary>
         /// <param name="item">Received Item</param>
         /// <param name="index">The index of the item in the Archipelago Multiworld</param>
-        private static void ProcessItem(ItemInfo item, int index, bool refresh = true)
+        private static void ProcessItem(ItemInfo item, int index)
         {
             // Log the item
             LogUtility.Success(
@@ -725,8 +786,6 @@ namespace StS2AP
             if (item.ItemId < 10000)
             {
                 HandleUniversalItem(item, index);
-                if (refresh)
-                    ArchipelagoTopBarUI.RefreshCount();
                 return;
             }
 
@@ -892,11 +951,6 @@ namespace StS2AP
                 }
             }
 
-            if (refresh)
-            {
-                // Refresh the unused item count
-                ArchipelagoTopBarUI.RefreshCount();
-            }
         }
 
         /// <summary>
@@ -983,7 +1037,7 @@ namespace StS2AP
                 ItemInfo info = ArchipelagoClient.Session.Items.AllItemsReceived[i];
 
                 // i+1 because the index from multiclient .net is essentially 1 based, not 0
-                ProcessItem(info, i + 1, false);
+                ProcessItem(info, i + 1);
             }
         }
 

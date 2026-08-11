@@ -1002,8 +1002,6 @@ namespace StS2AP.UI
                         group.QueueFree();
                         _remainingRewards--;
                         UpdateProceedButton();
-                        ArchipelagoTopBarUI.SetCount(ArchipelagoClient.Progress.UnusedItemCount);
-
                         if (_remainingRewards <= 0)
                             Hide();
                     }).CallDeferred();
@@ -1261,7 +1259,6 @@ namespace StS2AP.UI
                                 btn.QueueFree();
                                 _remainingRewards--;
                                 UpdateProceedButton();
-                                ArchipelagoTopBarUI.SetCount(ArchipelagoClient.Progress.UnusedItemCount);
                                 if (_remainingRewards <= 0)
                                     Hide();
                             }
@@ -1281,8 +1278,6 @@ namespace StS2AP.UI
                     btn.QueueFree();
                     _remainingRewards--;
                     UpdateProceedButton();
-                    ArchipelagoTopBarUI.RefreshCount();
-
                     // Auto-hide once all rewards are dismissed
                     if (_remainingRewards <= 0)
                         Hide();

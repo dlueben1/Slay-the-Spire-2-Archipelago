@@ -64,9 +64,6 @@ namespace StS2AP.Patches
             [HarmonyPostfix]
             public static void Postfix(IRunState? runState, bool isRestoringRoomStackBase)
             {
-                // Force a Refresh of the Archipelago Unused Item Count, for run start sync issues.
-                ArchipelagoTopBarUI.RefreshCount();
-
                 // Attempt to send a check for the current room we're on
                 if(ArchipelagoClient.Settings.Floorsanity)
                 {

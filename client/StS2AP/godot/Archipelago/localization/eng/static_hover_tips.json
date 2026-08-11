@@ -1,6 +1,6 @@
 {
-  "AP_BTN.title": "Archipelago Rewards",
-  "AP_BTN.description": "Claim the rewards that have been sent to you from the Multiworld! The items refresh on each new run.",
+  "ARCHIPELAGO_TOPBARBUTTON_REWARDS.title": "Archipelago Rewards",
+  "ARCHIPELAGO_TOPBARBUTTON_REWARDS.description": "Claim the rewards that have been sent to you from the Multiworld! The items refresh on each new run.",
   "AP_REWARD_CARD_CHECKS.title": "Card Checks",
   "AP_REWARD_CARD_CHECKS.description": "The number of AP Checks found that replaced Card Rewards",
   "AP_REWARD_RARE_CARD_CHECKS.title": "Rare Card Checks",
@@ -40,5 +40,9 @@
   "AP_REWARD_PROGRESSIVE_STARTER_CARD.title": "Progressive Starter Card",
   "AP_REWARD_PROGRESSIVE_STARTER_CARD.description": "The number of Progressive Starter Card items received for this character. For supported characters: none, the normal starter card, then its Archaic Tooth transformation.",
   "AP_REWARD_PROGRESSIVE_STARTER_RELIC.title": "Progressive Starter Relic",
-  "AP_REWARD_PROGRESSIVE_STARTER_RELIC.description": "The number of Progressive Starter Relic items received for this character. For supported characters: none, the normal starter relic, then its Touch of Orobas refinement."
+  "AP_REWARD_PROGRESSIVE_STARTER_RELIC.description": "The number of Progressive Starter Relic items received for this character. For supported characters: none, the normal starter relic, then its Touch of Orobas refinement.",
+  "ARCHIPELAGO_TOPBARBUTTON_PROGRESSIVE_REST.title": "Rest Availability",
+  "ARCHIPELAGO_TOPBARBUTTON_PROGRESSIVE_REST.description": "Shows whether Rest is available in the current Act. A green check means enabled; a red X means you still need this Act's Progressive Rest. Rest is always enabled when Campfire Sanity is off.",
+  "ARCHIPELAGO_TOPBARBUTTON_PROGRESSIVE_SMITH.title": "Smith Availability",
+  "ARCHIPELAGO_TOPBARBUTTON_PROGRESSIVE_SMITH.description": "Shows whether Smith is available in the current Act. A green check means enabled; a red X means you still need this Act's Progressive Smith. Smith is always enabled when Campfire Sanity is off."
 }
