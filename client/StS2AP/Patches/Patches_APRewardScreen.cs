@@ -8,9 +8,9 @@ using StS2AP.UI;
 namespace StS2AP.Patches
 {
     /// <summary>
-    /// Keeps the AP reward overlay chain active when the map is also open. The
-    /// base game normally gives the map priority over every overlay, which
-    /// disables overlay focus and input even if an overlay is still visible.
+    /// Keeps the AP reward overlay active when the map is also open. The base
+    /// game normally gives the map priority over every overlay, which disables
+    /// overlay focus and input even if an overlay is still visible.
     /// </summary>
     [HarmonyPatch(typeof(ActiveScreenContext), nameof(ActiveScreenContext.GetCurrentScreen))]
     public static class PreferAPRewardScreenOverMap
@@ -37,7 +37,14 @@ namespace StS2AP.Patches
         [HarmonyPostfix]
         public static void Postfix()
         {
-            if (ArchipelagoRewardUI.IsOpen)
+            // If we're not not restoring the map behind rewards then this is a case
+            // of you have the AP reward menu open but you hit the map button
+            // so you close the menu
+            // If we're restoring the map behind the rewards then this means we temporarily closed the map
+            // to do the card reward shenanigans. In this case we actually want to return back to the AP menu
+            // cus that was the thing before opening the card reward.
+            if (ArchipelagoRewardUI.IsOpen &&
+                !ArchipelagoRewardUI.IsRestoringMapBehindRewards)
             {
                 ArchipelagoRewardUI.Hide();
             }

@@ -361,11 +361,40 @@ namespace StS2AP.Utils
                 // CardReward.OnSelect may replace the selected card while adding it to the deck
                 // (for example through an Egg relic), so identify the actual resulting deck card.
                 var deckCardsBeforeSelection = player.Deck.Cards.ToHashSet();
-                
+
+                // The base game gives the map priority over every overlay. A native card picker
+                // pushed while the map is open therefore exists but cannot receive focus/input.
+                // Temporarily return to the current room and remember the map/AP-menu state.
+                // Very important fact, the map is all powerful, believe me I tried everything
+                // All hail the map for it is too powerful and conusmes plebian card rewards.
+                // Essentially: Card rewards have to be chosen in a 'room' and can't be in the map
+                // due to the aformentioned map taking priority. 
+                var mapScreen = NMapScreen.Instance;
+                var restoreMapBehindRewards =
+                    ArchipelagoRewardUI.IsOpen && mapScreen?.IsOpen == true;
+
+                if (restoreMapBehindRewards)
+                {
+                    LogUtility.Debug("Temporarily closing map for Archipelago card selection");
+                    mapScreen!.Close(animateOut: false);
+                }
+
                 // well the decompiled code say we should probably not use this but it seems to work well for our
                 // use case. this replaces the manual card counting we were doing for relics such as pael's wing
                 // but this may impact how easy it is to port to multiplayer
-                bool rewardConsumed = await reward.SelectUnsynchronized();
+                bool rewardConsumed;
+                try
+                {
+                    rewardConsumed = await reward.SelectUnsynchronized();
+                }
+                finally
+                {
+                    if (restoreMapBehindRewards)
+                    {
+                        ArchipelagoRewardUI.RestoreMapBehindRewards(mapScreen!);
+                    }
+                }
+
                 var selectedCards = player.Deck.Cards
                     .Where(card => !deckCardsBeforeSelection.Contains(card))
                     .ToList();
