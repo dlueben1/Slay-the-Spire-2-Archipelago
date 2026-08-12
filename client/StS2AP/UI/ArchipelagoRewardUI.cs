@@ -9,6 +9,7 @@ using MegaCrit.Sts2.Core.Nodes.HoverTips;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Screens;
+using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
 using MegaCrit.Sts2.Core.Nodes.Screens.Capstones;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
@@ -24,6 +25,7 @@ using ItemInfo = Archipelago.MultiClient.Net.Models.ItemInfo;
 using MegaCrit.Sts2.Core.Entities.Multiplayer;
 using StS2AP.Models;
 using System.Reflection;
+using MegaCrit.Sts2.Core.Nodes;
 
 namespace StS2AP.UI
 {
@@ -191,6 +193,8 @@ namespace StS2AP.UI
         private static readonly PropertyInfo? ChainImagePathProperty =
             AccessTools.Property(typeof(NLinkedRewardSet), "ChainImagePath");
         private static ReturnDestination _returnDestination;
+        private static NCardRewardSelectionScreen? _ownedCardPicker;
+        private static bool _ownedCardPickerSkipRequested;
 
         // UI resource paths sourced from rewards_screen.tscn
         private const string PanelPath   = "res://images/ui/reward_screen/reward_panel.png";
@@ -268,15 +272,14 @@ namespace StS2AP.UI
         public static bool IsOpen => _rootPanel != null && IsInstanceValid(_rootPanel) && _rootPanel.IsInsideTree();
 
         /// <summary>
-        /// True when AP itself is the visible top overlay. A native picker above AP
-        /// makes AP button/hotkey presses a no-op until that picker is resolved.
+        /// True when AP itself is the visible top overlay.
         /// </summary>
         internal static bool IsActive =>
             IsOpen && ActiveScreenContext.Instance.IsCurrent(_rootPanel);
 
         /// <summary>
-        /// Toggles AP rewards only when AP is closed or is itself the active overlay.
-        /// Removing AP from beneath an awaiting native picker would strand its task.
+        /// Toggles AP rewards. When the exact card picker launched by AP is active,
+        /// the same request invokes that picker's native Skip action instead.
         /// </summary>
         public static void Toggle()
         {
@@ -289,11 +292,11 @@ namespace StS2AP.UI
             if (IsActive)
             {
                 Hide();
+                return;
             }
-            else
+
+            if (!TrySkipOwnedCardPicker())
             {
-                // This case occurs like when you open a card reward within the AP menu
-                // In this case we do nothing so the user must either pick a reward or skip.
                 LogUtility.Debug("Ignoring AP reward toggle while a nested overlay is active");
             }
         }
@@ -344,7 +347,7 @@ namespace StS2AP.UI
                     ItemName    = "Card Reward",
                     SenderName  = "TestPlayer",
                     IconPath    = IconCard,
-                    GrantAction = () => GameUtility.GrantCardReward(index: -1, rare: false)
+                    GrantAction = () => GrantAPCardReward(index: -1, rare: false)
                 },
             };
             Callable.From(() => ShowRewards(testRewards)).CallDeferred();
@@ -421,7 +424,7 @@ namespace StS2AP.UI
                 {
                     bool isRare = rawId == APItem.RareCardReward;
                     int itemIndex = i.Index;
-                    data.GrantAction = async () => await GameUtility.GrantCardReward(itemIndex, rare: isRare);
+                    data.GrantAction = () => GrantAPCardReward(itemIndex, rare: isRare);
                 }
 
                 if(rawId == APItem.Potion)
@@ -602,11 +605,94 @@ namespace StS2AP.UI
             _remainingRewards = 0;
             _isClosing        = false;
             _returnDestination = ReturnDestination.Room;
+            _ownedCardPicker = null;
+            _ownedCardPickerSkipRequested = false;
         }
 
         #endregion
 
         #region Navigation Coordination
+
+        /// <summary>
+        /// Runs the native card reward flow while retaining the exact picker instance
+        /// created by this AP action. This prevents an AP toggle from ever skipping a
+        /// normal combat or treasure card reward.
+        /// </summary>
+        private static async Task<bool> GrantAPCardReward(int index, bool rare)
+        {
+            var selectionTask = GameUtility.GrantCardReward(index, rare);
+            var picker = NOverlayStack.Instance?.Peek() as NCardRewardSelectionScreen;
+
+            if (picker == null)
+            {
+                LogUtility.Warn("AP card reward did not expose its native picker for navigation ownership");
+            }
+            else
+            {
+                _ownedCardPicker = picker;
+                _ownedCardPickerSkipRequested = false;
+            }
+
+            try
+            {
+                return await selectionTask;
+            }
+            finally
+            {
+                if (ReferenceEquals(_ownedCardPicker, picker))
+                {
+                    _ownedCardPicker = null;
+                    _ownedCardPickerSkipRequested = false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Treats an AP toggle as the native Skip button only for the exact active
+        /// picker launched by <see cref="GrantAPCardReward"/>.
+        /// </summary>
+        private static bool TrySkipOwnedCardPicker()
+        {
+            var picker = _ownedCardPicker;
+            if (picker == null ||
+                !GodotObject.IsInstanceValid(picker) ||
+                !ActiveScreenContext.Instance.IsCurrent(picker))
+            {
+                return false;
+            }
+
+            if (_ownedCardPickerSkipRequested)
+            {
+                return true;
+            }
+
+            // CardRewardAlternative.Generate() inserts the native Skip alternative
+            // first when CanSkip is true. AP card rewards retain that default.
+            var alternatives = picker.GetNodeOrNull<Control>("UI/RewardAlternatives");
+            var skipButton = alternatives?
+                .GetChildren()
+                .OfType<NCardRewardAlternativeButton>()
+                .FirstOrDefault();
+            if (skipButton == null)
+            {
+                LogUtility.Warn("Could not find the native Skip button for the AP card picker");
+                return false;
+            }
+
+            _ownedCardPickerSkipRequested = true;
+            try
+            {
+                LogUtility.Debug("AP reward toggle invoked the owned card picker's native Skip action");
+                skipButton.ForceClick();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _ownedCardPickerSkipRequested = false;
+                LogUtility.Warn($"Failed to skip the AP card picker: {ex.Message}");
+                return false;
+            }
+        }
 
         /// <summary>
         /// Returns to a room before AP is pushed. Map and capstone screens outrank
