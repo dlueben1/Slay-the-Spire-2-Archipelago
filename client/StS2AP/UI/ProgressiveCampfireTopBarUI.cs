@@ -41,6 +41,8 @@ public abstract class ProgressiveCampfireTopBarHandler(bool smith) : IModTopBarB
     public int GetCount(ModTopBarButtonContext ctx) => -1;
 }
 
+// RitsuLib qualifies owned button stems with the registered mod ID, so these buttons'
+// static_hover_tips keys must use ARCHIPELAGO_TOPBARBUTTON_*, not an AP prefix.
 [RegisterOwnedTopBarButton(
     "progressive_rest",
     IconPath = "res://images/relics/regal_pillow.png",

@@ -10,6 +10,8 @@ namespace StS2AP.UI;
 /// count-badge rendering, and hover/click/open tweens; this handler supplies AP behavior.
 /// ButtonOrder, lower number = closer to BaseDeck
 /// </summary>
+// RitsuLib qualifies owned button stems with the registered mod ID, so this button's
+// static_hover_tips keys must use ARCHIPELAGO_TOPBARBUTTON_REWARDS, not an AP prefix.
 [RegisterOwnedTopBarButton(
     "rewards",
     IconPath = "res://images/APIcon.png",
