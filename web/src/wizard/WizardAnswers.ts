@@ -290,7 +290,7 @@ export function createDefaultWizardAnswers(
       individualAscensions,
       selectionMode: "all",
       randomCharacterCount: 1,
-      availability: "all",
+      availability: "random",
       startingCharacter: selectedCharacters[0] ?? null,
       goal: "all",
     },
@@ -303,10 +303,11 @@ export function createDefaultWizardAnswers(
     },
     checksAndRewards: {
       ancients: {
-        relicLocation: getChoiceDefault(catalog, ANCIENT_OPTION_KEYS.relicLocation, [
-          "start_of_act",
-          "anytime",
-        ]),
+        relicLocation: getChoiceDefault(
+          catalog,
+          ANCIENT_OPTION_KEYS.relicLocation,
+          ["start_of_act", "anytime"],
+        ),
         relicPool: getChoiceDefault(catalog, ANCIENT_OPTION_KEYS.relicPool, [
           "balanced",
           "chaos",
@@ -357,10 +358,11 @@ export function createDefaultWizardAnswers(
         catalog,
         PROGRESSION_OPTION_KEYS.progressionBalancing,
       ),
-      accessibility: getChoiceDefault(catalog, PROGRESSION_OPTION_KEYS.accessibility, [
-        "full",
-        "minimal",
-      ]),
+      accessibility: getChoiceDefault(
+        catalog,
+        PROGRESSION_OPTION_KEYS.accessibility,
+        ["full", "minimal"],
+      ),
     },
     deathLink: {
       enabled: getBooleanDefault(catalog, DEATH_LINK_OPTION_KEYS.enabled),
