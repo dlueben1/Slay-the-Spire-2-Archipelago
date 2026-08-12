@@ -111,7 +111,8 @@ namespace StS2AP.Patches
                                 () => NotificationUtility.ShowRawText(
                                     "[font_size=80]Game autosaved.[/font_size]",
                                     timeout: 3.5,
-                                    priority: NotificationUtility.NotificationPriority.High
+                                    priority: NotificationUtility.NotificationPriority.High,
+                                    includeInDevConsole: false
                                 )
                             ).CallDeferred();
                         }

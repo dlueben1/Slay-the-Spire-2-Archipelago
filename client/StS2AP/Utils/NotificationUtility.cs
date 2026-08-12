@@ -81,7 +81,8 @@ namespace StS2AP.Utils
             bool devConsoleOnly = false,
             double timeout = 3.0,
             bool forceIntoDevConsole = false,
-            NotificationPriority priority = NotificationPriority.Normal
+            NotificationPriority priority = NotificationPriority.Normal,
+            bool includeInDevConsole = true
         )
         {
             LogUtility.Info($"Attempting to enqueue notification {message} {type}");
@@ -100,7 +101,10 @@ namespace StS2AP.Utils
                     _queue.Enqueue(notification);
                 }
             }
-            _devQueue.Enqueue(notification);
+            if (includeInDevConsole)
+            {
+                _devQueue.Enqueue(notification);
+            }
             LogUtility.Info($"Notification queued ({type}): {message}");
         }
 
@@ -351,14 +355,16 @@ namespace StS2AP.Utils
         public static void ShowRawText(
             string msg,
             double timeout = 3.0,
-            NotificationPriority priority = NotificationPriority.Normal
+            NotificationPriority priority = NotificationPriority.Normal,
+            bool includeInDevConsole = true
         )
         {
             EnqueueNotification(
                 msg,
                 NotificationType.Info,
                 timeout: timeout,
-                priority: priority
+                priority: priority,
+                includeInDevConsole: includeInDevConsole
             );
         }
 
