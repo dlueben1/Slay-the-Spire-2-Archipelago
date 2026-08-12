@@ -13,21 +13,14 @@ namespace StS2AP.UI;
 /// It's probably overkill to use a TopBarButton but it also handles all the patching and ordering and automatic
 /// positioning for us so I think it's more ergonomic
 /// </summary>
-public abstract class ProgressiveCampfireTopBarHandler : IModTopBarButtonHandler
+public abstract class ProgressiveCampfireTopBarHandler(bool smith) : IModTopBarButtonHandler
 {
-    private readonly bool _smith;
-
-    protected ProgressiveCampfireTopBarHandler(bool smith)
-    {
-        _smith = smith;
-    }
-
     /// <summary>The indicators deliberately have no click action.</summary>
     public void OnClick(ModTopBarButtonContext ctx) { }
 
     public bool IsVisible(ModTopBarButtonContext ctx)
     {
-        if (ctx.Player == null || ArchipelagoClient.Settings == null)
+        if (ctx.Player == null)
             return false;
 
         ArchipelagoSettings settings = ArchipelagoClient.Settings;
@@ -37,7 +30,7 @@ public abstract class ProgressiveCampfireTopBarHandler : IModTopBarButtonHandler
         // Rest/Smith access treats any Act after Act 3 as Act 3, matching the rest-site patch.
         int act = Math.Min(ctx.Player.RunState.CurrentActIndex + 1, 3);
         bool enabled = !settings.CampfireSanity ||
-            ArchipelagoClient.HasProgressiveCampfireAccess(character.CharOffset, act, _smith);
+            ArchipelagoClient.HasProgressiveCampfireAccess(character.CharOffset, act, smith);
 
         ProgressiveCampfireTopBarUI.UpdateBadge(ctx.Button, enabled);
         return true;
@@ -52,19 +45,13 @@ public abstract class ProgressiveCampfireTopBarHandler : IModTopBarButtonHandler
     "progressive_rest",
     IconPath = "res://images/relics/regal_pillow.png",
     ButtonOrder = 1)]
-public sealed class ProgressiveRestTopBarHandler : ProgressiveCampfireTopBarHandler
-{
-    public ProgressiveRestTopBarHandler() : base(smith: false) { }
-}
+public sealed class ProgressiveRestTopBarHandler() : ProgressiveCampfireTopBarHandler(smith: false);
 
 [RegisterOwnedTopBarButton(
     "progressive_smith",
     IconPath = "res://images/relics/whetstone.png",
     ButtonOrder = 2)]
-public sealed class ProgressiveSmithTopBarHandler : ProgressiveCampfireTopBarHandler
-{
-    public ProgressiveSmithTopBarHandler() : base(smith: true) { }
-}
+public sealed class ProgressiveSmithTopBarHandler() : ProgressiveCampfireTopBarHandler(smith: true);
 
 internal static class ProgressiveCampfireTopBarUI
 {

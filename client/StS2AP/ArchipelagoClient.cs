@@ -1050,10 +1050,10 @@ namespace StS2AP
         /// </summary>
         private static ArchipelagoSettings GetPlayerSettings()
         {
-            /// Use the SlotData that was already retrieved during login
-            /// instead of calling Session.DataStorage.GetSlotData() which performs
-            /// a synchronous network call that can deadlock/timeout when the websocket
-            /// thread is busy processing incoming item packets (e.g. on reconnect).
+            // Use the SlotData that was already retrieved during login
+            // instead of calling Session.DataStorage.GetSlotData() which performs
+            // a synchronous network call that can deadlock/timeout when the websocket
+            // thread is busy processing incoming item packets (e.g. on reconnect).
             var slotData = SlotData;
             if (slotData == null || slotData.Count == 0)
             {
@@ -1088,9 +1088,9 @@ namespace StS2AP
                 // Grab the total number of characters
                 settings.TotalCharacters = charsList.Count;
 
-                /// Go through each character and add it to the list of Characters in our settings.
-                /// Slot data from Archipelago.MultiClient.Net is deserialized via Newtonsoft.Json,
-                /// so each entry arrives as a JObject, NOT a Dictionary<string, object>.
+                // Go through each character and add it to the list of Characters in our settings.
+                // Slot data from Archipelago.MultiClient.Net is deserialized via Newtonsoft.Json,
+                // so each entry arrives as a JObject, NOT a Dictionary<string, object>.
                 foreach (var charData in charsList)
                 {
                     if (charData is JObject)

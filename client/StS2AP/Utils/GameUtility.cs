@@ -365,7 +365,6 @@ namespace StS2AP.Utils
                 // use case. this replaces the manual card counting we were doing for relics such as pael's wing
                 // but this may impact how easy it is to port to multiplayer
                 bool rewardConsumed = await reward.SelectUnsynchronized();
-
                 var selectedCards = player.Deck.Cards
                     .Where(card => !deckCardsBeforeSelection.Contains(card))
                     .ToList();

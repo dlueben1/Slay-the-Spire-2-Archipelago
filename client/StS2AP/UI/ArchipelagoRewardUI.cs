@@ -192,7 +192,11 @@ namespace StS2AP.UI
         private static bool _linkedRewardChainTextureResolved;
         private static readonly PropertyInfo? ChainImagePathProperty =
             AccessTools.Property(typeof(NLinkedRewardSet), "ChainImagePath");
+        
         private static ReturnDestination _returnDestination;
+        
+        // used to differentiate card rewards from AP rewards versus a natural card reward
+        // because they are treated differently due to skips not actually skipping AP stuff
         private static NCardRewardSelectionScreen? _ownedCardPicker;
         private static bool _ownedCardPickerSkipRequested;
 
@@ -424,6 +428,9 @@ namespace StS2AP.UI
                 {
                     bool isRare = rawId == APItem.RareCardReward;
                     int itemIndex = i.Index;
+                    // AP Card reward has special handling so we can remember that the card reward
+                    // is an AP one for UI purposes such as hitting AP button to act like a skip cus
+                    // I think its more intuitive, I'd rather not have dead buttons
                     data.GrantAction = () => GrantAPCardReward(itemIndex, rare: isRare);
                 }
 
@@ -695,12 +702,15 @@ namespace StS2AP.UI
         }
 
         /// <summary>
-        /// Returns to a room before AP is pushed. Map and capstone screens outrank
-        /// overlays in ActiveScreenContext, so leaving either open would make AP or
-        /// its nested native card picker visible but unable to receive input.
+        /// Returns to a room before AP menu is pushed aka opened.
+        /// Map and capstone screens outrank overlays in ActiveScreenContext,
+        /// so leaving either open would make AP or its nested
+        /// native card picker visible but unable to receive input.
         /// </summary>
         private static void PrepareForOpen()
         {
+            // Basically before opening the AP menu, try our best
+            // to find a suitable location to return to
             _returnDestination = ReturnDestination.Room;
 
             var capstoneContainer = NCapstoneContainer.Instance;
@@ -1307,7 +1317,7 @@ namespace StS2AP.UI
                                 // Reward consumption is authoritative even if this particular
                                 // menu instance was closed or rebuilt while the picker was open.
                                 data.OnClaimed?.Invoke();
-
+                                
                                 if (!GodotObject.IsInstanceValid(btn) ||
                                     owningPanel == null ||
                                     !GodotObject.IsInstanceValid(owningPanel) ||
