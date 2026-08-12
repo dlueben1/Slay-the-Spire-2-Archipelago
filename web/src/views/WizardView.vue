@@ -307,9 +307,9 @@ function next(): void {
       color="primary"
       variant="pill"
       size="lg"
-      class="mb-6"
+      class="sticky top-(--ui-header-height) z-40 mb-6"
       :ui="{
-        list: 'overflow-x-auto bg-black/45 ring-1 ring-amber-500/20 shadow-lg shadow-black/30',
+        list: 'overflow-x-auto bg-gray-900/90 ring-1 ring-amber-500/20 shadow-lg shadow-black/30',
         trigger: 'cursor-pointer data-[state=active]:font-bold',
       }"
       aria-label="Wizard progress"
