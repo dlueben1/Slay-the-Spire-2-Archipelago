@@ -27,12 +27,9 @@ public sealed class ArchipelagoRewardsTopBarHandler : IModTopBarButtonHandler
 
     public void OnClick(ModTopBarButtonContext ctx)
     {
-        LogUtility.Info("Opening Archipelago Rewards UI...");
+        LogUtility.Info("Toggling Archipelago Rewards UI...");
 
-        if (ArchipelagoRewardUI.IsOpen)
-            ArchipelagoRewardUI.Hide();
-        else
-            ArchipelagoRewardUI.ShowRewards();
+        ArchipelagoRewardUI.Toggle();
     }
 
     public bool IsVisible(ModTopBarButtonContext ctx)

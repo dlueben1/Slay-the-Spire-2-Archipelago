@@ -66,15 +66,7 @@ public static class ModSettingsRegistration
                 if (!GameUtility.IsInRun)
                     return;
 
-                // Toggle the Archipelago Reward UI
-                if (!ArchipelagoRewardUI.IsOpen)
-                {
-                    ArchipelagoRewardUI.ShowRewards();
-                }
-                else
-                {
-                    ArchipelagoRewardUI.Hide();
-                }
+                ArchipelagoRewardUI.Toggle();
             },
             new RuntimeHotkeyOptions
             {
