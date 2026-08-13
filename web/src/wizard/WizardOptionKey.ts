@@ -26,9 +26,6 @@ export const CHARACTER_OPTION_KEYS = [
 
 /** Generated option keys owned by the Gameplay Modifiers compiler. */
 export const RUN_OPTION_KEYS = {
-  // TODO: Restore or remove this key after collaborators confirm whether the
-  // removed Python option is returning in a future schema.
-  // relicChoiceCount: "relic_choice_count",
   relicRewardsAvailableAnytime: "relic_rewards_available_anytime",
   releaseOnVictory: "release_on_victory",
   seeded: "seeded",

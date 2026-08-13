@@ -4,8 +4,7 @@
  * The Gameplay Modifiers step groups settings that change how an individual climb is offered
  * and rewarded without changing the selected character roster. This compiler owns the
  * immediate Relic availability, victory release, and seeded-run fields. Generic
- * catalog validation still runs after every section. The removed relic-choice-count
- * mapping remains commented pending clarification from the Python-world maintainers.
+ * catalog validation still runs after every section.
  */
 
 import type { OptionCatalog } from "../../generated/optionCatalog";
@@ -35,9 +34,6 @@ export function applyRunOptions(
   }
 
   // Map semantic answers to the canonical generated fields owned by this section.
-  // TODO: Restore or remove this assignment after collaborators confirm whether
-  // `relic_choice_count` will return to the generated schema.
-  // target[RUN_OPTION_KEYS.relicChoiceCount] = answers.relicChoiceCount;
   target[RUN_OPTION_KEYS.relicRewardsAvailableAnytime] =
     answers.relicRewardsAvailableAnytime;
   target[RUN_OPTION_KEYS.releaseOnVictory] = answers.releaseOnVictory;

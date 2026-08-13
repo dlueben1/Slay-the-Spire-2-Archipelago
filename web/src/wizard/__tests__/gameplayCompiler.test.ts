@@ -74,9 +74,6 @@ function compilesConfiguredGameplaySections(): void {
   // Arrange non-default intent in each new player-facing answer section.
   const answers = createTestAnswers();
   answers.run = {
-    // TODO: Restore or remove this test value after collaborators confirm
-    // whether `relic_choice_count` will return to the generated schema.
-    // relicChoiceCount: 5,
     relicRewardsAvailableAnytime: 7,
     releaseOnVictory: false,
     seeded: true,
@@ -124,9 +121,6 @@ function compilesConfiguredGameplaySections(): void {
   // Assert representative output from every new section boundary.
   expect(options.ancient_relic_location).toBe("start_of_act");
   expect(options.ancient_relic_pool).toBe("true_chaos");
-  // TODO: Restore or remove this assertion after collaborators confirm whether
-  // `relic_choice_count` will return to the generated schema.
-  // expect(options.relic_choice_count).toBe(5);
   expect(options.relic_rewards_available_anytime).toBe(7);
   expect(options.release_on_victory).toBe(false);
   expect(options.neow_sanity).toBe(true);

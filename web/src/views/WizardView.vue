@@ -53,12 +53,6 @@ function getHasConfiguredCharacters(): boolean {
 
 const hasConfiguredCharacters = computed(getHasConfiguredCharacters);
 
-// TODO: Restore or remove this range after collaborators confirm whether
-// `relic_choice_count` will return to the generated schema.
-// const relicChoiceRange = getGeneratedNumberRange(
-//   optionCatalog,
-//   RUN_OPTION_KEYS.relicChoiceCount,
-// );
 const relicRewardsAvailableAnytimeRange = getGeneratedNumberRange(
   optionCatalog,
   RUN_OPTION_KEYS.relicRewardsAvailableAnytime,
@@ -338,10 +332,6 @@ function next(): void {
         v-model="answers.characters"
         :available-characters="availableCharacters"
       />
-      <!--
-        TODO: Restore or remove `:relic-choice-range="relicChoiceRange"`
-        after collaborators confirm whether `relic_choice_count` will return.
-      -->
       <RunSettingsStep
         v-else-if="activeStepId === 'run'"
         v-model="answers.run"

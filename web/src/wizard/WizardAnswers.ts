@@ -86,9 +86,6 @@ export interface FillerAnswers {
 }
 
 export interface RunAnswers {
-  // TODO: Restore or remove this answer after collaborators confirm whether
-  // `relic_choice_count` will return to the generated schema.
-  // relicChoiceCount: number;
   relicRewardsAvailableAnytime: number;
   releaseOnVictory: boolean;
   seeded: boolean;
@@ -307,12 +304,6 @@ export function createDefaultWizardAnswers(
       goal: "all",
     },
     run: {
-      // TODO: Restore or remove this initializer after collaborators confirm
-      // whether `relic_choice_count` will return to the generated schema.
-      // relicChoiceCount: getNumberDefault(
-      //   catalog,
-      //   RUN_OPTION_KEYS.relicChoiceCount,
-      // ),
       relicRewardsAvailableAnytime: getNumberDefault(
         catalog,
         RUN_OPTION_KEYS.relicRewardsAvailableAnytime,

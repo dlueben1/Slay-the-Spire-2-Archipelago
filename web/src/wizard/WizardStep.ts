@@ -173,17 +173,6 @@ export const runSetupStep: WizardStep = {
   description:
     "Configure your experience, how Archipelago Rewards are handled, and what gets randomized.",
   questions: [
-    /*
-     * TODO: Restore or remove this question after collaborators confirm whether
-     * `relic_choice_count` will return to the generated schema.
-    {
-      id: "relic-choice-count",
-      title:
-        "When claiming a Relic from the Multiworld, how many choices should you choose from?",
-      description:
-        "In the Vanilla game, the option for this is 1, but you can choose from up to 5 relics",
-    },
-    */
     {
       id: "relic-rewards-available-anytime",
       title: "How many Relic rewards should be available immediately?",

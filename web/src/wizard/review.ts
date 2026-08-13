@@ -237,9 +237,6 @@ export function summarizeFillerAnswers(answers: FillerAnswers): string {
  * @returns A compact paragraph describing Relic availability, victory, and seeds.
  */
 export function summarizeRunAnswers(answers: RunAnswers): string {
-  // TODO: Restore or remove this summary after collaborators confirm whether
-  // `relic_choice_count` will return to the generated schema.
-  // const relicChoices = `Archipelago Relic items offer ${countWord(answers.relicChoiceCount)} ${answers.relicChoiceCount === 1 ? "choice" : "choices"}.`;
   const immediateRelics =
     answers.relicRewardsAvailableAnytime === 0
       ? "Every Archipelago Relic item requires an earned in-run relic reward before it can be claimed."

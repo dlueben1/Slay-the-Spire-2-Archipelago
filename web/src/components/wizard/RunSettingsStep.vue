@@ -9,9 +9,6 @@ import WizardQuestion from "./WizardQuestion.vue";
 
 const props = defineProps<{
   modelValue: RunAnswers;
-  // TODO: Restore or remove this prop after collaborators confirm whether
-  // `relic_choice_count` will return to the generated schema.
-  // relicChoiceRange: GeneratedNumberRange;
   relicRewardsAvailableAnytimeRange: GeneratedNumberRange;
 }>();
 
@@ -42,19 +39,6 @@ function updateAnswers(patch: Partial<RunAnswers>): void {
   // Keep the parent view as the sole owner of persistent wizard state.
   emit("update:modelValue", nextAnswers);
 }
-
-/*
- * TODO: Restore or remove this handler after collaborators confirm whether
- * `relic_choice_count` will return to the generated schema.
- *
- * function setRelicChoiceCount(value: number | null | undefined): void {
- *   if (value === null || value === undefined) {
- *     return;
- *   }
- *
- *   updateAnswers({ relicChoiceCount: value });
- * }
- */
 
 /**
  * Updates how many received Relic items may be claimed without an in-run reward.
@@ -109,27 +93,6 @@ function setSeeded(value: unknown): void {
 
 <template>
   <div class="space-y-8">
-    <!--
-      TODO: Restore or remove this control after collaborators confirm whether
-      `relic_choice_count` will return to the generated schema.
-    <WizardQuestion :question="questionsById['relic-choice-count']!">
-      <template #help>
-        This affects Relic items received from Archipelago, not ordinary game or
-        mod relic rewards.
-      </template>
-
-      <UInputNumber
-        :model-value="modelValue.relicChoiceCount"
-        :min="relicChoiceRange.minimum"
-        :max="relicChoiceRange.maximum"
-        color="primary"
-        variant="outline"
-        class="wizard-number-input"
-        @update:model-value="setRelicChoiceCount"
-      />
-    </WizardQuestion>
-    -->
-
     <WizardQuestion :question="questionsById.seeded!">
       <UCheckbox
         :model-value="modelValue.seeded"
