@@ -9,13 +9,15 @@ import WizardQuestion from "./WizardQuestion.vue";
 
 const props = defineProps<{
   modelValue: RunAnswers;
-  relicChoiceRange: GeneratedNumberRange;
+  // TODO: Restore or remove this prop after collaborators confirm whether
+  // `relic_choice_count` will return to the generated schema.
+  // relicChoiceRange: GeneratedNumberRange;
+  relicRewardsAvailableAnytimeRange: GeneratedNumberRange;
 }>();
 
 const emit = defineEmits<{
   "update:modelValue": [value: RunAnswers];
 }>();
-
 
 // Resolve full question definitions by ID so flow definitions remain the copy source of truth.
 const questionsById: Record<string, WizardQuestionDefinition> = {};
@@ -41,20 +43,51 @@ function updateAnswers(patch: Partial<RunAnswers>): void {
   emit("update:modelValue", nextAnswers);
 }
 
+/*
+ * TODO: Restore or remove this handler after collaborators confirm whether
+ * `relic_choice_count` will return to the generated schema.
+ *
+ * function setRelicChoiceCount(value: number | null | undefined): void {
+ *   if (value === null || value === undefined) {
+ *     return;
+ *   }
+ *
+ *   updateAnswers({ relicChoiceCount: value });
+ * }
+ */
+
 /**
- * Updates the number of relics offered by an Archipelago Relic item.
+ * Updates how many received Relic items may be claimed without an in-run reward.
  *
  * @param value - Numeric value emitted by Nuxt UI's input-number control.
  * @returns Nothing; ignores the input's temporary empty state.
  */
-function setRelicChoiceCount(value: number | null | undefined): void {
+function setRelicRewardsAvailableAnytime(
+  value: number | null | undefined,
+): void {
   // Retain the last complete answer while the numeric control is temporarily empty.
   if (value === null || value === undefined) {
     return;
   }
 
-  // Range enforcement remains authoritative in generated-schema validation.
-  updateAnswers({ relicChoiceCount: value });
+  // Generated-schema validation remains authoritative for the inclusive 0-10 range.
+  updateAnswers({ relicRewardsAvailableAnytime: value });
+}
+
+/**
+ * Updates whether victory releases the winning character's remaining checks.
+ *
+ * @param value - Boolean-like value emitted by Nuxt UI's checkbox.
+ * @returns Nothing; ignores the checkbox's unsupported indeterminate state.
+ */
+function setReleaseOnVictory(value: unknown): void {
+  // This generated toggle accepts only a concrete true or false value.
+  if (typeof value !== "boolean") {
+    return;
+  }
+
+  // Persist the player-facing toggle for Gameplay Modifiers compilation.
+  updateAnswers({ releaseOnVictory: value });
 }
 
 /**
@@ -72,11 +105,13 @@ function setSeeded(value: unknown): void {
   // Persist the player-facing toggle for later section compilation.
   updateAnswers({ seeded: value });
 }
-
 </script>
 
 <template>
   <div class="space-y-8">
+    <!--
+      TODO: Restore or remove this control after collaborators confirm whether
+      `relic_choice_count` will return to the generated schema.
     <WizardQuestion :question="questionsById['relic-choice-count']!">
       <template #help>
         This affects Relic items received from Archipelago, not ordinary game or
@@ -93,6 +128,7 @@ function setSeeded(value: unknown): void {
         @update:model-value="setRelicChoiceCount"
       />
     </WizardQuestion>
+    -->
 
     <WizardQuestion :question="questionsById.seeded!">
       <UCheckbox
@@ -110,6 +146,41 @@ function setSeeded(value: unknown): void {
       />
     </WizardQuestion>
 
+    <WizardQuestion :question="questionsById['release-on-victory']!">
+      <UCheckbox
+        :model-value="modelValue.releaseOnVictory"
+        label="Release remaining checks on victory"
+        description="Release the winning character's unfinished checks as soon as their goal is recorded."
+        color="primary"
+        variant="card"
+        class="cursor-pointer"
+        :ui="{
+          label: 'cursor-pointer',
+          description: 'cursor-pointer',
+        }"
+        @update:model-value="setReleaseOnVictory"
+      />
+    </WizardQuestion>
+
+    <WizardQuestion
+      :question="questionsById['relic-rewards-available-anytime']!"
+    >
+      <template #help
+        >Note: Relics will always be shuffled into the Multiworld, this setting
+        just controls how many Relics can be claimed from the Loot Menu versus a
+        Vanilla location.</template
+      >
+
+      <UInputNumber
+        :model-value="modelValue.relicRewardsAvailableAnytime"
+        :min="relicRewardsAvailableAnytimeRange.minimum"
+        :max="relicRewardsAvailableAnytimeRange.maximum"
+        color="primary"
+        variant="outline"
+        class="wizard-number-input"
+        @update:model-value="setRelicRewardsAvailableAnytime"
+      />
+    </WizardQuestion>
   </div>
 </template>
 

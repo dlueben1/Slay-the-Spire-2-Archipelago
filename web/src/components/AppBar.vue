@@ -5,47 +5,59 @@ import type { NavigationMenuItem } from "@nuxt/ui";
 
 const route = useRoute();
 
-const items = computed<NavigationMenuItem[]>(() => [
-  {
-    label: "Home",
-    to: "/",
-    active: route.path === "/",
-  },
-  {
-    label: "Setup",
-    active: route.path.startsWith("/setup"),
-    class: "text-amber-500",
-    children: [
-      {
-        icon: "i-glyphs-signal-tower-bold",
-        label: "Hosting a Game",
-        description:
-          "Guide for hosting a game where one or more players are playing Slay the Spire II.",
-        to: "/setup/host",
-        active: route.path === "/setup/host",
-      },
-      {
-        icon: "i-glyphs-gamepad-bold",
-        label: "Joining a Game",
-        description:
-          "Guide for connecting Slay the Spire II to an Archipelago Multiworld game.",
+/**
+ * Builds the canonical navigation model shared by desktop and mobile menus.
+ *
+ * @returns Navigation links with active state derived from the current route.
+ * @remarks Add, remove, or rename application links only in this function. Both
+ * responsive presentations render this same model, so they cannot drift apart.
+ */
+function getNavigationItems(): NavigationMenuItem[] {
+  // Recompute route-dependent active and expanded state after every navigation.
+  return [
+    {
+      label: "Home",
+      to: "/",
+      active: route.path === "/",
+    },
+    {
+      label: "Setup",
+      active: route.path.startsWith("/setup"),
+      defaultOpen: route.path.startsWith("/setup"),
+      class: "text-amber-500",
+      children: [
+        {
+          icon: "i-glyphs-signal-tower-bold",
+          label: "Hosting a Game",
+          description:
+            "Guide for hosting a game where one or more players are playing Slay the Spire II.",
+          to: "/setup/host",
+          active: route.path === "/setup/host",
+        },
+        {
+          icon: "i-glyphs-gamepad-bold",
+          label: "Joining a Game",
+          description:
+            "Guide for connecting Slay the Spire II to an Archipelago Multiworld game.",
+          to: "/setup/client",
+          active: route.path === "/setup/client",
+        },
+      ],
+    },
+    {
+      label: "YAML Builder",
+      to: "/builder",
+      active: route.path.startsWith("/builder"),
+    },
+    // {
+    //   label: "Help",
+    //   to: "/help",
+    //   active: route.path.startsWith("/help"),
+    // },
+  ];
+}
 
-        to: "/setup/client",
-        active: route.path === "/setup/client",
-      },
-    ],
-  },
-  {
-    label: "YAML Builder",
-    to: "/builder",
-    active: route.path.startsWith("/builder"),
-  },
-  // {
-  //   label: "Help",
-  //   to: "/help",
-  //   active: route.path.startsWith("/help"),
-  // },
-]);
+const navigationItems = computed(getNavigationItems);
 </script>
 
 <template>
@@ -55,9 +67,9 @@ const items = computed<NavigationMenuItem[]>(() => [
     </template>
 
     <UNavigationMenu
-      :items="items"
+      :items="navigationItems"
       color="primary"
-      contentOrientation="vertical"
+      content-orientation="vertical"
       :ui="{
         childLinkLabel: 'font-medium',
         childLinkDescription: 'text-xs text-muted',
@@ -97,6 +109,21 @@ const items = computed<NavigationMenuItem[]>(() => [
           aria-label="Steam Workshop"
         />
       </UTooltip>
+    </template>
+
+    <template #body>
+      <UNavigationMenu
+        :items="navigationItems"
+        orientation="vertical"
+        color="primary"
+        class="w-full"
+        :ui="{
+          link: 'cursor-pointer',
+          childLink: 'cursor-pointer',
+          childLinkLabel: 'font-medium',
+          childLinkDescription: 'text-xs text-muted',
+        }"
+      />
     </template>
   </UHeader>
 </template>

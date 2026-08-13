@@ -7,6 +7,7 @@ import type {
   ChecksAndRewardsAnswers,
   FillerAnswers,
   ShopAnswers,
+  StartingEquipmentAnswers,
 } from "../../wizard/WizardAnswers";
 import type { GeneratedNumberRange } from "../../wizard/WizardOptionKey";
 import {
@@ -35,6 +36,29 @@ interface CheckToggleDefinition {
   label: string;
   description: string;
 }
+
+interface StartingEquipmentToggleDefinition {
+  key: keyof StartingEquipmentAnswers;
+  label: string;
+  description: string;
+}
+
+/** Player-facing rows for progressive starter equipment choices. */
+const startingEquipmentToggleDefinitions: readonly StartingEquipmentToggleDefinition[] =
+  [
+    {
+      key: "progressiveStarterCard",
+      label: "Progressive Starter Card",
+      description:
+        "Add two items per character that restore, then transform, their compatible special starter card(s). For example, the Ironclad would first unlock Bash, then transform it into Break.",
+    },
+    {
+      key: "progressiveStarterRelic",
+      label: "Progressive Starter Relic",
+      description:
+        "Add two items per character that restore, then upgrade, their compatible starter relic. For example, the Ironclad would first unlock Burning Blood, then upgrade it to Black Blood.",
+    },
+  ];
 
 const ancientLocationItems: RadioGroupItem[] = [
   {
@@ -159,8 +183,49 @@ function setCheckToggle(answerKey: keyof CheckAnswers, value: unknown): void {
     [answerKey]: value,
   };
 
+  // Progressive starter items cannot exist without Floor Check filler slots.
+  if (answerKey === "includeFloorChecks" && !value) {
+    updateAnswers({
+      checks,
+      startingEquipment: {
+        progressiveStarterCard: false,
+        progressiveStarterRelic: false,
+      },
+    });
+    return;
+  }
+
   // Emit player intent without exposing generated option names to the component.
   updateAnswers({ checks });
+}
+
+/**
+ * Updates one progressive Starting Equipment toggle.
+ *
+ * @param answerKey - Semantic Starting Equipment answer represented by the row.
+ * @param value - Boolean-like value emitted by Nuxt UI's checkbox.
+ * @returns Nothing; ignores indeterminate values and changes while Floor Checks are off.
+ */
+function setStartingEquipmentToggle(
+  answerKey: keyof StartingEquipmentAnswers,
+  value: unknown,
+): void {
+  // These options require Floor Checks and accept only concrete boolean values.
+  if (
+    typeof value !== "boolean" ||
+    !props.modelValue.checks.includeFloorChecks
+  ) {
+    return;
+  }
+
+  // Replace only the selected field in the nested Starting Equipment answer.
+  const startingEquipment = {
+    ...props.modelValue.startingEquipment,
+    [answerKey]: value,
+  };
+
+  // Keep the generated option translation out of the presentation component.
+  updateAnswers({ startingEquipment });
 }
 
 /** Updates one Ancient reward setting above the additional checks subsection. */
@@ -235,6 +300,44 @@ function setFillerAnswers(filler: FillerAnswers): void {
     />
 
     <section class="wizard-subsection border-t-0! pt-0!">
+      <div class="wizard-subsection__header">
+        <h3>Starting Equipment</h3>
+        <p>
+          Choose whether compatible starter cards and relics are restored and
+          upgraded through progressive Archipelago items.
+        </p>
+      </div>
+
+      <WizardQuestion :question="questionsById['starting-equipment']!">
+        <template v-if="!modelValue.checks.includeFloorChecks" #help>
+          Enable Floor Checks in the additional checks section below to use
+          progressive Starting Equipment.
+        </template>
+
+        <div class="wizard-toggle-grid">
+          <UCheckbox
+            v-for="definition in startingEquipmentToggleDefinitions"
+            :key="definition.key"
+            :model-value="modelValue.startingEquipment[definition.key]"
+            :label="definition.label"
+            :description="definition.description"
+            :disabled="!modelValue.checks.includeFloorChecks"
+            color="primary"
+            variant="card"
+            class="cursor-pointer"
+            :ui="{
+              label: 'cursor-pointer',
+              description: 'cursor-pointer',
+            }"
+            @update:model-value="
+              setStartingEquipmentToggle(definition.key, $event)
+            "
+          />
+        </div>
+      </WizardQuestion>
+    </section>
+
+    <section class="wizard-subsection">
       <div class="wizard-subsection__header">
         <h3>Ancients</h3>
         <p>

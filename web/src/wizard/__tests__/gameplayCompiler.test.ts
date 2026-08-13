@@ -18,6 +18,7 @@ import {
   PROGRESSION_OPTION_KEYS,
   RUN_OPTION_KEYS,
   SHOP_OPTION_KEYS,
+  STARTING_EQUIPMENT_OPTION_KEYS,
 } from "../WizardOptionKey";
 import {
   visibleCheckQuestionIds,
@@ -48,6 +49,7 @@ function compilesGeneratedGameplayDefaults(): void {
   const options = compileWizardAnswers(createTestAnswers(), optionCatalog);
   const optionKeys = [
     ...Object.values(RUN_OPTION_KEYS),
+    ...Object.values(STARTING_EQUIPMENT_OPTION_KEYS),
     ...Object.values(ANCIENT_OPTION_KEYS),
     ...Object.values(CHECK_OPTION_KEYS),
     ...Object.values(SHOP_OPTION_KEYS),
@@ -72,8 +74,16 @@ function compilesConfiguredGameplaySections(): void {
   // Arrange non-default intent in each new player-facing answer section.
   const answers = createTestAnswers();
   answers.run = {
-    relicChoiceCount: 5,
+    // TODO: Restore or remove this test value after collaborators confirm
+    // whether `relic_choice_count` will return to the generated schema.
+    // relicChoiceCount: 5,
+    relicRewardsAvailableAnytime: 7,
+    releaseOnVictory: false,
     seeded: true,
+  };
+  answers.checksAndRewards.startingEquipment = {
+    progressiveStarterCard: true,
+    progressiveStarterRelic: true,
   };
   answers.checksAndRewards.ancients = {
     relicLocation: "start_of_act",
@@ -81,7 +91,7 @@ function compilesConfiguredGameplaySections(): void {
   };
   answers.checksAndRewards.checks = {
     neowSanity: true,
-    includeFloorChecks: false,
+    includeFloorChecks: true,
     campfireSanity: true,
     goldSanity: true,
     potionSanity: true,
@@ -114,12 +124,18 @@ function compilesConfiguredGameplaySections(): void {
   // Assert representative output from every new section boundary.
   expect(options.ancient_relic_location).toBe("start_of_act");
   expect(options.ancient_relic_pool).toBe("true_chaos");
-  expect(options.relic_choice_count).toBe(5);
+  // TODO: Restore or remove this assertion after collaborators confirm whether
+  // `relic_choice_count` will return to the generated schema.
+  // expect(options.relic_choice_count).toBe(5);
+  expect(options.relic_rewards_available_anytime).toBe(7);
+  expect(options.release_on_victory).toBe(false);
   expect(options.neow_sanity).toBe(true);
   expect(options.seeded).toBe(true);
   expect(options.progression_balancing).toBe(99);
   expect(options.accessibility).toBe("minimal");
-  expect(options.include_floor_checks).toBe(false);
+  expect(options.include_floor_checks).toBe(true);
+  expect(options.progressive_starter_card).toBe(true);
+  expect(options.progressive_starter_relic).toBe(true);
   expect(options.campfire_sanity).toBe(true);
   expect(options.gold_sanity).toBe(true);
   expect(options.potion_sanity).toBe(true);
@@ -134,6 +150,26 @@ function compilesConfiguredGameplaySections(): void {
   expect(options.death_link).toBe(true);
   expect(options.enable_death_fragments).toBe(false);
   expect(options.death_link_damage_percent).toBe(37);
+}
+
+/**
+ * Verifies progressive Starting Equipment cannot outlive its Floor Checks budget.
+ *
+ * @returns Nothing; Vitest records assertion failures.
+ */
+function disablesStartingEquipmentWithoutFloorChecks(): void {
+  // Preserve deliberately stale enabled answers to exercise compiler normalization.
+  const answers = createTestAnswers();
+  answers.checksAndRewards.checks.includeFloorChecks = false;
+  answers.checksAndRewards.startingEquipment.progressiveStarterCard = true;
+  answers.checksAndRewards.startingEquipment.progressiveStarterRelic = true;
+
+  // Compile through the same boundary used by Review and YAML generation.
+  const options = compileWizardAnswers(answers, optionCatalog);
+
+  // Match Python generate_early behavior instead of emitting misleading YAML intent.
+  expect(options.progressive_starter_card).toBe(false);
+  expect(options.progressive_starter_relic).toBe(false);
 }
 
 /**
@@ -269,6 +305,7 @@ function revealsDependentGameplayQuestions(): void {
   // Defaults disable both sections, leaving only their controlling questions visible.
   const answers = createTestAnswers();
   expect(visibleCheckQuestionIds(answers)).toEqual([
+    "starting-equipment",
     "ancient-location",
     "ancient-pool",
     "check-types",
@@ -280,6 +317,7 @@ function revealsDependentGameplayQuestions(): void {
   answers.checksAndRewards.shop.enabled = true;
   answers.deathLink.enabled = true;
   expect(visibleCheckQuestionIds(answers)).toEqual([
+    "starting-equipment",
     "ancient-location",
     "ancient-pool",
     "check-types",
@@ -368,6 +406,10 @@ function registerGameplayCompilerTests(): void {
   it(
     "compiles configured gameplay sections",
     compilesConfiguredGameplaySections,
+  );
+  it(
+    "disables progressive Starting Equipment without Floor Checks",
+    disablesStartingEquipmentWithoutFloorChecks,
   );
   it("compiles lethal Death Link as 100% damage", compilesLethalDeathLinkMode);
   it(

@@ -53,9 +53,15 @@ function getHasConfiguredCharacters(): boolean {
 
 const hasConfiguredCharacters = computed(getHasConfiguredCharacters);
 
-const relicChoiceRange = getGeneratedNumberRange(
+// TODO: Restore or remove this range after collaborators confirm whether
+// `relic_choice_count` will return to the generated schema.
+// const relicChoiceRange = getGeneratedNumberRange(
+//   optionCatalog,
+//   RUN_OPTION_KEYS.relicChoiceCount,
+// );
+const relicRewardsAvailableAnytimeRange = getGeneratedNumberRange(
   optionCatalog,
-  RUN_OPTION_KEYS.relicChoiceCount,
+  RUN_OPTION_KEYS.relicRewardsAvailableAnytime,
 );
 const progressionBalancingRange = getGeneratedNumberRange(
   optionCatalog,
@@ -332,10 +338,16 @@ function next(): void {
         v-model="answers.characters"
         :available-characters="availableCharacters"
       />
+      <!--
+        TODO: Restore or remove `:relic-choice-range="relicChoiceRange"`
+        after collaborators confirm whether `relic_choice_count` will return.
+      -->
       <RunSettingsStep
         v-else-if="activeStepId === 'run'"
         v-model="answers.run"
-        :relic-choice-range="relicChoiceRange"
+        :relic-rewards-available-anytime-range="
+          relicRewardsAvailableAnytimeRange
+        "
       />
       <CheckSetupStep
         v-else-if="activeStepId === 'checks'"

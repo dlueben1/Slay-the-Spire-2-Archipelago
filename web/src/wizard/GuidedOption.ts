@@ -17,6 +17,7 @@ import {
   PROGRESSION_OPTION_KEYS,
   RUN_OPTION_KEYS,
   SHOP_OPTION_KEYS,
+  STARTING_EQUIPMENT_OPTION_KEYS,
 } from "./WizardOptionKey";
 
 /** Basic character keys omitted when the advanced dictionary is authoritative. */
@@ -42,6 +43,7 @@ export function getGuidedOptionKeys(): string[] {
   const optionKeys: string[] = [
     ...CHARACTER_OPTION_KEYS,
     ...Object.values(RUN_OPTION_KEYS),
+    ...Object.values(STARTING_EQUIPMENT_OPTION_KEYS),
     ...Object.values(ANCIENT_OPTION_KEYS),
     ...Object.values(CHECK_OPTION_KEYS),
     ...Object.values(SHOP_OPTION_KEYS),

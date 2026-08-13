@@ -173,12 +173,28 @@ export const runSetupStep: WizardStep = {
   description:
     "Configure your experience, how Archipelago Rewards are handled, and what gets randomized.",
   questions: [
+    /*
+     * TODO: Restore or remove this question after collaborators confirm whether
+     * `relic_choice_count` will return to the generated schema.
     {
       id: "relic-choice-count",
       title:
         "When claiming a Relic from the Multiworld, how many choices should you choose from?",
       description:
         "In the Vanilla game, the option for this is 1, but you can choose from up to 5 relics",
+    },
+    */
+    {
+      id: "relic-rewards-available-anytime",
+      title: "How many Relic rewards should be available immediately?",
+      description:
+        "This number controls how many Relic Rewards can be claimed in the Archipelago Loot menu at anytime (including the beginning of the run). Subsequent Relic Rewards must be found in their original locations in the Spire once unlocked.",
+    },
+    {
+      id: "release-on-victory",
+      title: "Should undiscovered checks be released when a character wins?",
+      description:
+        "When enabled, beating the final boss with a character releases any remaining checks they had not discovered.",
     },
     {
       id: "seeded",
@@ -195,6 +211,12 @@ export const checkSetupStep: WizardStep = {
   description:
     "Select what locations (checks) and items are enabled and available in your world.",
   questions: [
+    {
+      id: "starting-equipment",
+      title: "Which starting equipment should be progressive?",
+      description:
+        "These options require Floor Checks and add two progressive items per configured character.",
+    },
     {
       id: "ancient-location",
       title: "When should Progressive Ancient rewards be available?",

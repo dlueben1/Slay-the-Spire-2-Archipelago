@@ -4,11 +4,11 @@
   "sources": {
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "e4133bfea2fb9df59cb7af9975e0160b8eb175c2c351e2022aed7efde53951df"
+      "sha256": "d89be97401aaea2ea99d330ab9c3701c405684ef87b8981dc2f455a3ce21a8ad"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "70185af73afc6990c3beb2f8d694944c38eb9e5183dd50bf9e5d51fb323d152a"
+      "sha256": "d7711352fee671e710950a85266ea826c829f54b34357736108ec8890381ee6c"
     }
   },
   "option_order": [
@@ -38,7 +38,8 @@
     "ascension_down",
     "ancient_relic_location",
     "ancient_relic_pool",
-    "relic_choice_count",
+    "relic_rewards_available_anytime",
+    "release_on_victory",
     "shuffle_all_cards",
     "include_floor_checks",
     "one_gold_filler_weight",
@@ -58,6 +59,8 @@
     "post_combat_card_removal_filler_weight",
     "additional_card_reward_filler_weight",
     "neow_sanity",
+    "progressive_starter_card",
+    "progressive_starter_relic",
     "campfire_sanity",
     "gold_sanity",
     "potion_sanity",
@@ -88,7 +91,8 @@
       "option_keys": [
         "ancient_relic_location",
         "ancient_relic_pool",
-        "relic_choice_count"
+        "relic_rewards_available_anytime",
+        "release_on_victory"
       ],
       "start_collapsed": false,
       "source": "web_world"
@@ -111,6 +115,15 @@
         "death_link",
         "enable_death_fragments",
         "death_link_damage_percent"
+      ],
+      "start_collapsed": false,
+      "source": "web_world"
+    },
+    {
+      "name": "Progressive Starters",
+      "option_keys": [
+        "progressive_starter_card",
+        "progressive_starter_relic"
       ],
       "start_collapsed": false,
       "source": "web_world"
@@ -191,7 +204,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "archipelago_common",
       "minimum": 0,
@@ -216,7 +235,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "archipelago_common",
       "choices": [
@@ -263,7 +288,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "archipelago_common",
       "valid_keys_casefold": false,
@@ -283,7 +314,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "archipelago_common",
       "valid_keys_casefold": false,
@@ -303,7 +340,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "archipelago_common",
       "valid_keys_casefold": false,
@@ -324,7 +367,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "archipelago_common",
       "valid_keys_casefold": false,
@@ -344,7 +393,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "archipelago_common",
       "valid_keys_casefold": false,
@@ -364,7 +419,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "archipelago_common",
       "valid_keys_casefold": false,
@@ -384,7 +445,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "archipelago_common",
       "valid_keys_casefold": false,
@@ -404,7 +471,11 @@
       "visibility": {
         "name": "template|complex_ui|spoiler",
         "value": 13,
-        "flags": ["template", "complex_ui", "spoiler"]
+        "flags": [
+          "template",
+          "complex_ui",
+          "spoiler"
+        ]
       },
       "source": "archipelago_common",
       "valid_keys_casefold": false,
@@ -424,7 +495,10 @@
       "visibility": {
         "name": "template|spoiler",
         "value": 9,
-        "flags": ["template", "spoiler"]
+        "flags": [
+          "template",
+          "spoiler"
+        ]
       },
       "source": "archipelago_common",
       "supports_weighting": false,
@@ -442,7 +516,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -472,7 +552,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -502,7 +588,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "minimum": 0,
@@ -517,15 +609,31 @@
       "kind": "set",
       "display_name": "Characters",
       "description": "Enter the list of characters to play as.  Valid characters are:\n'Ironclad'\n'Silent'\n'Defect'\n'Regent'\n'Necrobinder'",
-      "default": ["Ironclad"],
-      "raw_default": ["Ironclad"],
+      "default": [
+        "Ironclad"
+      ],
+      "raw_default": [
+        "Ironclad"
+      ],
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
-      "valid_keys": ["Ironclad", "Silent", "Defect", "Regent", "Necrobinder"],
+      "valid_keys": [
+        "Ironclad",
+        "Silent",
+        "Defect",
+        "Regent",
+        "Necrobinder"
+      ],
       "valid_keys_casefold": false,
       "allow_custom_values": false,
       "supports_weighting": false,
@@ -543,7 +651,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "valid_keys_casefold": false,
@@ -563,7 +677,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "minimum": 0,
@@ -583,7 +703,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "minimum": 0,
@@ -603,7 +729,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -638,7 +770,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -684,7 +822,9 @@
       "visibility": {
         "name": "template",
         "value": 1,
-        "flags": ["template"]
+        "flags": [
+          "template"
+        ]
       },
       "source": "game",
       "choices": [
@@ -711,20 +851,26 @@
       "description": "The configuration for advanced characters.  Each character's options can be configured\nindependently of each other.  No validation is done on the character name, so use carefully.\nFormat is:\n    <char name>:\n        ascension:\n            - <string or number>\n        ascension_down:\n            - <string or number>\n\nIf using a modded character:\nEnter the internal ID of the character to use.\n\nIf you don't know the exact ID to enter with the mod installed go to\n`Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.\n\nIf the chosen character mod is not installed, checks will be sent when another character\nsends them.  If none of the chosen character mods are installed, you will be playing\na very boring Ironclad run.",
       "default": {
         "ironclad": {
-          "ascension": [1],
+          "ascension": [
+            1
+          ],
           "ascension_down": []
         }
       },
       "raw_default": {
         "ironclad": {
-          "ascension": [1],
+          "ascension": [
+            1
+          ],
           "ascension_down": []
         }
       },
       "visibility": {
         "name": "template",
         "value": 1,
-        "flags": ["template"]
+        "flags": [
+          "template"
+        ]
       },
       "source": "game",
       "has_validation_schema": true,
@@ -738,12 +884,22 @@
       "kind": "set",
       "display_name": "Ascension",
       "description": "What Ascensions do you wish to play with. Note that logic is written assuming ascension 1\nValid values are the numbers for the ascensions, and the names for the ascensions.  When a number is provided\nalone, all ascensions below that number will also be enabled.\n\nThe ascension names are as follows:\n- 'SwarmingElites'\n- 'WearyTraveler'\n- 'Poverty'\n- 'TightBelt'\n- \"AscenderBane\"\n- 'Inflation'\n- 'Scarcity'\n- 'ToughEnemies'\n- 'DeadlyEnemies'\n- 'DoubleBoss'",
-      "default": ["SwarmingElites"],
-      "raw_default": ["SwarmingElites"],
+      "default": [
+        "SwarmingElites"
+      ],
+      "raw_default": [
+        "SwarmingElites"
+      ],
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "valid_keys": [
@@ -785,7 +941,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "valid_keys": [
@@ -827,7 +989,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -857,7 +1025,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -880,23 +1054,65 @@
       "supports_weighting": true,
       "group": "Game Options"
     },
-    "relic_choice_count": {
-      "key": "relic_choice_count",
-      "class_name": "RelicChoiceCount",
+    "relic_rewards_available_anytime": {
+      "key": "relic_rewards_available_anytime",
+      "class_name": "RelicRewardsAvailableAnytime",
       "module": "worlds.spire2.options",
       "kind": "range",
-      "display_name": "Relic Choice Count",
-      "description": "How many relics you can choose from when claiming a Relic received from Archipelago.\n\nThis affects only Relic items received from Archipelago. Relics offered by the base game\nand other mods are unchanged.",
-      "default": 1,
+      "display_name": "Relic Rewards Available Anytime",
+      "description": "How many Relic items can be claimed before earning relic rewards in the run.\n\nThe client snapshots this value at run start. Later Relic items need a reward from an\nElite, treasure chest, or Black Star before they appear in the AP reward menu.",
+      "default": 2,
+      "raw_default": 2,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "minimum": 0,
+      "maximum": 10,
+      "supports_weighting": true,
+      "group": "Game Options"
+    },
+    "release_on_victory": {
+      "key": "release_on_victory",
+      "class_name": "ReleaseOnVictory",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Release Checks On Victory",
+      "description": "Release the winning character's remaining checks when their goal is recorded.",
+      "default": true,
       "raw_default": 1,
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
-      "minimum": 1,
-      "maximum": 5,
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
       "supports_weighting": true,
       "group": "Game Options"
     },
@@ -912,7 +1128,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -942,7 +1164,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -972,7 +1200,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1012,7 +1246,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1052,7 +1292,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1092,7 +1338,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1132,7 +1384,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1172,7 +1430,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1212,7 +1476,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1252,7 +1522,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1292,7 +1568,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1332,7 +1614,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1372,7 +1660,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1412,7 +1706,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1452,7 +1752,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1492,7 +1798,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1532,7 +1844,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1572,7 +1890,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1612,7 +1936,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1630,6 +1960,78 @@
       "supports_weighting": true,
       "group": "Other Game Options"
     },
+    "progressive_starter_card": {
+      "key": "progressive_starter_card",
+      "class_name": "ProgressiveStarterCard",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Progressive Starter Card",
+      "description": "Globally enables progressive special starter cards for every configured character.\n\nRequires Include Floor Checks. Each character gets two Progressive Starter Card items, which\nreplace two floor-check filler items. With none received, the character\nstarts without the special starter card that Archaic Tooth would transform (Bash, Neutralize,\nDualcast, Unleash, Falling Star, or a compatible modded equivalent). The first item restores\nthe normal card and the second grants Archaic Tooth so its normal effect performs the\ntransformation. Archaic Tooth is unavailable from Orobas while this option is enabled.\n\nCharacters without an Archaic Tooth transformation are left unchanged, although their two\nProgressive Starter Card items are still present in the multiworld.\n\nWARNING: This can make the early game significantly harder for some characters. Logic does not\naccount for the missing or upgraded starter card.",
+      "default": false,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Progressive Starters"
+    },
+    "progressive_starter_relic": {
+      "key": "progressive_starter_relic",
+      "class_name": "ProgressiveStarterRelic",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Progressive Starter Relic",
+      "description": "Globally enables progressive starter relics for every configured character.\n\nRequires Include Floor Checks. Each character gets two Progressive Starter Relic items, which\nreplace two floor-check filler items. With none received, the character\nstarts without the starter relic that Touch of Orobas would refine (such as Burning Blood, or a\ncompatible modded equivalent). The first item restores the normal relic and the second grants\nTouch of Orobas so its normal effect performs the refinement. Touch of Orobas is unavailable\nfrom Orobas while this option is enabled.\n\nCharacters without a Touch of Orobas refinement are left unchanged, although their two\nProgressive Starter Relic items are still present in the multiworld.\n\nWARNING: This can make the early game significantly harder for characters whose starting relic\nis central to their early power. Logic does not account for the missing or upgraded starter relic.",
+      "default": false,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Progressive Starters"
+    },
     "campfire_sanity": {
       "key": "campfire_sanity",
       "class_name": "CampfireSanity",
@@ -1642,7 +2044,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1672,7 +2080,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1702,7 +2116,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1732,7 +2152,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1762,7 +2188,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "minimum": 0,
@@ -1782,7 +2214,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "minimum": 0,
@@ -1802,7 +2240,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "minimum": 0,
@@ -1822,7 +2266,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "minimum": 0,
@@ -1842,7 +2292,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1872,7 +2328,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [
@@ -1912,7 +2374,13 @@
       "visibility": {
         "name": "all",
         "value": 15,
-        "flags": ["template", "simple_ui", "complex_ui", "spoiler", "all"]
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
       },
       "source": "game",
       "choices": [

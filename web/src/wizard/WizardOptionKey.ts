@@ -26,8 +26,18 @@ export const CHARACTER_OPTION_KEYS = [
 
 /** Generated option keys owned by the Gameplay Modifiers compiler. */
 export const RUN_OPTION_KEYS = {
-  relicChoiceCount: "relic_choice_count",
+  // TODO: Restore or remove this key after collaborators confirm whether the
+  // removed Python option is returning in a future schema.
+  // relicChoiceCount: "relic_choice_count",
+  relicRewardsAvailableAnytime: "relic_rewards_available_anytime",
+  releaseOnVictory: "release_on_victory",
   seeded: "seeded",
+} as const;
+
+/** Generated option keys owned by Checks & Rewards' Starting Equipment subsection. */
+export const STARTING_EQUIPMENT_OPTION_KEYS = {
+  progressiveStarterCard: "progressive_starter_card",
+  progressiveStarterRelic: "progressive_starter_relic",
 } as const;
 
 /** Generated option keys owned by the Ancient subsection of Checks & Rewards. */

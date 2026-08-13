@@ -18,6 +18,7 @@ import type {
   ProgressionAnswers,
   RunAnswers,
   ShopAnswers,
+  StartingEquipmentAnswers,
   WizardAnswers,
 } from "./WizardAnswers";
 import { getConfiguredCharacterNames } from "./CharacterRoster";
@@ -233,15 +234,64 @@ export function summarizeFillerAnswers(answers: FillerAnswers): string {
  * Summarizes the gameplay modifiers that affect an individual climb.
  *
  * @param answers - Valid current Gameplay Modifiers answers.
- * @returns A compact paragraph describing relic rewards and seed behavior.
+ * @returns A compact paragraph describing Relic availability, victory, and seeds.
  */
 export function summarizeRunAnswers(answers: RunAnswers): string {
-  const relicChoices = `Archipelago Relic items offer ${countWord(answers.relicChoiceCount)} ${answers.relicChoiceCount === 1 ? "choice" : "choices"}.`;
+  // TODO: Restore or remove this summary after collaborators confirm whether
+  // `relic_choice_count` will return to the generated schema.
+  // const relicChoices = `Archipelago Relic items offer ${countWord(answers.relicChoiceCount)} ${answers.relicChoiceCount === 1 ? "choice" : "choices"}.`;
+  const immediateRelics =
+    answers.relicRewardsAvailableAnytime === 0
+      ? "Every Archipelago Relic item requires an earned in-run relic reward before it can be claimed."
+      : `The first ${countWord(
+          answers.relicRewardsAvailableAnytime,
+        )} Archipelago Relic ${
+          answers.relicRewardsAvailableAnytime === 1 ? "item is" : "items are"
+        } available immediately.`;
+  const victoryRelease = answers.releaseOnVictory
+    ? "A winning character's remaining checks are released when their goal is recorded."
+    : "A winning character's remaining checks are not released automatically.";
   const seeded = answers.seeded
     ? "Each character uses a fixed seed."
     : "Runs are not assigned fixed seeds.";
 
-  return `${relicChoices} ${seeded}`;
+  return `${immediateRelics} ${victoryRelease} ${seeded}`;
+}
+
+/**
+ * Summarizes the progressive choices in the Starting Equipment subsection.
+ *
+ * @param answers - Progressive starter-card and starter-relic choices.
+ * @param includeFloorChecks - Whether the required Floor Check budget is enabled.
+ * @returns A sentence describing enabled equipment or its disabled dependency.
+ */
+export function summarizeStartingEquipmentAnswers(
+  answers: StartingEquipmentAnswers,
+  includeFloorChecks: boolean,
+): string {
+  // Match compilation and Python normalization when Floor Checks are unavailable.
+  if (!includeFloorChecks) {
+    return "Progressive Starting Equipment is disabled because Floor Checks are off.";
+  }
+
+  // Collect enabled equipment in the same order as the subsection controls.
+  const enabled: string[] = [];
+
+  if (answers.progressiveStarterCard) {
+    enabled.push("starter cards");
+  }
+
+  if (answers.progressiveStarterRelic) {
+    enabled.push("starter relics");
+  }
+
+  // Keep the all-disabled state explicit in the final review.
+  if (!enabled.length) {
+    return "Progressive Starting Equipment is disabled.";
+  }
+
+  // Describe the selected progressive item families without exposing YAML keys.
+  return `Progressive ${joinNames(enabled)} are enabled.`;
 }
 
 /** Summarizes the Ancient choices displayed above additional checks. */
@@ -351,9 +401,9 @@ export function summarizeShopAnswers(answers: ShopAnswers): string {
 }
 
 /**
- * Summarizes the three option families in the combined Checks & Rewards step.
+ * Summarizes the option families in the combined Checks & Rewards step.
  *
- * @param answers - Valid ordinary-check, Shop Sanity, and filler subsection answers.
+ * @param answers - Valid Starting Equipment, Ancient, check, Shop, and filler answers.
  * @returns One paragraph following the same order as the combined step UI.
  * @remarks The focused summary functions remain reusable while this facade mirrors
  * the consolidated answer model and visible review section.
@@ -362,13 +412,17 @@ export function summarizeChecksAndRewardsAnswers(
   answers: ChecksAndRewardsAnswers,
 ): string {
   // Summarize each independently compiled family through its focused prose helper.
+  const startingEquipment = summarizeStartingEquipmentAnswers(
+    answers.startingEquipment,
+    answers.checks.includeFloorChecks,
+  );
   const checks = summarizeCheckAnswers(answers.checks);
   const ancients = summarizeAncientAnswers(answers.ancients);
   const shop = summarizeShopAnswers(answers.shop);
   const filler = summarizeFillerAnswers(answers.filler);
 
   // Preserve the visible subsection order in the final combined review paragraph.
-  return `${ancients} ${checks} ${shop} ${filler}`;
+  return `${startingEquipment} ${ancients} ${checks} ${shop} ${filler}`;
 }
 
 /**
