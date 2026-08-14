@@ -14,6 +14,7 @@ using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves;
 using MegaCrit.Sts2.Core.Saves.Managers;
+using StS2AP.Data;
 using StS2AP.Extensions;
 using StS2AP.Models;
 using StS2AP.UI;
@@ -56,8 +57,11 @@ namespace StS2AP.Patches
                     );
                 var ancientRelicLocation = ArchipelagoClient.Settings?.AncientRelicLocation
                     ?? AncientRelicLocation.Anytime;
+                var usesProgressiveAncients =
+                    ArchipelagoClient.Settings.APWorldVersion > Constants.VERSION_0_5_3;
                 var ancientIsLocked =
-                    ancientRelicLocation == AncientRelicLocation.StartOfAct
+                    usesProgressiveAncients
+                    && ancientRelicLocation == AncientRelicLocation.StartOfAct
                     && currentAct > 1
                     && maxSaveAct < currentAct;
 
