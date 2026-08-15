@@ -42,6 +42,10 @@ namespace StS2AP.Patches
         private const string InstallWorldButtonPath =
             MainMenuButtonsPath + "/" + InstallWorldButtonName;
 
+        // The new name & path of our injected "Visit Website" button, which is a clone of the vanilla Settings button
+        private const string WebsiteButtonName = "VisitWebsiteButton";
+        private const string WebsiteButtonPath = MainMenuButtonsPath + "/" + WebsiteButtonName;
+
         #endregion
 
         #region Main Menu Patches
@@ -89,6 +93,11 @@ namespace StS2AP.Patches
                 // Grab the custom Install APWorld button
                 var installWorldButton = __instance.GetNodeOrNull<NMainMenuTextButton>(
                     InstallWorldButtonPath
+                );
+
+                // Grab the custom Visit Website button
+                var visitWebsiteButton = __instance.GetNodeOrNull<NMainMenuTextButton>(
+                    WebsiteButtonPath
                 );
 
                 // Grab the original settings button
@@ -150,6 +159,15 @@ namespace StS2AP.Patches
                     installWorldButton.Visible = true;
                     installWorldButton.Enable();
                     installWorldButton.label.Text = "Install APWorld";
+                }
+
+                /// Configure the injected Visit Website button after its label
+                /// reference has been initialized by the vanilla _Ready method.
+                if (visitWebsiteButton?.label != null)
+                {
+                    visitWebsiteButton.Visible = true;
+                    visitWebsiteButton.Enable();
+                    visitWebsiteButton.label.Text = "Mod Website & YAML Builder";
                 }
             }
         }
@@ -232,6 +250,21 @@ namespace StS2AP.Patches
             );
             settingsButton.AddSibling(installButton);
             settingsButton.CustomMinimumSize = new Vector2(300f, installButton.CustomMinimumSize.Y);
+
+            // Create a "Website & YAML Builder" button
+            var websiteButton = (NMainMenuTextButton)settingsButton.Duplicate();
+            websiteButton.Name = WebsiteButtonName;
+            websiteButton.Connect(
+                NClickableControl.SignalName.Released,
+                Callable.From<NButton>(_ =>
+                {
+                    // Go to the website
+                    var url = "https://sts2ap.net";
+                    Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
+                })
+            );
+            installButton.AddSibling(websiteButton);
+            installButton.CustomMinimumSize = new Vector2(300f, websiteButton.CustomMinimumSize.Y);
 
             // Adjust button focusing
             var selfNodePath = new NodePath(".");
