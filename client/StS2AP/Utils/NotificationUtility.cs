@@ -1,15 +1,17 @@
-﻿using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
+﻿using System.Collections.Concurrent;
+using System.Drawing;
+using System.Reflection;
+using System.Text;
+using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
 using Archipelago.MultiClient.Net.MessageLog.Messages;
 using Archipelago.MultiClient.Net.Models;
 using Godot;
 using MegaCrit.Sts2.Core.DevConsole;
+using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.CardPools;
 using MegaCrit.Sts2.Core.Nodes.Debug;
 using MegaCrit.Sts2.Core.RichTextTags;
 using StS2AP.UI;
-using System.Collections.Concurrent;
-using System.Drawing;
-using System.Reflection;
-using System.Text;
 using static StS2AP.Data.CharTable;
 using static StS2AP.Data.ItemTable;
 
@@ -23,6 +25,7 @@ namespace StS2AP.Utils
         /// <summary>
         /// The queue of messages to display.
         /// </summary>
+        private static readonly ConcurrentQueue<ArchipelagoNotification> _priorityQueue = new();
         private static readonly ConcurrentQueue<ArchipelagoNotification> _queue = new();
         private static readonly ConcurrentQueue<ArchipelagoNotification> _devQueue = new();
 
@@ -35,7 +38,12 @@ namespace StS2AP.Utils
             public NotificationType Type { get; set; }
             public double DisplayDuration { get; set; } = 3.0;
             public bool ForceIntoDevConsole { get; set; } = false;
-            public ArchipelagoNotification(string message, NotificationType type = NotificationType.Info)
+            public NotificationPriority Priority { get; set; } = NotificationPriority.Normal;
+
+            public ArchipelagoNotification(
+                string message,
+                NotificationType type = NotificationType.Info
+            )
             {
                 Message = message;
                 Type = type;
@@ -52,33 +60,53 @@ namespace StS2AP.Utils
             ItemReceived,
             LocationCheck,
             Error,
-            Warning
+            Warning,
+        }
+
+        public enum NotificationPriority
+        {
+            Normal,
+            High,
         }
 
         #region Notification Queue
 
         /// <summary>
         /// Queues a notification to be displayed.
-        /// 
+        ///
         /// It's best not to hit this directly, but to go through the functions in the "Display Notifications" region below,
         /// which will format messages appropriately for the user.
         /// </summary>
         private static void EnqueueNotification(
-            string message, 
-            NotificationType type = NotificationType.Info, 
-            bool devConsoleOnly = false, 
-            double timeout=3.0,
-            bool forceIntoDevConsole = false)
+            string message,
+            NotificationType type = NotificationType.Info,
+            bool devConsoleOnly = false,
+            double timeout = 3.0,
+            bool forceIntoDevConsole = false,
+            NotificationPriority priority = NotificationPriority.Normal,
+            bool includeInDevConsole = true
+        )
         {
             LogUtility.Info($"Attempting to enqueue notification {message} {type}");
             var notification = new ArchipelagoNotification(message, type);
             notification.DisplayDuration = timeout;
             notification.ForceIntoDevConsole = forceIntoDevConsole;
+            notification.Priority = priority;
             if (!devConsoleOnly)
-            { 
-                _queue.Enqueue(notification);
+            {
+                if (priority == NotificationPriority.High)
+                {
+                    _priorityQueue.Enqueue(notification);
+                }
+                else
+                {
+                    _queue.Enqueue(notification);
+                }
             }
-            _devQueue.Enqueue(notification);
+            if (includeInDevConsole)
+            {
+                _devQueue.Enqueue(notification);
+            }
             LogUtility.Info($"Notification queued ({type}): {message}");
         }
 
@@ -87,7 +115,11 @@ namespace StS2AP.Utils
         /// </summary>
         public static ArchipelagoNotification? DequeueNotification()
         {
-            if(_queue.TryDequeue(out var result))
+            if (_priorityQueue.TryDequeue(out var priorityResult))
+            {
+                return priorityResult;
+            }
+            if (_queue.TryDequeue(out var result))
             {
                 //LogUtility.Info($"Notification dequeued: {result.Message}");
                 return result;
@@ -100,7 +132,7 @@ namespace StS2AP.Utils
         /// </summary>
         public static ArchipelagoNotification? DequeueDevNotification()
         {
-            if(_devQueue.TryDequeue(out var result))
+            if (_devQueue.TryDequeue(out var result))
             {
                 //LogUtility.Info($"Notification dequeued: {result.Message}");
                 return result;
@@ -110,20 +142,19 @@ namespace StS2AP.Utils
 
         public static ArchipelagoNotification? PeekDevNotification()
         {
-            if(_devQueue.TryPeek(out var result))
+            if (_devQueue.TryPeek(out var result))
             {
                 return result;
             }
             return null;
         }
 
-
         /// <summary>
         /// Returns the number of queued notifications.
         /// </summary>
         public static int GetQueueCount()
         {
-            return _queue.Count;
+            return _priorityQueue.Count + _queue.Count;
         }
 
         /// <summary>
@@ -131,6 +162,7 @@ namespace StS2AP.Utils
         /// </summary>
         public static void ClearQueue()
         {
+            _priorityQueue.Clear();
             _queue.Clear();
             _devQueue.Clear();
             LogUtility.Info("Notification queue cleared");
@@ -147,60 +179,57 @@ namespace StS2AP.Utils
         /// <returns></returns>
         private static string? GetItemIcon(ItemInfo item)
         {
-            switch (item.GetRawItemID())
+            switch (item.GetCharacterSpecificItemID())
             {
                 case APItem.OneGold:
                 case APItem.FiveGold:
                 case APItem.BossGold:
-                case APItem._15Gold:
-                case APItem._30Gold:
-                        return @"[img]res://images/packed/sprite_fonts/gold_icon.png[/img]";
+                case APItem.CombatGold:
+                case APItem.EliteGold:
+                    return @"[img]res://images/packed/sprite_fonts/gold_icon.png[/img]";
                 case APItem.CardReward:
                 case APItem.RareCardReward:
-                        return @"[img]res://images/packed/sprite_fonts/card_icon.png[/img]";
+                    return @"[img]res://images/packed/sprite_fonts/card_icon.png[/img]";
                 case APItem.Potion:
-                        return @"[img]res://images/packed/sprite_fonts/potion_icon.png[/img]";
+                    return @"[img]res://images/packed/sprite_fonts/potion_icon.png[/img]";
                 case APItem.Unlock:
-                        switch (item.GetStSCharID())
-                        {
-                            case APItemCharID.Ironclad:
-                                    return @"[img]res://images/packed/sprite_fonts/ironclad_energy_icon.png[/img]";
-                            case APItemCharID.Silent:
-                                    return @"[img]res://images/packed/sprite_fonts/silent_energy_icon.png[/img]";
-                            case APItemCharID.Defect:
-                                    return @"[img]res://images/packed/sprite_fonts/defect_energy_icon.png[/img]";
-                            case APItemCharID.Necrobinder:
-                                    return @"[img]res://images/packed/sprite_fonts/necrobinder_energy_icon.png[/img]";
-                            case APItemCharID.Regent:
-                                    return @"[img]res://images/packed/sprite_fonts/regent_energy_icon.png[/img]";
-                        }
-                    return null;
+                    var iconPath = item.GetCharacterOffset() switch
+                    {
+                        (int)APItemCharID.Ironclad => ModelDb.CardPool<IroncladCardPool>().EnergyIconPath,
+                        (int)APItemCharID.Silent => ModelDb.CardPool<SilentCardPool>().EnergyIconPath,
+                        (int)APItemCharID.Defect => ModelDb.CardPool<DefectCardPool>().EnergyIconPath,
+                        (int)APItemCharID.Necrobinder => ModelDb.CardPool<NecrobinderCardPool>().EnergyIconPath,
+                        (int)APItemCharID.Regent => ModelDb.CardPool<RegentCardPool>().EnergyIconPath,
+                        // TODO: What to do for modded characters?
+                        _ => ModelDb.CardPool<IroncladCardPool>().EnergyIconPath,
+                    };
+                    return $"[img]{iconPath}[/img]";
             }
             return null;
         }
 
         public static void HandleItemSend(ItemSendLogMessage msg)
         {
-            if(!msg.IsRelatedToActivePlayer)
+            if (!msg.IsRelatedToActivePlayer)
             {
                 return;
             }
-            if(msg.GetType() == typeof(HintItemSendLogMessage))
+            if (msg.GetType() == typeof(HintItemSendLogMessage))
             {
-                if(((HintItemSendLogMessage) msg).IsFound)
+                if (((HintItemSendLogMessage)msg).IsFound)
                 {
                     return;
                 }
             }
             var result = ToColoredString(msg);
             NotificationType type = NotificationType.Info;
-            if(msg.GetType() != typeof(HintItemSendLogMessage))
+            if (msg.GetType() != typeof(HintItemSendLogMessage))
             {
-                if(msg.IsReceiverTheActivePlayer)
+                if (msg.IsReceiverTheActivePlayer)
                 {
                     type = NotificationType.ItemReceived;
                 }
-                else if(msg.IsSenderTheActivePlayer)
+                else if (msg.IsSenderTheActivePlayer)
                 {
                     type = NotificationType.LocationCheck;
                 }
@@ -208,18 +237,29 @@ namespace StS2AP.Utils
             EnqueueNotification(result, type);
         }
 
-        public static void HandleOtherAPMessages(LogMessage message, bool devConsoleOnly = false, double timeout = 3.0, bool forceIntoDevConsole = false)
+        public static void HandleOtherAPMessages(
+            LogMessage message,
+            bool devConsoleOnly = false,
+            double timeout = 3.0,
+            bool forceIntoDevConsole = false
+        )
         {
-
             var result = ToColoredString(message, null);
-            EnqueueNotification(result, NotificationType.Info, devConsoleOnly, timeout, forceIntoDevConsole);
+            EnqueueNotification(
+                result,
+                NotificationType.Info,
+                devConsoleOnly,
+                timeout,
+                forceIntoDevConsole
+            );
         }
 
         private static String ToColoredString(ItemSendLogMessage msg)
         {
-            
             ItemInfo info = msg.Item;
-            LogUtility.Info($"ItemInfo: Item Game: {info.ItemGame} Location Game: {info.LocationGame}");
+            LogUtility.Info(
+                $"ItemInfo: Item Game: {info.ItemGame} Location Game: {info.LocationGame}"
+            );
             return ToColoredString(msg, info);
         }
 
@@ -228,34 +268,33 @@ namespace StS2AP.Utils
             StringBuilder sb = new StringBuilder();
             string? itemIcon = null;
 
-            if(info?.ItemGame == ArchipelagoClient.Game)
+            if (info?.ItemGame == ArchipelagoClient.Game)
             {
                 itemIcon = GetItemIcon(info);
             }
             LogUtility.Info($"Got item icon: {itemIcon}");
-            
-            foreach(var part in msg.Parts)
+
+            foreach (var part in msg.Parts)
             {
                 var colorWord = ToColorWord(part.Color);
-                if(part.Type == Archipelago.MultiClient.Net.MessageLog.Parts.MessagePartType.Item)
+                if (part.Type == Archipelago.MultiClient.Net.MessageLog.Parts.MessagePartType.Item)
                 {
-                    if(itemIcon != null)
+                    if (itemIcon != null)
                     {
-                        sb.Append(itemIcon.Replace("  ", " "))
-                            .Append(' ');
+                        sb.Append(itemIcon.Replace("  ", " ")).Append(' ');
                     }
                     sb.Append("[sine]");
                 }
-                if(colorWord != null)
+                if (colorWord != null)
                 {
                     sb.Append($"[color={colorWord}]");
                 }
                 sb.Append(part.Text?.Replace("[", "[lb]"));
-                if(colorWord != null)
+                if (colorWord != null)
                 {
                     sb.Append($"[/color]");
                 }
-                if(part.Type == Archipelago.MultiClient.Net.MessageLog.Parts.MessagePartType.Item)
+                if (part.Type == Archipelago.MultiClient.Net.MessageLog.Parts.MessagePartType.Item)
                 {
                     sb.Append("[/sine]");
                 }
@@ -265,9 +304,9 @@ namespace StS2AP.Utils
 
         private static string? ToColorWord(Archipelago.MultiClient.Net.Models.Color? color)
         {
-            if(color == null)
+            if (color == null)
             {
-                return null; 
+                return null;
             }
             if (Archipelago.MultiClient.Net.Models.Color.Red == color)
                 return "red";
@@ -302,20 +341,27 @@ namespace StS2AP.Utils
         public static void ShowError(string errorMessage)
         {
             var message = $"⚠ Error: {errorMessage}";
-            EnqueueNotification(
-                message,
-                NotificationType.Error);
+            EnqueueNotification(message, NotificationType.Error);
         }
 
         /// <summary>
         /// Displays a notification as-is
         /// </summary>
         /// <param name="msg">The message to display</param>
-        public static void ShowRawText(string msg)
+        public static void ShowRawText(
+            string msg,
+            double timeout = 3.0,
+            NotificationPriority priority = NotificationPriority.Normal,
+            bool includeInDevConsole = true
+        )
         {
             EnqueueNotification(
                 msg,
-                NotificationType.Info);
+                NotificationType.Info,
+                timeout: timeout,
+                priority: priority,
+                includeInDevConsole: includeInDevConsole
+            );
         }
 
         /// <summary>
@@ -325,14 +371,36 @@ namespace StS2AP.Utils
         public static void ShowDeathLink(DeathLink death)
         {
             // If somehow we got here and Death Link is disabled, then back out
-            if (!DeathLinkUtility.IsDeathLinkEnabled) return;
+            if (!DeathLinkUtility.IsDeathLinkEnabled)
+                return;
 
             // If the cause is valid, display that, otherwise use a generic message
-            string cause = string.IsNullOrEmpty(death.Cause) ? $"{death.Source} has died!" : death.Cause;
+            string cause = string.IsNullOrEmpty(death.Cause)
+                ? $"{death.Source} has died!"
+                : death.Cause;
 
             // Wrap the entire message in red color and sine animation BBcode tags
             string message = $"[sine][color=red]{cause}[/color][/sine]";
             EnqueueNotification(message, NotificationType.Info);
+        }
+
+        /// <summary>
+        /// Displays a notification when the player receives a buff from another player in the multiworld
+        /// </summary>
+        public static void ShowBuffReceived(ItemInfo? info)
+        {
+            // Ignore if null
+            if (info == null)
+                return;
+
+            // Ignore if self (we don't want two messages for receiving a single check)
+            if (info.Player.Name == ArchipelagoClient.PlayerName)
+                return;
+
+            // Display the message
+            string message =
+                $"[color=magenta]{info.Player}[/color] provides you [sine][color=yellow]{info.ItemDisplayName}[/color][/sine] for your next turn!";
+            EnqueueNotification(message, NotificationType.ItemReceived);
         }
 
         #endregion

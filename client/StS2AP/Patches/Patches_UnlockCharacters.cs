@@ -1,18 +1,12 @@
 ﻿using Godot;
 using HarmonyLib;
+using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
-using MegaCrit.Sts2.Core.Nodes.Screens.MainMenu;
 using MegaCrit.Sts2.Core.Unlocks;
-using StS2AP.Data;
+using StS2AP.Models;
 using StS2AP.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using static StS2AP.Data.CharTable;
 
 namespace StS2AP.Patches
 {
@@ -33,8 +27,6 @@ namespace StS2AP.Patches
             static void Postfix(ref IEnumerable<CharacterModel> __result)
             {
                 LogUtility.Debug($"OverrideUnlockedCharacterData: Overriding unlocked characters. UnlockedCharacters count: {ArchipelagoClient.Progress.UnlockedCharacters.Count}");
-                foreach (var c in ArchipelagoClient.Progress.UnlockedCharacters)
-                    LogUtility.Debug($"OverrideUnlockedCharacterData: Unlocked character in progress: {c.Id.Entry}");
                 __result = ArchipelagoClient.Progress.UnlockedCharacters;
             }
         }
@@ -57,7 +49,7 @@ namespace StS2AP.Patches
             [HarmonyPostfix]
             public static void Postfix(NCharacterSelectScreen __instance)
             {
-                LogUtility.Debug($"OverrideCharacterSelectMenuOptions: OnSubmenuOpened postfix fired. AvailableCharacters: [{string.Join(", ", ArchipelagoClient.Settings.AvailableCharacters)}]");
+                LogUtility.Debug($"OverrideCharacterSelectMenuOptions: OnSubmenuOpened postfix fired. AvailableCharacters: [{string.Join(", ", ArchipelagoClient.Settings.Characters.Values)}]");
 
                 if (CharButtonContainerField.GetValue(__instance) is not Control container)
                 {
@@ -66,22 +58,21 @@ namespace StS2AP.Patches
                 }
 
                 LogUtility.Debug($"OverrideCharacterSelectMenuOptions: Found character button container '{container.Name}'. Iterating through buttons...");
-
                 foreach (NCharacterSelectButton button in container.GetChildren().OfType<NCharacterSelectButton>())
                 {
-                    /// Button names are set as "{characterId.Entry}_button" during Init — Entry is lowercase (e.g. "silent_button")
-                    /// We .Capitalize() after stripping the suffix to get the AP-style name (e.g. "Silent")
-                    string rawName = button.Name.ToString();
-                    string characterEntry = rawName.Replace("_button", "").Capitalize();
-                    LogUtility.Debug($"OverrideCharacterSelectMenuOptions: Checking button '{rawName}' → characterEntry '{characterEntry}'");
+                    var charModel = button.Character;
+                    LogUtility.Info($"Character Model id: {charModel.Id.Entry}");
+                    var name = charModel.Id.Entry;
+                    LogUtility.Info($"OverrideCharacterSelectMenuOptions: Checking button with character '{name}'");
 
                     // Hide any character that isn't in the available characters list for this Archipelago slot
-                    bool isVisible = ArchipelagoClient.Settings.AvailableCharacters.Contains(characterEntry);
-                    LogUtility.Debug($"OverrideCharacterSelectMenuOptions: '{characterEntry}' isVisible={isVisible}");
+                    bool isVisible = ArchipelagoClient.Settings.Characters.ContainsKey(name);
+                    LogUtility.Info($"OverrideCharacterSelectMenuOptions: '{name}' isVisible={isVisible}");
+                    LogUtility.Info($"Current Configured Characters: {string.Join(",", ArchipelagoClient.Settings.Characters.Keys)}");
 
                     if (!isVisible)
                     {
-                        LogUtility.Debug($"OverrideCharacterSelectMenuOptions: Hiding button '{rawName}' (character '{characterEntry}' not in slot)");
+                        LogUtility.Debug($"OverrideCharacterSelectMenuOptions: Hiding button for character '{name}' (character not in slot)");
                         button.Visible = false;
                     }
                 }
@@ -89,7 +80,7 @@ namespace StS2AP.Patches
         }
 
         /// <summary>
-        /// Subscribes to `ArchipelagoClient.CharacterUnlocked` when the character select screen opens,
+        /// Subscribes to `Patches_ItemProcessor.CharacterUnlocked` when the character select screen opens,
         /// so that receiving an unlock item while the screen is open immediately enables the correct button
         /// without having to close and re-open the screen.
         ///
@@ -109,7 +100,7 @@ namespace StS2AP.Patches
             /// Per-screen-instance handler storage.
             /// Keyed on the screen instance so UnsubscribeFromUnlockEventOnClose can remove the exact delegate.
             /// </summary>
-            internal static readonly Dictionary<NCharacterSelectScreen, Action<APItemCharID>> Handlers = new();
+            internal static readonly Dictionary<NCharacterSelectScreen, Action<CharacterConfig>> Handlers = new();
 
             [HarmonyPostfix]
             public static void Postfix(NCharacterSelectScreen __instance)
@@ -125,14 +116,14 @@ namespace StS2AP.Patches
                 if (Handlers.TryGetValue(__instance, out var existing))
                 {
                     LogUtility.Debug("SubscribeToUnlockEventOnOpen: Found stale handler for this instance — removing before re-subscribing");
-                    ArchipelagoClient.CharacterUnlocked -= existing;
+                    Patches_ItemProcessor.CharacterUnlocked -= existing;
                     Handlers.Remove(__instance);
                 }
 
                 // Create a closure-bound handler and store it so we can unsubscribe the exact same delegate later
-                Action<APItemCharID> handler = id => HandleCharacterUnlocked(__instance, id);
+                Action<CharacterConfig> handler = config => HandleCharacterUnlocked(__instance, config);
                 Handlers[__instance] = handler;
-                ArchipelagoClient.CharacterUnlocked += handler;
+                Patches_ItemProcessor.CharacterUnlocked += handler;
                 LogUtility.Debug($"SubscribeToUnlockEventOnOpen: Subscribed CharacterUnlocked handler for screen instance. Total active handlers: {Handlers.Count}");
             }
 
@@ -140,7 +131,7 @@ namespace StS2AP.Patches
             /// Called when a character unlock item arrives while this screen is open.
             /// Finds the corresponding button by its raw game name and calls UnlockIfPossible() on it.
             /// </summary>
-            public static void HandleCharacterUnlocked(NCharacterSelectScreen screen, APItemCharID charId)
+            public static void HandleCharacterUnlocked(NCharacterSelectScreen screen, CharacterConfig config)
             {
                 // Null check
                 if (screen == null)
@@ -155,7 +146,7 @@ namespace StS2AP.Patches
                     // Remove this handler
                     if (Handlers.TryGetValue(screen, out var handler))
                     {
-                        ArchipelagoClient.CharacterUnlocked -= handler;
+                        Patches_ItemProcessor.CharacterUnlocked -= handler;
                     }
                     Handlers.Remove(screen);
 
@@ -163,7 +154,7 @@ namespace StS2AP.Patches
                     return;
                 }
 
-                LogUtility.Debug($"HandleCharacterUnlocked: Received unlock event for charId={charId} on screen instance {screen?.GetInstanceId()}");
+                LogUtility.Debug($"HandleCharacterUnlocked: Received unlock event for {config.OfficialName} on screen instance {screen?.GetInstanceId()}");
 
                 if (CharButtonContainerField.GetValue(screen) is not Control container)
                 {
@@ -174,29 +165,29 @@ namespace StS2AP.Patches
                 /// Build the expected button name from the APItemCharID (e.g. APItemCharID.Silent → "silent_button").
                 /// We use case-insensitive comparison as a safety net, since the game's Id.Entry casing
                 /// could vary (the node dump above will confirm the real casing in the logs).
-                string buttonName = charId.ToString().ToLower() + "_button";
-                LogUtility.Debug($"HandleCharacterUnlocked: Looking for button matching '{buttonName}' (case-insensitive)");
+                // string buttonName = charId.ToString().ToLower() + "_button";
+                // LogUtility.Debug($"HandleCharacterUnlocked: Looking for button matching '{buttonName}' (case-insensitive)");
 
                 var button = container.GetChildren()
                     .OfType<NCharacterSelectButton>()
-                    .FirstOrDefault(b => string.Equals(b.Name.ToString(), buttonName, StringComparison.OrdinalIgnoreCase));
+                    .FirstOrDefault(b => string.Equals(b.Character.Id.Entry, config.OfficialName, StringComparison.OrdinalIgnoreCase));
 
                 if (button == null)
                 {
-                    LogUtility.Debug($"HandleCharacterUnlocked: No button found matching '{buttonName}' (case-insensitive) — check the node dump above for real button names. Unlock will take effect next time the screen opens.");
+                    LogUtility.Debug($"HandleCharacterUnlocked: No button found matching '{config.OfficialName}' (case-insensitive) — check the node dump above for real button names. Unlock will take effect next time the screen opens.");
                     return;
                 }
 
-                LogUtility.Debug($"HandleCharacterUnlocked: Found button '{buttonName}'. IsLocked={button.IsLocked}. Calling UnlockIfPossible()...");
+                LogUtility.Debug($"HandleCharacterUnlocked: Found button '{config.OfficialName}'. IsLocked={button.IsLocked}. Calling UnlockIfPossible()...");
 
                 // UnlockIfPossible checks the unlock state internally — safe to call even if already unlocked
                 button.UnlockIfPossible();
-                LogUtility.Success($"HandleCharacterUnlocked: Called UnlockIfPossible() on button '{buttonName}'");
+                LogUtility.Success($"HandleCharacterUnlocked: Called UnlockIfPossible() on button '{config.OfficialName}'");
             }
         }
 
         /// <summary>
-        /// Unsubscribes from `ArchipelagoClient.CharacterUnlocked` when the character select screen closes,
+        /// Unsubscribes from `Patches_ItemProcessor.CharacterUnlocked` when the character select screen closes,
         /// so we don't hold a stale reference to a closed screen.
         /// Uses the Handlers dictionary to look up the exact delegate that was registered on open.
         /// </summary>
@@ -216,7 +207,7 @@ namespace StS2AP.Patches
 
                 if (SubscribeToUnlockEventOnOpen.Handlers.TryGetValue(__instance, out var handler))
                 {
-                    ArchipelagoClient.CharacterUnlocked -= handler;
+                    Patches_ItemProcessor.CharacterUnlocked -= handler;
                     SubscribeToUnlockEventOnOpen.Handlers.Remove(__instance);
                     LogUtility.Debug($"UnsubscribeFromUnlockEventOnClose: Unsubscribed and removed handler. Remaining active handlers: {SubscribeToUnlockEventOnOpen.Handlers.Count}");
                 }
@@ -224,6 +215,28 @@ namespace StS2AP.Patches
                 {
                     LogUtility.Debug("UnsubscribeFromUnlockEventOnClose: No handler found in dictionary for this instance — nothing to unsubscribe");
                 }
+            }
+        }
+
+        [HarmonyPatch(typeof(CharacterModel), nameof(CharacterModel.GetUnlockText))]
+        public static class OverrideUnlockText
+        {
+            [HarmonyPrefix]
+            public static bool Prefix(ref LocString __result)
+            {
+                __result = new LocString("characters", "APCHARACTER.unlockText");
+
+                return false;
+            }
+        }
+
+        [HarmonyPatch(typeof(NCharacterSelectScreen), "UpdateRandomCharacterVisibility")]
+        public static class DisableRitsuStuff
+        {
+            [HarmonyPrefix]
+            public static bool DoNothing()
+            {
+                return false;
             }
         }
     }

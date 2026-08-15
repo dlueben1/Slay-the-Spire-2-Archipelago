@@ -8,6 +8,10 @@ using StS2AP.Utils;
 using static StS2AP.Data.CharTable;
 using MegaCrit.Sts2.Core.Saves;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Ascension;
+using AscensionManager = StS2AP.Utils.AscensionManager;
+using static StS2AP.Data.ItemTable;
+using System.Text.Json;
 
 
 namespace StS2AP.Models
@@ -49,6 +53,11 @@ namespace StS2AP.Models
         public const int _maxBossRewards = 3;
 
         /// <summary>
+        /// The maximum Progressive Shop Card Removal level a player could receive (one per Act).
+        /// </summary>
+        public const int _maxShopRemoves = 3;
+
+        /// <summary>
         /// The number of floor rewards in floorsanity
         /// </summary>
         public const int _maxFloorRewards = 47;
@@ -57,6 +66,18 @@ namespace StS2AP.Models
         /// Maximum possible number of Campfire Rewards that a player could find.
         /// </summary>
         public const int _maxCampfireChecks = 6;
+
+        public const int _maxAncientChecks = 3;
+
+        /// <summary>
+        /// Maximum number of Ancient Rewards a player could find. Depends on settings.
+        /// </summary>
+        public static int MaxConfiguredAncients { 
+            get {
+                return ArchipelagoClient.Settings?.NeowSanity ?? false ? 3 : 2;
+            } 
+        }
+
 
         #region Per-Run Tracker
 
@@ -74,10 +95,22 @@ namespace StS2AP.Models
         public int RareCardRewardsAttempted { get; set; } = 0;
 
         /// <summary>
-        /// Keeps track of the number of times the game has tried to provide a Relic Reward.
-        /// Used to keep track of when to replace a Relic Reward with an AP Location.
+        /// Eligible Elite, chest, and Black Star rewards encountered this run. Attempts after ten
+        /// are still counted so we can give 'natural relics'.
         /// </summary>
         public int RelicRewardsAttempted { get; set; } = 0;
+
+        /// <summary>
+        /// Earned relic rewards not yet paired with a received Relic item. A bank is spent when
+        /// the receipt is committed to either a native reward or a saved AP-menu assignment.
+        /// </summary>
+        public int BankedRelicRewards { get; set; } = 0;
+
+        /// <summary>
+        /// Run-start snapshot of the effective anytime setting. Changing local settings cannot
+        /// move receipts between anytime and reward-required while a run is in progress.
+        /// </summary>
+        public int RelicRewardsAvailableAnytimeForRun { get; set; } = 2;
 
         /// <summary>
         /// Keeps track of the number of times the game has tried to provide a Gold Reward.
@@ -99,11 +132,18 @@ namespace StS2AP.Models
         public Dictionary<string, bool> CampfiresChecked { get; set; } = new Dictionary<string, bool>();
 
         /// <summary>
-        /// Maps an Archipelago item's index to the RelicModel that was pre-pulled from the RelicFactory for it.
-        /// This ensures that opening/closing the reward screen always shows the same relic for each relic reward.
+        /// Maps an Archipelago Relic item's index to the choices pre-pulled from the RelicFactory for it.
+        /// Only AP-menu rewards use this; native Elite, chest, and Black Star rewards never do.
+        /// This ensures that reopening or loading the AP menu shows the same choice.
         /// Cleared on each new run via <see cref="ResetTrackers"/>.
         /// </summary>
-        public Dictionary<int, RelicModel> RelicAssignments { get; set; } = new Dictionary<int, RelicModel>();
+        public Dictionary<int, List<RelicModel>> RelicChoiceAssignments { get; set; } = new Dictionary<int, List<RelicModel>>();
+
+        /// <summary>
+        /// Maps a Progressive Ancient's AP item index to its three linked relic choices.
+        /// The complete set is retained so reopening or loading the reward screen cannot reroll it.
+        /// </summary>
+        public Dictionary<int, List<RelicModel>> AncientRelicChoiceAssignments { get; set; } = new Dictionary<int, List<RelicModel>>();
 
         /// <summary>
         /// Maps an Archipelago item's index to the CardReward that was pre-populated for it.
@@ -118,36 +158,119 @@ namespace StS2AP.Models
         /// </summary>
         public Dictionary<int, PotionModel> PotionAssignments { get; set; } = new Dictionary<int, PotionModel>();
 
+        public AscensionManager Ascensions = new AscensionManager();
+
         /// <summary>
-        /// Returns the relic assigned to the given location, pulling one from the RelicFactory if it hasn't been assigned yet.
-        /// This guarantees that the same relic is shown every time the reward screen is opened for the same item.
+        /// Returns the relic choices assigned to the given AP item, pulling them from the RelicFactory
+        /// if they have not been assigned yet. The complete choice is persisted by item index.
         /// </summary>
         /// <param name="index">The index of the specific item sent from the Multiworld.</param>
         /// <param name="player">The current player, needed by RelicFactory.</param>
-        /// <returns>The assigned RelicModel, or null if no player is provided or the factory fails.</returns>
-        public RelicModel? GetOrAssignRelic(int index, Player player)
+        /// <param name="choiceCount">The number of relics to persist for this item.</param>
+        /// <returns>The assigned relic choices, or an empty list if no player is provided or the factory fails.</returns>
+        public IReadOnlyList<RelicModel> GetOrAssignRelicChoices(int index, Player player, int choiceCount)
         {
-            if (RelicAssignments.TryGetValue(index, out var existing))
+            if (RelicChoiceAssignments.TryGetValue(index, out var existing))
                 return existing;
 
             if (player == null)
             {
-                LogUtility.Warn($"Cannot assign relic for item w/ index {index}: no active player");
-                return null;
+                LogUtility.Warn($"Cannot assign relic choices for item w/ index {index}: no active player");
+                return Array.Empty<RelicModel>();
             }
 
             try
             {
-                var relic = RelicFactory.PullNextRelicFromFront(player);
-                RelicAssignments[index] = relic;
-                LogUtility.Info($"Pre-assigned relic '{relic.Id}' for item w/ index {index}");
-                return relic;
+                var choices = Enumerable.Range(0, choiceCount)
+                    .Select(_ => RelicFactory.PullNextRelicFromFront(player))
+                    .ToList();
+                RelicChoiceAssignments[index] = choices;
+                LogUtility.Info(
+                    $"Pre-assigned relic choices for item w/ index {index}: " +
+                    string.Join(", ", choices.Select(relic => relic.Id.ToString()))
+                );
+                return choices;
             }
             catch (Exception ex)
             {
-                LogUtility.Error($"Failed to pre-assign relic for item w/ index {index}: {ex.Message}");
-                return null;
+                LogUtility.Error($"Failed to pre-assign relic choices for item w/ index {index}: {ex.Message}");
+                return Array.Empty<RelicModel>();
             }
+        }
+
+        /// <summary>
+        /// Returns the three Ancient relics assigned to a Progressive Ancient, creating the deterministic
+        /// assignment on first use. An empty list indicates that a valid three-relic pool could not be built.
+        /// </summary>
+        public IReadOnlyList<RelicModel> GetOrAssignAncientRelicChoices(int index, Player player)
+        {
+            if (AncientRelicChoiceAssignments.TryGetValue(index, out var existing))
+                return existing;
+
+            if (player == null)
+            {
+                LogUtility.Warn($"Cannot assign Ancient relic choices for item w/ index {index}: no active player");
+                return Array.Empty<RelicModel>();
+            }
+
+            var reservedRelicIds = AncientRelicChoiceAssignments.Values
+                .SelectMany(assignment => assignment)
+                .Select(relic => relic.Id)
+                .ToHashSet();
+            
+            // AllReceivedItems contains multiple reward types, so restrict it to this
+            // character's Progressive Ancients. ArchipelagoClient adds these entries only for
+            // Anytime mode; with Neow Sanity enabled, it omits the first unlock because
+            // that remains Neow's start-of-run reward. Sorting the remaining entries by
+            // AP item index maps ordinal 0 to Act 2 and ordinal 1 to Act 3.
+            var characterOffset = player.Character.GetCharacterOffset();
+            var orderedAncientItemIndices = AllReceivedItems
+                .Where(item => item.Item.GetCharacterOffset() == characterOffset &&
+                               item.Item.GetCharacterSpecificItemID() == APItem.ProgressiveAncient)
+                .OrderBy(item => item.Index)
+                .Select(item => item.Index)
+                .ToList();
+
+            // This is the item's zero-based position in the ordered list above, not its AP item index.
+            var rewardOrdinal = orderedAncientItemIndices.IndexOf(index);
+            if (rewardOrdinal is < 0 or > 1)
+            {
+                LogUtility.Error($"Could not map Ancient reward item index {index} to its Act 2/3 progression");
+                return Array.Empty<RelicModel>();
+            }
+
+            // ModelDb uses zero-based Act indices: 1 is Act 2 and 2 is Act 3 so convert accordingly
+            var ancientActIndex = rewardOrdinal + 1;
+            var poolMode = ArchipelagoClient.Settings?.AncientRelicPool ?? AncientRelicPoolMode.Balanced;
+            int? poolActIndex = (poolMode == AncientRelicPoolMode.TrueChaos) ? null : ancientActIndex;
+            var choiceKey = index.ToString();
+            AncientEventModel? naturalAncient = null;
+            if (poolMode == AncientRelicPoolMode.Balanced)
+            {
+                // Balanced must choose from one Ancient, so prefer the Ancient already rolled
+                // into this run's ActModel and use a stable same-act fallback only if necessary.
+                naturalAncient = AncientRelicPool.ResolveSpecificAncient(
+                    player,
+                    ancientActIndex,
+                    choiceKey,
+                    reservedRelicIds
+                );
+                if (naturalAncient == null)
+                    return Array.Empty<RelicModel>();
+            }
+
+            var choices = AncientRelicPool.CreateChoices(
+                player,
+                choiceKey,
+                reservedRelicIds,
+                poolActIndex,
+                naturalAncient
+            ).ToList();
+            if (choices.Count != AncientRelicPool.ChoiceCount)
+                return Array.Empty<RelicModel>();
+
+            AncientRelicChoiceAssignments[index] = choices;
+            return choices;
         }
 
         /// <summary>
@@ -205,6 +328,8 @@ namespace StS2AP.Models
                     CampfiresChecked[checkName] = ArchipelagoClient.Session.Locations.AllLocationsChecked.Contains(locationId);
                 }
             }
+            Ascensions.Initialize(GameUtility.CurrentConfig);
+            LogUtility.Info($"Starting game with ascension levels {string.Join(",", Ascensions.CurrentAscension)}");
         }
 
         public void ResetTrackers()
@@ -213,13 +338,24 @@ namespace StS2AP.Models
             RareCardRewardsAttempted = 0;
             BossRewardsDistributed = 0;
             RelicRewardsAttempted = 0;
+            BankedRelicRewards = 0;
+            RelicRewardsAvailableAnytimeForRun = RelicRewardUtility.EffectiveAvailableAnytime;
             GoldRewardsAttempted = 0;
             PotionRewardsAttempted = 0;
             CampfiresChecked.Clear();
-            RelicAssignments.Clear();
+            ShopSlotsChecked.Clear();
+            RelicChoiceAssignments.Clear();
+            AncientRelicChoiceAssignments.Clear();
             CardAssignments.Clear();
             PotionAssignments.Clear();
+            Ascensions.Reset();
             GoldRedeemed = 0;
+            ProgressiveStarterCardBaseId = null;
+            ProgressiveStarterCardUpgradedId = null;
+            ProgressiveStarterCardTier = ProgressiveStarterTier.Unsupported;
+            ProgressiveStarterRelicBaseId = null;
+            ProgressiveStarterRelicUpgradedId = null;
+            ProgressiveStarterRelicTier = ProgressiveStarterTier.Unsupported;
         }
 
 
@@ -243,7 +379,33 @@ namespace StS2AP.Models
         /// The number of items we've received from the multiworld that we haven't used yet. 
         /// This is what gets displayed in the top bar UI.
         /// </summary>
-        public int UnusedItemCount => AllReceivedItems.Where(i => i.Item.GetStSCharID() == GameUtility.CurrentCharacterID && !i.Item.ItemDisplayName.Contains("Progressive") && !i.Item.ItemName.Contains("Progressive")).Count() - UsedItems.Count;
+        public int UnusedItemCount
+        {
+            get
+            {
+                var player = GameUtility.CurrentPlayer;
+                return player == null
+                    ? 0
+                    : AllReceivedItems.Count(item => IsAvailableInRewardMenu(item, player));
+            }
+        }
+
+        /// <summary>
+        /// Returns whether a received item should currently appear as a row in the AP reward menu.
+        /// The top-bar count and the menu itself must use this same predicate so the badge cannot
+        /// advertise rewards that the menu filters out.
+        /// </summary>
+        public bool IsAvailableInRewardMenu(IndexedItemInfo item, Player player)
+        {
+            var itemId = item.Item.GetCharacterSpecificItemID();
+            return item.Item.GetCharacterOffset() == GameUtility.CurrentCharacterID
+                && !UsedItems.Contains(item.Index)
+                && itemId.CanBePickedUp()
+                && (
+                    itemId != APItem.Relic
+                    || RelicRewardUtility.IsAvailableInRewardMenu(item, player)
+                );
+        }
 
         #endregion
 
@@ -252,7 +414,7 @@ namespace StS2AP.Models
         /// <summary>
         /// ALL Gold received from the Multiworld
         /// </summary>
-        public Dictionary<APItemCharID, int> GoldReceived { get; set; } = new Dictionary<APItemCharID, int>();
+        public Dictionary<long, int> GoldReceived { get; set; } = new Dictionary<long, int>();
 
         /// <summary>
         /// The Gold you've redeemed so far this run
@@ -269,8 +431,12 @@ namespace StS2AP.Models
             {
                 try
                 {
-                    if (!GameUtility.CurrentCharacterID.HasValue) return -1;
-                    GoldReceived.TryGetValue(GameUtility.CurrentCharacterID.Value, out int gold);
+                    var config = GameUtility.CurrentConfig;
+                    if(config == null)
+                    {
+                        return -1;
+                    }
+                    GoldReceived.TryGetValue(config.CharOffset, out int gold);
                     return gold - GoldRedeemed;
                 }
                 catch
@@ -278,6 +444,76 @@ namespace StS2AP.Models
                     return -1;
                 }
             }
+        }
+
+        /// <summary>
+        ///  Helper function to apply the Poverty Ascension modifier affect
+        /// </summary>
+        private static int ApplyPoverty(int amount)
+        {
+            return amount * 3 / 4;
+        }
+        
+        /// <summary>
+        /// Calculates the Poverty Refund based on the Gold Redeemed
+        /// Should only be called on getting Poverty Ascension Down
+        /// </summary>
+        /// <returns></returns>
+        public int CalculatePovertyRefund()
+        {
+            return GoldRedeemed - ApplyPoverty(GoldRedeemed);
+        }
+
+        /// <summary>
+        /// Helps prepare the Gold Reward Display to be displayed to the user accounting for Ascension 3 poverty
+        /// </summary>
+        /// <returns></returns>
+        public ArchipelagoGoldOffer PrepareGoldOffer()
+        {
+            int consumedBefore = GoldRedeemed;
+            int sourceAmount = GoldRemaining;
+            bool povertyApplied = Ascensions.HasLevel(AscensionLevel.Poverty);
+            
+            var consumedAfter = consumedBefore + sourceAmount;
+
+            // consumedBefore and consumedAfter are needed to handle cumulative rounding like if you receive multiple
+            // 1 gold rewards in a row which always rounds to 0.
+            int grantedAmount = povertyApplied
+                ? ApplyPoverty(consumedAfter) - ApplyPoverty(consumedBefore)
+                : sourceAmount;
+
+            return new ArchipelagoGoldOffer(
+                SourceAmount: sourceAmount,
+                GrantedAmount: grantedAmount,
+                WithheldAmount: sourceAmount - grantedAmount,
+                PovertyApplied: povertyApplied
+            );
+        }
+
+        /// <summary>
+        /// Handles the edge-case when you get an Ascension Down during the AP reward menu.
+        /// Updates the GoldRedeemed global state as well.
+        /// </summary>
+        /// <param name="offer"></param>
+        /// <returns> The amount to grant to the player</returns>
+        public int ConsumeGoldOffer(ArchipelagoGoldOffer offer)
+        {
+            bool povertyCurrentlyApplied = Ascensions.HasLevel(AscensionLevel.Poverty);
+
+            GoldRedeemed += offer.SourceAmount;
+
+            if (offer.PovertyApplied && povertyCurrentlyApplied)
+            {
+                return offer.GrantedAmount;
+            }
+
+            if (offer.PovertyApplied)
+            {
+                // received an Ascension Down while viewing the reward so give proper amount
+                return offer.GrantedAmount + offer.WithheldAmount;
+            }
+            
+            return offer.GrantedAmount;
         }
 
         #endregion
@@ -298,21 +534,46 @@ namespace StS2AP.Models
         /// <summary>
         /// Keeps track of the number of Progressive Smiths we've received for each character
         /// </summary>
-        public Dictionary<APItemCharID, int> ProgressiveSmiths = new Dictionary<APItemCharID, int>();
+        public Dictionary<long, int> ProgressiveSmiths = new Dictionary<long, int>();
 
         /// <summary>
         /// Keeps track of the number of Progressive Rests we've received for each character
         /// </summary>
-        public Dictionary<APItemCharID, int> ProgressiveRests = new Dictionary<APItemCharID, int>();
+        public Dictionary<long, int> ProgressiveRests = new Dictionary<long, int>();
+
+        /// <summary>
+        /// Keeps track of the number of Progressive Ancients we've received for each character
+        /// </summary>
+        public Dictionary<long, int> ProgressiveAncients = new Dictionary<long, int>();
+
+        /// <summary>
+        /// Counts the Progressive Starter Card and Relic items received for each character.
+        /// These are reconstructed from the Archipelago item history when a save is loaded.
+        /// </summary>
+        public Dictionary<long, int> ProgressiveStarterCards = new Dictionary<long, int>();
+        public Dictionary<long, int> ProgressiveStarterRelics = new Dictionary<long, int>();
+
+        /// <summary>
+        /// The Orobas-recognized starter models and authoritative applied tiers for the active run.
+        /// The IDs must be saved because tier zero removes the models that would otherwise be
+        /// rediscovered for modded characters. Keeping the tier separately distinguishes that state
+        /// from a player or another mod removing an already-unlocked starter.
+        /// </summary>
+        public string? ProgressiveStarterCardBaseId { get; set; }
+        public string? ProgressiveStarterCardUpgradedId { get; set; }
+        public ProgressiveStarterTier ProgressiveStarterCardTier { get; set; } = ProgressiveStarterTier.Unsupported;
+        public string? ProgressiveStarterRelicBaseId { get; set; }
+        public string? ProgressiveStarterRelicUpgradedId { get; set; }
+        public ProgressiveStarterTier ProgressiveStarterRelicTier { get; set; } = ProgressiveStarterTier.Unsupported;
 
         /// <summary>
         /// Gets the highest Act that a character can rest at
         /// </summary>
-        /// <param name="character">The Character's encoded ItemID</param>
+        /// <param name="character">The Character's offset</param>
         /// <returns>The highest Act (one-based) that the character can rest at</returns>
-        public int? MaxRestLevel(APItemCharID character)
+        public int? MaxRestLevel(long offset)
         {
-            var canRest = ProgressiveRests.TryGetValue(character, out int act);
+            var canRest = ProgressiveRests.TryGetValue(offset, out int act);
             if (!canRest) return null;
             return act;
         }
@@ -320,20 +581,20 @@ namespace StS2AP.Models
         /// <summary>
         /// Gets the highest Act that a character can smith at
         /// </summary>
-        /// <param name="character">The Character's encoded ItemID</param>
+        /// <param name="character">The Character's offset</param>
         /// <returns>The highest Act (one-based) that the character can smith at</returns>
-        public int? MaxSmithLevel(APItemCharID character)
+        public int? MaxSmithLevel(long offset)
         {
-            var canSmith = ProgressiveSmiths.TryGetValue(character, out int act);
+            var canSmith = ProgressiveSmiths.TryGetValue(offset, out int act);
             if (!canSmith) return null;
             return act;
         }
-        public Dictionary<APItemCharID, int> ShopCardSlotsReceived = new Dictionary<APItemCharID, int>();
-        public Dictionary<APItemCharID, int> ShopNeutralSlotsReceived = new Dictionary<APItemCharID, int>();
-        public Dictionary<APItemCharID, int> ShopRelicSlotsReceived = new Dictionary<APItemCharID, int>();
-        public Dictionary<APItemCharID, int> ShopPotionSlotsReceived = new Dictionary<APItemCharID, int>();
-        public Dictionary<APItemCharID, int> ShopRemovesReceived = new Dictionary<APItemCharID, int>();
-        public int? MaxShopRemoveLevel(APItemCharID character)
+        public Dictionary<long, int> ShopCardSlotsReceived = new Dictionary<long, int>();
+        public Dictionary<long, int> ShopNeutralSlotsReceived = new Dictionary<long, int>();
+        public Dictionary<long, int> ShopRelicSlotsReceived = new Dictionary<long, int>();
+        public Dictionary<long, int> ShopPotionSlotsReceived = new Dictionary<long, int>();
+        public Dictionary<long, int> ShopRemovesReceived = new Dictionary<long, int>();
+        public int? MaxShopRemoveLevel(long character)
         {
             var canRemove = ShopRemovesReceived.TryGetValue(character, out int act);
             if (!canRemove) return null;
@@ -341,28 +602,68 @@ namespace StS2AP.Models
         }
         public Dictionary<string, bool> ShopSlotsChecked { get; set; } = new Dictionary<string, bool>();
 
+        /// <summary>
+        /// Returns the highest Act that a character can redeem Progressive Ancients at
+        /// </summary>
+        /// <param name="character"> The Character's offset</param>
+        /// <returns>The highest Act (one-based) that the character can redeem Progressive Ancients at</returns>
+        public int MaxProgressiveAncientLevel(long offset)
+        {
+            int count;
+            if(!ProgressiveAncients.TryGetValue(offset, out count))
+            {
+                count = 0;
+            }
+            if(!ArchipelagoClient.Settings.NeowSanity)
+            {
+                count++;
+            }
+            return count;
+        }
+
         #endregion
 
         #region StS Save
 
         public SerializableAP ToSerializable(SerializableRun run)
         {
+            using var runJson = JsonDocument.Parse(JsonSerializationUtility.ToJson(run));
             return new SerializableAP()
             {
-                SaveData = run,
+                SaveData = runJson.RootElement.Clone(),
                 CardRewardsAttempted = CardRewardsAttempted,
                 RareCardRewardsAttempted = RareCardRewardsAttempted,
                 RelicRewardsAttempted = RelicRewardsAttempted,
+                BankedRelicRewards = BankedRelicRewards,
+                RelicRewardsAvailableAnytimeForRun = RelicRewardsAvailableAnytimeForRun,
                 GoldRewardsAttempted = GoldRewardsAttempted,
                 PotionRewardsAttempted = PotionRewardsAttempted,
                 BossRewardsDistributed = BossRewardsDistributed,
                 UsedItems = UsedItems,
                 GoldRedeemed = GoldRedeemed,
-                RelicAssignments = RelicAssignments.Select((KeyValuePair<int,RelicModel> kv) => new KeyValuePair<int, SerializableRelic>(kv.Key, kv.Value.ToMutable().ToSerializable())).ToDictionary(),
-                CardAssignments = CardAssignments.Select((KeyValuePair<int,CardReward> kv) => new KeyValuePair<int, SerializableReward>(kv.Key, kv.Value.ToSerializable())).ToDictionary(),
-                CardAssignmentModels = CardAssignments.Select((KeyValuePair<int,CardReward> kv) => 
+                RelicChoiceAssignments = RelicChoiceAssignments.Select(kv =>
+                    new KeyValuePair<int, List<SerializableRelic>>(
+                        kv.Key,
+                        kv.Value.Select(relic => (relic.IsMutable ? relic : relic.ToMutable()).ToSerializable()).ToList()
+                    )
+                ).ToDictionary(),
+                AncientRelicChoiceAssignments = AncientRelicChoiceAssignments.Select(kv =>
+                    new KeyValuePair<int, List<SerializableRelic>>(
+                        kv.Key,
+                        kv.Value.Select(relic => (relic.IsMutable ? relic : relic.ToMutable()).ToSerializable()).ToList()
+                    )
+                ).ToDictionary(),
+                ProgressiveStarterCardBaseId = ProgressiveStarterCardBaseId,
+                ProgressiveStarterCardUpgradedId = ProgressiveStarterCardUpgradedId,
+                ProgressiveStarterCardTier = ProgressiveStarterCardTier,
+                ProgressiveStarterRelicBaseId = ProgressiveStarterRelicBaseId,
+                ProgressiveStarterRelicUpgradedId = ProgressiveStarterRelicUpgradedId,
+                ProgressiveStarterRelicTier = ProgressiveStarterRelicTier,
+                CardAssignments = CardAssignments.Select((KeyValuePair<int, CardReward> kv) => new KeyValuePair<int, SerializableReward>(kv.Key, kv.Value.ToSerializable())).ToDictionary(),
+                CardAssignmentModels = CardAssignments.Select((KeyValuePair<int, CardReward> kv) =>
                 new KeyValuePair<int, List<SerializableCard>>(kv.Key, kv.Value.Cards.Select(c => c.ToSerializable()).ToList())).ToDictionary(),
-                PotionAssignments = PotionAssignments.Select((KeyValuePair<int,PotionModel> kv) => new KeyValuePair<int, SerializablePotion>(kv.Key, kv.Value.ToMutable().ToSerializable(-1))).ToDictionary(),
+                PotionAssignments = PotionAssignments.Select((KeyValuePair<int, PotionModel> kv) => new KeyValuePair<int, SerializablePotion>(kv.Key, kv.Value.ToMutable().ToSerializable(-1))).ToDictionary(),
+                Ascensions = Ascensions.CurrentAscension.Select((level) => ((int)level)).ToList()
             };
         }
 
@@ -374,13 +675,31 @@ namespace StS2AP.Models
                 CardRewardsAttempted = saveData.CardRewardsAttempted,
                 RareCardRewardsAttempted = saveData.RareCardRewardsAttempted,
                 RelicRewardsAttempted = saveData.RelicRewardsAttempted,
+                BankedRelicRewards = saveData.BankedRelicRewards,
+                RelicRewardsAvailableAnytimeForRun = saveData.RelicRewardsAvailableAnytimeForRun,
                 GoldRewardsAttempted = saveData.GoldRewardsAttempted,
                 PotionRewardsAttempted = saveData.PotionRewardsAttempted,
                 BossRewardsDistributed = saveData.BossRewardsDistributed,
                 UsedItems = new List<int>(saveData.UsedItems),
                 GoldRedeemed = saveData.GoldRedeemed,
-                RelicAssignments = saveData.RelicAssignments.Select((KeyValuePair<int, SerializableRelic> kv) => new KeyValuePair<int, RelicModel>(kv.Key, RelicModel.FromSerializable(kv.Value).CanonicalInstance)).ToDictionary(),
-                //CardAssignments = saveData.CardAssignments.Select((KeyValuePair<int, SerializableReward> kv) => new KeyValuePair<int, CardReward>(kv.Key, (CardReward) CardReward.FromSerializable(kv.Value, player))).ToDictionary(),
+                RelicChoiceAssignments = saveData.RelicChoiceAssignments.Select(kv =>
+                    new KeyValuePair<int, List<RelicModel>>(
+                        kv.Key,
+                        kv.Value.Select(RelicModel.FromSerializable).ToList()
+                    )
+                ).ToDictionary(),
+                AncientRelicChoiceAssignments = (saveData.AncientRelicChoiceAssignments ?? new Dictionary<int, List<SerializableRelic>>()).Select(kv =>
+                    new KeyValuePair<int, List<RelicModel>>(
+                        kv.Key,
+                        kv.Value.Select(RelicModel.FromSerializable).ToList()
+                    )
+                ).ToDictionary(),
+                ProgressiveStarterCardBaseId = saveData.ProgressiveStarterCardBaseId,
+                ProgressiveStarterCardUpgradedId = saveData.ProgressiveStarterCardUpgradedId,
+                ProgressiveStarterCardTier = saveData.ProgressiveStarterCardTier,
+                ProgressiveStarterRelicBaseId = saveData.ProgressiveStarterRelicBaseId,
+                ProgressiveStarterRelicUpgradedId = saveData.ProgressiveStarterRelicUpgradedId,
+                ProgressiveStarterRelicTier = saveData.ProgressiveStarterRelicTier,
                 PotionAssignments = saveData.PotionAssignments.Select((KeyValuePair<int, SerializablePotion> kv) => new KeyValuePair<int, PotionModel>(kv.Key, PotionModel.FromSerializable(kv.Value).CanonicalInstance)).ToDictionary(),
             };
 
@@ -388,10 +707,6 @@ namespace StS2AP.Models
             foreach(var kv in saveData.CardAssignmentModels)
             {
                 var models = kv.Value.Select(cs => player.RunState.CreateCard(CardModel.FromSerializable(cs).CanonicalInstance, player)).ToList();
-                // foreach(var model in models)
-                // {
-                //     model.Owner = player;
-                // }
                 cardModels[kv.Key] = models;
             }
 
@@ -420,6 +735,10 @@ namespace StS2AP.Models
                     LogUtility.Error($"Could not recover card list from save for reward {kv.Key}");
                 }
             }
+
+            var ascensionLevels = saveData.Ascensions?.Select((level) => (AscensionLevel)level).ToHashSet() ?? new HashSet<AscensionLevel>();
+
+            progress.Ascensions.Initialize(GameUtility.CurrentConfig, ascensionLevels);
 
             progress.CardAssignments = cardRewards;
 

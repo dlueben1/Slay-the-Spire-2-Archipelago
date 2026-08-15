@@ -23,11 +23,11 @@ namespace StS2AP.Models
         {
             get
             {
-                var description = new LocString("ap", "shop_potion_description");
+                var description = new LocString("potions", "shop_potion_description");
                 description.Add("item_name", ApItemName);
                 description.Add("player_name", ApPlayerName);
                 description.Add("classification", ClassificationLabel);
-                yield return new HoverTip(new LocString("ap", "shop_potion_title"), description);
+                yield return new HoverTip(new LocString("potions", "shop_potion_title"), description);
             }
         }
 

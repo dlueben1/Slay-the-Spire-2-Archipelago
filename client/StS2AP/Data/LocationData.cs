@@ -21,10 +21,15 @@ namespace StS2AP.Data
         private static long CombineLocationAndCharacterIds(long locationId, CharacterModel character)
         {
             // Character offset (for locations this is zero-based, so it needs to be shifted)
-            long _characterOffset = character.GetAPLocationCharID();
+            long? _characterOffset = character.GetCharacterOffset();
+            if(_characterOffset == null)
+            {
+                LogUtility.Error($"Got unsupported character {character.APName()}");
+                return -1;
+            }
 
             // Place the character offset in the leftmost position and location ID in the rightmost 4 digits (zero-padded)
-            return (_characterOffset * 10000) + locationId;
+            return (long) _characterOffset + locationId;
         }
 
         /// <summary>
@@ -97,6 +102,17 @@ namespace StS2AP.Data
         }
 
         /// <summary>
+        /// Returns all location IDs for Ancient Rewards for a given character.
+        /// </summary>
+        /// <param name="character">The character to get Ancient Reward locations for.</param>
+        /// <returns>A list of location IDs for the specified character's Ancient Rewards.</returns>
+        public static List<long> GetAncientRewardLocations(CharacterModel character)
+        {
+            var start = ArchipelagoClient.Settings.NeowSanity ? 1 : 2;
+            return GetLocationsByPattern($"{character.APName()} Ancient Act #", ArchipelagoProgress._maxAncientChecks, start);
+        }
+
+        /// <summary>
         /// Returns all location IDs for Goldsanity for a given character.
         /// </summary>
         /// <param name="character">The character to get Goldsanity locations for.</param>
@@ -145,7 +161,9 @@ namespace StS2AP.Data
         }
         public static List<long> GetShopsanityLocations(CharacterModel character)
         {
-            return GetLocationsByPattern($"{character.APName()} Shop Slot #", 16);
+            return GetLocationsByPattern(
+                $"{character.APName()} Shop Slot #",
+                ArchipelagoClient.Settings.TotalShopLocations);
         }
 
         /// <summary>
@@ -154,10 +172,10 @@ namespace StS2AP.Data
         /// <param name="pattern">The pattern to match location names against, where '#' will be replaced by the index.</param>
         /// <param name="count">The maximum number of locations to return.</param>
         /// <returns>A list of location IDs that match the pattern. May be empty if something went wrong.</returns>
-        private static List<long> GetLocationsByPattern(string pattern, int count)
+        private static List<long> GetLocationsByPattern(string pattern, int count, int start = 1 )
         {
             List<long> ids = new();
-            for(int i = 1; i <= count; i++)
+            for(int i = start; i <= count; i++)
             {
                 try
                 {

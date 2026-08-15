@@ -3,6 +3,7 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Nodes.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Screens;
@@ -24,17 +25,24 @@ namespace StS2AP.Patches
     public static class Patches_InjectAPRewards
     {
 
-        private static ArchipelagoReward? GenerateForRelic(string name)
+        /// <summary>
+        /// Adds the numbered AP check for one native Elite or Black Star relic. A waiting receipt
+        /// keeps that exact reward; otherwise the reward is removed and its earned bank remains.
+        /// </summary>
+        private static void ProcessNativeRelicReward(
+            List<Reward> rewards,
+            RelicReward relicReward,
+            Player player
+        )
         {
-            // Have we already given out enough relic rewards?
-            ArchipelagoClient.Progress.RelicRewardsAttempted++;
-            if (ArchipelagoClient.Progress.RelicRewardsAttempted <= ArchipelagoProgress._maxRelicRewards)
-            {
-                // Replace this reward with an AP Location reward
-                //__result.Remove(relicReward);
-                return new ArchipelagoReward($"{name} Relic {ArchipelagoClient.Progress.RelicRewardsAttempted}");
-            }
-            return null;
+            if (!RelicRewardUtility.RecordEligibleReward(out var rewardNumber))
+                return;
+
+            rewards.Add(new ArchipelagoReward($"{player.APName()} Relic {rewardNumber}"));
+
+            // The native reward already exists. A receipt decides whether it survives beside the check.
+            if (!RelicRewardUtility.TryConsumeWaitingReceiptForNaturalReward(player))
+                rewards.Remove(relicReward);
         }
         /// <summary>
         /// Patches RewardsSet.GenerateRewardsFor to replace or inject Archipelago Location rewards.
@@ -64,18 +72,6 @@ namespace StS2AP.Patches
                 {
                     // Prepare the Character name from it's Title
                     var name = player.APName();
-
-                    // Determine if a Relic Reward is being placed
-                    var relicReward = __result.FirstOrDefault(r => r is RelicReward);
-                    if (relicReward != null)
-                    {
-                        var apReward = GenerateForRelic(name);
-                        if(apReward != null)
-                        {
-                            __result.Remove(relicReward);
-                            __result.Add(apReward);
-                        }
-                    }
 
                     // Determine if a Card Reward is being placed
                     var cardReward = __result.FirstOrDefault(r => r is CardReward);
@@ -157,6 +153,170 @@ namespace StS2AP.Patches
         }
 
         /// <summary>
+        /// Handles the room's base Elite relic after tutorial and extra-room rewards are assembled.
+        /// Treasure uses the same point because its native relic picker already exists by then;
+        /// its AP check is sent automatically so the chest cinematic is not interrupted by a
+        /// separate rewards screen.
+        /// </summary>
+        [HarmonyPatch(typeof(RewardsSet), nameof(RewardsSet.WithRewardsFromRoom))]
+        public static class ProcessRoomRelicReward
+        {
+            [HarmonyPostfix]
+            public static void Postfix(RewardsSet __instance, AbstractRoom room)
+            {
+                var player = __instance.Player;
+                if (player != GameUtility.CurrentPlayer)
+                    return;
+
+                if (room.RoomType == RoomType.Elite)
+                {
+                    // The base reward is first. Hook-added relics such as Black Star are handled
+                    // at their own append point so each one gets a separate attempt.
+                    var relicReward = __instance.Rewards.OfType<RelicReward>().FirstOrDefault();
+                    if (relicReward != null)
+                        ProcessNativeRelicReward(__instance.Rewards, relicReward, player);
+                    return;
+                }
+
+                if (room.RoomType != RoomType.Treasure)
+                {
+                    return;
+                }
+
+                // An empty chest is not an eligible relic source. Check this before
+                // recording the attempt so Silver Crucible neither sends a location
+                // nor consumes a reward number or creates a bank.
+                if (!Hook.ShouldGenerateTreasure(player.RunState, player))
+                {
+                    LogUtility.Info("Skipping AP Relic check for an empty treasure chest");
+                    return;
+                }
+
+                if (!RelicRewardUtility.RecordEligibleReward(out var rewardNumber))
+                    return;
+
+                // Opening the chest is the interaction that earns this check. Sending it here
+                // avoids inserting an AP rewards screen between the chest-open animation and the
+                // native relic picker. SendCheck is idempotent for an already-checked location.
+                // The alternative was the chest opening 2 times or having to manually generate a relic
+                // I opted to use the native game default way. My rationale was that floor checks automatically send
+                // things out so what's 3 more.
+                GameUtility.SendCheck($"{player.APName()} Relic {rewardNumber}");
+
+                var relicPicker = RunManager.Instance.TreasureRoomRelicSynchronizer;
+                var nativeRelicExists = relicPicker.CurrentRelics?.Count > 0;
+                if (nativeRelicExists
+                    && !RelicRewardUtility.TryConsumeWaitingReceiptForNaturalReward(player))
+                {
+                    // The AP check was still sent; only the native chest relic becomes a bank.
+                    // BeginRelicPicking currently exposes its backing List as IReadOnlyList. Clear
+                    // it here so the native empty-chest flow owns the later completion event.
+                    if (relicPicker.CurrentRelics is List<RelicModel> relics)
+                    {
+                        relics.Clear();
+                    }
+                    else
+                    {
+                        // Fail open if the game changes this collection type. Do not leave a bank
+                        // behind as well as the native relic, which would duplicate the reward.
+                        ArchipelagoClient.Progress.BankedRelicRewards--;
+                        RelicCoupons.RefreshCounter(player);
+                        LogUtility.Error(
+                            """
+                            Could not suppress the native treasure relic; preserving vanilla
+                             without a Relic bank. Please notify the devs. 
+                            """
+                        );
+                    }
+                }
+                else if (!nativeRelicExists)
+                {
+                    // Receipts delivered after the picker was generated should not suddenly appear
+                    // in the chest. They spend the new bank through the AP menu instead.
+                    // Note the logic is only sound because of the GateTreasureRelicPicker prefix
+                    RelicRewardUtility.ReconcileBankedRewards(player);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Decides chest ownership before the native picker pulls from its relic bag. If no receipt
+        /// is waiting, leave an empty picker for the AP check and bank recorded when the chest opens.
+        /// </summary>
+        [HarmonyPatch(
+            typeof(TreasureRoomRelicSynchronizer),
+            nameof(TreasureRoomRelicSynchronizer.BeginRelicPicking)
+        )]
+        public static class GateTreasureRelicPicker
+        {
+            [HarmonyPrefix]
+            public static bool Prefix(
+                ref List<RelicModel> ____currentRelics,
+                ref PlayerVote ____predictedVote
+            )
+            {
+                if (____currentRelics != null)
+                {
+                    throw new InvalidOperationException(
+                        "Attempted to start new relic picking session while one was already occurring!"
+                    );
+                }
+
+                var player = GameUtility.CurrentPlayer;
+                if (player == null
+                    || ArchipelagoClient.Progress.RelicRewardsAttempted
+                        >= ArchipelagoProgress._maxRelicRewards
+                    || RelicRewardUtility.HasWaitingReceiptForNaturalReward(player))
+                {
+                    return true;
+                }
+
+                ____currentRelics = new List<RelicModel>();
+                ____predictedVote = new PlayerVote
+                {
+                    voteReceived = true,
+                    index = 0,
+                };
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Black Star appends its own native reward during reward hooks. Process only that new
+        /// reward so it stays independent from the base Elite relic and receives its own AP check.
+        /// </summary>
+        [HarmonyPatch(typeof(BlackStar), nameof(BlackStar.TryModifyRewards))]
+        public static class ProcessBlackStarRelicReward
+        {
+            [HarmonyPrefix]
+            public static void Prefix(List<Reward> rewards, out int __state)
+            {
+                __state = rewards.Count;
+            }
+
+            [HarmonyPostfix]
+            public static void Postfix(
+                Player player,
+                List<Reward> rewards,
+                AbstractRoom? room,
+                bool __result,
+                int __state
+            )
+            {
+                if (!__result
+                    || player != GameUtility.CurrentPlayer
+                    || room?.RoomType != RoomType.Elite)
+                {
+                    return;
+                }
+
+                var relicReward = rewards.Skip(__state).OfType<RelicReward>().FirstOrDefault();
+                if (relicReward != null)
+                    ProcessNativeRelicReward(rewards, relicReward, player);
+            }
+        }
+
+        /// <summary>
         /// When an AP Location reward has already been claimed, make it semi-transparent in the rewards screen to indicate that it's been claimed.
         /// </summary>
         [HarmonyPatch(typeof(NRewardsScreen), "ShowScreen")]
@@ -199,54 +359,5 @@ namespace StS2AP.Patches
             }
         }
 
-        /// <summary>
-        /// Prevents chests from giving relics if that list hasn't been exhausted.
-        /// </summary>
-        [HarmonyPatch(typeof(TreasureRoomRelicSynchronizer), nameof(TreasureRoomRelicSynchronizer.BeginRelicPicking))]
-        public static class PreventRelicsFromChests
-        {
-            [HarmonyPrefix]
-            public static bool Prefix(ref List<RelicModel> ____currentRelics, ref PlayerVote ____predictedVote)
-            {
-                if(____currentRelics != null)
-                {
-			        throw new InvalidOperationException("Attempted to start new relic picking session while one was already occurring!");
-                }
-
-                if(ArchipelagoClient.Progress.RelicAssignments.Count <= ArchipelagoProgress._maxRelicRewards)
-                {
-                    ____currentRelics = new List<RelicModel>();
-                    ____predictedVote = new PlayerVote()
-                    {
-                        voteReceived    = true,     
-                        index = 0
-                    };
-                    return false;
-                }
-
-                return true;
-            }
-        }
-
-        /// <summary>
-        /// Adds an AP Relic reward, if appropriate
-        /// </summary>
-        [HarmonyPatch(typeof(RewardsSet), nameof(RewardsSet.WithRewardsFromRoom))]
-        public static class InjectAPRewardsForChest
-        {
-            [HarmonyPostfix]
-            public static void Postfix(RewardsSet __instance, AbstractRoom room)
-            {
-                if(room.RoomType != RoomType.Treasure)
-                {
-                    return;
-                }
-                var apReward = GenerateForRelic(__instance.Player.APName());
-                if(apReward != null)
-                {
-                    __instance.Rewards.Add(apReward);
-                }
-            }
-        }
     }
 }

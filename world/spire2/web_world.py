@@ -2,10 +2,18 @@ from BaseClasses import Tutorial
 from worlds.AutoWorld import WebWorld
 from Options import DeathLink, OptionGroup
 from .options import (
-    Characters, DeathLinkDamagePercent, EnableDeathFragments, PickNumberCharacters, GoalNumChar,
-    LockCharacters, UnlockedCharacter, Ascension,
-    IncludeFloorChecks, CampfireSanity, GoldSanity, PotionSanity,
-    CardReward,
+    Characters, ModdedCharacters, DeathLinkDamagePercent, EnableDeathFragments, PickNumberCharacters, GoalNumChar,
+    LockCharacters, UnlockedCharacter, Ascension, AscensionDown, AdvancedChar, CharacterOptions,
+    IncludeFloorChecks, NeowSanity, CampfireSanity, GoldSanity, PotionSanity,
+    ShopSanity, ShopCardSlots, ShopNeutralSlots, ShopRelicSlots, ShopPotionSlots, ShopRemoveSlots, ShopSanityCosts,
+    AncientRelicLocation, AncientRelicPool, RelicRewardsAvailableAnytime, ReleaseOnVictory,
+    CardReward, ProgressiveStarterCard, ProgressiveStarterRelic, SeededRun,
+    OneGoldFillerWeight, FiveGoldFillerWeight,
+    FreeAttackFillerWeight, FreePowerFillerWeight, FreeSkillFillerWeight,
+    DexterityFillerWeight, StrengthFillerWeight, PlatingFillerWeight,
+    FriendshipFillerWeight, PostCombatCardUpgradeFillerWeight, PostCombatCardRemovalFillerWeight,
+    AdditionalCardRewardFillerWeight, BufferFillerWeight, VigorFillerWeight, ThornsFillerWeight, ArtifactFillerWeight,
+    SingleColorlessCardFillerWeight,
 )
 
 # The info needed for the Archipelago Website, not the actual `apworld`
@@ -17,28 +25,71 @@ class SlayTheSpire2Web(WebWorld):
             "English",
             "setup_en.md",
             "setup/en",
-            ["Kirbyfanner"]
+            ["Kirbyfanner", "Platano Bailando", "Lyxn"]
         )
     ]
 
     option_groups = [
         OptionGroup("Character Options", [
             Characters,
+            ModdedCharacters,
             PickNumberCharacters,
             GoalNumChar,
             LockCharacters,
             UnlockedCharacter,
+            Ascension,
+            AscensionDown,
+        ]),
+        OptionGroup("Game Options", [
+            AncientRelicLocation,
+            AncientRelicPool,
+            RelicRewardsAvailableAnytime,
+            ProgressiveStarterCard,
+            ProgressiveStarterRelic,
+            CardReward,
         ]),
         OptionGroup("Sanities", [
             IncludeFloorChecks,
+            NeowSanity,
             CampfireSanity,
             GoldSanity,
             PotionSanity,
-            CardReward,
+            ShopSanity,
+            ShopCardSlots,
+            ShopNeutralSlots,
+            ShopRelicSlots,
+            ShopPotionSlots,
+            ShopRemoveSlots,
+            ShopSanityCosts,
         ]),
         OptionGroup("Death Link", [
             DeathLink,
             EnableDeathFragments,
             DeathLinkDamagePercent,
-        ])
+        ]),
+        OptionGroup("Advanced Options", [
+            ReleaseOnVictory,
+            SeededRun,
+            AdvancedChar,
+            CharacterOptions,
+        ], start_collapsed=True),
+        OptionGroup("Filler Items", [
+            OneGoldFillerWeight,
+            FiveGoldFillerWeight,
+            FreeAttackFillerWeight,
+            FreePowerFillerWeight,
+            FreeSkillFillerWeight,
+            DexterityFillerWeight,
+            StrengthFillerWeight,
+            PlatingFillerWeight,
+            FriendshipFillerWeight,
+            PostCombatCardUpgradeFillerWeight,
+            PostCombatCardRemovalFillerWeight,
+            AdditionalCardRewardFillerWeight,
+            BufferFillerWeight,
+            VigorFillerWeight,
+            ThornsFillerWeight,
+            ArtifactFillerWeight,
+            #SingleColorlessCardFillerWeight,
+        ]),
     ]

@@ -1,5 +1,15 @@
 using Godot;
+using HarmonyLib;
+using MegaCrit.Sts2.Core.ControllerInput;
+using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.HoverTips;
+using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Nodes.HoverTips;
+using MegaCrit.Sts2.Core.Nodes.CommonUi;
+using MegaCrit.Sts2.Core.Nodes.Rewards;
+using MegaCrit.Sts2.Core.Nodes.Screens;
+using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
 using MegaCrit.Sts2.Core.Nodes.Screens.Capstones;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
@@ -13,20 +23,94 @@ using System.Threading.Tasks;
 using static StS2AP.Data.ItemTable;
 using ItemInfo = Archipelago.MultiClient.Net.Models.ItemInfo;
 using MegaCrit.Sts2.Core.Entities.Multiplayer;
+using StS2AP.Models;
+using System.Reflection;
+using MegaCrit.Sts2.Core.Nodes;
 
 namespace StS2AP.UI
 {
     public partial class APRewardScreenNode : Control, IOverlayScreen
     {
+        private bool _hotkeysRegistered;
+        private bool _blocksUnderlyingHotkeys;
+
         public Button? DefaultFocus { get; set; }
         public NetScreenType ScreenType => NetScreenType.Rewards; 
         public bool UseSharedBackstop => true; 
         public Control? DefaultFocusedControl => DefaultFocus; 
 
         public void AfterOverlayOpened() { }
-        public void AfterOverlayClosed() { QueueFree(); }
-        public void AfterOverlayShown() { DefaultFocus?.GrabFocus(); }
-        public void AfterOverlayHidden() { }
+
+        public void AfterOverlayClosed()
+        {
+            UnregisterHotkeys();
+            QueueFree();
+        }
+
+        public void AfterOverlayShown()
+        {
+            Visible = true;
+            RegisterHotkeys();
+
+            // ActiveScreenContext updates after NOverlayStack invokes this callback.
+            // Defer focus so the overlay's recursive focus behavior is enabled first.
+            Callable.From(() => DefaultFocus?.GrabFocus()).CallDeferred();
+        }
+
+        public void AfterOverlayHidden()
+        {
+            // Let the native screen above AP own input. In particular, map and deck
+            // should temporarily hide a card picker exactly as they do elsewhere.
+            UnregisterHotkeys();
+            Visible = false;
+        }
+
+        internal void UnregisterHotkeys()
+        {
+            var hotkeyManager = NHotkeyManager.Instance;
+            if (_hotkeysRegistered)
+            {
+                hotkeyManager?.RemoveHotkeyPressedBinding(MegaInput.cancel, ArchipelagoRewardUI.Hide);
+                hotkeyManager?.RemoveHotkeyPressedBinding(MegaInput.pauseAndBack, ArchipelagoRewardUI.Hide);
+                hotkeyManager?.RemoveHotkeyReleasedBinding(MegaInput.viewMap, ArchipelagoRewardUI.CloseToMap);
+                hotkeyManager?.RemoveHotkeyReleasedBinding(MegaInput.viewDeckAndTabLeft, ArchipelagoRewardUI.CloseToDeck);
+                _hotkeysRegistered = false;
+            }
+
+            if (_blocksUnderlyingHotkeys)
+            {
+                hotkeyManager?.RemoveBlockingScreen(this);
+                _blocksUnderlyingHotkeys = false;
+            }
+        }
+
+        private void RegisterHotkeys()
+        {
+            var hotkeyManager = NHotkeyManager.Instance;
+            if (hotkeyManager == null)
+            {
+                return;
+            }
+
+            // Block underlying room/top-bar shortcuts, then add only the
+            // actions the AP reward screen intentionally supports on top.
+            if (!_blocksUnderlyingHotkeys)
+            {
+                hotkeyManager.AddBlockingScreen(this);
+                _blocksUnderlyingHotkeys = true;
+            }
+
+            if (_hotkeysRegistered)
+            {
+                return;
+            }
+
+            hotkeyManager.PushHotkeyPressedBinding(MegaInput.cancel, ArchipelagoRewardUI.Hide);
+            hotkeyManager.PushHotkeyPressedBinding(MegaInput.pauseAndBack, ArchipelagoRewardUI.Hide);
+            hotkeyManager.PushHotkeyReleasedBinding(MegaInput.viewMap, ArchipelagoRewardUI.CloseToMap);
+            hotkeyManager.PushHotkeyReleasedBinding(MegaInput.viewDeckAndTabLeft, ArchipelagoRewardUI.CloseToDeck);
+            _hotkeysRegistered = true;
+        }
     }
         /// <summary>
         /// Data container for a single reward entry displayed in the reward screen.
@@ -65,6 +149,21 @@ namespace StS2AP.UI
         /// </summary>
         public Func<Task<bool>>? GrantAction { get; set; }
 
+        /// <summary>
+        /// Relics linked to one AP item. When present, the UI renders a single grouped reward
+        /// and consumes the AP item only after one of these relics is granted.
+        /// </summary>
+        public IReadOnlyList<RelicModel>? LinkedRelicChoices { get; set; }
+
+        /// <summary>Whether linked relic choices should use the Ancient-specific button tint.</summary>
+        public bool UseAncientRelicStyle { get; set; }
+
+        /// <summary>The relic whose native hover tips should be shown for this reward row.</summary>
+        public RelicModel? TooltipRelic { get; set; }
+
+        /// <summary>The potion whose native hover tips should be shown for this reward row.</summary>
+        public PotionModel? TooltipPotion { get; set; }
+
         /// <summary>Optional sync callback invoked after the grant completes (e.g. for cleanup)</summary>
         public Action? OnClaimed { get; set; }
     }
@@ -77,10 +176,29 @@ namespace StS2AP.UI
     /// </summary>
     public static class ArchipelagoRewardUI
     {
+        private enum ReturnDestination
+        {
+            Room,
+            Map,
+            Deck,
+        }
+
         private static APRewardScreenNode? _rootPanel;
         private static VBoxContainer? _itemContainer;
         private static Button? _proceedButton;
         private static Tween? _fadeTween;
+        private static bool _isClosing;
+        private static Texture2D? _linkedRewardChainTexture;
+        private static bool _linkedRewardChainTextureResolved;
+        private static readonly PropertyInfo? ChainImagePathProperty =
+            AccessTools.Property(typeof(NLinkedRewardSet), "ChainImagePath");
+
+        private static ReturnDestination _returnDestination;
+
+        // used to differentiate card rewards from AP rewards versus a natural card reward
+        // because they are treated differently due to skips not actually skipping AP stuff
+        private static NCardRewardSelectionScreen? _ownedCardPicker;
+        private static bool _ownedCardPickerSkipRequested;
 
         // UI resource paths sourced from rewards_screen.tscn
         private const string PanelPath   = "res://images/ui/reward_screen/reward_panel.png";
@@ -130,6 +248,19 @@ namespace StS2AP.UI
         private const int RewardSenderFontSize = 16;
         private const float IconSlotSize      = 48f;
         private const float ButtonHeight      = 74f;
+        
+        // Linked relic choices mirror the base game's compact NLinkedRewardSet layout:
+        // buttons remain close together while the chain renders over both entries.
+        private const float LinkedChoiceSeparation = 3f;
+        private const float LinkedChoiceChainWidth = 104f;
+        private const float LinkedChoiceChainHeight = 88f;
+        private const int LinkedChoiceTextBottomBias = 8;
+
+        // Ancient Relics related settings
+        private static readonly Color AncientButtonNormalColor = new(0.78f, 0.48f, 0.95f);
+        private static readonly Color AncientButtonHoverColor = new(0.95f, 0.62f, 1f);
+        private static readonly Color AncientButtonPressedColor = new(0.65f, 0.34f, 0.82f);
+        private static readonly Color AncientButtonDisabledColor = new(0.45f, 0.30f, 0.55f, 0.8f);
 
         private static int _remainingRewards = 0;
 
@@ -138,12 +269,41 @@ namespace StS2AP.UI
         /// </summary>
         public static Action? OnScreenClosed;
 
-
         /// <summary>
-        /// Whether the UI is open or not. 
+        /// Whether the UI is open or not.
         /// Note: This is different from IsVisible, which can be false if the UI is hidden temporarily by another overlay.
         /// </summary>
         public static bool IsOpen => _rootPanel != null && IsInstanceValid(_rootPanel) && _rootPanel.IsInsideTree();
+
+        /// <summary>
+        /// True when AP itself is the visible top overlay.
+        /// </summary>
+        internal static bool IsActive =>
+            IsOpen && ActiveScreenContext.Instance.IsCurrent(_rootPanel);
+
+        /// <summary>
+        /// Toggles AP rewards. When the exact card picker launched by AP is active,
+        /// the same request invokes that picker's native Skip action instead.
+        /// </summary>
+        public static void Toggle()
+        {
+            if (!IsOpen)
+            {
+                ShowRewards();
+                return;
+            }
+
+            if (IsActive)
+            {
+                Hide();
+                return;
+            }
+
+            if (!TrySkipOwnedCardPicker())
+            {
+                LogUtility.Debug("Ignoring AP reward toggle while a nested overlay is active");
+            }
+        }
 
         #region Public API
 
@@ -191,7 +351,7 @@ namespace StS2AP.UI
                     ItemName    = "Card Reward",
                     SenderName  = "TestPlayer",
                     IconPath    = IconCard,
-                    GrantAction = () => GameUtility.GrantCardReward(index: -1, rare: false)
+                    GrantAction = () => GrantAPCardReward(index: -1, rare: false)
                 },
             };
             Callable.From(() => ShowRewards(testRewards)).CallDeferred();
@@ -204,15 +364,19 @@ namespace StS2AP.UI
         public static void ShowRewards()
         {
             // Ignore if current player is null
-            if (GameUtility.CurrentPlayer == null) return;
+            var currentPlayer = GameUtility.CurrentPlayer;
+            if (currentPlayer == null) return;
 
+            // Normally this happens on receipt or checkpoint load. Retrying here keeps an
+            // unexpected assignment failure recoverable without another tracking state.
+            RelicRewardUtility.ReconcileBankedRewards(currentPlayer);
 
             // Get Unused items from the Multiworld for our current character
             var availableItems = ArchipelagoClient.Progress.AllReceivedItems
-                                .Where(i => !ArchipelagoClient.Progress.UsedItems.Contains(i.Index) && i.Item.GetStSCharID() == GameUtility.CurrentCharacterID);
+                .Where(i => ArchipelagoClient.Progress.IsAvailableInRewardMenu(i, currentPlayer));
             
             // Prepare them for the UI
-            var rewardDataList = availableItems.Where(i => !i.Item.ItemDisplayName.Contains("Progressive") && !i.Item.ItemName.Contains("Progressive")).Select(i =>
+            var rewardDataList = availableItems.Select(i =>
             {
                 var data = new ArchipelagoRewardData
                 {
@@ -225,16 +389,46 @@ namespace StS2AP.UI
                     GrantAction = GetGrantAction(i.Item),
                 };
 
-                // For relic items, pre-assign a specific relic so the name is stable across open/close
-                var rawId = i.Item.GetRawItemID();
-                if (rawId == APItem.Relic || rawId == APItem.BossRelic)
+                // Relic items received from AP offer a stable, persisted choice. This does not
+                // affect relic rewards created by the base game or other mods.
+                var rawId = i.Item.GetCharacterSpecificItemID();
+                if (rawId == APItem.Relic)
                 {
-                    var relic = ArchipelagoClient.Progress.GetOrAssignRelic(i.Index, GameUtility.CurrentPlayer);
-                    if (relic != null)
+                    // AP-menu Relics are deliberately one persisted choice. Normal-screen relics
+                    // stay native and never enter this assignment map.
+                    var choices = ArchipelagoClient.Progress.GetOrAssignRelicChoices(
+                        i.Index,
+                        currentPlayer,
+                        choiceCount: 1
+                    );
+                    if (choices.Count > 0)
                     {
-                        data.ItemName = relic.Title.GetRawText();
-                        data.IconPath = relic.IconPath;
-                        data.GrantAction = async () => { await GameUtility.GrantRelic(relic); return true; };
+                        data.ItemName = "Choose a Relic";
+                        data.LinkedRelicChoices = choices;
+                        data.OnClaimed = () => RelicRewardUtility.CompleteMenuClaim(i.Index);
+                    }
+                    else
+                    {
+                        // Fail closed: do not consume the AP item if its choices could not be built.
+                        data.ItemName = "Relic Choice Unavailable";
+                        data.GrantAction = () => Task.FromResult(false);
+                    }
+                }
+
+                if (rawId == APItem.ProgressiveAncient)
+                {
+                    var choices = ArchipelagoClient.Progress.GetOrAssignAncientRelicChoices(i.Index, currentPlayer);
+                    if (choices.Count == AncientRelicPool.ChoiceCount)
+                    {
+                        data.ItemName = "Choose an Ancient Relic";
+                        data.LinkedRelicChoices = choices;
+                        data.UseAncientRelicStyle = true;
+                    }
+                    else
+                    {
+                        // Fail closed: do not consume the AP item if its choice pool could not be built.
+                        data.ItemName = "Ancient Relic Choice Unavailable";
+                        data.GrantAction = () => Task.FromResult(false);
                     }
                 }
 
@@ -243,16 +437,25 @@ namespace StS2AP.UI
                 {
                     bool isRare = rawId == APItem.RareCardReward;
                     int itemIndex = i.Index;
-                    data.GrantAction = async () => await GameUtility.GrantCardReward(itemIndex, rare: isRare);
+                    // AP Card reward has special handling so we can remember that the card reward
+                    // is an AP one for UI purposes such as hitting AP button to act like a skip cus
+                    // I think its more intuitive, I'd rather not have dead buttons
+                    data.GrantAction = () => GrantAPCardReward(itemIndex, rare: isRare);
                 }
 
                 if(rawId == APItem.Potion)
                 {
-                    var potion = ArchipelagoClient.Progress.GetOrAssignPotion(i.Index, GameUtility.CurrentPlayer);
+                    var potion = ArchipelagoClient.Progress.GetOrAssignPotion(i.Index, currentPlayer);
                     if(potion != null)
                     {
+                        // Potion assignments stay canonical for persistence/granting. Use an
+                        // owner-bound mutable copy so dynamic tooltip variables resolve safely.
+                        var tooltipPotion = potion.ToMutable();
+                        tooltipPotion.Owner = currentPlayer;
+
                         data.ItemName = potion.Title.GetRawText();
                         data.IconPath = potion.ImagePath;
+                        data.TooltipPotion = tooltipPotion;
                         data.GrantAction = async () => { return await GameUtility.GrantPotion(potion); };
                     }
                 }
@@ -260,7 +463,7 @@ namespace StS2AP.UI
                 return data;
             }).ToList();
 
-            rewardDataList.ForEach(item => item.OnClaimed = () =>
+            rewardDataList.ForEach(item => item.OnClaimed ??= () =>
             {
                 // Mark the item as used in the Multiworld so it doesn't show up again if we reopen the screen
                 ArchipelagoClient.Progress.UsedItems.Add(item.Index);
@@ -280,7 +483,9 @@ namespace StS2AP.UI
             try
             {
                 if (_rootPanel == null || !IsInstanceValid(_rootPanel))
+                {
                     CreateUI();
+                }
 
                 if (_itemContainer == null || !IsInstanceValid(_itemContainer))
                 {
@@ -295,18 +500,20 @@ namespace StS2AP.UI
                 _remainingRewards = 0;
 
                 // Inject a reward for any remaining gold (if applicable)
-                int pendingGold = ArchipelagoClient.Progress.GoldRemaining;
-                if(pendingGold > 0)
+                ArchipelagoGoldOffer offer = ArchipelagoClient.Progress.PrepareGoldOffer();
+
+                if (offer.GrantedAmount > 0)
                 {
                     rewards.Insert(0, new ArchipelagoRewardData
                     {
-                        ItemName    = $"{pendingGold} Gold",
-                        SenderName  = "",
-                        IconPath    = IconGold,
-                        GrantAction = async() =>
-                        { 
-                            await GameUtility.GrantGold(pendingGold); 
-                            ArchipelagoClient.Progress.GoldRedeemed += pendingGold;
+                        ItemName = $"{offer.GrantedAmount} Gold",
+                        SenderName = "",
+                        IconPath = IconGold,
+                        GrantAction = async () =>
+                        {
+                            var amountToGrant = ArchipelagoClient.Progress.ConsumeGoldOffer(offer);
+                            
+                            await GameUtility.GrantGold(amountToGrant);
                             return true;
                         }
                     });
@@ -349,8 +556,10 @@ namespace StS2AP.UI
         {
             LogUtility.Debug("Reward UI Hide() called");
 
-            if (_rootPanel == null || !IsInstanceValid(_rootPanel))
+            if (_isClosing || _rootPanel == null || !IsInstanceValid(_rootPanel))
                 return;
+
+            _isClosing = true;
 
             // Fade out the rewards window, then hide the layer
             if (_rootPanel != null && IsInstanceValid(_rootPanel))
@@ -362,17 +571,34 @@ namespace StS2AP.UI
                 {
                     if (_rootPanel != null && IsInstanceValid(_rootPanel))
                         NOverlayStack.Instance?.Remove(_rootPanel);
-                    if (_rootPanel != null && IsInstanceValid(_rootPanel))
-                        _rootPanel.Modulate = new Color(1f, 1f, 1f, 1f);
+
+                    var destination = _returnDestination;
                     _rootPanel = null;
+                    _isClosing = false;
+                    _returnDestination = ReturnDestination.Room;
+                    OnScreenClosed?.Invoke();
+                    RestoreDestination(destination);
                 }));
             }
-            else
-            {
-                _rootPanel.Visible = false;
-            }
+        }
 
-            OnScreenClosed?.Invoke();
+        /// <summary>
+        /// Makes the map the last requested destination and closes AP. Used by
+        /// AP's hotkey and by the map-open compatibility patch.
+        /// </summary>
+        internal static void CloseToMap()
+        {
+            _returnDestination = ReturnDestination.Map;
+            Hide();
+        }
+
+        /// <summary>
+        /// Makes a fresh deck screen the last requested destination and closes AP.
+        /// </summary>
+        internal static void CloseToDeck()
+        {
+            _returnDestination = ReturnDestination.Deck;
+            Hide();
         }
 
         /// <summary>
@@ -384,6 +610,7 @@ namespace StS2AP.UI
             
             _fadeTween?.Kill();
             _fadeTween = null;
+            (_rootPanel as APRewardScreenNode)?.UnregisterHotkeys();
 
             if (_rootPanel != null && IsInstanceValid(_rootPanel))
                 _rootPanel.QueueFree();
@@ -392,6 +619,157 @@ namespace StS2AP.UI
             _itemContainer    = null;
             _proceedButton    = null;
             _remainingRewards = 0;
+            _isClosing        = false;
+            _returnDestination = ReturnDestination.Room;
+            _ownedCardPicker = null;
+            _ownedCardPickerSkipRequested = false;
+        }
+
+        #endregion
+
+        #region Navigation Coordination
+
+        /// <summary>
+        /// Runs the native card reward flow while retaining the exact picker instance
+        /// created by this AP action. This prevents an AP toggle from ever skipping a
+        /// normal combat or treasure card reward.
+        /// </summary>
+        private static async Task<bool> GrantAPCardReward(int index, bool rare)
+        {
+            var selectionTask = GameUtility.GrantCardReward(index, rare);
+            var picker = NOverlayStack.Instance?.Peek() as NCardRewardSelectionScreen;
+
+            if (picker == null)
+            {
+                LogUtility.Warn("AP card reward did not expose its native picker for navigation ownership");
+            }
+            else
+            {
+                _ownedCardPicker = picker;
+                _ownedCardPickerSkipRequested = false;
+            }
+
+            try
+            {
+                return await selectionTask;
+            }
+            finally
+            {
+                if (ReferenceEquals(_ownedCardPicker, picker))
+                {
+                    _ownedCardPicker = null;
+                    _ownedCardPickerSkipRequested = false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Treats an AP toggle as the native Skip button only for the exact active
+        /// picker launched by <see cref="GrantAPCardReward"/>.
+        /// </summary>
+        private static bool TrySkipOwnedCardPicker()
+        {
+            var picker = _ownedCardPicker;
+            if (picker == null ||
+                !GodotObject.IsInstanceValid(picker) ||
+                !ActiveScreenContext.Instance.IsCurrent(picker))
+            {
+                return false;
+            }
+
+            if (_ownedCardPickerSkipRequested)
+            {
+                return true;
+            }
+
+            // CardRewardAlternative.Generate() inserts the native Skip alternative
+            // first when CanSkip is true. AP card rewards retain that default.
+            var alternatives = picker.GetNodeOrNull<Control>("UI/RewardAlternatives");
+            var skipButton = alternatives?
+                .GetChildren()
+                .OfType<NCardRewardAlternativeButton>()
+                .FirstOrDefault();
+            if (skipButton == null)
+            {
+                LogUtility.Warn("Could not find the native Skip button for the AP card picker");
+                return false;
+            }
+
+            _ownedCardPickerSkipRequested = true;
+            try
+            {
+                LogUtility.Debug("AP reward toggle invoked the owned card picker's native Skip action");
+                skipButton.ForceClick();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _ownedCardPickerSkipRequested = false;
+                LogUtility.Warn($"Failed to skip the AP card picker: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Returns to a room before AP menu is pushed aka opened.
+        /// Map and capstone screens outrank overlays in ActiveScreenContext,
+        /// so leaving either open would make AP or its nested
+        /// native card picker visible but unable to receive input.
+        /// </summary>
+        private static void PrepareForOpen()
+        {
+            // Basically before opening the AP menu, try our best
+            // to find a suitable location to return to
+            _returnDestination = ReturnDestination.Room;
+
+            var capstoneContainer = NCapstoneContainer.Instance;
+            var currentCapstone = capstoneContainer?.CurrentCapstoneScreen;
+            if (currentCapstone is NDeckViewScreen)
+            {
+                _returnDestination = ReturnDestination.Deck;
+            }
+
+            if (currentCapstone != null)
+            {
+                capstoneContainer!.Close();
+            }
+
+            var mapScreen = NMapScreen.Instance;
+            if (mapScreen?.IsOpen != true)
+            {
+                return;
+            }
+
+            // Only remember the map when it was the active high-priority screen.
+            // A deck over a map restores just a fresh deck; unsupported capstones
+            // intentionally return to the room.
+            if (currentCapstone == null)
+            {
+                _returnDestination = ReturnDestination.Map;
+            }
+
+            mapScreen.Close(animateOut: false);
+        }
+
+        private static void RestoreDestination(ReturnDestination destination)
+        {
+            switch (destination)
+            {
+                case ReturnDestination.Map:
+                    NMapScreen.Instance?.Open(isOpenedFromTopBar: true);
+                    break;
+                case ReturnDestination.Deck:
+                    var player = GameUtility.CurrentPlayer;
+                    if (player != null)
+                    {
+                        NDeckViewScreen.ShowScreen(player);
+                        NRun.Instance?.GlobalUi.TopBar.Deck.ToggleAnimState();
+                    }
+                    break;
+                case ReturnDestination.Room:
+                default:
+                    break;
+            }
         }
 
         #endregion
@@ -436,7 +814,10 @@ namespace StS2AP.UI
         {
             if (_itemContainer == null || !IsInstanceValid(_itemContainer)) return;
 
-            _itemContainer.AddChild(CreateRewardButton(data));
+            var rewardControl = data.LinkedRelicChoices?.Count > 0
+                ? CreateRelicChoiceGroup(data)
+                : CreateRewardButton(data);
+            _itemContainer.AddChild(rewardControl);
             _remainingRewards++;
             UpdateProceedButton();
         }
@@ -478,9 +859,10 @@ namespace StS2AP.UI
                     return;
                 }
 
-                var root = sceneTree.Root;
+                PrepareForOpen();
 
                 // Full-screen root panel (blocks input to the game while open)
+                _isClosing = false;
                 _rootPanel = new APRewardScreenNode { Name = "APRewardsScreen" };
                 _rootPanel.SetAnchorsPreset(Control.LayoutPreset.FullRect);
                 _rootPanel.MouseFilter = Control.MouseFilterEnum.Stop;
@@ -637,24 +1019,191 @@ namespace StS2AP.UI
         }
 
         /// <summary>
+        /// Creates visually linked relic buttons which collectively represent one AP item.
+        /// </summary>
+        private static Control CreateRelicChoiceGroup(ArchipelagoRewardData data)
+        {
+            // this is probably infinitely more complicated than it needs to be...
+            // so im sorry if this hurts your brain or can be made simpler
+            // i took inspiration from decompiled code of a similar mod that does this
+            var choices = data.LinkedRelicChoices;
+            if (choices == null || choices.Count == 0)
+                return CreateRewardButton(data);
+
+            var owningPanel = _rootPanel;
+            var chainTexture = GetLinkedRewardChainTexture();
+            var group = new Control
+            {
+                Name = $"RelicChoice_{data.Index}",
+                CustomMinimumSize = new Vector2(0, choices.Count * ButtonHeight + (choices.Count - 1) * LinkedChoiceSeparation),
+                SizeFlagsHorizontal = Control.SizeFlags.Fill
+            };
+            var buttonContainer = new VBoxContainer();
+            buttonContainer.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+            buttonContainer.AddThemeConstantOverride("separation", (int)LinkedChoiceSeparation);
+            group.AddChild(buttonContainer);
+
+            var buttons = new List<Button>(choices.Count);
+            var resolving = false;
+
+            void ResolveChoice(RelicModel relic)
+            {
+                if (resolving)
+                    return;
+
+                resolving = true;
+                foreach (var button in buttons)
+                    button.Disabled = true;
+
+                GameUtility.TryGrantRelic(relic).ContinueWith(task =>
+                {
+                    var granted = task.Status == TaskStatus.RanToCompletion && task.Result;
+                    var failure = task.Exception?.InnerException?.Message ?? task.Exception?.Message;
+
+                    Callable.From(() =>
+                    {
+                        if (granted)
+                            data.OnClaimed?.Invoke();
+
+                        if (!GodotObject.IsInstanceValid(group) ||
+                            owningPanel == null ||
+                            !GodotObject.IsInstanceValid(owningPanel) ||
+                            !ReferenceEquals(_rootPanel, owningPanel))
+                            return;
+
+                        if (!granted)
+                        {
+                            if (!string.IsNullOrEmpty(failure))
+                                LogUtility.Error($"Relic choice failed for '{relic.Id}': {failure}");
+
+                            resolving = false;
+                            foreach (var button in buttons.Where(button => GodotObject.IsInstanceValid(button)))
+                                button.Disabled = false;
+                            return;
+                        }
+
+                        group.QueueFree();
+                        _remainingRewards--;
+                        UpdateProceedButton();
+                        if (_remainingRewards <= 0)
+                            Hide();
+                    }).CallDeferred();
+                });
+            }
+
+            for (var index = 0; index < choices.Count; index++)
+            {
+                var relic = choices[index];
+                var choiceData = new ArchipelagoRewardData
+                {
+                    Index = data.Index,
+                    ItemOriginID = data.ItemOriginID,
+                    ItemName = relic.Title.GetRawText(),
+                    SenderName = data.SenderName,
+                    FoundLocation = data.FoundLocation,
+                    IconPath = relic.IconPath,
+                    TooltipRelic = relic
+                };
+
+                var button = CreateRewardButton(
+                    choiceData,
+                    _ => ResolveChoice(relic),
+                    data.UseAncientRelicStyle,
+                    isLinkedChoice: true
+                );
+                buttons.Add(button);
+                buttonContainer.AddChild(button);
+            }
+
+            if (chainTexture != null)
+            {
+                for (var index = 0; index < choices.Count - 1; index++)
+                {
+                    var chainCenterY = (index + 1) * ButtonHeight
+                        + index * LinkedChoiceSeparation
+                        + LinkedChoiceSeparation / 2f;
+                    var chain = new TextureRect
+                    {
+                        Texture = chainTexture,
+                        ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+                        StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+                        // Keep the chain in the reward screen's normal canvas order. Giving it
+                        // a positive ZIndex lets it render above the separately managed pause menu.
+                        MouseFilter = Control.MouseFilterEnum.Ignore
+                    };
+                    chain.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
+                    chain.OffsetLeft = -LinkedChoiceChainWidth / 2f;
+                    chain.OffsetTop = chainCenterY - LinkedChoiceChainHeight / 2f;
+                    chain.OffsetRight = LinkedChoiceChainWidth / 2f;
+                    chain.OffsetBottom = chainCenterY + LinkedChoiceChainHeight / 2f;
+                    group.AddChild(chain);
+                }
+            }
+
+            return group;
+        }
+
+        private static Texture2D? GetLinkedRewardChainTexture()
+        {
+            if (_linkedRewardChainTextureResolved)
+                return _linkedRewardChainTexture;
+
+            _linkedRewardChainTextureResolved = true;
+            try
+            {
+                var chainPath = ChainImagePathProperty?.GetValue(null) as string;
+                if (!string.IsNullOrWhiteSpace(chainPath))
+                    _linkedRewardChainTexture = PreloadManager.Cache.GetCompressedTexture2D(chainPath);
+                else
+                    LogUtility.Warn("Native linked-reward chain asset path was unavailable; using spacing-only relic choices");
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Warn($"Failed to load native linked-reward chain asset: {ex.Message}");
+            }
+
+            return _linkedRewardChainTexture;
+        }
+
+        /// <summary>
         /// Creates a single reward row button for the given reward data.
         /// The button shows an icon on the left, the item name prominently,
         /// and the sender's name in smaller text below.
         /// </summary>
         /// <param name="data">The reward entry to represent.</param>
-        private static Button CreateRewardButton(ArchipelagoRewardData data)
+        /// <param name="customPressed">Optional group-owned click handler.</param>
+        /// <param name="isAncientChoice">Whether to apply the Ancient-specific button tint.</param>
+        /// <param name="isLinkedChoice">Whether this button belongs to an overlaid chain group.</param>
+        private static Button CreateRewardButton(
+            ArchipelagoRewardData data,
+            Action<Button>? customPressed = null,
+            bool isAncientChoice = false,
+            bool isLinkedChoice = false)
         {
             var btn = new Button { CustomMinimumSize = new Vector2(0, ButtonHeight) };
+            var owningPanel = _rootPanel;
 
             // Apply the in-game reward button texture as the button style
             try
             {
-                var normalStyle = new StyleBoxTexture { Texture = GD.Load<Texture2D>(ItemBtnPath) };
-                var hoverStyle  = new StyleBoxTexture { Texture = GD.Load<Texture2D>(ItemBtnPath) };
+                var buttonTexture = GD.Load<Texture2D>(ItemBtnPath);
+                var normalColor = isAncientChoice ? AncientButtonNormalColor : Colors.White;
+                var hoverColor = isAncientChoice ? AncientButtonHoverColor : Colors.White;
+                var pressedColor = isAncientChoice ? AncientButtonPressedColor : Colors.White;
+                var disabledColor = isAncientChoice ? AncientButtonDisabledColor : Colors.White;
+
+                StyleBoxTexture CreateButtonStyle(Color color) => new()
+                {
+                    Texture = buttonTexture,
+                    ModulateColor = color
+                };
+
+                var normalStyle = CreateButtonStyle(normalColor);
                 btn.AddThemeStyleboxOverride("normal",  normalStyle);
-                btn.AddThemeStyleboxOverride("hover",   hoverStyle);
-                btn.AddThemeStyleboxOverride("pressed", normalStyle);
+                btn.AddThemeStyleboxOverride("hover",   CreateButtonStyle(hoverColor));
+                btn.AddThemeStyleboxOverride("pressed", CreateButtonStyle(pressedColor));
                 btn.AddThemeStyleboxOverride("focus",   normalStyle);
+                btn.AddThemeStyleboxOverride("disabled", CreateButtonStyle(disabledColor));
             }
             catch (Exception ex)
             {
@@ -694,9 +1243,27 @@ namespace StS2AP.UI
             }
 
             // Text column: item name (large) + sender (small)
-            var vbox = new VBoxContainer { SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
+            var vbox = new VBoxContainer();
             vbox.AddThemeConstantOverride("separation", 2);
-            hbox.AddChild(vbox);
+
+            if (isLinkedChoice)
+            {
+                // Move both text lines slightly upward so the larger chain can overlap
+                // the button edges without obscuring the source line.
+                var textMargin = new MarginContainer
+                {
+                    SizeFlagsHorizontal = Control.SizeFlags.Fill,
+                    SizeFlagsVertical = Control.SizeFlags.ShrinkCenter
+                };
+                textMargin.AddThemeConstantOverride("margin_bottom", LinkedChoiceTextBottomBias);
+                textMargin.AddChild(vbox);
+                hbox.AddChild(textMargin);
+            }
+            else
+            {
+                vbox.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+                hbox.AddChild(vbox);
+            }
 
             // Item name label
             var nameLabel = CreateTextLabel(data.ItemName, RewardNameFontSize, new Color(1f, 0.965f, 0.886f));
@@ -707,6 +1274,29 @@ namespace StS2AP.UI
             {
                 var senderLabel = CreateTextLabel($"from {data.SenderName} ({data.FoundLocation})", RewardSenderFontSize, new Color(0.7f, 0.85f, 1f));
                 vbox.AddChild(senderLabel);
+            }
+
+            if (data.TooltipRelic is { } tooltipRelic)
+            {
+                AttachModelHoverTips(
+                    btn,
+                    () => tooltipRelic.HoverTips,
+                    $"relic '{tooltipRelic.Id}'"
+                );
+            }
+            else if (data.TooltipPotion is { } tooltipPotion)
+            {
+                AttachModelHoverTips(
+                    btn,
+                    () => tooltipPotion.HoverTips,
+                    $"potion '{tooltipPotion.Id}'"
+                );
+            }
+
+            if (customPressed != null)
+            {
+                btn.Pressed += () => customPressed(btn);
+                return btn;
             }
 
             // Grant the item and dismiss the button on click
@@ -724,7 +1314,11 @@ namespace StS2AP.UI
                         {
                             LogUtility.Error($"Grant failed for '{data.ItemName}': {t.Exception.InnerException?.Message ?? t.Exception.Message}");
                             // Re-enable the button on failure so the player can try again
-                            Callable.From(() => { btn.Disabled = false; }).CallDeferred();
+                            Callable.From(() =>
+                            {
+                                if (GodotObject.IsInstanceValid(btn))
+                                    btn.Disabled = false;
+                            }).CallDeferred();
                             return;
                         }
 
@@ -733,19 +1327,29 @@ namespace StS2AP.UI
                         {
                             if (shouldRemove)
                             {
-                                // Reward was consumed — remove the button
+                                // Reward consumption is authoritative even if this particular
+                                // menu instance was closed or rebuilt while the picker was open.
                                 data.OnClaimed?.Invoke();
+
+                                if (!GodotObject.IsInstanceValid(btn) ||
+                                    owningPanel == null ||
+                                    !GodotObject.IsInstanceValid(owningPanel) ||
+                                    !ReferenceEquals(_rootPanel, owningPanel))
+                                {
+                                    return;
+                                }
+
                                 btn.QueueFree();
                                 _remainingRewards--;
                                 UpdateProceedButton();
-                                ArchipelagoTopBarUI.SetCount(ArchipelagoClient.Progress.UnusedItemCount);
                                 if (_remainingRewards <= 0)
                                     Hide();
                             }
                             else
                             {
                                 // Reward was skipped — re-enable the button so the player can try again
-                                btn.Disabled = false;
+                                if (GodotObject.IsInstanceValid(btn))
+                                    btn.Disabled = false;
                             }
                         }).CallDeferred();
                     });
@@ -757,8 +1361,6 @@ namespace StS2AP.UI
                     btn.QueueFree();
                     _remainingRewards--;
                     UpdateProceedButton();
-                    ArchipelagoTopBarUI.RefreshCount();
-
                     // Auto-hide once all rewards are dismissed
                     if (_remainingRewards <= 0)
                         Hide();
@@ -766,6 +1368,85 @@ namespace StS2AP.UI
             };
 
             return btn;
+        }
+
+        /// <summary>
+        /// Shows a model's native description and any extra hover tips while a reward button is
+        /// hovered or keyboard-focused.
+        /// </summary>
+        private static void AttachModelHoverTips(
+            Button button,
+            Func<IEnumerable<IHoverTip>> hoverTipsFactory,
+            string diagnosticSubject)
+        {
+            var isHovered = false;
+            var isFocused = false;
+            var isTooltipVisible = false;
+
+            void ShowTooltip()
+            {
+                if (isTooltipVisible)
+                    return;
+
+                try
+                {
+                    var tipSet = NHoverTipSet.CreateAndShow(button, hoverTipsFactory(), HoverTipAlignment.Left);
+                    isTooltipVisible = tipSet != null;
+                }
+                catch (Exception ex)
+                {
+                    LogUtility.Warn($"Failed to show tooltip for {diagnosticSubject}: {ex.Message}");
+                }
+            }
+
+            void HideTooltip()
+            {
+                if (!isTooltipVisible)
+                    return;
+
+                try
+                {
+                    NHoverTipSet.Remove(button);
+                }
+                catch (Exception ex)
+                {
+                    LogUtility.Warn($"Failed to hide tooltip for {diagnosticSubject}: {ex.Message}");
+                }
+                finally
+                {
+                    isTooltipVisible = false;
+                }
+            }
+
+            void RefreshTooltip()
+            {
+                if (isHovered || isFocused)
+                    ShowTooltip();
+                else
+                    HideTooltip();
+            }
+
+            button.MouseEntered += () =>
+            {
+                isHovered = true;
+                RefreshTooltip();
+            };
+            button.MouseExited += () =>
+            {
+                isHovered = false;
+                RefreshTooltip();
+            };
+            button.FocusEntered += () =>
+            {
+                isFocused = true;
+                RefreshTooltip();
+            };
+            button.FocusExited += () =>
+            {
+                isFocused = false;
+                RefreshTooltip();
+            };
+            button.Pressed += HideTooltip;
         }
 
         /// <summary>
@@ -825,14 +1506,17 @@ namespace StS2AP.UI
         /// <returns>An async grant action, or null if not applicable.</returns>
         private static Func<Task<bool>>? GetGrantAction(ItemInfo item)
         {
-            switch (item.GetRawItemID())
+            switch (item.GetCharacterSpecificItemID())
             {
                 case APItem.OneGold:      return async () => { await GameUtility.GrantGold(1); return true; };
                 case APItem.FiveGold:     return async () => { await GameUtility.GrantGold(5); return true; };
-                case APItem._15Gold:      return async () => { await GameUtility.GrantGold(15); return true; };
-                case APItem._30Gold:      return async () => { await GameUtility.GrantGold(30); return true; };
+                case APItem.CombatGold:   return async () => { await GameUtility.GrantGold(15); return true; };
+                case APItem.EliteGold:    return async () => { await GameUtility.GrantGold(40); return true; };
                 case APItem.BossGold:     return async () => { await GameUtility.GrantGold(100); return true; };
                 case APItem.Relic:        return async () => { await GameUtility.GrantRelic(); return true; };
+                // Ancient choices require the received-item index and are built in ShowRewards().
+                // Keep the obsolete AddReward(ItemInfo) path from consuming one as display-only.
+                case APItem.ProgressiveAncient: return () => Task.FromResult(false);
                     // Need to do potion lookup before granting; see ShowRewards
                 case APItem.Potion:       return async () => {  return false; };
                 default:
@@ -851,13 +1535,13 @@ namespace StS2AP.UI
         /// <returns>A resource path string, or <see cref="string.Empty"/> if no icon is available.</returns>
         private static string GetIconForItem(ItemInfo item)
         {
-            switch (item.GetRawItemID())
+            switch (item.GetCharacterSpecificItemID())
             {
                 case APItem.OneGold:
                 case APItem.FiveGold:
                 case APItem.BossGold:
-                case APItem._15Gold:
-                case APItem._30Gold:
+                case APItem.CombatGold:
+                case APItem.EliteGold:
                     return IconGold;
 
                 case APItem.CardReward:
@@ -865,7 +1549,7 @@ namespace StS2AP.UI
                     return IconCard;
 
                 case APItem.Relic:
-                case APItem.BossRelic:
+                case APItem.ProgressiveAncient:
                     return IconRelic;
 
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using StS2AP.Models;
 
 namespace StS2AP.Data
 {
@@ -14,7 +15,7 @@ namespace StS2AP.Data
             CardReward = 1,
             RareCardReward = 2,
             Relic = 3,
-            BossRelic = 4,
+            ProgressiveAncient = 4,
             OneGold = 5,
             FiveGold = 6,
             ProgressiveRest = 7,
@@ -25,11 +26,42 @@ namespace StS2AP.Data
             ShopPotionSlot = 12,
             ProgressiveShopRemove = 13,
             Unlock = 14,
-            _15Gold = 15,
-            _30Gold = 16,
+            CombatGold = 15,
+            EliteGold = 16,
             BossGold = 17,
             Potion = 18,
-            AscensionDown = 19
+            SwarmingElites = 19,
+            WearyTraveler = 20,
+            Poverty = 21,
+            TightBelt = 22,
+            AscenderBane = 23,
+            Inflation = 24,
+            Scarcity = 25,
+            ToughEnemies = 26,
+            DeadlyEnemies = 27,
+            DoubleBoss = 28,
+            ProgressiveStarterCard = 29,
+            ProgressiveStarterRelic = 30,
+
+            /// ── Ephemeral Buff items (universal / character-agnostic) ──────────────────
+            /// These are one-time-use filler items that apply a temporary in-combat buff
+            /// when received. Unlike run rewards (gold, cards, relics), buffs are never
+            /// reapplied on subsequent runs. Consumption is tracked permanently in the
+            /// Archipelago server's DataStorage. IDs match universal_items in items.py.
+            FreeAttack = 500,
+            FreePower = 501,
+            FreeSkill = 502,
+            Dexterity = 503,
+            Strength = 504,
+            Plating = 505,
+            Friendship = 506,
+            PostCombatCardUpgrade = 507,
+            PostCombatCardRemoval = 508,
+            AdditionalCardReward = 509,
+            Buffer = 510,
+            Vigor = 511,
+            Thorns = 512,
+            Artifact = 513,
         }
 
         public static Dictionary<int, string> Items = new Dictionary<int, string>
@@ -38,7 +70,7 @@ namespace StS2AP.Data
             { 1, "Card Reward" },
             { 2, "Rare Card Reward" },
             { 3, "Relic" },
-            { 4, "Boss Relic" },
+            { 4, "Progressive Ancient" },
             { 5, "One Gold" },
             { 6, "Five Gold" },
             { 7, "Progressive Rest" },
@@ -49,11 +81,36 @@ namespace StS2AP.Data
             { 12, "Shop Potion Slot" },
             { 13, "Progressive Shop Remove" },
             { 14, "Unlock" },
-            { 15, "15 Gold" },
-            { 16, "30 Gold" },
+            { 15, "Combat Gold" },
+            { 16, "Elite Gold" },
             { 17, "Boss Gold" },
             { 18, "Potion" },
-            { 19, "Ascension Down" }
+            { 19, "Disable Swarming Elites" },
+            { 20, "Disable Weary Traveler" },
+            { 21, "Disable Poverty" },
+            { 22, "Disable Tight Belt" },
+            { 23, "Disable Ascender's Bane" },
+            { 24, "Disable Inflation" },
+            { 25, "Disable Scarcity" },
+            { 26, "Disable Tough Enemies" },
+            { 27, "Disable Deadly Enemies" },
+            { 28, "Disable Double Boss" },
+            { 29, "Progressive Starter Card" },
+            { 30, "Progressive Starter Relic" },
+            { 500, "Free Attack" },
+            { 501, "Free Power" },
+            { 502, "Free Skill" },
+            { 503, "Dexterity" },
+            { 504, "Strength" },
+            { 505, "Plating" },
+            { 506, "Friendship" },
+            { 507, "Post-Combat Card Upgrade" },
+            { 508, "Post-Combat Card Removal" },
+            { 509, "Additional Card Reward" },
+            { 510, "Buffer" },
+            { 511, "Vigor" },
+            { 512, "Thorns" },
+            { 513, "Artifact" },
         };
 
         /// <summary>
@@ -63,9 +120,57 @@ namespace StS2AP.Data
         {
             { APItem.OneGold, 1 },
             { APItem.FiveGold, 5 },
-            { APItem._15Gold, 15 },
-            { APItem._30Gold, 30 },
-            { APItem.BossGold, 100 }
+            { APItem.CombatGold, 15 },
+            { APItem.EliteGold, 40 },
+            { APItem.BossGold, 100 },
         };
+
+        public static bool CanBePickedUp(this APItem item)
+        {
+            switch(item)
+            {
+              case APItem.CAWCAW:
+                   return false;
+              case APItem.CardReward:
+              case APItem.RareCardReward:
+              case APItem.Relic:
+                    return true;
+              case APItem.ProgressiveAncient:
+                    // pickup is true if Anytime since Relics are in AP reward menu, false otherwise
+                    return (ArchipelagoClient.Settings?.AncientRelicLocation ?? AncientRelicLocation.Anytime) == AncientRelicLocation.Anytime;
+              case APItem.ProgressiveRest:
+              case APItem.ProgressiveSmith:
+              case APItem.ShopCardSlot:
+              case APItem.NeutralShopCardSlot:
+              case APItem.ShopRelicSlot:
+              case APItem.ShopPotionSlot:
+              case APItem.ProgressiveShopRemove:
+              case APItem.ProgressiveStarterCard:
+              case APItem.ProgressiveStarterRelic:
+                    return false;
+              case APItem.Unlock:
+                    return false;
+              case APItem.OneGold:
+              case APItem.FiveGold:
+              case APItem.CombatGold:
+              case APItem.EliteGold:
+              case APItem.BossGold:
+                    return false;
+              case APItem.Potion:
+                    return true;
+              case APItem.SwarmingElites:
+              case APItem.WearyTraveler:
+              case APItem.Poverty:
+              case APItem.TightBelt:
+              case APItem.AscenderBane:
+              case APItem.Inflation:
+              case APItem.Scarcity:
+              case APItem.ToughEnemies:
+              case APItem.DeadlyEnemies:
+              case APItem.DoubleBoss:
+                    return false;
+            }
+            return false;
+        }
     }
 }

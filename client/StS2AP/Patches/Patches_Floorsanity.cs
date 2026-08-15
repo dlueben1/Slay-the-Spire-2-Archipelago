@@ -64,9 +64,6 @@ namespace StS2AP.Patches
             [HarmonyPostfix]
             public static void Postfix(IRunState? runState, bool isRestoringRoomStackBase)
             {
-                // Force a Refresh of the Archipelago Unused Item Count, for run start sync issues.
-                ArchipelagoTopBarUI.RefreshCount();
-
                 // Attempt to send a check for the current room we're on
                 if(ArchipelagoClient.Settings.Floorsanity)
                 {
@@ -111,8 +108,7 @@ namespace StS2AP.Patches
                 if (!ArchipelagoClient.CheckedLocations.Contains(locationId))
                 {
                     // Check the location off and let the server know
-                    ArchipelagoClient.CheckedLocations.Add(locationId);
-                    _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(locationId);
+                    GameUtility.SendCheck(locationId);
 
                     // Log it and notify the user (uses pre-scouted data)
                     LogUtility.Success($"Sent location check: {locationName}");

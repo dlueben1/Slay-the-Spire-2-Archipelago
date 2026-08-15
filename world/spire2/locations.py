@@ -36,7 +36,7 @@ class LocationType(Enum):
     Card_Reward = auto()
     Rare_Card_Reward = auto()
     Relic = auto()
-    Boss_Relic = auto()
+    Ancient = auto()
     Floor = auto()
     Campfire = auto()
     Event = auto()
@@ -70,10 +70,11 @@ def create_location_data() -> typing.List[LocationData]:
              LocationData('Act 3 Campfire 2', 94, LocationType.Campfire),
              LocationData('Rare Card Reward 1', 95, LocationType.Rare_Card_Reward, True),
              LocationData('Rare Card Reward 2', 96, LocationType.Rare_Card_Reward, True),
-             # LocationData('Boss Relic 1', 97, LocationType.Boss_Relic, True),
-             # LocationData('Boss Relic 2', 98, LocationType.Boss_Relic, True),
              LocationData('Boss Gold 1', 99, LocationType.Gold, True),
              LocationData('Boss Gold 2', 100, LocationType.Gold, True),
+             LocationData('Ancient Act 1', 151, LocationType.Ancient, True),
+             LocationData('Ancient Act 2', 152, LocationType.Ancient, True),
+             LocationData('Ancient Act 3', 153, LocationType.Ancient, True),
              LocationData('Act 1 Boss', None, LocationType.Event),
              LocationData('Act 2 Boss', None, LocationType.Event),
              LocationData('Act 3 Boss', None, LocationType.Event),

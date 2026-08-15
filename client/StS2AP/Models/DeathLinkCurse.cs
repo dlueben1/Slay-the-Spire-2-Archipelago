@@ -2,7 +2,7 @@
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.CardPools;
-using MegaCrit.Sts2.Core.Saves.Runs;
+using STS2RitsuLib.Utils;
 
 namespace StS2AP.Models
 {
@@ -12,11 +12,11 @@ namespace StS2AP.Models
     public sealed class DeathLinkCurse : CardModel
     {
         /// <summary>
-        /// A serializable message representing the DeathLink event that caused this Curse to be generated.
+        /// A saved message representing the DeathLink event that caused this Curse to be generated.
         /// This will be used in the card's description.
         /// </summary>
-        [SavedProperty]
-        public string DeathMessage { get; private set; } = string.Empty;
+        public static readonly SavedAttachedState<DeathLinkCurse, string> DeathMessage =
+            new("DeathMessage", _ => string.Empty);
 
         public DeathLinkCurse()
             : base(-1, CardType.Curse, CardRarity.Curse, TargetType.None)
@@ -70,7 +70,7 @@ namespace StS2AP.Models
         {
             base.AfterCloned();
             if (ArchipelagoClient.LastDeathLinkMessage != null)
-                DeathMessage = ArchipelagoClient.LastDeathLinkMessage;
+                DeathMessage[this] = ArchipelagoClient.LastDeathLinkMessage;
         }
 
         /// <summary>
@@ -78,7 +78,7 @@ namespace StS2AP.Models
         /// </summary>
         protected override void AddExtraArgsToDescription(LocString description)
         {
-            description.Add("death_message", DeathMessage);
+            description.Add("death_message", DeathMessage[this]);
         }
     }
 }

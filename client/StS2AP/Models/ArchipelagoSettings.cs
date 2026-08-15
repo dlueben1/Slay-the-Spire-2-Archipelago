@@ -1,4 +1,6 @@
-﻿using System;
+﻿using MegaCrit.Sts2.Core.Commands;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,6 +8,24 @@ using System.Threading.Tasks;
 
 namespace StS2AP.Models
 {
+    
+    // Where you can receive Ancient Relics
+    public enum AncientRelicLocation
+    {
+        StartOfAct = 0,
+        Anytime = 1,
+    }
+
+    // Balanced = Relics from a specific act 2 ancient followed by Relics from a specific act 3 ancient
+    // Chaos = Any act 2 ancient relic followed by any act 3 ancient relic
+    // TrueChaos = Any act 2 or act 3 ancient relic always.
+    public enum AncientRelicPoolMode
+    {
+        Balanced = 0,
+        Chaos = 1,
+        TrueChaos = 2,
+    }
+
     /// <summary>
     /// The settings that a player has configured for their Archipelago Slot.
     /// 
@@ -17,6 +37,7 @@ namespace StS2AP.Models
     /// </summary>
     public class ArchipelagoSettings
     {
+        // TODO: update to be a set
         public int AscensionLevel { get; set; }
 
         /// <summary>
@@ -35,12 +56,43 @@ namespace StS2AP.Models
         /// A collection of characters that are available in the Multiworld (i.e. have checks for this Slot)
         /// 
         /// This is *not* a collection of which characters are unlocked, just which characters *can* be unlocked for this slot.
+        /// Official Name -> CharacterConfig
         /// </summary>
-        public string[] AvailableCharacters { get; set; } = Array.Empty<string>();
+        public IDictionary<string, CharacterConfig> Characters { get; set;} = new ConcurrentDictionary<string, CharacterConfig>(StringComparer.InvariantCultureIgnoreCase);
+
+        /// <summary>
+        /// The collection of characters that are unrecognized by the mod.  Needed so we can send out unlocks.
+        /// </summary>
+        public IDictionary<string, CharacterConfig> UnrecognizedCharacters { get; set; } = new ConcurrentDictionary<string, CharacterConfig>(StringComparer.InvariantCultureIgnoreCase);
+
+        public bool NeowSanity { get; set; }
+
+        /// <summary>
+        /// Controls whether Progressive Ancient choices appear at the start of their act or
+        /// immediately in the Archipelago reward menu.
+        /// </summary>
+        public AncientRelicLocation AncientRelicLocation { get; set; } = AncientRelicLocation.StartOfAct;
+
+        /// <summary>
+        /// Controls whether Ancient choices use the rolled Ancient, the appropriate act's
+        /// Ancient pool, or the combined Act 2 and Act 3 Ancient pool.
+        /// </summary>
+        public AncientRelicPoolMode AncientRelicPool { get; set; } = AncientRelicPoolMode.Balanced;
+
+        /// <summary>
+        /// Number of Relic receipts that do not need an earned Elite, chest, or Black Star reward.
+        /// </summary>
+        public int RelicRewardsAvailableAnytime { get; set; } = 10;
+
+        /// <summary>Whether a victory releases the winning character's remaining checks.</summary>
+        public bool ReleaseOnVictory { get; set; } = true;
+
         public bool CampfireSanity { get; set; }
         public bool GoldSanity { get; set; }
         public bool PotionSanity { get; set; }
         public bool Floorsanity { get; set; }
+        public bool ProgressiveStarterCard { get; set; }
+        public bool ProgressiveStarterRelic { get; set; }
 
         #region Shop Sanity Settings
 
@@ -51,6 +103,16 @@ namespace StS2AP.Models
         public int ShopPotionSlots { get; set; }
         public bool ShopRemoveSlots { get; set; }
         public int ShopSanityCosts { get; set; }
+
+        /// <summary>
+        /// Total number of generic Shop Slot locations generated per character. Enabling card
+        /// removal adds three locations, matching its three progressive act unlock items.
+        /// </summary>
+        public int TotalShopLocations => ShopCardSlots
+            + ShopNeutralSlots
+            + ShopRelicSlots
+            + ShopPotionSlots
+            + (ShopRemoveSlots ? ArchipelagoProgress._maxShopRemoves : 0);
 
         #endregion
 
@@ -76,6 +138,8 @@ namespace StS2AP.Models
         /// This value should be between 1 and 100, inclusive.
         /// </summary>
         public int DeathLinkDamagePercent { get; set; }
+
+        public Version? APWorldVersion { get; set;}
 
         #endregion
     }

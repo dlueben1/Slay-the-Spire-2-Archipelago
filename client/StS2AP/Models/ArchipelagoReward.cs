@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
 using Archipelago.MultiClient.Net.Models;
+using Godot;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Rewards;
+using MegaCrit.Sts2.Core.TestSupport;
 using StS2AP.Utils;
 using System.Threading.Tasks;
 
@@ -13,6 +15,12 @@ namespace StS2AP.Models;
 /// </summary>
 public class ArchipelagoReward : Reward
 {
+    // This fixes some weird error introduced at some point. Maybe this PR
+    // But essentially multiple images used the same UID and caching things didn't work
+    // this is the simplest fix I could find to solve the caching/lifetime issues. 
+    private const string ApIconPath = "res://images/APIcon.png";
+    private static ImageTexture? _rewardIconTexture;
+
     #region Archipelago Data
 
     /// <summary>
@@ -46,7 +54,40 @@ public class ArchipelagoReward : Reward
 
     #endregion
 
-    protected override string? IconPath => "res://images/APIcon.png";
+    protected override string? IconPath => ApIconPath;
+
+    /// <summary>
+    /// Uses an AP-owned copy of the icon instead of Reward.CreateIcon's room-scoped
+    /// PreloadManager cache. That cache disposes assets it loaded on demand at the
+    /// next room transition, while RitsuLib retains the same source texture for the
+    /// AP top-bar hover tip. Basically the game runs fine but this is for suppressing Godot
+    /// Engine errors.
+    /// </summary>
+    public override Control? CreateIcon()
+    {
+        if (TestMode.IsOn)
+        {
+            return null;
+        }
+
+        if (_rewardIconTexture == null || !GodotObject.IsInstanceValid(_rewardIconTexture))
+        {
+            using Texture2D sourceTexture = ResourceLoader.Load<Texture2D>(
+                ApIconPath,
+                cacheMode: ResourceLoader.CacheMode.Ignore
+            );
+            using Image sourceImage = sourceTexture.GetImage();
+            _rewardIconTexture = ImageTexture.CreateFromImage(sourceImage);
+        }
+
+        var textureRect = new TextureRect
+        {
+            Texture = _rewardIconTexture,
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+        };
+        textureRect.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        return textureRect;
+    }
 
     /// <summary>
     /// Constructor that takes in the name of a Location
@@ -92,8 +133,7 @@ public class ArchipelagoReward : Reward
         if (!ArchipelagoClient.CheckedLocations.Contains(_locationId))
         {
             // Check the location off and let the server know
-            ArchipelagoClient.CheckedLocations.Add(_locationId);
-            _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(_locationId);
+            GameUtility.SendCheck(_locationId);
 
             LogUtility.Success($"Sent location check: {_locationId}");
         }

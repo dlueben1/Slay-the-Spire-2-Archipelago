@@ -5,14 +5,14 @@ from collections import defaultdict
 from enum import auto, Enum
 
 from worlds.spire2.characters import character_list
-from worlds.spire2.constants import CHAR_OFFSET, NUM_CUSTOM
+from worlds.spire2.constants import CHAR_OFFSET, NUM_CUSTOM, ASCENSIONS
 
 
 class ItemType(Enum):
     CARD_REWARD = auto()
     RARE_CARD_REWARD = auto()
     RELIC = auto()
-    BOSS_RELIC = auto()
+    PROGRESSIVE_ANCIENT = auto()
     GOLD = auto()
     EVENT = auto()
     CAMPFIRE = auto()
@@ -24,8 +24,12 @@ class ItemType(Enum):
     CHAR_UNLOCK = auto()
     POTION = auto()
     ASCENSION_DOWN = auto()
+    PROGRESSIVE_STARTER_CARD = auto()
+    PROGRESSIVE_STARTER_RELIC = auto()
     # TRAP = auto()
     CAW_CAW = auto()
+    BUFF = auto()
+    FILLER_CARD_REWARD = auto()
     OTHER = auto()
 
 class ItemData(typing.NamedTuple):
@@ -41,15 +45,16 @@ class ItemData(typing.NamedTuple):
         newcode = base.code + char_offset if base.code is not None else base.code
         return ItemData(newcode, base.type, base.classification, base.event, base.is_victory, char_offset//CHAR_OFFSET)
 
+# Items in this table get unique variations for each character. For example, "Five Gold" becomes "Ironclad Five Gold", "Silent Five Gold", etc.
 base_item_table: Dict[str, ItemData] = {
     'Card Reward': ItemData(1, ItemType.CARD_REWARD, ItemClassification.progression_deprioritized),
     'Rare Card Reward': ItemData(2, ItemType.RARE_CARD_REWARD, ItemClassification.progression_deprioritized),
     'Relic': ItemData(3, ItemType.RELIC, ItemClassification.progression),
-    'Boss Relic': ItemData(4, ItemType.BOSS_RELIC, ItemClassification.progression),
+    'Progressive Ancient': ItemData(4, ItemType.PROGRESSIVE_ANCIENT, ItemClassification.progression),
     'One Gold': ItemData(5, ItemType.GOLD, ItemClassification.filler),
     'Five Gold': ItemData(6, ItemType.GOLD, ItemClassification.filler),
-    '15 Gold': ItemData(15, ItemType.GOLD, ItemClassification.useful),
-    '30 Gold': ItemData(16, ItemType.GOLD, ItemClassification.progression_deprioritized_skip_balancing),
+    'Combat Gold': ItemData(15, ItemType.GOLD, ItemClassification.useful),
+    'Elite Gold': ItemData(16, ItemType.GOLD, ItemClassification.progression_deprioritized_skip_balancing),
     'Boss Gold': ItemData(17, ItemType.GOLD, ItemClassification.progression),
     'Progressive Rest': ItemData(7, ItemType.CAMPFIRE, ItemClassification.progression),
     'Progressive Smith': ItemData(8, ItemType.CAMPFIRE, ItemClassification.progression),
@@ -60,16 +65,33 @@ base_item_table: Dict[str, ItemData] = {
     'Progressive Shop Remove': ItemData(13, ItemType.SHOP_REMOVE, ItemClassification.progression_deprioritized),
     'Unlock': ItemData(14, ItemType.CHAR_UNLOCK, ItemClassification.progression),
     'Potion': ItemData(18, ItemType.POTION, ItemClassification.useful),
-    'Ascension Down': ItemData(19, ItemType.ASCENSION_DOWN, ItemClassification.useful),
+    'Progressive Starter Card': ItemData(29, ItemType.PROGRESSIVE_STARTER_CARD, ItemClassification.progression),
+    'Progressive Starter Relic': ItemData(30, ItemType.PROGRESSIVE_STARTER_RELIC, ItemClassification.progression),
 
     # Event Items
     'Victory': ItemData(None, ItemType.EVENT, ItemClassification.progression, True, True),
     'Beat Act 1 Boss': ItemData(None, ItemType.EVENT, ItemClassification.progression, True),
     'Beat Act 2 Boss': ItemData(None, ItemType.EVENT, ItemClassification.progression, True),
+    **{asc: ItemData(i + 19, ItemType.ASCENSION_DOWN, ItemClassification.useful) for i, asc in enumerate(ASCENSIONS.values()) }
 }
 
+# Items in this table are character-agnostic, and can be claimed by any of them
 universal_items: Dict[str, ItemData] = {
-    'CAW CAW': ItemData(1, ItemType.CAW_CAW, ItemClassification.filler)
+    'Free Attack': ItemData(500, ItemType.BUFF, ItemClassification.filler),
+    'Free Power': ItemData(501, ItemType.BUFF, ItemClassification.filler),
+    'Free Skill': ItemData(502, ItemType.BUFF, ItemClassification.filler),
+    'Dexterity': ItemData(503, ItemType.BUFF, ItemClassification.filler),
+    'Strength': ItemData(504, ItemType.BUFF, ItemClassification.filler),
+    'Plating': ItemData(505, ItemType.BUFF, ItemClassification.filler),
+    'Friendship': ItemData(506, ItemType.BUFF, ItemClassification.filler),
+    'Post-Combat Card Upgrade': ItemData(507, ItemType.BUFF, ItemClassification.filler),
+    'Post-Combat Card Removal': ItemData(508, ItemType.BUFF, ItemClassification.filler),
+    'Additional Card Reward': ItemData(509, ItemType.BUFF, ItemClassification.filler),
+    'Buffer': ItemData(510, ItemType.BUFF, ItemClassification.filler),
+    'Vigor': ItemData(511, ItemType.BUFF, ItemClassification.filler),
+    'Thorns': ItemData(512, ItemType.BUFF, ItemClassification.filler),
+    'Artifact': ItemData(513, ItemType.BUFF, ItemClassification.filler),
+    #'Single Colorless Card': ItemData(508, ItemType.FILLER_CARD_REWARD, ItemClassification.filler),
 }
 
 base_event_item_pairs: Dict[str, str] = {

@@ -29,13 +29,13 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
     prefix = config.name
     multiworld = world.multiworld
     every_other = not world.options.shuffle_all_cards
-    # TODO: update for ascension down?
-    ascension_mod = 0 if config.ascension <= 9 else 1
+    ascension_mod = 1 if 'DoubleBoss'.lower() in config.ascension and 'DoubleBoss'.lower() not in config.ascension_down else 0
     first_char_region = world.create_region(player, prefix, 'Early Act 1', config,
                                             [
                                                 "Press Start",
                                                 "Potion Drop 1",
                                                 "Act 1 Campfire 1",
+                                                "Ancient Act 1",
                                                 *_create_floor_check(1,6),
                                                 *_create_combat_check(1,4),
                                                 *_create_card_rewards(1, 4, every_other)
@@ -74,6 +74,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                       'Rare Card Reward 1',
                                                       # 'Boss Relic 1',
                                                       'Boss Gold 1',
+                                                      "Ancient Act 2",
                                                       * _create_floor_check(17, 17)
                                                   ], ['Early Act 2']))
 
@@ -114,6 +115,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                       'Rare Card Reward 2',
                                                       # 'Boss Relic 2',
                                                       'Boss Gold 2',
+                                                      "Ancient Act 3",
                                                       *_create_floor_check(33, 33),
                                                   ], ['Early Act 3']))
 

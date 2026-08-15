@@ -1,5 +1,4 @@
 using Godot;
-using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using Newtonsoft.Json;
 using StS2AP.Utils;
 using System;
@@ -57,6 +56,7 @@ namespace StS2AP.UI
                 if (_rootPanel != null && IsInstanceValid(_rootPanel))
                 {
                     _rootPanel.Visible = true;
+                    FocusFirstInput();
                     return;
                 }
 
@@ -69,6 +69,9 @@ namespace StS2AP.UI
                 canvasLayer.Layer = 100; // High layer to render on top
                 canvasLayer.AddChild(_rootPanel);
                 root.AddChild(canvasLayer);
+
+                ConfigureKeyboardNavigation();
+                FocusFirstInput();
 
                 LogUtility.Success("Archipelago connection UI injected successfully");
             }
@@ -102,6 +105,7 @@ namespace StS2AP.UI
             if (_rootPanel != null && IsInstanceValid(_rootPanel))
             {
                 _rootPanel.Visible = true;
+                FocusFirstInput();
             }
         }
 
@@ -217,14 +221,17 @@ namespace StS2AP.UI
 
             // Slot Name field
             vbox.AddChild(CreateLabeledInput("Slot Name:", "Enter your slot name...", out _slotNameInput));
+            _slotNameInput!.Name = "SlotNameInput";
             _slotNameInput!.Text = cachedData.SlotName;
 
             // URL field
             vbox.AddChild(CreateLabeledInput("Server URL:", "archipelago.gg:38281", out _urlInput));
+            _urlInput!.Name = "UrlInput";
             _urlInput!.Text = cachedData.Connection; // Default value
 
             // Password field
             vbox.AddChild(CreateLabeledInput("Password:", "(optional)", out _passwordInput, isSecret: true));
+            _passwordInput!.Name = "PasswordInput";
             _passwordInput!.Text = cachedData.Password;
 
             // Spacer
@@ -241,11 +248,13 @@ namespace StS2AP.UI
 
             // Close button
             _closeButton = CreateStyledButton("Close", new Color(0.5f, 0.5f, 0.5f));
+            _closeButton.Name = "CloseButton";
             _closeButton.Pressed += OnCloseButtonPressed;
             buttonContainer.AddChild(_closeButton);
 
             // Connect button
             _connectButton = CreateStyledButton("Connect", new Color(0.2f, 0.6f, 0.3f));
+            _connectButton.Name = "ConnectButton";
             _connectButton.Pressed += OnConnectButtonPressed;
             buttonContainer.AddChild(_connectButton);
 
@@ -278,6 +287,7 @@ namespace StS2AP.UI
             lineEdit.PlaceholderText = placeholder;
             lineEdit.CustomMinimumSize = new Vector2(350, 35);
             lineEdit.Secret = isSecret;
+            lineEdit.TextSubmitted += OnInputSubmitted;
 
             // Style the input
             var inputStyle = new StyleBoxFlat();
@@ -303,6 +313,120 @@ namespace StS2AP.UI
             container.AddChild(lineEdit);
 
             return container;
+        }
+
+        /// <summary>
+        /// Defines the Tab and Shift+Tab order for every interactive control.
+        /// </summary>
+        private static void ConfigureKeyboardNavigation()
+        {
+            var focusOrder = GetFocusOrder();
+            if (focusOrder == null)
+            {
+                return;
+            }
+
+            for (var i = 0; i < focusOrder.Length; i++)
+            {
+                var control = focusOrder[i];
+                var previous = focusOrder[(i - 1 + focusOrder.Length) % focusOrder.Length];
+                var next = focusOrder[(i + 1) % focusOrder.Length];
+
+                control.FocusMode = Control.FocusModeEnum.All;
+                control.FocusPrevious = previous.GetPath();
+                control.FocusNext = next.GetPath();
+                control.GuiInput += OnKeyboardInput;
+            }
+        }
+
+        private static Control[]? GetFocusOrder()
+        {
+            if (_slotNameInput == null || _urlInput == null || _passwordInput == null ||
+                _connectButton == null || _closeButton == null)
+            {
+                return null;
+            }
+
+            return
+            [
+                _slotNameInput,
+                _urlInput,
+                _passwordInput,
+                _connectButton,
+                _closeButton,
+            ];
+        }
+
+        /// <summary>
+        /// The base game routes keyboard actions through MegaInput and leaves Godot's
+        /// standard UI actions unbound, so handle this overlay's keys locally.
+        /// </summary>
+        private static void OnKeyboardInput(InputEvent inputEvent)
+        {
+            if (inputEvent is not InputEventKey keyEvent)
+            {
+                return;
+            }
+
+            var isTab = keyEvent.Keycode is Key.Tab or Key.Backtab;
+            var isEnter = keyEvent.Keycode is Key.Enter or Key.KpEnter;
+            var isEscape = keyEvent.Keycode == Key.Escape;
+            if (!isTab && !isEnter && !isEscape)
+            {
+                return;
+            }
+
+            var viewport = _rootPanel?.GetViewport();
+
+            if (keyEvent.Pressed && !keyEvent.Echo && viewport != null)
+            {
+                if (isTab)
+                {
+                    var focusOrder = GetFocusOrder();
+                    if (focusOrder != null)
+                    {
+                        var currentIndex = Array.IndexOf(focusOrder, viewport.GuiGetFocusOwner());
+                        if (currentIndex >= 0)
+                        {
+                            var moveBackward = keyEvent.ShiftPressed || keyEvent.Keycode == Key.Backtab;
+                            var direction = moveBackward ? -1 : 1;
+                            var nextIndex = (currentIndex + direction + focusOrder.Length) % focusOrder.Length;
+                            focusOrder[nextIndex].GrabFocus();
+                        }
+                    }
+                }
+                else if (isEnter && viewport.GuiGetFocusOwner() is Button focusedButton &&
+                    (ReferenceEquals(focusedButton, _connectButton) || ReferenceEquals(focusedButton, _closeButton)) &&
+                    !focusedButton.Disabled)
+                {
+                    focusedButton.EmitSignal(BaseButton.SignalName.Pressed);
+                }
+                else if (isEscape && _closeButton != null && IsInstanceValid(_closeButton) &&
+                    !_closeButton.Disabled)
+                {
+                    _closeButton.EmitSignal(BaseButton.SignalName.Pressed);
+                }
+            }
+
+            // Match the game's explicit navigation handlers: do not let this key leak to
+            // the hidden submenu or other global input listeners after the overlay handles it.
+            viewport?.SetInputAsHandled();
+        }
+
+        private static void FocusFirstInput()
+        {
+            if (_slotNameInput != null && IsInstanceValid(_slotNameInput))
+            {
+                _slotNameInput.GrabFocus();
+            }
+        }
+
+        private static void OnInputSubmitted(string _)
+        {
+            if (_connectButton != null && IsInstanceValid(_connectButton) && !_connectButton.Disabled)
+            {
+                _connectButton.EmitSignal(BaseButton.SignalName.Pressed);
+            }
         }
 
         private static Button CreateStyledButton(string text, Color baseColor)
@@ -379,6 +503,10 @@ namespace StS2AP.UI
             ArchipelagoClient.ServerAddress = url;
             ArchipelagoClient.ServerPassword = password;
             ArchipelagoClient.PlayerName = slotName;
+
+            // A connection attempt has exactly one terminal result. Remove any
+            // stale registration defensively before subscribing for this attempt.
+            ArchipelagoClient.ConnectionStateChanged -= OnConnectionResult;
             ArchipelagoClient.ConnectionStateChanged += OnConnectionResult;
             ArchipelagoClient.Connect();
 
@@ -400,6 +528,15 @@ namespace StS2AP.UI
         /// </summary>
         private static void OnConnectionResult(ConnectionState state)
         {
+            if (state is not ConnectionState.Connected and not ConnectionState.Disconnected)
+            {
+                return;
+            }
+
+            // Connected and Disconnected are terminal results for this attempt.
+            // Do not let this callback accumulate across retries or reconnects.
+            ArchipelagoClient.ConnectionStateChanged -= OnConnectionResult;
+
             // Did we connect?
             if (state == ConnectionState.Connected)
             {
@@ -407,9 +544,7 @@ namespace StS2AP.UI
                 SetStatus("Connected successfully!");
 
                 // Enter the game
-                var _charSelectScreen = MenuUtility.SubmenuStack.GetSubmenuType<NCharacterSelectScreen>();
-                _charSelectScreen?.InitializeSingleplayer();
-                MenuUtility.SubmenuStack.Push(_charSelectScreen);
+                MenuUtility.OpenCharacterSelect();
 
                 // Hide the connection UI
                 Hide();

@@ -5,11 +5,12 @@ from typing import TYPE_CHECKING, List
 
 from BaseClasses import CollectionState, MultiWorld, Item
 from NetUtils import JSONMessagePart
+from rule_builder.field_resolvers import FieldResolver
 from rule_builder.options import OptionFilter
-from rule_builder.rules import HasFromList, Rule, TWorld, True_, Has, HasFromListUnique
+from rule_builder.rules import HasFromList, Rule, TWorld, True_, Has, HasFromListUnique, HasAnyCount, HasAllCounts
 from .characters import CharacterConfig, character_offset_map
 from .items import ItemType
-from .options import CampfireSanity, ShopSanity, GoldSanity
+from .options import CampfireSanity, ShopSanity, GoldSanity, NeowSanity, ShopRemoveSlots
 from ..AutoWorld import LogicMixin
 from ..generic.Rules import set_rule
 
@@ -105,7 +106,8 @@ class SpireHasGold(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
 
         @typing.override
         def _evaluate(self, state: CollectionState) -> bool:
-            return state.count(f"{self.char} 30 Gold", self.player) * 30 + state.count(f"{self.char} Boss Gold", self.player) * 75 >= self.gold
+            # Assume Ascension 3 Poverty reduces gold rewards by 25%.
+            return state.count(f"{self.char} Elite Gold", self.player) * 30 + state.count(f"{self.char} Boss Gold", self.player) * 75 >= self.gold
 
 @dataclasses.dataclass()
 class SpireHasShop(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
@@ -137,6 +139,14 @@ class SpireHasShop(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
                     state.count(f"{self.char} Shop Relic Slot", self.player) +
                     state.count(f"{self.char} Shop Potion Slot", self.player) >= min(self.shop, self.max_shop))
 
+@dataclasses.dataclass(frozen=True)
+class NumberOfProgressiveAncients(FieldResolver, game="Slay the Spire II"):
+    default_amount: int
+    @typing.override
+    def resolve(self, world: 'SlayTheSpire2World') -> typing.Any:
+        return self.default_amount + (0 if world.options.neow_sanity.value == 0 else 1)
+
+
 
 def set_rules(world: 'SlayTheSpire2World') -> None:
     for config in world.characters:
@@ -152,18 +162,26 @@ def _set_rules(world: 'SlayTheSpire2World', config: CharacterConfig) -> None:
     offset = config.char_offset
     world.set_rule(world.get_entrance(f"{prefix} Early Act 1"), Has(f"{prefix} Unlock"))
     world.set_rule(world.get_entrance(f"{prefix} Mid Act 1"), SpireHasPower(offset,3) &
-                   Has(f"{prefix} Progressive Rest", options=[OptionFilter(CampfireSanity, 1)], filtered_resolution=True)
+                   Has(f"{prefix} Progressive Rest", options=[OptionFilter(CampfireSanity, 1)], filtered_resolution=True) &
+                   Has(f"{prefix} Progressive Ancient", count=NumberOfProgressiveAncients(0))
                    )
+    if world.options.neow_sanity:
+        neow_loc = world.get_location(f"{prefix} Ancient Act 1")
+        # Blocking Progressive Ancients on Neow, because that would just be annoying.  The others
+        # should be blocked by the regular logic gates
+        neow_loc.item_rule = lambda item: item.game != "Slay the Spire II" or item.item_data.type != ItemType.PROGRESSIVE_ANCIENT
     world.set_rule(world.get_entrance(f"{prefix} Late Act 1"),SpireHasPower(offset,6) &
                    SpireHasShop(prefix, 2, options=[OptionFilter(ShopSanity,1)], filtered_resolution=True)
                    )
     world.set_rule(world.get_entrance(f"{prefix} Act 1 Boss Arena"), SpireHasPower(offset,9) &
                     Has(f"{prefix} Progressive Smith", options=[OptionFilter(CampfireSanity, 1)], filtered_resolution=True) &
                     SpireHasShop(prefix, 3, options=[OptionFilter(ShopSanity, 1)], filtered_resolution=True) &
-                    Has(f"{prefix} Progressive Shop Remove", 1, options=[OptionFilter(ShopSanity, 1)], filtered_resolution=True) &
+                    Has(f"{prefix} Progressive Shop Remove", 1, options=[OptionFilter(ShopSanity, 1), OptionFilter(ShopRemoveSlots, 1)], filtered_resolution=True) &
                     SpireHasGold(prefix, 50, options=[OptionFilter(GoldSanity, 1)], filtered_resolution=True)
     )
-    world.set_rule(world.get_entrance(f"{prefix} Early Act 2"), SpireHasPower(offset,10))
+    world.set_rule(world.get_entrance(f"{prefix} Early Act 2"), SpireHasPower(offset,10) &
+                   Has(f"{prefix} Progressive Ancient", count=NumberOfProgressiveAncients(1))
+                   )
     world.set_rule(world.get_entrance(f"{prefix} Mid Act 2"), SpireHasPower(offset,12) &
                     Has(f"{prefix} Progressive Rest", count=2, options=[OptionFilter(CampfireSanity, 1)], filtered_resolution=True) &
                     SpireHasShop(prefix, 4, options=[OptionFilter(ShopSanity, 1)], filtered_resolution=True)
@@ -174,10 +192,12 @@ def _set_rules(world: 'SlayTheSpire2World', config: CharacterConfig) -> None:
     world.set_rule(world.get_entrance(f"{prefix} Act 2 Boss Arena"), SpireHasPower(offset,18) &
                     Has(f"{prefix} Progressive Smith", count=2, options=[OptionFilter(CampfireSanity, 1)], filtered_resolution=True) &
                     SpireHasShop(prefix, 6, options=[OptionFilter(ShopSanity, 1)], filtered_resolution=True) &
-                    Has(f"{prefix} Progressive Shop Remove", 2, options=[OptionFilter(ShopSanity, 1)], filtered_resolution=True) &
+                    Has(f"{prefix} Progressive Shop Remove", 2, options=[OptionFilter(ShopSanity, 1), OptionFilter(ShopRemoveSlots, 1)], filtered_resolution=True) &
                     SpireHasGold(prefix, 150, options=[OptionFilter(GoldSanity, 1)], filtered_resolution=True)
     )
-    world.set_rule(world.get_entrance(f"{prefix} Early Act 3"), SpireHasPower(offset,19))
+    world.set_rule(world.get_entrance(f"{prefix} Early Act 3"), SpireHasPower(offset,19) &
+                   Has(f"{prefix} Progressive Ancient", count=NumberOfProgressiveAncients(2))
+                   )
     world.set_rule(world.get_entrance(f"{prefix} Mid Act 3"), SpireHasPower(offset,21) &
                    Has(f"{prefix} Progressive Rest", count=3, options=[OptionFilter(CampfireSanity, 1)], filtered_resolution=True) &
                    SpireHasShop(prefix, 8, options=[OptionFilter(ShopSanity, 1)], filtered_resolution=True)
@@ -188,17 +208,16 @@ def _set_rules(world: 'SlayTheSpire2World', config: CharacterConfig) -> None:
     world.set_rule(world.get_entrance(f"{prefix} Act 3 Boss Arena"), SpireHasPower(offset,27) &
                    Has(f"{prefix} Progressive Smith", count=3, options=[OptionFilter(CampfireSanity, 1)], filtered_resolution=True) &
                    SpireHasShop(prefix, 10, options=[OptionFilter(ShopSanity, 1)], filtered_resolution=True) &
-                   Has(f"{prefix} Progressive Shop Remove", 3, options=[OptionFilter(ShopSanity, 1)], filtered_resolution=True) &
+                   Has(f"{prefix} Progressive Shop Remove", 3, options=[OptionFilter(ShopSanity, 1), OptionFilter(ShopRemoveSlots, 1)], filtered_resolution=True) &
                    SpireHasGold(prefix, 270, options=[OptionFilter(GoldSanity, 1)], filtered_resolution=True)
     )
 
     if world.options.shop_sanity:
         world.set_rule(world.get_entrance(f"{prefix} Act 1 Shop"),
-                 SpireHasGold(prefix, 50))
+                 SpireHasGold(prefix, 50, options=[OptionFilter(GoldSanity,1)], filtered_resolution=True))
 
         world.set_rule(world.get_entrance(f"{prefix} Act 2 Shop"),
-                       SpireHasGold(prefix, 150))
+                       SpireHasGold(prefix, 150, options=[OptionFilter(GoldSanity,1)], filtered_resolution=True))
 
         world.set_rule(world.get_entrance(f"{prefix} Act 2 Shop"),
-                       SpireHasGold(prefix, 270))
-
+                       SpireHasGold(prefix, 270, options=[OptionFilter(GoldSanity,1)], filtered_resolution=True))

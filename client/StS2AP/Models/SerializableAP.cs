@@ -13,21 +13,32 @@ namespace StS2AP.Models
     public class SerializableAP
     {
         [JsonPropertyName("save_data")]
-        public SerializableRun? SaveData { get; set; }
+        // Keep the base-game save opaque to AP's source-generated serializer. The
+        // running game must serialize and deserialize this payload with its own
+        // MegaCritSerializerContext so public and beta save schemas can differ.
+        public JsonElement? SaveData { get; set; }
         [JsonPropertyName("card_rewards_attempted")]
         public int CardRewardsAttempted { get; set; }
         [JsonPropertyName("rare_card_rewards_attempted")]
         public int RareCardRewardsAttempted { get; set; }
         [JsonPropertyName("relic_rewards_attempted")]
         public int RelicRewardsAttempted { get; set; }
+        /// <summary>Earned relic rewards not yet paired with an AP Relic receipt.</summary>
+        [JsonPropertyName("banked_relic_rewards")]
+        public int BankedRelicRewards { get; set; }
+        /// <summary>The anytime value captured when this run started.</summary>
+        [JsonPropertyName("relic_rewards_available_anytime_for_run")]
+        public int RelicRewardsAvailableAnytimeForRun { get; set; }
         [JsonPropertyName("gold_rewards_attempted")]
         public int GoldRewardsAttempted { get; set; }
         [JsonPropertyName("potion_rewards_attempted")]
         public int PotionRewardsAttempted { get; set; }
         [JsonPropertyName("boss_rewards_distributed")]
         public int BossRewardsDistributed { get; set; }
-        [JsonPropertyName("relic_assignments")]
-        public Dictionary<int, SerializableRelic> RelicAssignments { get; set; } = new Dictionary<int, SerializableRelic>();
+        [JsonPropertyName("relic_choice_assignments")]
+        public Dictionary<int, List<SerializableRelic>> RelicChoiceAssignments { get; set; } = new Dictionary<int, List<SerializableRelic>>();
+        [JsonPropertyName("ancient_relic_choice_assignments")]
+        public Dictionary<int, List<SerializableRelic>> AncientRelicChoiceAssignments { get; set; } = new Dictionary<int, List<SerializableRelic>>();
         [JsonPropertyName("card_assignments")]
         public Dictionary<int, SerializableReward> CardAssignments { get; set; } = new Dictionary<int, SerializableReward>();
         [JsonPropertyName("card_models")]
@@ -38,9 +49,20 @@ namespace StS2AP.Models
         public List<int> UsedItems { get; set; } = new List<int>();
         [JsonPropertyName("gold_redeemed")]
         public int GoldRedeemed { get; set; }
-
+        [JsonPropertyName("progressive_starter_card_base_id")]
+        public string? ProgressiveStarterCardBaseId { get; set; }
+        [JsonPropertyName("progressive_starter_card_upgraded_id")]
+        public string? ProgressiveStarterCardUpgradedId { get; set; }
+        [JsonPropertyName("progressive_starter_card_tier")]
+        public ProgressiveStarterTier ProgressiveStarterCardTier { get; set; } = ProgressiveStarterTier.Unsupported;
+        [JsonPropertyName("progressive_starter_relic_base_id")]
+        public string? ProgressiveStarterRelicBaseId { get; set; }
+        [JsonPropertyName("progressive_starter_relic_upgraded_id")]
+        public string? ProgressiveStarterRelicUpgradedId { get; set; }
+        [JsonPropertyName("progressive_starter_relic_tier")]
+        public ProgressiveStarterTier ProgressiveStarterRelicTier { get; set; } = ProgressiveStarterTier.Unsupported;
+        public List<int> Ascensions { get; set; } = new List<int>();
     }
-
 
     [JsonSerializable(typeof(SerializableAP))]
     public partial class APSerializationContext : JsonSerializerContext

@@ -44,7 +44,7 @@ namespace StS2AP.Patches
                                 var locationId = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", checkName);
                                 LogUtility.Info($"Adding campfire location {locationId} " + checkName);
                                 var description = checkName;
-                                ScoutedItemInfo info;
+                                ScoutedItemInfo? info;
                                 if (ArchipelagoClient.ScoutedLocations.TryGetValue(locationId, out info))
                                 {
                                     description = info.Player.Alias + "'s " + info.ItemName;
@@ -183,6 +183,22 @@ namespace StS2AP.Patches
                 ArchipelagoClient.Progress.CampfiresChecked[checkName] = true;
 
                 return true;
+            }
+
+            // Need to override Equals because the base game does equality checks based on
+            // optionId, but we have identical optionIds for different options
+            public override bool Equals(object? obj)
+            {
+                if(obj is APRestOption otherOpt && otherOpt.locationId == locationId)
+                {
+                    return Owner == otherOpt.Owner;
+                }
+                return false;
+            }
+
+            public override int GetHashCode()
+            {
+                return (locationId, Owner).GetHashCode();
             }
         }
 

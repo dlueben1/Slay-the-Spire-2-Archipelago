@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using MegaCrit.Sts2.Core.Entities.Relics;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 
@@ -17,15 +19,26 @@ namespace StS2AP.Models
         public override RelicRarity Rarity => RelicRarity.Shop;
         public override string PackedIconPath
             => "res://.godot/imported/APIcon.png-b030ed7a050dcd9ae78eaea3be50ed9f.ctex";
-        public override LocString Title
+        // goober godot requires explicit texture definitions for different UI states
+        protected override string BigIconPath
+            => "res://.godot/imported/APIcon.png-b030ed7a050dcd9ae78eaea3be50ed9f.ctex";
+        protected override string PackedIconOutlinePath
+            => "res://.godot/imported/APIcon.png-b030ed7a050dcd9ae78eaea3be50ed9f.ctex";
+
+        protected override IEnumerable<IHoverTip> ExtraHoverTips
         {
             get
             {
-                var title = new LocString("ap", "shop_relic_title");
+                var title = new LocString("relics", "shop_relic_title");
                 title.Add("item_name", ApItemName);
-                title.Add("player_name", ApPlayerName);
                 title.Add("classification", ClassificationLabel);
-                return title;
+
+                var description = new LocString("relics", "shop_relic_description");
+                description.Add("item_name", ApItemName);
+                description.Add("player_name", ApPlayerName);
+                description.Add("classification", ClassificationLabel);
+
+                yield return new HoverTip(title, description);
             }
         }
 

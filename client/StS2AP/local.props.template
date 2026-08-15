@@ -1,13 +1,23 @@
 <Project>
   <PropertyGroup>
-    <!-- Paths - Update these with the absolute paths to your Slay the Spire 2 Steam App and Godot Executable -->
+    <!-- Active game installation used for debugging and deploying the built mod. -->
     <STS2GamePath>???\steamapps\common\Slay the Spire 2</STS2GamePath>
+
+    <!--
+      Optional compile-time reference directory. For reproducible cross-branch release builds,
+      point this at a preserved Public Branch 0.107.1 data_sts2_windows_x86_64 directory.
+      I recommend, copying that directory on main branch so you can better test the beta branch 
+      If omitted, the build uses the active installation under STS2GamePath.
+    -->
+    <!-- <STS2ReferenceDataDir>???\sts2-reference\0.107.1\data_sts2_windows_x86_64</STS2ReferenceDataDir> -->
+
+    <!-- Godot 4.5.1 .NET executable used to export the mod's PCK. -->
     <GodotExePath>???\Godot_v4.5.1-stable_mono_win64.exe</GodotExePath>
     
     <!-- Mod Metadata -->
     <ModName>Archipelago</ModName>
     <ModDisplayName>Archipelago Client</ModDisplayName>
     <ModAuthor>Kirbyfanner</ModAuthor>
-    <ModVersion>0.0.1</ModVersion>
+    <ModVersion>0.5.3</ModVersion>
   </PropertyGroup>
 </Project>

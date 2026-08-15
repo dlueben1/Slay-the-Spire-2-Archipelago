@@ -32,10 +32,18 @@ class CharacterConfig:
         self.option_name: str = option_name
         self.mod_num = mod_num
         self.char_offset: int = char_offset
-        self.official_name: str = official_names[char_offset - 1]
+        if self.mod_num == 0:
+            self.official_name: str = official_names[char_offset - 1]
+        else:
+            self.official_name = option_name
         self.seed: str = seed
         self.locked: bool = locked
-        self.ascension: int = kwargs['ascension']
+        self.ascension: List[str] = kwargs['ascension']
+        # Doesn't need to make it to the mod
+        if 'ascension_down' in kwargs:
+            self.ascension_down: List[str] = kwargs['ascension_down']
+        else:
+            self.ascension_down = []
 
     def to_dict(self) -> dict[str, Any]:
         return {
