@@ -373,17 +373,10 @@ namespace StS2AP.UI
 
             // Get Unused items from the Multiworld for our current character
             var availableItems = ArchipelagoClient.Progress.AllReceivedItems
-                .Where(i =>
-                    !ArchipelagoClient.Progress.UsedItems.Contains(i.Index)
-                    && i.Item.GetCharacterOffset() == GameUtility.CurrentCharacterID
-                )
-                .Where(i =>
-                    i.Item.GetCharacterSpecificItemID() != APItem.Relic
-                    || RelicRewardUtility.IsAvailableInRewardMenu(i, currentPlayer)
-                );
+                .Where(i => ArchipelagoClient.Progress.IsAvailableInRewardMenu(i, currentPlayer));
             
             // Prepare them for the UI
-            var rewardDataList = availableItems.Where(i => i.Item.GetCharacterSpecificItemID().CanBePickedUp()).Select(i =>
+            var rewardDataList = availableItems.Select(i =>
             {
                 var data = new ArchipelagoRewardData
                 {

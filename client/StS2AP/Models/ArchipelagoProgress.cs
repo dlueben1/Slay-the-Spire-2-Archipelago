@@ -380,17 +380,27 @@ namespace StS2AP.Models
             get
             {
                 var player = GameUtility.CurrentPlayer;
-                return AllReceivedItems.Count(item =>
-                    item.Item.GetCharacterOffset() == GameUtility.CurrentCharacterID
-                    && !item.Item.ItemDisplayName.Contains("Progressive")
-                    && !item.Item.ItemName.Contains("Progressive")
-                    && !UsedItems.Contains(item.Index)
-                    && (
-                        item.Item.GetCharacterSpecificItemID() != APItem.Relic
-                        || player != null && RelicRewardUtility.IsAvailableInRewardMenu(item, player)
-                    )
-                );
+                return player == null
+                    ? 0
+                    : AllReceivedItems.Count(item => IsAvailableInRewardMenu(item, player));
             }
+        }
+
+        /// <summary>
+        /// Returns whether a received item should currently appear as a row in the AP reward menu.
+        /// The top-bar count and the menu itself must use this same predicate so the badge cannot
+        /// advertise rewards that the menu filters out.
+        /// </summary>
+        public bool IsAvailableInRewardMenu(IndexedItemInfo item, Player player)
+        {
+            var itemId = item.Item.GetCharacterSpecificItemID();
+            return item.Item.GetCharacterOffset() == GameUtility.CurrentCharacterID
+                && !UsedItems.Contains(item.Index)
+                && itemId.CanBePickedUp()
+                && (
+                    itemId != APItem.Relic
+                    || RelicRewardUtility.IsAvailableInRewardMenu(item, player)
+                );
         }
 
         #endregion
