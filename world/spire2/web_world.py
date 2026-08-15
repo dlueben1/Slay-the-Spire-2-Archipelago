@@ -25,7 +25,7 @@ class SlayTheSpire2Web(WebWorld):
             "English",
             "setup_en.md",
             "setup/en",
-            ["Kirbyfanner", "Platano Bailando", "Lyxn"]
+            ["Kirbyfanner", "Platano Bailando", "Lyxn", "Terairk"]
         )
     ]
 
