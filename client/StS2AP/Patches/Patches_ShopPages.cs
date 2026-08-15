@@ -14,7 +14,7 @@ using StS2AP.Utils;
 namespace StS2AP.Patches
 {
     /// <summary>
-    /// Splits the merchant shop into two pages: the vanilla page (unmodified, filtered
+    /// Splits the merchant shop into independent vanilla and AP-check pages.
     /// </summary>
     public static class Patches_ShopPages
     {
@@ -46,8 +46,7 @@ namespace StS2AP.Patches
 
         /// <summary>
         /// When the vanilla merchant page finishes Initialize(), spawns a second copy of
-        /// the same scene parked off-screen, initialized against the same
-        /// MerchantInventory so both pages stay in sync automatically.
+        /// the same scene parked off-screen and binds it to the AP-only inventory.
         /// </summary>
         [HarmonyPatch(typeof(NMerchantInventory), nameof(NMerchantInventory.Initialize))]
         public static class SpawnApPage
@@ -58,6 +57,11 @@ namespace StS2AP.Patches
             public static void Postfix(NMerchantInventory __instance, MerchantInventory inventory, MerchantDialogueSet dialogue)
             {
                 if (_isSpawning)
+                {
+                    return;
+                }
+
+                if (!Patches_ShopSanity.TryGetApInventory(inventory, out MerchantInventory apInventory))
                 {
                     return;
                 }
@@ -89,7 +93,7 @@ namespace StS2AP.Patches
 
                     NMerchantInventory apPage = scene.Instantiate<NMerchantInventory>();
                     __instance.GetParent().AddChildSafely(apPage);
-                    apPage.Initialize(inventory, dialogue);
+                    apPage.Initialize(apInventory, dialogue);
 
                     KeepExitButtonOnscreen(__instance);
                     KeepExitButtonOnscreen(apPage);
@@ -132,7 +136,7 @@ namespace StS2AP.Patches
 
                     ShopPageUtility.Register(__instance, apPage);
 
-                    foreach (MerchantEntry entry in inventory.AllEntries)
+                    foreach (MerchantEntry entry in inventory.AllEntries.Concat(apInventory.AllEntries))
                     {
                         entry.OnMerchantInventoryUpdated();
                     }

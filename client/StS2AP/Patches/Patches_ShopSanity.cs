@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Archipelago.MultiClient.Net.Models;
 using Godot;
@@ -18,7 +19,6 @@ using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.Potions;
 using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
-using MegaCrit.Sts2.Core.Rooms;
 using StS2AP.Data;
 using StS2AP.Extensions;
 using StS2AP.Models;
@@ -63,6 +63,35 @@ namespace StS2AP.Patches
 
         private static readonly FieldInfo? PlayerField =
             AccessTools.Field(typeof(MerchantEntry), "_player");
+
+        private static readonly FieldInfo? CharacterCardEntriesField =
+            AccessTools.Field(typeof(MerchantInventory), "_characterCardEntries");
+
+        private static readonly FieldInfo? ColorlessCardEntriesField =
+            AccessTools.Field(typeof(MerchantInventory), "_colorlessCardEntries");
+
+        private static readonly FieldInfo? RelicEntriesField =
+            AccessTools.Field(typeof(MerchantInventory), "_relicEntries");
+
+        private static readonly FieldInfo? PotionEntriesField =
+            AccessTools.Field(typeof(MerchantInventory), "_potionEntries");
+
+        private static readonly PropertyInfo? CardRemovalEntryProp =
+            AccessTools.Property(typeof(MerchantInventory), nameof(MerchantInventory.CardRemovalEntry));
+
+        private static readonly MethodInfo? MemberwiseCloneMethod =
+            AccessTools.Method(typeof(object), "MemberwiseClone");
+
+        private static readonly FieldInfo? PurchaseCompletedField =
+            AccessTools.Field(typeof(MerchantEntry), nameof(MerchantEntry.PurchaseCompleted));
+
+        private static readonly FieldInfo? PurchaseFailedField =
+            AccessTools.Field(typeof(MerchantEntry), nameof(MerchantEntry.PurchaseFailed));
+
+        private static readonly FieldInfo? EntryUpdatedField =
+            AccessTools.Field(typeof(MerchantEntry), nameof(MerchantEntry.EntryUpdated));
+
+        private static readonly ConditionalWeakTable<MerchantInventory, MerchantInventory> ApInventories = new();
 
         #region Unclaimed-Location Queue
         /// <summary>
@@ -176,94 +205,214 @@ namespace StS2AP.Patches
 
         #region Slot Population
 
-        /// <summary>Fills a character/colorless card category's candidate slots with AP fakes</summary>
-        private static void PopulateCardCategory(IReadOnlyList<MerchantCardEntry> entries, int categoryMax, int availableSlots, ShopVisitContext ctx)
+        private readonly record struct ApSlotCounts(int Cards, int Neutral, int Relics, int Potions);
+
+        /// <summary>
+        /// The configured category counts reserve AP-page positions. Card-removal sanity adds
+        /// three generic checks, so let those borrow otherwise-unused positions in display order.
+        /// </summary>
+        private static ApSlotCounts GetApSlotCounts()
         {
-            int candidateCount = Math.Min(categoryMax - availableSlots, entries.Count);
-            for (int i = 0; i < candidateCount; i++)
+            int cards = Math.Clamp(ArchipelagoClient.Settings.ShopCardSlots, 0, CardSlotMax);
+            int neutral = Math.Clamp(ArchipelagoClient.Settings.ShopNeutralSlots, 0, NeutralSlotMax);
+            int relics = Math.Clamp(ArchipelagoClient.Settings.ShopRelicSlots, 0, RelicSlotMax);
+            int potions = Math.Clamp(ArchipelagoClient.Settings.ShopPotionSlots, 0, PotionSlotMax);
+            int overflow = ArchipelagoClient.Settings.ShopRemoveSlots ? ArchipelagoProgress._maxShopRemoves : 0;
+            
+            // ShopRemoveSlots don't have a dedicated page on the AP page so it 'overflows'
+            // in the priority of cards, colourless cards, relics, then potions.
+            // which is where you then claim it and send the check
+            AddOverflow(ref cards, CardSlotMax, ref overflow);
+            AddOverflow(ref neutral, NeutralSlotMax, ref overflow);
+            AddOverflow(ref relics, RelicSlotMax, ref overflow);
+            AddOverflow(ref potions, PotionSlotMax, ref overflow);
+
+            return new ApSlotCounts(cards, neutral, relics, potions);
+        }
+
+        private static void AddOverflow(ref int count, int maximum, ref int overflow)
+        {
+            int added = Math.Min(maximum - count, overflow);
+            count += added;
+            overflow -= added;
+        }
+
+        internal static bool TryGetApInventory(MerchantInventory vanillaInventory, out MerchantInventory apInventory)
+            => ApInventories.TryGetValue(vanillaInventory, out apInventory!);
+
+        private static MerchantInventory CreateApInventory(
+            Player player,
+            MerchantInventory vanillaInventory,
+            ShopVisitContext ctx,
+            ApSlotCounts counts)
+        {
+            EnsureInventoryReflectionAvailable();
+
+            var apInventory = new MerchantInventory(player);
+            PopulateCardCategory(
+                vanillaInventory.CharacterCardEntries,
+                GetMutableEntries<MerchantCardEntry>(apInventory, CharacterCardEntriesField),
+                counts.Cards,
+                ctx);
+            PopulateCardCategory(
+                vanillaInventory.ColorlessCardEntries,
+                GetMutableEntries<MerchantCardEntry>(apInventory, ColorlessCardEntriesField),
+                counts.Neutral,
+                ctx);
+            PopulateRelicCategory(
+                vanillaInventory.RelicEntries,
+                GetMutableEntries<MerchantRelicEntry>(apInventory, RelicEntriesField),
+                counts.Relics,
+                ctx);
+            PopulatePotionCategory(
+                vanillaInventory.PotionEntries,
+                GetMutableEntries<MerchantPotionEntry>(apInventory, PotionEntriesField),
+                counts.Potions,
+                ctx);
+
+            // Initialize the cloned scene's removal node, then keep it permanently empty/hidden.
+            MerchantCardRemovalEntry sourceRemovalEntry = vanillaInventory.CardRemovalEntry
+                ?? throw new InvalidOperationException("Normal merchant inventory had no card-removal entry.");
+            MerchantCardRemovalEntry removalEntry = CloneEntry(sourceRemovalEntry);
+            removalEntry.SetUsed();
+            CardRemovalEntryProp!.SetValue(apInventory, removalEntry);
+
+            return apInventory;
+        }
+
+        private static List<T> GetMutableEntries<T>(MerchantInventory inventory, FieldInfo? field)
+            where T : MerchantEntry
+            => field?.GetValue(inventory) as List<T>
+               ?? throw new MissingFieldException(typeof(MerchantInventory).FullName, field?.Name ?? typeof(T).Name);
+
+        /// <summary>
+        /// Clone the already-rolled entry so the AP page gets independent state without rolling
+        /// another shop and advancing the player's shop RNG.
+        /// </summary>
+        private static T CloneEntry<T>(T source) where T : MerchantEntry
+        {
+            var clone = (T)MemberwiseCloneMethod!.Invoke(source, null)!;
+            PurchaseCompletedField!.SetValue(clone, null);
+            PurchaseFailedField!.SetValue(clone, null);
+            EntryUpdatedField!.SetValue(clone, null);
+            return clone;
+        }
+
+        private static void PopulateCardCategory(
+            IReadOnlyList<MerchantCardEntry> vanillaEntries,
+            List<MerchantCardEntry> apEntries,
+            int candidateCount,
+            ShopVisitContext ctx)
+        {
+            for (int i = 0; i < vanillaEntries.Count; i++)
             {
-                var entry = entries[i];
-                if (!ctx.HasMore)
+                MerchantCardEntry entry = CloneEntry(vanillaEntries[i]);
+                if (i < candidateCount && ctx.HasMore)
                 {
-                    CardCreationResultProp?.SetValue(entry, null);
-                    continue;
+                    long locationId = ctx.GetNext();
+                    var (itemName, playerName, classification) = ResolveApItem(locationId);
+                    ApItemCardModelBase apCard = ApItemCardModelBase.CreateForSlot(itemName, playerName, classification, locationId);
+                    CardCreationResultProp!.SetValue(entry, new CardCreationResult(apCard));
+                    entry.CalcCost();
+                    ApplyCostTier(entry);
                 }
-
-                long locationId = ctx.GetNext();
-                var (itemName, playerName, classification) = ResolveApItem(locationId);
-                ApItemCardModelBase apCard = ApItemCardModelBase.CreateForSlot(itemName, playerName, classification, locationId);
-
-                CardCreationResultProp?.SetValue(entry, new CardCreationResult(apCard));
-                entry.CalcCost();
-                ApplyCostTier(entry);
+                else
+                {
+                    CardCreationResultProp!.SetValue(entry, null);
+                }
+                apEntries.Add(entry);
             }
         }
 
-        /// <summary>Fills a relic category's candidate slots with AP fakes</summary>
-        private static void PopulateRelicCategory(IReadOnlyList<MerchantRelicEntry> entries, int categoryMax, int availableSlots, ShopVisitContext ctx)
+        private static void PopulateRelicCategory(
+            IReadOnlyList<MerchantRelicEntry> vanillaEntries,
+            List<MerchantRelicEntry> apEntries,
+            int candidateCount,
+            ShopVisitContext ctx)
         {
-            int candidateCount = Math.Min(categoryMax - availableSlots, entries.Count);
-            for (int i = 0; i < candidateCount; i++)
+            for (int i = 0; i < vanillaEntries.Count; i++)
             {
-                var entry = entries[i];
-                if (!ctx.HasMore)
+                MerchantRelicEntry entry = CloneEntry(vanillaEntries[i]);
+                if (i < candidateCount && ctx.HasMore)
                 {
-                    RelicModelProp?.SetValue(entry, null);
-                    continue;
+                    long locationId = ctx.GetNext();
+                    var (itemName, playerName, classification) = ResolveApItem(locationId);
+                    RelicModelProp!.SetValue(entry, ApItemRelicModel.CreateForSlot(itemName, playerName, classification, locationId));
+                    entry.CalcCost();
+                    ApplyCostTier(entry);
                 }
-
-                long locationId = ctx.GetNext();
-                var (itemName, playerName, classification) = ResolveApItem(locationId);
-                ApItemRelicModel apRelic = ApItemRelicModel.CreateForSlot(itemName, playerName, classification, locationId);
-
-                RelicModelProp?.SetValue(entry, apRelic);
-                entry.CalcCost();
-                ApplyCostTier(entry);
+                else
+                {
+                    RelicModelProp!.SetValue(entry, null);
+                }
+                apEntries.Add(entry);
             }
         }
 
-        /// <summary>Fills a potion category's candidate slots with AP fakes</summary>
-        private static void PopulatePotionCategory(IReadOnlyList<MerchantPotionEntry> entries, int categoryMax, int availableSlots, ShopVisitContext ctx)
+        private static void PopulatePotionCategory(
+            IReadOnlyList<MerchantPotionEntry> vanillaEntries,
+            List<MerchantPotionEntry> apEntries,
+            int candidateCount,
+            ShopVisitContext ctx)
         {
-            int candidateCount = Math.Min(categoryMax - availableSlots, entries.Count);
-            for (int i = 0; i < candidateCount; i++)
+            for (int i = 0; i < vanillaEntries.Count; i++)
             {
-                var entry = entries[i];
-                if (!ctx.HasMore)
+                MerchantPotionEntry entry = CloneEntry(vanillaEntries[i]);
+                if (i < candidateCount && ctx.HasMore)
                 {
-                    PotionModelProp?.SetValue(entry, null);
-                    continue;
+                    long locationId = ctx.GetNext();
+                    var (itemName, playerName, classification) = ResolveApItem(locationId);
+                    PotionModelProp!.SetValue(entry, ApItemPotionModel.CreateForSlot(itemName, playerName, classification, locationId));
+                    entry.CalcCost();
+                    ApplyCostTier(entry);
                 }
-
-                long locationId = ctx.GetNext();
-                var (itemName, playerName, classification) = ResolveApItem(locationId);
-                ApItemPotionModel apPotion = ApItemPotionModel.CreateForSlot(itemName, playerName, classification, locationId);
-
-                PotionModelProp?.SetValue(entry, apPotion);
-                entry.CalcCost();
-                ApplyCostTier(entry);
+                else
+                {
+                    PotionModelProp!.SetValue(entry, null);
+                }
+                apEntries.Add(entry);
             }
         }
 
-        /// <summary>Runs a category's populate step, swallowing exceptions so one bad category can't crash the whole room transition(because of my goober self)</summary>
-        private static void PopulateCategorySafely(string categoryName, Action populate)
+        private static void GateVanillaCategory<T>(
+            IReadOnlyList<T> entries,
+            int availableSlots,
+            PropertyInfo itemProperty)
+            where T : MerchantEntry
         {
-            try
+            int lockedCount = Math.Clamp(entries.Count - availableSlots, 0, entries.Count);
+            for (int i = 0; i < lockedCount; i++)
             {
-                populate();
+                itemProperty.SetValue(entries[i], null);
             }
-            catch (Exception ex)
+        }
+
+        private static void EnsureInventoryReflectionAvailable()
+        {
+            if (CardCreationResultProp == null
+                || RelicModelProp == null
+                || PotionModelProp == null
+                || CostField == null
+                || PlayerField == null
+                || CharacterCardEntriesField == null
+                || ColorlessCardEntriesField == null
+                || RelicEntriesField == null
+                || PotionEntriesField == null
+                || CardRemovalEntryProp == null
+                || MemberwiseCloneMethod == null
+                || PurchaseCompletedField == null
+                || PurchaseFailedField == null
+                || EntryUpdatedField == null)
             {
-                LogUtility.Error($"ShopSanity: populating '{categoryName}' slots threw and was aborted for this visit, that category will show as vanilla/unlocked rather than crash the room transition. {ex}");
+                throw new MissingMemberException("ShopSanity: required merchant inventory members could not be resolved.");
             }
         }
 
         #endregion
 
         /// <summary>
-        /// after a normal merchant's inventory is
-        /// rolled, replaces the appropriate portion of each category with AP
-        /// location fakes and applies the Progressive Shop Remove gate
+        /// After a normal merchant's inventory is rolled, builds an independent AP inventory
+        /// and applies received slot unlocks only to the vanilla inventory.
         /// </summary>
         [HarmonyPatch(typeof(MerchantInventory), nameof(MerchantInventory.CreateForNormalMerchant))]
         public static class PopulateApShopSlots
@@ -295,12 +444,30 @@ namespace StS2AP.Patches
                 int potionAvailable = AvailableSlots(PotionSlotMax, ArchipelagoClient.Settings.ShopPotionSlots,
                     GetReceived(ArchipelagoClient.Progress.ShopPotionSlotsReceived, charId.Value));
 
-                LogUtility.Info($"ShopSanity: act={act} card={cardAvailable}/{CardSlotMax} neutral={neutralAvailable}/{NeutralSlotMax} relic={relicAvailable}/{RelicSlotMax} potion={potionAvailable}/{PotionSlotMax}");
+                ApSlotCounts apSlots = GetApSlotCounts();
 
-                PopulateCategorySafely("card", () => PopulateCardCategory(__result.CharacterCardEntries, CardSlotMax, cardAvailable, ctx));
-                PopulateCategorySafely("neutral", () => PopulateCardCategory(__result.ColorlessCardEntries, NeutralSlotMax, neutralAvailable, ctx));
-                PopulateCategorySafely("relic", () => PopulateRelicCategory(__result.RelicEntries, RelicSlotMax, relicAvailable, ctx));
-                PopulateCategorySafely("potion", () => PopulatePotionCategory(__result.PotionEntries, PotionSlotMax, potionAvailable, ctx));
+                LogUtility.Info(
+                    $"ShopSanity: act={act} "
+                    + $"vanilla(card={cardAvailable}/{CardSlotMax}, neutral={neutralAvailable}/{NeutralSlotMax}, relic={relicAvailable}/{RelicSlotMax}, potion={potionAvailable}/{PotionSlotMax}) "
+                    + $"ap(card={apSlots.Cards}, neutral={apSlots.Neutral}, relic={apSlots.Relics}, potion={apSlots.Potions})");
+
+                try
+                {
+                    MerchantInventory apInventory = CreateApInventory(player, __result, ctx, apSlots);
+
+                    GateVanillaCategory(__result.CharacterCardEntries, cardAvailable, CardCreationResultProp!);
+                    GateVanillaCategory(__result.ColorlessCardEntries, neutralAvailable, CardCreationResultProp!);
+                    GateVanillaCategory(__result.RelicEntries, relicAvailable, RelicModelProp!);
+                    GateVanillaCategory(__result.PotionEntries, potionAvailable, PotionModelProp!);
+
+                    ApInventories.Remove(__result);
+                    ApInventories.Add(__result, apInventory);
+                }
+                catch (Exception ex)
+                {
+                    LogUtility.Error($"ShopSanity: failed to prepare independent shop pages; leaving the vanilla shop untouched. {ex}");
+                    return;
+                }
 
                 if (ArchipelagoClient.Settings.ShopRemoveSlots)
                 {
@@ -353,6 +520,22 @@ namespace StS2AP.Patches
             }
 
             return false;
+        }
+
+        private static void ClearApEntry(MerchantEntry entry)
+        {
+            switch (entry)
+            {
+                case MerchantCardEntry:
+                    CardCreationResultProp!.SetValue(entry, null);
+                    break;
+                case MerchantRelicEntry:
+                    RelicModelProp!.SetValue(entry, null);
+                    break;
+                case MerchantPotionEntry:
+                    PotionModelProp!.SetValue(entry, null);
+                    break;
+            }
         }
 
         /// <summary>Convenience wrapper for the shop pages
@@ -408,17 +591,8 @@ namespace StS2AP.Patches
                 GameUtility.SendCheck(locationId);
                 MarkShopSlotChecked(locationId);
 
-                bool shouldRefill = player.RunState.CurrentRoom is MerchantRoom
-                    && Hook.ShouldRefillMerchantEntry(player.RunState, entry, player);
-                if (shouldRefill)
-                {
-                    AccessTools.Method(entry.GetType(), "RestockAfterPurchase", new[] { typeof(MerchantInventory) })
-                        ?.Invoke(entry, new object?[] { inventory });
-                }
-                else
-                {
-                    AccessTools.Method(entry.GetType(), "ClearAfterPurchase")?.Invoke(entry, null);
-                }
+                // AP checks are single-use even when The Courier would refill vanilla entries.
+                ClearApEntry(entry);
 
                 await Hook.AfterItemPurchased(player.RunState, player, entry, goldSpent);
                 entry.InvokePurchaseCompleted(entry);
