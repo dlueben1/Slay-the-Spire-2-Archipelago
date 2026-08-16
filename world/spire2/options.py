@@ -80,7 +80,7 @@ class LockCharacters(Choice):
 class UnlockedCharacter(TextChoice):
     """Which character to start unlocked, if lock_characters is set to locked_fixed.
     Can also enter a character name for modded characters."""
-    default = ""
+    default = 0
     option_ironclad = 0
     option_silent = 1
     option_defect = 2
@@ -434,6 +434,7 @@ def _create_filler_weight_class(item_name: str, description: str, default_weight
         class_name,
         (Choice,),
         {
+            "__module__": __name__,
             "__doc__": docstring,
             "display_name": display_name,
             "option_none": 0,

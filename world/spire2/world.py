@@ -735,6 +735,7 @@ class SlayTheSpire2World(World):
         self.total_shop_locations = self.total_shop_items + (3 if self.options.shop_remove_slots else 0)
         if self.total_shop_locations <= 0:
             self.options.shop_sanity.value = 0
+        self.options.shuffle_all_cards.value = slot_data['shuffle_all_cards']
         self.options.include_floor_checks.value = slot_data['include_floor_checks']
         self.options.neow_sanity.value = slot_data['neow_sanity']
         self.options.ancient_relic_location.value = slot_data['ancient_relic_location']

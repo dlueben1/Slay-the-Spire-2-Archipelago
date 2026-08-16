@@ -1,5 +1,39 @@
-from worlds.spire2.options import CharacterOptions
+from Utils import restricted_dumps
+from test.general import setup_solo_multiworld
+from worlds.AutoWorld import call_all
+from worlds.spire2 import SlayTheSpire2World
+from worlds.spire2.options import CharacterOptions, UnlockedCharacter, filler_item_options
 from worlds.spire2.test import Spire2TestBase
+
+
+class TestOptionDefaults(Spire2TestBase):
+    def test_unlocked_character_default_is_a_named_choice(self):
+        self.assertIn(UnlockedCharacter.default, UnlockedCharacter.name_lookup)
+
+    def test_filler_weight_defaults_are_picklable(self):
+        for option in filler_item_options.options:
+            with self.subTest(option=option.__name__):
+                restricted_dumps(option.from_any(option.default))
+
+
+class TestUniversalTrackerCardRewards(Spire2TestBase):
+    options = {
+        "characters": ["ironclad"],
+        "shuffle_all_cards": True,
+    }
+
+    def test_regeneration_preserves_card_reward_locations(self):
+        slot_data = self.world.fill_slot_data()
+        regenerated = setup_solo_multiworld(SlayTheSpire2World, steps=())
+        regenerated.re_gen_passthrough = {
+            self.game: SlayTheSpire2World.interpret_slot_data(slot_data),
+        }
+        call_all(regenerated, "generate_early")
+        call_all(regenerated, "create_regions")
+
+        original_locations = {location.name for location in self.world.get_locations()}
+        regenerated_locations = {location.name for location in regenerated.get_locations()}
+        self.assertEqual(original_locations, regenerated_locations)
 
 
 class TestMultiCharsValid(Spire2TestBase):
