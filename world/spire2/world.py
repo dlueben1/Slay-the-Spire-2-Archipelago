@@ -12,8 +12,8 @@ from .rules import set_rules, SpireLogic
 from .web_world import SlayTheSpire2Web
 from .characters import CharacterConfig, character_list, character_offset_map
 from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET, ASCENSIONS
-from .items import item_table, chars_to_items, universal_items, ItemType, base_event_item_pairs, ItemData
-from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
+from .items import item_table, chars_to_items, universal_items, ItemType, base_event_item_pairs, ItemData, item_groups
+from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType, location_groups
 from .options import Spire2Options
 
 COMBAT_GOLD_ITEM_COUNT = 13
@@ -45,10 +45,12 @@ class SlayTheSpire2World(World):
     item_name_to_id = {
         name: data.code for name, data in item_table.items()
     }
+    item_name_groups = item_groups
 
     ut_can_gen_without_yaml = True
 
     location_name_to_id = location_table
+    location_name_groups = location_groups
 
     def __init__(self, mw: MultiWorld, player: int):
         super().__init__(mw, player)

@@ -134,3 +134,83 @@ def create_item_tables(vanilla_chars: typing.List[str], extras: int) -> typing.T
     return item_name_to_data, characters_to_items, event_item_pairs
 
 item_table, chars_to_items, event_item_pairs = create_item_tables(character_list, NUM_CUSTOM)
+
+
+def create_item_groups(
+        items: dict[str, ItemData],
+        characters_to_items: dict[typing.Union[str, int], dict[str, ItemData]],
+) -> dict[str, typing.Set[str]]:
+    groups: dict[str, typing.Set[str]] = {
+        "Gold": set(),
+        "Campfire Upgrades": set(),
+        "Shop Slots": set(),
+        "Character Unlocks": set(),
+        "Potions": set(),
+        "Card Rewards": set(),
+        "Rare Card Rewards": set(),
+        "Relics": set(),
+        "Ancients": set(),
+        "Ascension Downs": set(),
+        "Starter Upgrades": set(),
+        "Buffs": set(),
+    }
+
+    for item_name, item_data in items.items():
+        if item_data.code is None:
+            continue
+
+        if item_data.type == ItemType.GOLD:
+            groups["Gold"].add(item_name)
+        elif item_data.type == ItemType.CAMPFIRE:
+            groups["Campfire Upgrades"].add(item_name)
+        elif item_data.type in {
+            ItemType.SHOP_CARD,
+            ItemType.SHOP_NEUTRAL,
+            ItemType.SHOP_RELIC,
+            ItemType.SHOP_POTION,
+            ItemType.SHOP_REMOVE,
+        }:
+            groups["Shop Slots"].add(item_name)
+        elif item_data.type == ItemType.CHAR_UNLOCK:
+            groups["Character Unlocks"].add(item_name)
+        elif item_data.type == ItemType.POTION:
+            groups["Potions"].add(item_name)
+        elif item_data.type in {ItemType.CARD_REWARD, ItemType.RARE_CARD_REWARD}:
+            groups["Card Rewards"].add(item_name)
+            if item_data.type == ItemType.RARE_CARD_REWARD:
+                groups["Rare Card Rewards"].add(item_name)
+        elif item_data.type == ItemType.RELIC:
+            groups["Relics"].add(item_name)
+        elif item_data.type == ItemType.PROGRESSIVE_ANCIENT:
+            groups["Ancients"].add(item_name)
+        elif item_data.type == ItemType.ASCENSION_DOWN:
+            groups["Ascension Downs"].add(item_name)
+        elif item_data.type in {ItemType.PROGRESSIVE_STARTER_CARD, ItemType.PROGRESSIVE_STARTER_RELIC}:
+            groups["Starter Upgrades"].add(item_name)
+        elif item_data.type == ItemType.BUFF:
+            groups["Buffs"].add(item_name)
+
+    for character_key, character_items in characters_to_items.items():
+        character_name = character_key if isinstance(character_key, str) else f"Custom Character {character_key}"
+        character_groups = {
+            ItemType.GOLD: groups.setdefault(f"{character_name} Gold", set()),
+            ItemType.CAMPFIRE: groups.setdefault(f"{character_name} Campfire Upgrades", set()),
+        }
+        character_shop_group = groups.setdefault(f"{character_name} Shop Slots", set())
+
+        for item_name, item_data in character_items.items():
+            if item_data.type in character_groups:
+                character_groups[item_data.type].add(item_name)
+            elif item_data.type in {
+                ItemType.SHOP_CARD,
+                ItemType.SHOP_NEUTRAL,
+                ItemType.SHOP_RELIC,
+                ItemType.SHOP_POTION,
+                ItemType.SHOP_REMOVE,
+            }:
+                character_shop_group.add(item_name)
+
+    return groups
+
+
+item_groups = create_item_groups(item_table, chars_to_items)
