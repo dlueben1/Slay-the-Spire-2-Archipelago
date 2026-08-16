@@ -21,7 +21,6 @@ using Newtonsoft.Json.Linq;
 using StS2AP.Extensions;
 using StS2AP.Models;
 using StS2AP.Patches;
-using System.Text.Json;
 using StS2AP.UI;
 using static StS2AP.Data.CharTable;
 using static StS2AP.Data.ItemTable;
@@ -867,19 +866,15 @@ namespace StS2AP.Utils
 
         /// <summary>
         /// Creates an emergency recovery save file locally.
-        /// Serializes the current run (via RunManager.ToSave) using the same format as the normal DataStorage save,
-        /// then writes the compressed data to a local file so it can be restored when the server comes back.
+        /// Serializes the current run and its Archipelago progress using the same envelope as
+        /// the normal DataStorage save, then writes it locally until the server is available.
         /// </summary>
         private static void CreateEmergencyRecoverySave()
         {
             try
             {
-                /// Serialize the run the same way the normal save path does.
-                /// RunManager.ToSave triggers the Harmony postfix on SerializableRun.Serialize,
-                /// which appends the ArchipelagoProgress data to the stream.
-                SerializableRun saveMe = RunManager.Instance.ToSave(preFinishedRoom: null);
-                var json = JsonSerializer.Serialize(saveMe, JsonSerializationUtility.GetTypeInfo<SerializableRun>());
-                var zipped = Patches_RunSaveManager.SaveRun.Zip(json);
+                SerializableRun vanillaSave = RunManager.Instance.ToSave(preFinishedRoom: null);
+                var zipped = Patches_RunSaveManager.SaveRun.SerializeAndCompress(vanillaSave);
 
                 // Write to a local file using Godot's FileAccess (respects user:// virtual path)
                 var savePath = GetRecoverySavePath();

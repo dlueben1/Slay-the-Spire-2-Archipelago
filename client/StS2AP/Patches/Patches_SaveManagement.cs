@@ -95,9 +95,7 @@ namespace StS2AP.Patches
                 bool showAutosaveNotification = false
             )
             {
-                var saveMe = ArchipelagoClient.Progress.ToSerializable(vanillaSave);
-                var result = JsonSerializer.Serialize(saveMe, SerializationUtility.CombinedOptions.GetTypeInfo(typeof(SerializableAP)));
-                var zipped = Zip(result);
+                var zipped = SerializeAndCompress(vanillaSave);
                 if(GameUtility.CurrentPlayer == null)
                 {
                     return;
@@ -127,6 +125,20 @@ namespace StS2AP.Patches
                     );
                 }
                 ArchipelagoClient.Session.DataStorage[Scope.Slot, saveStorageKey] = saveOperation;
+            }
+
+            /// <summary>
+            /// Serializes a vanilla run together with all run-scoped Archipelago progress.
+            /// Both server checkpoints and local recovery saves use this same envelope.
+            /// </summary>
+            public static string SerializeAndCompress(SerializableRun vanillaSave)
+            {
+                var save = ArchipelagoClient.Progress.ToSerializable(vanillaSave);
+                var json = JsonSerializer.Serialize(
+                    save,
+                    SerializationUtility.CombinedOptions.GetTypeInfo(typeof(SerializableAP))
+                );
+                return Zip(json);
             }
 
             public static string Zip(string str)
@@ -164,6 +176,68 @@ namespace StS2AP.Patches
 
     public static class Patches_NCharacterSelectScreen
     {
+        /// <summary>
+        /// Restores a compressed Archipelago save and reconstructs both the vanilla run and
+        /// all run-scoped AP state. Server checkpoints and local recovery saves share this path.
+        /// </summary>
+        private static async Task RestoreRun(string compressedSave, string saveDescription)
+        {
+            var unzipped = Patches_RunSaveManager.SaveRun.Unzip(compressedSave);
+            SerializableAP? apSave = JsonSerializer.Deserialize<SerializableAP>(
+                unzipped,
+                SerializationUtility.CombinedOptions
+            );
+            JsonElement? saveData = apSave?.SaveData;
+            if (
+                apSave == null
+                || saveData == null
+                || saveData.Value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined
+            )
+            {
+                throw new InvalidDataException($"{saveDescription} was missing AP save data");
+            }
+
+            ReadSaveResult<SerializableRun> runResult =
+                JsonSerializationUtility.FromJson<SerializableRun>(saveData.Value.GetRawText());
+            if (!runResult.Success || runResult.SaveData == null)
+            {
+                throw new InvalidDataException(
+                    $"Failed to deserialize {saveDescription}: "
+                        + (runResult.ErrorMessage ?? runResult.Status.ToString())
+                );
+            }
+
+            SerializableRun serializableRun = runResult.SaveData;
+            RunState runState = RunState.FromSerializable(serializableRun);
+            await RunManager.Instance.SetUpSavedSingleplayer(runState, serializableRun);
+            Log.Info(
+                $"Continuing run from {saveDescription} with character: "
+                    + serializableRun.Players[0].CharacterId
+            );
+            SfxCmd.Play(runState.Players[0].Character.CharacterTransitionSfx);
+
+            GameUtility.CurrentPlayer = runState.Players[0];
+            GameUtility.CurrentConfig = ArchipelagoClient.Settings.Characters[
+                GameUtility.CurrentPlayer.getInternalName()
+            ];
+            ArchipelagoClient.Progress = ArchipelagoProgress.FromSerializable(
+                apSave,
+                GameUtility.CurrentPlayer
+            );
+            RelicCoupons.EnsureOwnedBy(GameUtility.CurrentPlayer, silent: true);
+            Patches_ItemProcessor.ReprocessItems();
+            RelicRewardUtility.ReconcileBankedRewards(GameUtility.CurrentPlayer);
+            ArchipelagoClient.Progress.InitializeFromServer(GameUtility.CurrentPlayer);
+
+            await NGame.Instance.Transition.FadeOut(
+                0.8f,
+                runState.Players[0].Character.CharacterSelectTransitionPath
+            );
+            NGame.Instance.ReactionContainer.InitializeNetworking(new NetSingleplayerGameService());
+            await NGame.Instance.LoadRun(runState, serializableRun.PreFinishedRoom);
+            await NGame.Instance.Transition.FadeIn();
+        }
+
         [HarmonyPatch(typeof(NCharacterSelectScreen), "OnEmbarkPressed")]
         public static class MaybeLoadAP
         {
@@ -206,59 +280,26 @@ namespace StS2AP.Patches
 
             private static async Task ContinueRun(NCharacterSelectScreen _charSelect)
             {
+                var charName = BetaMainCompatibility.GetLocalCharacter(_charSelect.Lobby).Id.Entry;
+                if (!GameUtility.APSaves.TryGetValue(charName, out var saveStr))
+                {
+                    LogUtility.Error(
+                        "AP save disappeared before it could be loaded; preserving the current run selection"
+                    );
+                    NotificationUtility.ShowRawText("The checkpoint could not be found.");
+                    return;
+                }
+
                 try
                 {
                     NAudioManager.Instance?.StopMusic();
-                    string saveStr;
-                    var charName = BetaMainCompatibility.GetLocalCharacter(_charSelect.Lobby).Id.Entry;
-                    if (GameUtility.APSaves.TryGetValue(charName, out saveStr))
-                    {
-                        var unzipped = Patches_RunSaveManager.SaveRun.Unzip(saveStr);
-                        //LogUtility.Info($"JSON Save data{unzipped}");
-                        SerializableAP? result = JsonSerializer.Deserialize<SerializableAP>(unzipped, SerializationUtility.CombinedOptions);
-                        JsonElement? saveData = result?.SaveData;
-                        if (result == null || saveData == null ||
-                            saveData.Value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
-                        {
-                            LogUtility.Error("Failed to load AP save: save_data was missing");
-                            NotificationUtility.ShowRawText("Failed to load checkpoint. The checkpoint was preserved.");
-                            return;
-                        }
-                        ReadSaveResult<SerializableRun> runResult = JsonSerializationUtility.FromJson<SerializableRun>(saveData.Value.GetRawText());
-                        if (!runResult.Success || runResult.SaveData == null)
-                        {
-                            LogUtility.Error($"Failed to deserialize AP run save: {runResult.ErrorMessage ?? runResult.Status.ToString()}");
-                            NotificationUtility.ShowRawText("Failed to load checkpoint. The checkpoint was preserved.");
-                            return;
-                        }
-                        SerializableRun serializableRun = runResult.SaveData;
-                        RunState runState = RunState.FromSerializable(serializableRun);
-                        await RunManager.Instance.SetUpSavedSingleplayer(runState, serializableRun);
-                        Log.Info($"Continuing run with character: {serializableRun.Players[0].CharacterId}");
-                        SfxCmd.Play(runState.Players[0].Character.CharacterTransitionSfx);
-
-                        GameUtility.CurrentPlayer = runState.Players[0];
-                        GameUtility.CurrentConfig = ArchipelagoClient.Settings.Characters[GameUtility.CurrentPlayer.getInternalName()];
-                        ArchipelagoClient.Progress = ArchipelagoProgress.FromSerializable(result, GameUtility.CurrentPlayer);
-                        RelicCoupons.EnsureOwnedBy(GameUtility.CurrentPlayer, silent: true);
-                        Patches_ItemProcessor.ReprocessItems();
-                        RelicRewardUtility.ReconcileBankedRewards(GameUtility.CurrentPlayer);
-                        ArchipelagoClient.Progress.InitializeFromServer(GameUtility.CurrentPlayer);
-                        await NGame.Instance.Transition.FadeOut(0.8f, runState.Players[0].Character.CharacterSelectTransitionPath);
-                        NGame.Instance.ReactionContainer.InitializeNetworking(new NetSingleplayerGameService());
-                        await NGame.Instance.LoadRun(runState, serializableRun.PreFinishedRoom);
-                        await NGame.Instance.Transition.FadeIn();
-                        return;
-                    }
+                    await RestoreRun(saveStr, "AP checkpoint");
                 }
                 catch (Exception ex)
                 {
                     LogUtility.Error($"Failed to load AP save: {ex}");
                     NotificationUtility.ShowRawText("Failed to load checkpoint. The checkpoint was preserved.");
-                    return;
                 }
-                LogUtility.Error("AP save disappeared before it could be loaded; preserving the current run selection");
-                NotificationUtility.ShowRawText("The checkpoint could not be found.");
             }
         }
 
@@ -270,7 +311,7 @@ namespace StS2AP.Patches
         public static class CheckRecoverySaveOnOpen
         {
             [HarmonyPostfix]
-            public static void Postfix(NCharacterSelectScreen __instance)
+            public static void Postfix()
             {
                 if (!ArchipelagoClient.IsConnected) return;
                 if (!GameUtility.HasRecoverySave()) return;
@@ -284,7 +325,7 @@ namespace StS2AP.Patches
                 {
                     if (yesPressed)
                     {
-                        _ = LoadRecoverySave(__instance);
+                        _ = LoadRecoverySave();
                     }
                     else
                     {
@@ -294,7 +335,7 @@ namespace StS2AP.Patches
                 popup.Show();
             }
 
-            private static async Task LoadRecoverySave(NCharacterSelectScreen charSelect)
+            private static async Task LoadRecoverySave()
             {
                 try
                 {
@@ -302,42 +343,19 @@ namespace StS2AP.Patches
                     if (string.IsNullOrEmpty(saveStr))
                     {
                         LogUtility.Error("Recovery save data was empty or null");
-                        GameUtility.DeleteRecoverySave();
                         return;
                     }
 
                     NAudioManager.Instance?.StopMusic();
-
-                    var unzipped = Patches_RunSaveManager.SaveRun.Unzip(saveStr);
-                    ReadSaveResult<SerializableRun> result = JsonSerializationUtility.FromJson<SerializableRun>(unzipped);
-                    if (!result.Success)
-                    {
-                        LogUtility.Error($"Failed to deserialize recovery save: {result.ErrorMessage}");
-                        GameUtility.DeleteRecoverySave();
-                        return;
-                    }
-
-                    SerializableRun serializableRun = result.SaveData;
-                    RunState runState = RunState.FromSerializable(serializableRun);
-                    await RunManager.Instance.SetUpSavedSingleplayer(runState, serializableRun);
-                    Log.Info($"Continuing run from recovery save with character: {serializableRun.Players[0].CharacterId}");
-                    SfxCmd.Play(runState.Players[0].Character.CharacterTransitionSfx);
-
-                    GameUtility.CurrentPlayer = runState.Players[0];
-                    RelicCoupons.EnsureOwnedBy(GameUtility.CurrentPlayer, silent: true);
-
-                    await NGame.Instance.Transition.FadeOut(0.8f, runState.Players[0].Character.CharacterSelectTransitionPath);
-                    NGame.Instance.ReactionContainer.InitializeNetworking(new NetSingleplayerGameService());
-                    await NGame.Instance.LoadRun(runState, serializableRun.PreFinishedRoom);
-                    await NGame.Instance.Transition.FadeIn();
+                    await RestoreRun(saveStr, "emergency recovery save");
+                    GameUtility.DeleteRecoverySave();
                 }
                 catch (Exception ex)
                 {
-                    LogUtility.Error($"Failed to load recovery save: {ex.Message}");
-                }
-                finally
-                {
-                    GameUtility.DeleteRecoverySave();
+                    LogUtility.Error($"Failed to load recovery save: {ex}");
+                    NotificationUtility.ShowRawText(
+                        "Failed to load the recovery save. The recovery file was preserved."
+                    );
                 }
             }
         }
