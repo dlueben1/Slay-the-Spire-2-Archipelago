@@ -197,6 +197,7 @@ def create_item_groups(
             ItemType.CAMPFIRE: groups.setdefault(f"{character_name} Campfire Upgrades", set()),
         }
         character_shop_group = groups.setdefault(f"{character_name} Shop Slots", set())
+        character_starter_group = groups.setdefault(f"{character_name} Starter", set())
 
         for item_name, item_data in character_items.items():
             if item_data.type in character_groups:
@@ -209,6 +210,11 @@ def create_item_groups(
                 ItemType.SHOP_REMOVE,
             }:
                 character_shop_group.add(item_name)
+            elif item_data.type in {
+                ItemType.PROGRESSIVE_STARTER_CARD,
+                ItemType.PROGRESSIVE_STARTER_RELIC
+            }:
+                character_starter_group.add(item_name)
 
     return groups
 
