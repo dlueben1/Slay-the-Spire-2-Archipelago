@@ -18,6 +18,6 @@
     <ModName>Archipelago</ModName>
     <ModDisplayName>Archipelago Client</ModDisplayName>
     <ModAuthor>Kirbyfanner, PlatanoBailando, Lyxn, Terairk</ModAuthor>
-    <ModVersion>1.0.0</ModVersion>
+    <ModVersion>1.0.1</ModVersion>
   </PropertyGroup>
 </Project>

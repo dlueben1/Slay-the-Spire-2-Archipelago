@@ -38,7 +38,7 @@ class SlayTheSpire2World(World):
     web = SlayTheSpire2Web()
     options_dataclass = Spire2Options
     options: Spire2Options
-    mod_compat_version = "1.0.0"
+    mod_compat_version = "1.0.1"
     origin_region_name = "Neow's Room"
 
     # Build the final Item Table
@@ -462,9 +462,9 @@ class SlayTheSpire2World(World):
         tier pools, then picks an item using two-stage rarity tier selection.
 
         Tier probability weights:
-            HIGH   ~50% — tier chosen most often
+            HIGH   ~50% â€” tier chosen most often
             MEDIUM ~33%
-            LOW    ~17% — tier chosen least often
+            LOW    ~17% â€” tier chosen least often
 
         Within a selected tier, one item is chosen uniformly (equal probability
         regardless of how many items are in the tier).
