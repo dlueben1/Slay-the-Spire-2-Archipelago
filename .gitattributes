@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Godot rewrites import metadata with LF; keep Git from checking it out as CRLF on Windows.
+*.import text eol=lf
