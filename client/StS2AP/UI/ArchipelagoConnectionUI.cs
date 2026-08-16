@@ -55,6 +55,9 @@ namespace StS2AP.UI
                 // Don't build the UI if it's already present, just make sure it's visible
                 if (_rootPanel != null && IsInstanceValid(_rootPanel))
                 {
+                    SetStatus("");
+                    SetConnectButtonEnabled(true);
+                    SetCloseButtonEnabled(true);
                     _rootPanel.Visible = true;
                     FocusFirstInput();
                     return;
