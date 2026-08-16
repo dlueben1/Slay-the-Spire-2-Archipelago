@@ -55,6 +55,7 @@ namespace StS2AP.UI
                 // Don't build the UI if it's already present, just make sure it's visible
                 if (_rootPanel != null && IsInstanceValid(_rootPanel))
                 {
+                    // reset the button's, this previously didn't happen during a disconnect
                     SetStatus("");
                     SetConnectButtonEnabled(true);
                     SetCloseButtonEnabled(true);
