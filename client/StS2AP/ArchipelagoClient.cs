@@ -719,8 +719,9 @@ namespace StS2AP
                 Task.Run(() => session.Socket.DisconnectAsync());
             }
 
-            // Clear the buff queue so stale entries from this session don't carry over
+            // Clear session queues so stale entries don't carry over after reconnecting
             BuffUtility.ClearQueue();
+            NotificationUtility.ClearQueue();
 
             // Let the game know that we've disconnected
             Callable
@@ -838,7 +839,7 @@ namespace StS2AP
                 //    break;
                 case CommandResultLogMessage:
                 case AdminCommandResultLogMessage:
-                    NotificationUtility.HandleOtherAPMessages(message, true, 3.0, true);
+                    NotificationUtility.HandleOtherAPMessages(message, true, 3.0);
                     break;
                 default:
                     return;

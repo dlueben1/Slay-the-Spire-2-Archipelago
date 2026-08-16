@@ -25,6 +25,7 @@ namespace StS2AP.UI
         private static TextureRect? _speakerIcon;
         private static System.Threading.Timer? _displayTimer;
         private static Tween? _fadeTween;
+        private static SceneTree? _sceneTree;
 
         // UI Constants
         private const float IconSize = 64f;
@@ -68,6 +69,7 @@ namespace StS2AP.UI
                 // Don't build the UI if it's already present
                 if (_rootPanel != null && IsInstanceValid(_rootPanel))
                 {
+                    StartProcessing(sceneTree);
                     return;
                 }
 
@@ -80,6 +82,10 @@ namespace StS2AP.UI
                 _canvasLayer.Layer = 101; // Above the connection UI layer
                 _canvasLayer.AddChild(_rootPanel);
                 root.AddChild(_canvasLayer);
+
+                // This UI is attached to the scene-tree root and outlives NRun, so it is
+                // also the appropriate owner for processing notifications in every scene.
+                StartProcessing(sceneTree);
 
                 // Load the desired ancient as the announcer icon
                 UpdateSpeakerIcon();
@@ -97,6 +103,8 @@ namespace StS2AP.UI
         /// </summary>
         public static void RemoveUI()
         {
+            StopProcessing();
+
             if (_fadeTween != null)
             {
                 _fadeTween.Kill();
@@ -122,6 +130,29 @@ namespace StS2AP.UI
         }
 
         #endregion
+
+        private static void StartProcessing(SceneTree sceneTree)
+        {
+            if (_sceneTree == sceneTree)
+            {
+                return;
+            }
+
+            StopProcessing();
+            _sceneTree = sceneTree;
+            _sceneTree.ProcessFrame += CheckAndHandleNotification;
+        }
+
+        private static void StopProcessing()
+        {
+            if (_sceneTree == null)
+            {
+                return;
+            }
+
+            _sceneTree.ProcessFrame -= CheckAndHandleNotification;
+            _sceneTree = null;
+        }
 
         #region Speaker Icon Management
 
@@ -223,19 +254,6 @@ namespace StS2AP.UI
             Callable.From(Hide).CallDeferred(); // FIX WILL DO A BETTER COMMENT LATER
         }
 
-        public static bool DevConsoleVisible()
-        {
-            try
-            {
-                return NDevConsole.Instance?.Visible ?? false;
-            }
-            catch (Exception)
-            {
-                // can throw if the dev console is not created
-                return false;
-            }
-        }
-
         /// <summary>
         /// Checks for notifications to process from the queues.
         /// </summary>
@@ -252,21 +270,15 @@ namespace StS2AP.UI
                 }
             }
 
-            if (
-                (NotificationUtility.PeekDevNotification()?.ForceIntoDevConsole ?? false)
-                || !DevConsoleVisible()
-            )
+            var devNotification = NotificationUtility.DequeueDevNotification();
+            if (devNotification != null)
             {
-                var notif = NotificationUtility.DequeueDevNotification();
-                if (notif != null)
-                {
-                    WriteToDevConsole(notif.Message);
-                }
+                WriteToDevConsole(devNotification.Message);
             }
         }
 
         /// <summary>
-        /// Writes to the dev console; a bit concerned about race conditions, so use with care
+        /// Writes to the dev console from the main-thread notification processor.
         /// </summary>
         /// <param name="msg"></param>
         private static void WriteToDevConsole(string msg)

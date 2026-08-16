@@ -37,7 +37,6 @@ namespace StS2AP.Utils
             public string Message { get; set; }
             public NotificationType Type { get; set; }
             public double DisplayDuration { get; set; } = 3.0;
-            public bool ForceIntoDevConsole { get; set; } = false;
             public NotificationPriority Priority { get; set; } = NotificationPriority.Normal;
 
             public ArchipelagoNotification(
@@ -82,7 +81,6 @@ namespace StS2AP.Utils
             NotificationType type = NotificationType.Info,
             bool devConsoleOnly = false,
             double timeout = 3.0,
-            bool forceIntoDevConsole = false,
             NotificationPriority priority = NotificationPriority.Normal,
             bool includeInDevConsole = true
         )
@@ -90,7 +88,6 @@ namespace StS2AP.Utils
             LogUtility.Info($"Attempting to enqueue notification {message} {type}");
             var notification = new ArchipelagoNotification(message, type);
             notification.DisplayDuration = timeout;
-            notification.ForceIntoDevConsole = forceIntoDevConsole;
             notification.Priority = priority;
             if (!devConsoleOnly)
             {
@@ -135,15 +132,6 @@ namespace StS2AP.Utils
             if (_devQueue.TryDequeue(out var result))
             {
                 //LogUtility.Info($"Notification dequeued: {result.Message}");
-                return result;
-            }
-            return null;
-        }
-
-        public static ArchipelagoNotification? PeekDevNotification()
-        {
-            if (_devQueue.TryPeek(out var result))
-            {
                 return result;
             }
             return null;
@@ -240,8 +228,7 @@ namespace StS2AP.Utils
         public static void HandleOtherAPMessages(
             LogMessage message,
             bool devConsoleOnly = false,
-            double timeout = 3.0,
-            bool forceIntoDevConsole = false
+            double timeout = 3.0
         )
         {
             var result = ToColoredString(message, null);
@@ -249,8 +236,7 @@ namespace StS2AP.Utils
                 result,
                 NotificationType.Info,
                 devConsoleOnly,
-                timeout,
-                forceIntoDevConsole
+                timeout
             );
         }
 
