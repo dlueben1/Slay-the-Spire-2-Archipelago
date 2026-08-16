@@ -797,11 +797,10 @@ namespace StS2AP.Utils
         {
             if (!ArchipelagoClient.CheckedLocations.Contains(locationId) && locationId != -1 && ArchipelagoClient.ScoutedLocations.ContainsKey(locationId))
             {
-                // Check the location off and let the server know
+                // Record the location durably before attempting the socket write. If the
+                // connection is timing out, it will be replayed after the next login.
                 ArchipelagoClient.CheckedLocations.Add(locationId);
-                _ = ArchipelagoClient.Session.Locations.CompleteLocationChecksAsync(locationId);
-
-                LogUtility.Success($"Sent location check: {locationId}");
+                PendingCheckUtility.RecordAndSend(locationId);
             }
             if(includeUnrecognizedChars)
             {

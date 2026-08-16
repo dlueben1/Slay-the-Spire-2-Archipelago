@@ -573,6 +573,10 @@ namespace StS2AP
                 $"Restored {CheckedLocations.Count} previously checked location(s) from server."
             );
 
+            // A fresh session's checked-location list is authoritative, so this is the safe
+            // point to discard confirmed outbox entries and replay anything still missing.
+            PendingCheckUtility.ReconcileAndSend();
+
             try
             {
                 // Enable/Disable the Death Link Service based on user settings
