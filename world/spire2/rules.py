@@ -10,7 +10,8 @@ from rule_builder.options import OptionFilter
 from rule_builder.rules import HasFromList, Rule, TWorld, True_, Has, HasFromListUnique, HasAnyCount, HasAllCounts
 from .characters import CharacterConfig, character_offset_map
 from .items import ItemType
-from .options import CampfireSanity, ShopSanity, GoldSanity, NeowSanity, ShopRemoveSlots
+from .options import CampfireSanity, ShopSanity, GoldSanity, NeowSanity, ShopRemoveSlots, ProgressiveStarterCard, \
+    ProgressiveStarterRelic
 from ..AutoWorld import LogicMixin
 from ..generic.Rules import set_rule
 
@@ -171,7 +172,9 @@ def _set_rules(world: 'SlayTheSpire2World', config: CharacterConfig) -> None:
         # should be blocked by the regular logic gates
         neow_loc.item_rule = lambda item: item.game != "Slay the Spire II" or item.item_data.type != ItemType.PROGRESSIVE_ANCIENT
     world.set_rule(world.get_entrance(f"{prefix} Late Act 1"),SpireHasPower(offset,6) &
-                   SpireHasShop(prefix, 2, options=[OptionFilter(ShopSanity,1)], filtered_resolution=True)
+                   SpireHasShop(prefix, 2, options=[OptionFilter(ShopSanity,1)], filtered_resolution=True) &
+                   Has(f"{prefix} Progressive Starter Relic", options=[OptionFilter(ProgressiveStarterRelic, 1)], filtered_resolution=True) &
+                   Has(f"{prefix} Progressive Starter Card", options=[OptionFilter(ProgressiveStarterCard, 1)], filtered_resolution=True),
                    )
     world.set_rule(world.get_entrance(f"{prefix} Act 1 Boss Arena"), SpireHasPower(offset,9) &
                     Has(f"{prefix} Progressive Smith", options=[OptionFilter(CampfireSanity, 1)], filtered_resolution=True) &
