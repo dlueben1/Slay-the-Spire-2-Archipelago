@@ -5,11 +5,11 @@ Archipelago Client & APWorld for STS2
 # Download the Latest Playable Release [Here](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest)
 
 > [!IMPORTANT]
-> We do **not** support the Beta Branch, only the Public Branch of the game! There can be breaking changes to the underlying game's code that makes supporting beta branches unrealistic.
+> We **currently** support the Beta Branch (v0.111.0), and also the Main Branch of the game! (v.107.1) The Beta Branch may break our mod whenever it updates so be aware if a fix could take several days to fix and hence we recommend using the Main Branch (though Beta Branch does work for now).
 
-## Alpha Development
+## 1.0 Development onwards
 
-This mod is currently in Alpha, and is unfinished. It's not feature-complete to consider it a v1, but it's perfectly playable! While there are some edge case bugs, most people have successfully played an Archipelago with this world and had no issues.
+This mod is currently in 1.0 stage and is practically feature-parity with the AP from the StS1 (barring a few features). While there are some edge case bugs, most people have successfully played an Archipelago with this world and had no issues.
 
 > [!WARNING]
 > The mod only supports English at the moment, but as we understand localization better, we can work with the community to support more languages
@@ -20,6 +20,8 @@ There are two ways to install the mod, detailed below.
 ## Steam Workshop
 
 Subscribe to the mod on the [steam workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3748826296).
+Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) installed. The easiest way to obtain it is from Steam Workshop.
+
 
 ## Manual installation
 
@@ -43,14 +45,16 @@ Subscribe to the mod on the [steam workshop](https://steamcommunity.com/sharedfi
 - Potionsanity
 - Saving to the AP Server, and Saving when Connection is Lost
 - Death Link
+- Shopsanity (currently playable but may lack some polish)
+- Interesting Filler Items
+- Progressive Ancients
+- Progressive Starter Card and Relic (ie None -> Bash -> Break)
 
 ## What's **NOT** Included
 
 - **Multiplayer Support**
   - This is a popular request, but it will not be something we work on until _everything else_ is stable. You will be waiting a very long time for this, sorry.
-- Shopsanity
 - Traps
-- Interesting Filler Items
 - Polish
 
 > [!CAUTION]
