@@ -35,6 +35,7 @@ namespace StS2AP.UI
         private const int FontSize = 24;
         private const float TailWidth = 16f;
         private const float BubbleWidth = 480f;
+        private const int MaxDevConsoleParagraphs = 1000;
 
         /// <summary>
         /// Whether the UI is currently visible
@@ -286,7 +287,16 @@ namespace StS2AP.UI
             RichTextLabel? outputBuffer = GetDevConsoleBuffer();
             if (outputBuffer != null)
             {
-                outputBuffer.Text = outputBuffer.Text + msg + "\n";
+                outputBuffer.AppendText(msg);
+                outputBuffer.Newline();
+
+                while (outputBuffer.GetParagraphCount() > MaxDevConsoleParagraphs)
+                {
+                    if (!outputBuffer.RemoveParagraph(0))
+                    {
+                        break;
+                    }
+                }
             }
         }
 
