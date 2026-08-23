@@ -1,86 +1,97 @@
 <Project Sdk="Microsoft.NET.Sdk">
-	<!-- Import user-specific paths -->
-	<Import Project="local.props" Condition="Exists('local.props')" />
+  <!-- Import user-specific paths -->
+  <Import Project="local.props" Condition="Exists('local.props')" />
 
-	<PropertyGroup>
-		<TargetFramework>net9.0</TargetFramework>
-		<PlatformTarget>x64</PlatformTarget>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-		
-		<!-- Debug settings -->
-		<StartAction>Program</StartAction>
-		<StartProgram>$(STS2GamePath)\SlayTheSpire2.exe</StartProgram>
-		<StartWorkingDirectory>$(STS2GamePath)</StartWorkingDirectory>
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>14</LangVersion>
+    <PlatformTarget>x64</PlatformTarget>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 
-		<!-- Fallback defaults if local.props missing -->
-		<STS2GamePath Condition="'$(STS2GamePath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2</STS2GamePath>
-		<GodotExePath Condition="'$(GodotExePath)' == ''">godot</GodotExePath>
-		<ModName Condition="'$(ModName)' == ''">ExampleMod</ModName>
-		<ModDisplayName Condition="'$(ModDisplayName)' == ''">Example Mod</ModDisplayName>
-		<ModAuthor Condition="'$(ModAuthor)' == ''">Unknown</ModAuthor>
-		<ModVersion Condition="'$(ModVersion)' == ''">1.0.0</ModVersion>
+    <!-- Debug settings -->
+    <StartAction>Program</StartAction>
+    <StartProgram>$(STS2GamePath)\SlayTheSpire2.exe</StartProgram>
+    <StartWorkingDirectory>$(STS2GamePath)</StartWorkingDirectory>
 
-		<AssemblyName>$(ModName)</AssemblyName>
-		<Version>$(ModVersion)</Version>
+    <!-- Fallback defaults if local.props missing -->
+    <STS2GamePath Condition="'$(STS2GamePath)' == ''"
+      >C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2</STS2GamePath>
+    <GodotExePath Condition="'$(GodotExePath)' == ''">godot</GodotExePath>
+    <ModName Condition="'$(ModName)' == ''">ExampleMod</ModName>
+    <ModDisplayName Condition="'$(ModDisplayName)' == ''">Example Mod</ModDisplayName>
+    <ModAuthor Condition="'$(ModAuthor)' == ''">Unknown</ModAuthor>
+    <ModVersion Condition="'$(ModVersion)' == ''">1.0.0</ModVersion>
 
-		<!-- Derived paths -->
-		<ModsOutputDir>$(STS2GamePath)\mods\$(ModName)</ModsOutputDir>
-		<GameDataDir>$(STS2GamePath)\data_sts2_windows_x86_64</GameDataDir>
-		<STS2ReferenceDataDir Condition="'$(STS2ReferenceDataDir)' == ''">$(GameDataDir)</STS2ReferenceDataDir>
-		<GodotProject>$(ProjectDir)godot</GodotProject>
-	</PropertyGroup>
+    <AssemblyName>$(ModName)</AssemblyName>
+    <Version>$(ModVersion)</Version>
 
-	<ItemGroup>
-	  <PackageReference Include="Archipelago.MultiClient.Net" Version="6.7.0" />
-	  <PackageReference Include="STS2.RitsuLib.Compat.0.107.1" Version="0.4.53" />
-	</ItemGroup>
+    <!-- Derived paths -->
+    <ModsOutputDir>$(STS2GamePath)\mods\$(ModName)</ModsOutputDir>
+    <GameDataDir>$(STS2GamePath)\data_sts2_windows_x86_64</GameDataDir>
+    <STS2ReferenceDataDir Condition="'$(STS2ReferenceDataDir)' == ''"
+      >$(GameDataDir)</STS2ReferenceDataDir>
+    <GodotProject>$(ProjectDir)godot</GodotProject>
+  </PropertyGroup>
 
-	<ItemGroup>
-		<Reference Include="0Harmony">
-			<HintPath>$(STS2ReferenceDataDir)\0Harmony.dll</HintPath>
-		</Reference>
-		<Reference Include="GodotSharp">
-			<HintPath>$(STS2ReferenceDataDir)\GodotSharp.dll</HintPath>
-		</Reference>
-		<Reference Include="sts2">
-			<HintPath>$(STS2ReferenceDataDir)\sts2.dll</HintPath>
-		</Reference>
-	</ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Archipelago.MultiClient.Net" Version="6.7.0" />
+    <PackageReference Include="STS2.RitsuLib.Compat.0.107.1" Version="0.4.53" />
+  </ItemGroup>
 
-	<ItemGroup>
-	  <None Update="Archipelago.json">
-	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	  </None>
-	</ItemGroup>
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>$(STS2ReferenceDataDir)\0Harmony.dll</HintPath>
+    </Reference>
+    <Reference Include="GodotSharp">
+      <HintPath>$(STS2ReferenceDataDir)\GodotSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="sts2">
+      <HintPath>$(STS2ReferenceDataDir)\sts2.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 
-	<!-- Create steam_appid.txt for debugging outside Steam -->
-	<Target Name="CreateSteamAppId" BeforeTargets="Build">
-		<PropertyGroup>
-			<SteamAppIdPath>$(STS2GamePath)\steam_appid.txt</SteamAppIdPath>
-			<SteamAppId>2868840</SteamAppId>
-		</PropertyGroup>
-		<WriteLinesToFile File="$(SteamAppIdPath)" Lines="$(SteamAppId)" Overwrite="true" Encoding="ASCII" WriteOnlyWhenDifferent="false" />
-		<Exec Command="powershell -Command &quot;Set-Content -Path '$(SteamAppIdPath)' -Value '$(SteamAppId)' -NoNewline -Encoding ASCII&quot;" />
-		<Message Text="Created steam_appid.txt with App ID $(SteamAppId)" Importance="high" />
-	</Target>
+  <ItemGroup>
+    <None Update="Archipelago.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
-	<!-- Create Godot folder structure -->
-	<Target Name="CreateGodotFolder" BeforeTargets="BeforeBuild">
-		<MakeDir Directories="$(GodotProject)" />
-		<Message Text="Created Godot folder structure" Importance="high" />
-	</Target>
+  <!-- Create steam_appid.txt for debugging outside Steam -->
+  <Target Name="CreateSteamAppId" BeforeTargets="Build">
+    <PropertyGroup>
+      <SteamAppIdPath>$(STS2GamePath)\steam_appid.txt</SteamAppIdPath>
+      <SteamAppId>2868840</SteamAppId>
+    </PropertyGroup>
+    <WriteLinesToFile
+      File="$(SteamAppIdPath)"
+      Lines="$(SteamAppId)"
+      Overwrite="true"
+      Encoding="ASCII"
+      WriteOnlyWhenDifferent="false"
+    />
+    <Exec Command="powershell -Command &quot;Set-Content -Path '$(SteamAppIdPath)' -Value '$(SteamAppId)' -NoNewline -Encoding ASCII&quot;" />
+    <Message Text="Created steam_appid.txt with App ID $(SteamAppId)" Importance="high" />
+  </Target>
 
-	<!-- Generate export_presets.cfg -->
+  <!-- Create Godot folder structure -->
+  <Target Name="CreateGodotFolder" BeforeTargets="BeforeBuild">
+    <MakeDir Directories="$(GodotProject)" />
+    <Message Text="Created Godot folder structure" Importance="high" />
+  </Target>
 
+  <!-- Generate export_presets.cfg -->
 
-
-	<!-- Generate project.godot -->
-	<Target Name="GenerateProjectGodot" BeforeTargets="BeforeBuild" DependsOnTargets="CreateGodotFolder">
-		<PropertyGroup>
-			<ProjectGodotPath>$(GodotProject)\project.godot</ProjectGodotPath>
-			<ProjectGodotContent>
+  <!-- Generate project.godot -->
+  <Target
+    Name="GenerateProjectGodot"
+    BeforeTargets="BeforeBuild"
+    DependsOnTargets="CreateGodotFolder"
+  >
+    <PropertyGroup>
+      <ProjectGodotPath>$(GodotProject)\project.godot</ProjectGodotPath>
+      <ProjectGodotContent>
 config_version=5
 
 [application]
@@ -90,17 +101,26 @@ config/features=PackedStringArray("4.5", "Forward Plus")
 [dotnet]
 project/assembly_name="$(ModName)"
 			</ProjectGodotContent>
-		</PropertyGroup>
+    </PropertyGroup>
 
-		<WriteLinesToFile File="$(ProjectGodotPath)" Lines="$(ProjectGodotContent)" Overwrite="true" Encoding="UTF-8" />
-		<Message Text="Generated project.godot" Importance="high" />
-	</Target>
+    <WriteLinesToFile
+      File="$(ProjectGodotPath)"
+      Lines="$(ProjectGodotContent)"
+      Overwrite="true"
+      Encoding="UTF-8"
+    />
+    <Message Text="Generated project.godot" Importance="high" />
+  </Target>
 
-	<Target Name="GenerateExportPresets" BeforeTargets="BeforeBuild" DependsOnTargets="CreateGodotFolder">
-		<PropertyGroup>
-			<ExportPresetsPath>$(GodotProject)\export_presets.cfg</ExportPresetsPath>
-			<ExportPresetsContent>
-				<![CDATA[config_version=5
+  <Target
+    Name="GenerateExportPresets"
+    BeforeTargets="BeforeBuild"
+    DependsOnTargets="CreateGodotFolder"
+  >
+    <PropertyGroup>
+      <ExportPresetsPath>$(GodotProject)\export_presets.cfg</ExportPresetsPath>
+      <ExportPresetsContent>
+        <![CDATA[config_version=5
 
 [preset.0]
 
@@ -173,31 +193,45 @@ dotnet/include_scripts_content=false
 dotnet/include_debug_symbols=true
 dotnet/embed_build_outputs=false
 ]]>
-			</ExportPresetsContent>
-		</PropertyGroup>
+      </ExportPresetsContent>
+    </PropertyGroup>
 
-		<WriteLinesToFile File="$(ExportPresetsPath)" Lines="$(ExportPresetsContent)" Overwrite="true" Encoding="UTF-8" />
-		<Message Text="Generated export_presets.cfg" Importance="high" />
-	</Target>
+    <WriteLinesToFile
+      File="$(ExportPresetsPath)"
+      Lines="$(ExportPresetsContent)"
+      Overwrite="true"
+      Encoding="UTF-8"
+    />
+    <Message Text="Generated export_presets.cfg" Importance="high" />
+  </Target>
 
-	
-	<Target Name="PostBuild" AfterTargets="Build">
-		<MakeDir Directories="$(ModsOutputDir)" />
-		<!-- Copy main assembly -->
-		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModsOutputDir)" />
-		<!-- Copy all dependency DLLs (NuGet packages) except game-provided assemblies -->
-		<ItemGroup>
-			<DependencyDlls Include="$(TargetDir)*.dll" Exclude="$(TargetDir)$(TargetFileName);$(TargetDir)GodotSharp.dll;$(TargetDir)0Harmony.dll;$(TargetDir)sts2.dll;$(TargetDir)STS2.RitsuLib*.dll" />
-		</ItemGroup>
-		<Copy SourceFiles="@(DependencyDlls)" DestinationFolder="$(ModsOutputDir)" />
-		<Copy SourceFiles="Archipelago.json" DestinationFiles="$(ModsOutputDir)\Archipelago.json" />
-		<!-- Copy .apworld file if it exists (dev builds may not have it yet) -->
-		<PropertyGroup>
-			<ApWorldSource>$(MSBuildProjectDirectory)\..\..\dist\spire2.apworld</ApWorldSource>
-			<ApWorldDest>$(ModsOutputDir)\spire2.apworld</ApWorldDest>
-		</PropertyGroup>
-		<Copy SourceFiles="$(ApWorldSource)" DestinationFiles="$(ApWorldDest)" Condition="Exists('$(ApWorldSource)')" />
-		<Warning Text="spire2.apworld not found in dist folder. Run scripts\build_world.ps1 to build it." Condition="!Exists('$(ApWorldSource)')" />
-		<Exec Command="&quot;$(GodotExePath)&quot; --headless --path &quot;$(GodotProject)&quot; --export-pack &quot;Windows Desktop&quot; &quot;$(ModsOutputDir)\$(ModName).pck&quot;" />
-	</Target>
+  <Target Name="PostBuild" AfterTargets="Build">
+    <MakeDir Directories="$(ModsOutputDir)" />
+    <!-- Copy main assembly -->
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModsOutputDir)" />
+    <!-- Copy all dependency DLLs (NuGet packages) except game-provided assemblies -->
+    <ItemGroup>
+      <DependencyDlls
+        Include="$(TargetDir)*.dll"
+        Exclude="$(TargetDir)$(TargetFileName);$(TargetDir)GodotSharp.dll;$(TargetDir)0Harmony.dll;$(TargetDir)sts2.dll;$(TargetDir)STS2.RitsuLib*.dll"
+      />
+    </ItemGroup>
+    <Copy SourceFiles="@(DependencyDlls)" DestinationFolder="$(ModsOutputDir)" />
+    <Copy SourceFiles="Archipelago.json" DestinationFiles="$(ModsOutputDir)\Archipelago.json" />
+    <!-- Copy .apworld file if it exists (dev builds may not have it yet) -->
+    <PropertyGroup>
+      <ApWorldSource>$(MSBuildProjectDirectory)\..\..\dist\spire2.apworld</ApWorldSource>
+      <ApWorldDest>$(ModsOutputDir)\spire2.apworld</ApWorldDest>
+    </PropertyGroup>
+    <Copy
+      SourceFiles="$(ApWorldSource)"
+      DestinationFiles="$(ApWorldDest)"
+      Condition="Exists('$(ApWorldSource)')"
+    />
+    <Warning
+      Text="spire2.apworld not found in dist folder. Run scripts\build_world.ps1 to build it."
+      Condition="!Exists('$(ApWorldSource)')"
+    />
+    <Exec Command="&quot;$(GodotExePath)&quot; --headless --path &quot;$(GodotProject)&quot; --export-pack &quot;Windows Desktop&quot; &quot;$(ModsOutputDir)\$(ModName).pck&quot;" />
+  </Target>
 </Project>
