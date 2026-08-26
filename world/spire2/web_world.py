@@ -7,7 +7,7 @@ from .options import (
     IncludeFloorChecks, NeowSanity, CampfireSanity, GoldSanity, PotionSanity,
     ShopSanity, ShopCardSlots, ShopNeutralSlots, ShopRelicSlots, ShopPotionSlots, ShopRemoveSlots, ShopSanityCosts,
     AncientRelicLocation, AncientRelicPool, RelicRewardsAvailableAnytime, ReleaseOnVictory,
-    CardReward, ProgressiveStarterCard, ProgressiveStarterRelic, SeededRun,
+    CardReward, ProgressiveStarterCard, ProgressiveStarterRelic, BonusItems, SeededRun,
     OneGoldFillerWeight, FiveGoldFillerWeight,
     FreeAttackFillerWeight, FreePowerFillerWeight, FreeSkillFillerWeight,
     DexterityFillerWeight, StrengthFillerWeight, PlatingFillerWeight,
@@ -49,7 +49,7 @@ class SlayTheSpire2Web(WebWorld):
             ProgressiveStarterCard,
             ProgressiveStarterRelic,
             CardReward,
-        ]),
+        ]),        
         OptionGroup("Sanities", [
             IncludeFloorChecks,
             NeowSanity,
@@ -75,6 +75,9 @@ class SlayTheSpire2Web(WebWorld):
             AdvancedChar,
             CharacterOptions,
         ], start_collapsed=True),
+        OptionGroup("Bonus Items", [
+            BonusItems,
+        ]),
         OptionGroup("Filler Items", [
             OneGoldFillerWeight,
             FiveGoldFillerWeight,
