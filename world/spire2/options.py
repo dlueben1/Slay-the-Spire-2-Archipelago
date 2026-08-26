@@ -3,7 +3,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import List
 
-from Options import OptionSet, Range, Toggle, Visibility, Choice, TextChoice, OptionDict, OptionCounter, \
+from Options import OptionSet, OptionList, Range, Toggle, Visibility, Choice, TextChoice, OptionDict, OptionCounter, \
     PerGameCommonOptions, OptionGroup, DeathLink
 
 import schema
@@ -342,6 +342,54 @@ class CharacterOptions(OptionDict):
         }
     })
 
+
+
+class BonusItems(OptionList):
+    """Add a number of Bonus Items to the item pool.
+    These items make the game easier to complete, and are not accounted for in logic.
+
+    Each ordered entry creates one character-agnostic bonus item and must provide either
+    a non-empty list of value Pools or one specific Value. For example:
+
+        bonus_items:
+            - WAX_RELIC:
+                Pools: [Common, Uncommon]
+            - WAX_RELIC:
+                Value: Orichalcum
+
+
+    Generation fails if more bonus items are configured than there are filler slots.
+
+    It's recommended to use the YAML Builder on our website to easily generate this value, which you can find at https://sts2ap.net
+    """
+    display_name = "Bonus Items"
+    visibility = Visibility.template
+    default = []
+
+    @staticmethod
+    def _has_exactly_one_selector(entry: dict) -> bool:
+        if len(entry) != 1:
+            return False
+
+        reward = next(iter(entry.values()))
+        has_pools = "Pools" in reward
+        has_value = "Value" in reward
+        return has_pools != has_value and (
+            not has_pools or bool(reward["Pools"])
+        )
+
+    schema = Schema([
+        And(
+            {
+                str: {
+                    Optional("Pools"): [And(str, len)],
+                    Optional("Value"): And(str, len),
+                }
+            },
+            _has_exactly_one_selector,
+        )
+    ])
+
 class AscensionDown(OptionSet):
     """The ascension downs to add to the item pool, per character. Only valid when
     `use_advanced_characters` is false (see `advanced_characters`), and when `include_floor_checks` is true.
@@ -602,6 +650,9 @@ class Spire2Options(PerGameCommonOptions):
     progressive_starter_card: ProgressiveStarterCard
     progressive_starter_relic: ProgressiveStarterRelic
     shuffle_all_cards: CardReward
+
+    # Bonus items
+    bonus_items: BonusItems
 
     # Sanities
     include_floor_checks: IncludeFloorChecks

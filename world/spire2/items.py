@@ -26,6 +26,7 @@ class ItemType(Enum):
     ASCENSION_DOWN = auto()
     PROGRESSIVE_STARTER_CARD = auto()
     PROGRESSIVE_STARTER_RELIC = auto()
+    BONUS_WAX_RELIC = auto()
     # TRAP = auto()
     CAW_CAW = auto()
     BUFF = auto()
@@ -44,6 +45,11 @@ class ItemData(typing.NamedTuple):
     def increment(base: 'ItemData', char_offset: int) -> 'ItemData':
         newcode = base.code + char_offset if base.code is not None else base.code
         return ItemData(newcode, base.type, base.classification, base.event, base.is_victory, char_offset//CHAR_OFFSET)
+
+
+class BonusItemData(typing.NamedTuple):
+    item_name: str
+    item_data: ItemData
 
 # Items in this table get unique variations for each character. For example, "Five Gold" becomes "Ironclad Five Gold", "Silent Five Gold", etc.
 base_item_table: Dict[str, ItemData] = {
@@ -77,6 +83,7 @@ base_item_table: Dict[str, ItemData] = {
 
 # Items in this table are character-agnostic, and can be claimed by any of them
 universal_items: Dict[str, ItemData] = {
+    # Filler / Junk
     'Free Attack': ItemData(500, ItemType.BUFF, ItemClassification.filler),
     'Free Power': ItemData(501, ItemType.BUFF, ItemClassification.filler),
     'Free Skill': ItemData(502, ItemType.BUFF, ItemClassification.filler),
@@ -94,6 +101,20 @@ universal_items: Dict[str, ItemData] = {
     #'Single Colorless Card': ItemData(508, ItemType.FILLER_CARD_REWARD, ItemClassification.filler),
 }
 
+# `bonus_item_table` is keyed by the configuration selector: "WAX_RELIC". This is what the YAML option uses.
+bonus_item_table: Dict[str, BonusItemData] = {
+    'WAX_RELIC': BonusItemData(
+        'Bonus Wax Relic',
+        ItemData(600, ItemType.BONUS_WAX_RELIC, ItemClassification.useful),
+    ),
+}
+
+# `universal_bonus_items` is keyed by the actual Archipelago item name (like "Bonus Wax Relic").
+# This matches item_table and create_item() lookups.
+universal_bonus_items: Dict[str, ItemData] = {
+    bonus.item_name: bonus.item_data for bonus in bonus_item_table.values()
+}
+
 base_event_item_pairs: Dict[str, str] = {
     "Act 1 Boss": "Beat Act 1 Boss",
     "Act 2 Boss": "Beat Act 2 Boss",
@@ -104,6 +125,7 @@ def create_item_tables(vanilla_chars: typing.List[str], extras: int) -> typing.T
     typing.Union[str, int],dict[str,ItemData]], dict[str,str]]:
     item_name_to_data = {
         **universal_items,
+        **universal_bonus_items,
     }
 
     characters_to_items: dict[typing.Union[str, int],dict[str, ItemData]] = defaultdict(lambda: dict())
@@ -153,6 +175,7 @@ def create_item_groups(
         "Ascension Downs": set(),
         "Starter Upgrades": set(),
         "Buffs": set(),
+        "Bonus Items": set(),
     }
 
     for item_name, item_data in items.items():
@@ -189,6 +212,8 @@ def create_item_groups(
             groups["Starter Upgrades"].add(item_name)
         elif item_data.type == ItemType.BUFF:
             groups["Buffs"].add(item_name)
+        elif item_name in universal_bonus_items:
+            groups["Bonus Items"].add(item_name)
 
     for character_key, character_items in characters_to_items.items():
         character_name = character_key if isinstance(character_key, str) else f"Custom Character {character_key}"
