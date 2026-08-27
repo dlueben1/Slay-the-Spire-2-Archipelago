@@ -303,6 +303,7 @@ function revealsDependentGameplayQuestions(): void {
     "ancient-location",
     "ancient-pool",
     "check-types",
+    "bonus-items",
     "filler-weights",
   ]);
   expect(visibleDeathLinkQuestionIds(answers)).toEqual(["death-link-enabled"]);
@@ -318,6 +319,7 @@ function revealsDependentGameplayQuestions(): void {
     "shop-slots",
     "shop-removal",
     "shop-costs",
+    "bonus-items",
     "filler-weights",
   ]);
   expect(visibleDeathLinkQuestionIds(answers)).toEqual([

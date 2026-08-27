@@ -12,6 +12,7 @@ import { FILLER_ITEM_DEFINITIONS } from "./FillerItem";
 import {
   CHARACTER_OPTION_KEYS,
   ANCIENT_OPTION_KEYS,
+  BONUS_ITEM_OPTION_KEY,
   CHECK_OPTION_KEYS,
   DEATH_LINK_OPTION_KEYS,
   PROGRESSION_OPTION_KEYS,
@@ -47,6 +48,7 @@ export function getGuidedOptionKeys(): string[] {
     ...Object.values(ANCIENT_OPTION_KEYS),
     ...Object.values(CHECK_OPTION_KEYS),
     ...Object.values(SHOP_OPTION_KEYS),
+    BONUS_ITEM_OPTION_KEY,
   ];
 
   // Filler keys come from their semantic item definitions rather than a duplicate list.

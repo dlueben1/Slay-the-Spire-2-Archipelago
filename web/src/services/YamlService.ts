@@ -60,13 +60,8 @@ function appendValue(
 
     lines.push(`${prefix}${serializedKey}:`);
 
-    // Generated list options contain scalars; object fallback remains valid flow YAML.
     for (const entry of value) {
-      const serializedEntry =
-        entry !== null && typeof entry === "object"
-          ? JSON.stringify(entry)
-          : scalar(entry as boolean | number | string);
-      lines.push(`${prefix}  - ${serializedEntry}`);
+      appendSequenceEntry(lines, entry, indentation + 2);
     }
 
     return;
@@ -95,6 +90,108 @@ function appendValue(
   lines.push(
     `${prefix}${serializedKey}: ${scalar(value as boolean | number | string)}`,
   );
+}
+
+/**
+ * Appends one entry of a YAML block sequence at the given indentation.
+ *
+ * @param lines - Mutable output lines being assembled by the serializer.
+ * @param entry - Scalar or mapping sequence entry to serialize.
+ * @param indentation - Number of spaces preceding the `- ` marker.
+ * @returns Nothing; appends the entry's complete YAML representation to `lines`.
+ * @remarks Mapping entries such as `WAX_RELIC` bonus items emit their first key on
+ * the dash line and remaining keys on following lines, matching hand-written YAML.
+ */
+function appendSequenceEntry(
+  lines: string[],
+  entry: unknown,
+  indentation: number,
+): void {
+  const prefix = " ".repeat(indentation);
+
+  if (entry !== null && typeof entry === "object" && !Array.isArray(entry)) {
+    const childEntries = Object.entries(entry);
+
+    // An empty mapping inside a sequence still needs an explicit representation.
+    if (!childEntries.length) {
+      lines.push(`${prefix}- {}`);
+      return;
+    }
+
+    // The first key shares the dash line so the entry reads as one nested block.
+    const [firstKey, firstValue] = childEntries[0]!;
+
+    if (firstValue !== null && typeof firstValue === "object") {
+      lines.push(`${prefix}- ${firstKey}:`);
+      appendNested(lines, firstValue, indentation + 4);
+    } else {
+      lines.push(
+        `${prefix}- ${firstKey}: ${scalar(firstValue as boolean | number | string)}`,
+      );
+    }
+
+    // Subsequent keys align under the first key, two spaces past the dash.
+    for (const [childKey, childValue] of childEntries.slice(1)) {
+      appendValue(lines, childKey, childValue, indentation + 2, false);
+    }
+
+    return;
+  }
+
+  if (Array.isArray(entry)) {
+    // A nested list as a direct sequence entry is emitted as a child sequence.
+    if (!entry.length) {
+      lines.push(`${prefix}- []`);
+      return;
+    }
+
+    lines.push(`${prefix}-`);
+    for (const child of entry) {
+      appendSequenceEntry(lines, child, indentation + 2);
+    }
+
+    return;
+  }
+
+  // Scalar entries such as character names serialize inline after the dash.
+  lines.push(`${prefix}- ${scalar(entry as boolean | number | string)}`);
+}
+
+/**
+ * Appends the value of a mapping key that opened on a parent line.
+ *
+ * @param lines - Mutable output lines being assembled by the serializer.
+ * @param value - List or mapping value belonging to the already-written key.
+ * @param indentation - Number of spaces for the value's children.
+ * @returns Nothing; appends the nested block representation to `lines`.
+ */
+function appendNested(
+  lines: string[],
+  value: unknown,
+  indentation: number,
+): void {
+  const prefix = " ".repeat(indentation);
+
+  if (Array.isArray(value)) {
+    // Empty nested lists stay inline-style on their own line for clarity.
+    if (!value.length) {
+      lines.push(`${prefix}[]`);
+      return;
+    }
+
+    for (const entry of value) {
+      appendSequenceEntry(lines, entry, indentation);
+    }
+
+    return;
+  }
+
+  // Nested mappings recurse with data keys quoted for safety.
+  for (const [childKey, childValue] of Object.entries(
+    value as Record<string, unknown>,
+  )) {
+    appendValue(lines, childKey, childValue, indentation, false);
+  }
 }
 
 /**

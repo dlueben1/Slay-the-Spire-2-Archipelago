@@ -115,7 +115,36 @@ function downloadYaml(): void {
       <dl class="review-sections">
         <div v-for="section in sections" :key="section.title">
           <dt>{{ section.title }}</dt>
-          <dd>{{ section.summary }}</dd>
+          <dd>
+            {{ section.summary }}
+
+            <ul
+              v-if="section.items?.length"
+              class="review-bonus-items"
+              aria-label="Bonus Items"
+            >
+              <li
+                v-for="(item, index) in section.items"
+                :key="index"
+                class="review-bonus-item"
+              >
+                <img
+                  :src="item.imageUrl"
+                  :alt="`${item.name} image`"
+                  class="review-bonus-item__image"
+                  loading="lazy"
+                />
+                <span class="review-bonus-item__text">
+                  <span class="review-bonus-item__name">{{ item.name }}</span>
+                  <span
+                    v-if="item.details"
+                    class="review-bonus-item__details"
+                    >{{ item.details }}</span
+                  >
+                </span>
+              </li>
+            </ul>
+          </dd>
         </div>
       </dl>
     </section>
@@ -212,6 +241,42 @@ function downloadYaml(): void {
   margin-top: 0.25rem;
   color: var(--ui-text);
   line-height: 1.6;
+}
+
+.review-bonus-items {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.review-bonus-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.review-bonus-item__image {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: none;
+  object-fit: contain;
+}
+
+.review-bonus-item__text {
+  display: grid;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.review-bonus-item__name {
+  color: var(--ui-text-highlighted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.review-bonus-item__details {
+  color: var(--ui-text-muted);
+  font-size: 0.8rem;
 }
 
 .yaml-output {

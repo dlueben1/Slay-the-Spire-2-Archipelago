@@ -3,6 +3,7 @@ import type { RadioGroupItem } from "@nuxt/ui";
 import type { FillerDisplayItem } from "../../wizard/FillerItem";
 import type {
   AncientAnswers,
+  BonusItemAnswer,
   CheckAnswers,
   ChecksAndRewardsAnswers,
   FillerAnswers,
@@ -14,6 +15,7 @@ import {
   checkSetupStep,
   type WizardQuestion as WizardQuestionDefinition,
 } from "../../wizard/WizardStep";
+import BonusItemsStep from "./BonusItemsStep.vue";
 import FillerStep from "./FillerStep.vue";
 import ShopSetupStep from "./ShopSetupStep.vue";
 import WizardQuestion from "./WizardQuestion.vue";
@@ -281,6 +283,17 @@ function setShopAnswers(shop: ShopAnswers): void {
 }
 
 /**
+ * Accepts a complete Bonus Items list update from its focused child component.
+ *
+ * @param bonusItems - Updated ordered Bonus Item answers.
+ * @returns Nothing; replaces the nested Bonus Items answer immutably.
+ */
+function setBonusItems(bonusItems: BonusItemAnswer[]): void {
+  // Delegate combined-section ownership to the shared immutable update helper.
+  updateAnswers({ bonusItems });
+}
+
+/**
  * Accepts a complete Filler subsection update from the existing Filler UI.
  *
  * @param filler - Updated semantic filler-weight answers.
@@ -429,6 +442,21 @@ function setFillerAnswers(filler: FillerAnswers): void {
         :model-value="modelValue.shop"
         :slot-ranges="shopSlotRanges"
         @update:model-value="setShopAnswers"
+      />
+    </section>
+
+    <section class="wizard-subsection">
+      <div class="wizard-subsection__header">
+        <h3>Bonus Items</h3>
+        <p>
+          Add powerful guaranteed rewards to the item pool, ahead of any filler.
+        </p>
+      </div>
+
+      <BonusItemsStep
+        :model-value="modelValue.bonusItems"
+        :question="questionsById['bonus-items']!"
+        @update:model-value="setBonusItems"
       />
     </section>
 

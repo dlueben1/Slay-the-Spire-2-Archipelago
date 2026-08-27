@@ -1,0 +1,20 @@
+{
+  "Fake": [
+    "FAKE_BLOOD_VIAL",
+    "FAKE_HAPPY_FLOWER",
+    "FAKE_ORICHALCUM",
+    "FAKE_SNECKO_EYE",
+    "FAKE_STRIKE_DUMMY",
+    "FAKE_VENERABLE_TEA_SET",
+    "FAKE_ANCHOR",
+    "FAKE_LEES_WAFFLE",
+    "FAKE_MANGO"
+  ],
+  "Classic": [
+    "THE_BOOT",
+    "MAW_BANK",
+    "HAND_DRILL",
+    "DREAM_CATCHER",
+    "DARKSTONE_PERIAPT"
+  ]
+}
