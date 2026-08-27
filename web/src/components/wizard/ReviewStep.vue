@@ -131,7 +131,7 @@ function downloadYaml(): void {
                 <img
                   :src="item.imageUrl"
                   :alt="`${item.name} image`"
-                  class="review-bonus-item__image"
+                  class="review-bonus-item__image sepia"
                   loading="lazy"
                 />
                 <span class="review-bonus-item__text">

@@ -41,7 +41,8 @@ const modeItems: RadioGroupItem[] = [
   },
   {
     label: "Random Relic",
-    description: "Randomized each run from the pools you select.",
+    description:
+      "Randomized each run from shared relics in the pools you select.",
     value: "random",
   },
 ];

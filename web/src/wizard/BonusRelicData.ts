@@ -264,17 +264,26 @@ function isExcludedRelic(relic: GeneratedRelic): boolean {
   );
 }
 
-/** Eligible relic IDs per pool after blacklist and pickup-description exclusions. */
+/** Eligible relic IDs per pool for specific Wax Relic selection. */
 const eligiblePoolMemberIds = new Map<BonusRelicPool, Set<string>>();
+/** Eligible shared relic IDs per pool for randomized Wax Relic selection. */
+const eligibleRandomPoolMemberIds = new Map<BonusRelicPool, Set<string>>();
 for (const [pool, memberIds] of poolMemberIds) {
   const eligible = new Set<string>();
+  const randomEligible = new Set<string>();
   for (const id of memberIds) {
     const relic = relicById.get(id)!;
-    if (!isExcludedRelic(relic)) {
-      eligible.add(id);
+    if (isExcludedRelic(relic)) {
+      continue;
+    }
+
+    eligible.add(id);
+    if (relic.pool === "shared") {
+      randomEligible.add(id);
     }
   }
   eligiblePoolMemberIds.set(pool, eligible);
+  eligibleRandomPoolMemberIds.set(pool, randomEligible);
 }
 
 /** Sorted eligible specific relics: union of all pools, minus exclusions. */
@@ -322,21 +331,21 @@ export function isBonusRelicPool(value: unknown): value is BonusRelicPool {
   );
 }
 
-/** Returns pool display models with eligible relic counts for the checkbox grid. */
+/** Returns pool display models with shared relic counts for the checkbox grid. */
 export function getBonusRelicPoolOptions(): readonly BonusRelicPoolOption[] {
   return BONUS_RELIC_POOLS.map((pool) => ({
     name: pool,
     description:
       POOL_DESCRIPTIONS[pool] ?? `Relics from the ${pool} custom pool.`,
-    relicCount: eligiblePoolMemberIds.get(pool)?.size ?? 0,
+    relicCount: eligibleRandomPoolMemberIds.get(pool)?.size ?? 0,
   }));
 }
 
-/** Eligible relic IDs for one pool, in relic catalog order. */
+/** Eligible shared relic IDs for one randomized pool, in relic catalog order. */
 export function getEligiblePoolRelicIds(
   pool: BonusRelicPool,
 ): readonly string[] {
-  const memberIds = eligiblePoolMemberIds.get(pool) ?? new Set<string>();
+  const memberIds = eligibleRandomPoolMemberIds.get(pool) ?? new Set<string>();
   return relics.filter((relic) => memberIds.has(relic.id)).map((r) => r.id);
 }
 

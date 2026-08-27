@@ -40,16 +40,6 @@ const addMenuItems: DropdownMenuItem[] = [
       openAddDialog();
     },
   },
-  {
-    label: "Add Max HP",
-    icon: "i-glyphs-plus-bold",
-    disabled: true,
-  },
-  {
-    label: "Add Permanent Fake Relic",
-    icon: "i-glyphs-plus-bold",
-    disabled: true,
-  },
 ];
 
 /**
@@ -145,6 +135,7 @@ function submitBonusItem(item: BonusItemAnswer): void {
           <div class="bonus-item-table__action" role="columnheader">
             <UDropdownMenu
               :items="addMenuItems"
+              :modal="false"
               :content="{ align: 'end', side: 'bottom', sideOffset: 8 }"
             >
               <UTooltip text="Add Bonus Item">
@@ -185,7 +176,7 @@ function submitBonusItem(item: BonusItemAnswer): void {
               v-if="getDisplayRow(item).imageUrl"
               :src="getDisplayRow(item).imageUrl"
               :alt="`${getDisplayRow(item).name} image`"
-              class="bonus-item-table__image"
+              class="bonus-item-table__image sepia"
               loading="lazy"
             />
           </span>
@@ -199,7 +190,7 @@ function submitBonusItem(item: BonusItemAnswer): void {
             <UTooltip text="Edit Bonus Item">
               <UButton
                 type="button"
-                icon="i-glyphs-pen-bold"
+                icon="i-glyphs-edit-1-bold"
                 color="primary"
                 variant="ghost"
                 size="sm"
