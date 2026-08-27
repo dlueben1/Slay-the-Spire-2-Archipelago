@@ -236,6 +236,12 @@ export const checkSetupStep: WizardStep = {
       isVisible: usesShopSanity,
     },
     {
+      id: "bonus-items",
+      title: "Which Bonus Items should be added to the item pool?",
+      description:
+        "Bonus Items are guaranteed additions placed before any filler items. Generation fails if there are not enough filler slots for them.",
+    },
+    {
       id: "filler-weights",
       title: "How often should each filler item appear?",
     },

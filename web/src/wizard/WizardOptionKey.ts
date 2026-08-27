@@ -70,6 +70,9 @@ export const SHOP_OPTION_KEYS = {
   costs: "shop_sanity_costs",
 } as const;
 
+/** Generated option key owned by the Bonus Items compiler. */
+export const BONUS_ITEM_OPTION_KEY = "bonus_items" as const;
+
 /** Generated option keys owned by the Death Link compiler. */
 export const DEATH_LINK_OPTION_KEYS = {
   enabled: "death_link",

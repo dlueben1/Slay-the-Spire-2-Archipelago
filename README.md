@@ -15,13 +15,13 @@ This mod is currently in 1.0 stage and is practically feature-parity with the AP
 > The mod only supports English at the moment, but as we understand localization better, we can work with the community to support more languages
 
 # Installing the Mod
+
 There are two ways to install the mod, detailed below.
 
 ## Steam Workshop
 
 Subscribe to the mod on the [steam workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3748826296).
 Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) installed. The easiest way to obtain it is from Steam Workshop.
-
 
 ## Manual installation
 
@@ -66,7 +66,9 @@ Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetai
 - Platano Bailando for creating the StS 1 Archipelago that inspires this one!
 - [lamali292](https://github.com/lamali292) for their initial guide on creating mods for Slay the Spire 2!
 - [alwaysintreble](https://github.com/alwaysintreble/ArchipelagoBepInExPluginTemplate/tree/master) for their example Archipelago C# Plugin Template
+- [Spire Codex](https://spire-codex.com) for providing an awesome public API that helps us stay up-to-date with Slay the Spire 2 data for our item pools
 - All of the wonderful contributors to the project!
+
   <a href="https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=dlueben1/Slay-the-Spire-2-Archipelago" />
   </a>

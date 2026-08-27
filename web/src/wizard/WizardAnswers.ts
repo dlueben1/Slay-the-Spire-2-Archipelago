@@ -28,6 +28,27 @@ export type CharacterAvailability = "all" | "random" | "fixed";
 export type CharacterGoal = "all" | number;
 export type CharacterAscensionMode = "shared" | "individual";
 
+/** Bonus item types currently supported by the wizard. More arrive in later passes. */
+export type BonusItemKind = "WAX_RELIC";
+
+/** A Wax Relic that always grants one chosen relic. */
+export interface SpecificWaxRelicBonusItem {
+  kind: "WAX_RELIC";
+  mode: "specific";
+  relicId: string;
+}
+
+/** A Wax Relic randomized from one or more selected pools. */
+export interface RandomWaxRelicBonusItem {
+  kind: "WAX_RELIC";
+  mode: "random";
+  pools: string[];
+}
+
+/** Discriminated union of every supported Bonus Item configuration. */
+export type BonusItemAnswer =
+  SpecificWaxRelicBonusItem | RandomWaxRelicBonusItem;
+
 export type AncientRelicLocation = "start_of_act" | "anytime";
 export type AncientRelicPool = "balanced" | "chaos" | "true_chaos";
 export type AccessibilityMode = "full" | "minimal";
@@ -131,6 +152,7 @@ export interface ChecksAndRewardsAnswers {
   ancients: AncientAnswers;
   checks: CheckAnswers;
   shop: ShopAnswers;
+  bonusItems: BonusItemAnswer[];
   filler: FillerAnswers;
 }
 
@@ -374,6 +396,8 @@ export function createDefaultWizardAnswers(
           "Tiered",
         ]),
       },
+      // Bonus Items start empty; each one is added deliberately through the table UI.
+      bonusItems: [],
       filler,
     },
     progression: {

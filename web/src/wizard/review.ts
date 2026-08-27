@@ -10,6 +10,7 @@
 import type {
   AscensionConfigurationAnswers,
   AncientAnswers,
+  BonusItemAnswer,
   CharacterAnswers,
   CheckAnswers,
   ChecksAndRewardsAnswers,
@@ -21,11 +22,17 @@ import type {
   StartingEquipmentAnswers,
   WizardAnswers,
 } from "./WizardAnswers";
+import {
+  getBonusItemDisplayRows,
+  type BonusItemDisplayRow,
+} from "./BonusItemDisplay";
 import { getConfiguredCharacterNames } from "./CharacterRoster";
 
 export interface WizardReviewSection {
   title: string;
   summary: string;
+  /** Optional structured rows rendered beneath the prose summary (Bonus Items). */
+  items?: BonusItemDisplayRow[];
 }
 
 /**
@@ -398,6 +405,38 @@ export function summarizeShopAnswers(answers: ShopAnswers): string {
 }
 
 /**
+ * Summarizes the configured Bonus Items subsection.
+ *
+ * @param answers - Ordered Bonus Item answers from the Checks & Rewards table.
+ * @returns A sentence covering the empty state or the configured item count.
+ */
+export function summarizeBonusItemAnswers(answers: BonusItemAnswer[]): string {
+  // Keep the deliberate empty state explicit in the final review.
+  if (!answers.length) {
+    return "No Bonus Items are added to the item pool.";
+  }
+
+  // Rows are listed individually beneath this summary, so the prose stays compact.
+  return `${countWord(answers.length)} Bonus ${
+    answers.length === 1 ? "Item is" : "Items are"
+  } added to the item pool before any filler.`;
+}
+
+/**
+ * Builds structured review rows for every configured Bonus Item.
+ *
+ * @param answers - Ordered Bonus Item answers from the Checks & Rewards table.
+ * @returns Image/name/details rows in the player's configured order.
+ * @remarks Delegates all relic resolution to the shared display helper so the
+ * review list matches the Checks & Rewards table exactly.
+ */
+export function buildBonusItemReviewRows(
+  answers: BonusItemAnswer[],
+): BonusItemDisplayRow[] {
+  return getBonusItemDisplayRows(answers);
+}
+
+/**
  * Summarizes the option families in the combined Checks & Rewards step.
  *
  * @param answers - Valid Starting Equipment, Ancient, check, Shop, and filler answers.
@@ -416,10 +455,11 @@ export function summarizeChecksAndRewardsAnswers(
   const checks = summarizeCheckAnswers(answers.checks);
   const ancients = summarizeAncientAnswers(answers.ancients);
   const shop = summarizeShopAnswers(answers.shop);
+  const bonusItems = summarizeBonusItemAnswers(answers.bonusItems);
   const filler = summarizeFillerAnswers(answers.filler);
 
   // Preserve the visible subsection order in the final combined review paragraph.
-  return `${startingEquipment} ${ancients} ${checks} ${shop} ${filler}`;
+  return `${startingEquipment} ${ancients} ${checks} ${shop} ${bonusItems} ${filler}`;
 }
 
 /**
@@ -480,6 +520,7 @@ export function buildWizardReviewSections(
     {
       title: "Checks & Rewards",
       summary: summarizeChecksAndRewardsAnswers(answers.checksAndRewards),
+      items: buildBonusItemReviewRows(answers.checksAndRewards.bonusItems),
     },
     {
       title: "Death Link",

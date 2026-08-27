@@ -68,6 +68,22 @@ function syncDocs() {
 
 // https://vite.dev/config/
 export default defineConfig({
+  resolve: {
+    alias: {
+      // Shared JSON data (relic blacklist, custom pools) lives at the repo root.
+      "@shared": path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        "..",
+        "shared",
+      ),
+    },
+  },
+  server: {
+    fs: {
+      // Allow dev-server reads of the repo root so @shared JSON imports resolve.
+      allow: [path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")],
+    },
+  },
   plugins: [
     syncDocs(),
     vue(),

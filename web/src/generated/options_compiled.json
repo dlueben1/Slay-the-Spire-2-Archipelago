@@ -4,11 +4,11 @@
   "sources": {
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "d89be97401aaea2ea99d330ab9c3701c405684ef87b8981dc2f455a3ce21a8ad"
+      "sha256": "2bd08bbaf53b7fa234cc497b54a3201597e3956cda5e5e7fc4916a41d83495dd"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "d7711352fee671e710950a85266ea826c829f54b34357736108ec8890381ee6c"
+      "sha256": "c70b9a2d23b6e11fd67eb4f32a468fa13bdbc84affdbd2aa70b7d017d4bebbd7"
     }
   },
   "option_order": [
@@ -23,25 +23,40 @@
     "priority_locations",
     "item_links",
     "plando_items",
-    "death_link",
-    "enable_death_fragments",
-    "death_link_damage_percent",
     "characters",
     "modded_characters",
     "pick_num_characters",
     "num_chars_goal",
     "lock_characters",
     "unlocked_character",
-    "use_advanced_characters",
-    "advanced_characters",
     "ascension",
     "ascension_down",
     "ancient_relic_location",
     "ancient_relic_pool",
     "relic_rewards_available_anytime",
-    "release_on_victory",
+    "progressive_starter_card",
+    "progressive_starter_relic",
     "shuffle_all_cards",
+    "bonus_items",
     "include_floor_checks",
+    "neow_sanity",
+    "campfire_sanity",
+    "gold_sanity",
+    "potion_sanity",
+    "shop_sanity",
+    "shop_card_slots",
+    "shop_neutral_card_slots",
+    "shop_relic_slots",
+    "shop_potion_slots",
+    "shop_remove_slots",
+    "shop_sanity_costs",
+    "death_link",
+    "enable_death_fragments",
+    "death_link_damage_percent",
+    "release_on_victory",
+    "seeded",
+    "use_advanced_characters",
+    "advanced_characters",
     "one_gold_filler_weight",
     "five_gold_filler_weight",
     "free_attack_filler_weight",
@@ -57,31 +72,20 @@
     "friendship_filler_weight",
     "post_combat_card_upgrade_filler_weight",
     "post_combat_card_removal_filler_weight",
-    "additional_card_reward_filler_weight",
-    "neow_sanity",
-    "progressive_starter_card",
-    "progressive_starter_relic",
-    "campfire_sanity",
-    "gold_sanity",
-    "potion_sanity",
-    "shop_sanity",
-    "shop_card_slots",
-    "shop_neutral_card_slots",
-    "shop_relic_slots",
-    "shop_potion_slots",
-    "shop_remove_slots",
-    "shop_sanity_costs",
-    "seeded"
+    "additional_card_reward_filler_weight"
   ],
   "groups": [
     {
       "name": "Character Options",
       "option_keys": [
         "characters",
+        "modded_characters",
         "pick_num_characters",
         "num_chars_goal",
         "lock_characters",
-        "unlocked_character"
+        "unlocked_character",
+        "ascension",
+        "ascension_down"
       ],
       "start_collapsed": false,
       "source": "web_world"
@@ -92,7 +96,9 @@
         "ancient_relic_location",
         "ancient_relic_pool",
         "relic_rewards_available_anytime",
-        "release_on_victory"
+        "progressive_starter_card",
+        "progressive_starter_relic",
+        "shuffle_all_cards"
       ],
       "start_collapsed": false,
       "source": "web_world"
@@ -101,10 +107,17 @@
       "name": "Sanities",
       "option_keys": [
         "include_floor_checks",
+        "neow_sanity",
         "campfire_sanity",
         "gold_sanity",
         "potion_sanity",
-        "shuffle_all_cards"
+        "shop_sanity",
+        "shop_card_slots",
+        "shop_neutral_card_slots",
+        "shop_relic_slots",
+        "shop_potion_slots",
+        "shop_remove_slots",
+        "shop_sanity_costs"
       ],
       "start_collapsed": false,
       "source": "web_world"
@@ -120,10 +133,20 @@
       "source": "web_world"
     },
     {
-      "name": "Progressive Starters",
+      "name": "Advanced Options",
       "option_keys": [
-        "progressive_starter_card",
-        "progressive_starter_relic"
+        "release_on_victory",
+        "seeded",
+        "use_advanced_characters",
+        "advanced_characters"
+      ],
+      "start_collapsed": true,
+      "source": "web_world"
+    },
+    {
+      "name": "Bonus Items",
+      "option_keys": [
+        "bonus_items"
       ],
       "start_collapsed": false,
       "source": "web_world"
@@ -150,27 +173,6 @@
       ],
       "start_collapsed": false,
       "source": "web_world"
-    },
-    {
-      "name": "Other Game Options",
-      "option_keys": [
-        "modded_characters",
-        "use_advanced_characters",
-        "advanced_characters",
-        "ascension",
-        "ascension_down",
-        "neow_sanity",
-        "shop_sanity",
-        "shop_card_slots",
-        "shop_neutral_card_slots",
-        "shop_relic_slots",
-        "shop_potion_slots",
-        "shop_remove_slots",
-        "shop_sanity_costs",
-        "seeded"
-      ],
-      "start_collapsed": true,
-      "source": "generated_fallback"
     },
     {
       "name": "Common Archipelago Options",
@@ -504,104 +506,6 @@
       "supports_weighting": false,
       "group": "Common Archipelago Options"
     },
-    "death_link": {
-      "key": "death_link",
-      "class_name": "DeathLink",
-      "module": "Options",
-      "kind": "toggle",
-      "display_name": "Death Link",
-      "description": "When you die, everyone who enabled death link dies. Of course, the reverse is true too.",
-      "default": false,
-      "raw_default": 0,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "false",
-          "display_name": "False",
-          "value": 0
-        },
-        {
-          "name": "true",
-          "display_name": "True",
-          "value": 1
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Death Link"
-    },
-    "enable_death_fragments": {
-      "key": "enable_death_fragments",
-      "class_name": "EnableDeathFragments",
-      "module": "worlds.spire2.options",
-      "kind": "toggle",
-      "display_name": "Enable Death Fragments",
-      "description": "If Death Link is enabled, turning this setting on gives you a Curse Card whenever\nyou receive a Death Link.",
-      "default": true,
-      "raw_default": 1,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "false",
-          "display_name": "False",
-          "value": 0
-        },
-        {
-          "name": "true",
-          "display_name": "True",
-          "value": 1
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Death Link"
-    },
-    "death_link_damage_percent": {
-      "key": "death_link_damage_percent",
-      "class_name": "DeathLinkDamagePercent",
-      "module": "worlds.spire2.options",
-      "kind": "range",
-      "display_name": "Death Link Damage Percent",
-      "description": "If Death Link is enabled, this setting determines how much damage you take when you receive a Death Link, \nas a percentage of your max health. \nIf you do not want to take any damage, set this to 0. \nIf you want to be killed whenever you receive a Death Link, set this to 100.",
-      "default": 0,
-      "raw_default": 0,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "minimum": 0,
-      "maximum": 100,
-      "supports_weighting": true,
-      "group": "Death Link"
-    },
     "characters": {
       "key": "characters",
       "class_name": "Characters",
@@ -663,7 +567,7 @@
       "valid_keys_casefold": false,
       "allow_custom_values": true,
       "supports_weighting": false,
-      "group": "Other Game Options"
+      "group": "Character Options"
     },
     "pick_num_characters": {
       "key": "pick_num_characters",
@@ -765,8 +669,8 @@
       "kind": "text_choice",
       "display_name": "Unlocked Character",
       "description": "Which character to start unlocked, if lock_characters is set to locked_fixed.\nCan also enter a character name for modded characters.",
-      "default": "",
-      "raw_default": "",
+      "default": "ironclad",
+      "raw_default": 0,
       "visibility": {
         "name": "all",
         "value": 15,
@@ -809,73 +713,6 @@
       "allow_custom_values": true,
       "supports_weighting": true,
       "group": "Character Options"
-    },
-    "use_advanced_characters": {
-      "key": "use_advanced_characters",
-      "class_name": "AdvancedChar",
-      "module": "worlds.spire2.options",
-      "kind": "toggle",
-      "display_name": "Advanced Characters",
-      "description": "Whether to use the advanced characters feature. The normal options for character, ascension, etc. are ignored.\nSee the \"advanced_characters\" option.",
-      "default": false,
-      "raw_default": 0,
-      "visibility": {
-        "name": "template",
-        "value": 1,
-        "flags": [
-          "template"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "false",
-          "display_name": "False",
-          "value": 0
-        },
-        {
-          "name": "true",
-          "display_name": "True",
-          "value": 1
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Other Game Options"
-    },
-    "advanced_characters": {
-      "key": "advanced_characters",
-      "class_name": "CharacterOptions",
-      "module": "worlds.spire2.options",
-      "kind": "dictionary",
-      "display_name": "Advanced Characters",
-      "description": "The configuration for advanced characters.  Each character's options can be configured\nindependently of each other.  No validation is done on the character name, so use carefully.\nFormat is:\n    <char name>:\n        ascension:\n            - <string or number>\n        ascension_down:\n            - <string or number>\n\nIf using a modded character:\nEnter the internal ID of the character to use.\n\nIf you don't know the exact ID to enter with the mod installed go to\n`Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.\n\nIf the chosen character mod is not installed, checks will be sent when another character\nsends them.  If none of the chosen character mods are installed, you will be playing\na very boring Ironclad run.",
-      "default": {
-        "ironclad": {
-          "ascension": [
-            1
-          ],
-          "ascension_down": []
-        }
-      },
-      "raw_default": {
-        "ironclad": {
-          "ascension": [
-            1
-          ],
-          "ascension_down": []
-        }
-      },
-      "visibility": {
-        "name": "template",
-        "value": 1,
-        "flags": [
-          "template"
-        ]
-      },
-      "source": "game",
-      "has_validation_schema": true,
-      "supports_weighting": false,
-      "group": "Other Game Options"
     },
     "ascension": {
       "key": "ascension",
@@ -927,7 +764,7 @@
       "valid_keys_casefold": false,
       "allow_custom_values": false,
       "supports_weighting": false,
-      "group": "Other Game Options"
+      "group": "Character Options"
     },
     "ascension_down": {
       "key": "ascension_down",
@@ -975,7 +812,7 @@
       "valid_keys_casefold": false,
       "allow_custom_values": false,
       "supports_weighting": false,
-      "group": "Other Game Options"
+      "group": "Character Options"
     },
     "ancient_relic_location": {
       "key": "ancient_relic_location",
@@ -1080,15 +917,51 @@
       "supports_weighting": true,
       "group": "Game Options"
     },
-    "release_on_victory": {
-      "key": "release_on_victory",
-      "class_name": "ReleaseOnVictory",
+    "progressive_starter_card": {
+      "key": "progressive_starter_card",
+      "class_name": "ProgressiveStarterCard",
       "module": "worlds.spire2.options",
       "kind": "toggle",
-      "display_name": "Release Checks On Victory",
-      "description": "Release the winning character's remaining checks when their goal is recorded.",
-      "default": true,
-      "raw_default": 1,
+      "display_name": "Progressive Starter Card",
+      "description": "Globally enables progressive special starter cards for every configured character.\n\nRequires Include Floor Checks. Each character gets two Progressive Starter Card items, which\nreplace two floor-check filler items. With none received, the character\nstarts without the special starter card that Archaic Tooth would transform (Bash, Neutralize,\nDualcast, Unleash, Falling Star, or a compatible modded equivalent). The first item restores\nthe normal card and the second grants Archaic Tooth so its normal effect performs the\ntransformation. Archaic Tooth is unavailable from Orobas while this option is enabled.\n\nCharacters without an Archaic Tooth transformation are left unchanged, although their two\nProgressive Starter Card items are still present in the multiworld.\n\nWARNING: This can make the early game significantly harder for some characters. Logic does not\naccount for the missing or upgraded starter card.",
+      "default": false,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Game Options"
+    },
+    "progressive_starter_relic": {
+      "key": "progressive_starter_relic",
+      "class_name": "ProgressiveStarterRelic",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Progressive Starter Relic",
+      "description": "Globally enables progressive starter relics for every configured character.\n\nRequires Include Floor Checks. Each character gets two Progressive Starter Relic items, which\nreplace two floor-check filler items. With none received, the character\nstarts without the starter relic that Touch of Orobas would refine (such as Burning Blood, or a\ncompatible modded equivalent). The first item restores the normal relic and the second grants\nTouch of Orobas so its normal effect performs the refinement. Touch of Orobas is unavailable\nfrom Orobas while this option is enabled.\n\nCharacters without a Touch of Orobas refinement are left unchanged, although their two\nProgressive Starter Relic items are still present in the multiworld.\n\nWARNING: This can make the early game significantly harder for characters whose starting relic\nis central to their early power. Logic does not account for the missing or upgraded starter relic.",
+      "default": false,
+      "raw_default": 0,
       "visibility": {
         "name": "all",
         "value": 15,
@@ -1150,7 +1023,29 @@
         }
       ],
       "supports_weighting": true,
-      "group": "Sanities"
+      "group": "Game Options"
+    },
+    "bonus_items": {
+      "key": "bonus_items",
+      "class_name": "BonusItems",
+      "module": "worlds.spire2.options",
+      "kind": "list",
+      "display_name": "Bonus Items",
+      "description": "Add a number of Bonus Items to the item pool.\nThese items make the game easier to complete, and are not accounted for in logic.\n\nEach ordered entry creates one character-agnostic bonus item and must provide either\na non-empty list of value Pools or one specific Value. For example:\n\n    bonus_items:\n        - WAX_RELIC:\n            Pools: [Common, Uncommon]\n        - WAX_RELIC:\n            Value: Orichalcum\n\n\nGeneration fails if more bonus items are configured than there are filler slots.\n\nIt's recommended to use the YAML Builder on our website to easily generate this value, which you can find at https://sts2ap.net",
+      "default": [],
+      "raw_default": [],
+      "visibility": {
+        "name": "template",
+        "value": 1,
+        "flags": [
+          "template"
+        ]
+      },
+      "source": "game",
+      "valid_keys_casefold": false,
+      "allow_custom_values": true,
+      "supports_weighting": false,
+      "group": "Bonus Items"
     },
     "include_floor_checks": {
       "key": "include_floor_checks",
@@ -1188,742 +1083,6 @@
       "supports_weighting": true,
       "group": "Sanities"
     },
-    "one_gold_filler_weight": {
-      "key": "one_gold_filler_weight",
-      "class_name": "OneGoldFillerWeight",
-      "module": "abc",
-      "kind": "choice",
-      "display_name": "One Gold Filler Weight",
-      "description": "Weight for One Gold filler items. Generates one gold for the character who receives it.\nAvailable across runs, as a pool of all gold rewards.\n\nNote: Even if you disable this item, you may still see it in on rare occasion, \nas it's the fallback for when item generation has issues.",
-      "default": "none",
-      "raw_default": 0,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "none",
-          "display_name": "None",
-          "value": 0
-        },
-        {
-          "name": "low",
-          "display_name": "Low",
-          "value": 1
-        },
-        {
-          "name": "medium",
-          "display_name": "Medium",
-          "value": 3
-        },
-        {
-          "name": "high",
-          "display_name": "High",
-          "value": 5
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Filler Items"
-    },
-    "five_gold_filler_weight": {
-      "key": "five_gold_filler_weight",
-      "class_name": "FiveGoldFillerWeight",
-      "module": "abc",
-      "kind": "choice",
-      "display_name": "Five Gold Filler Weight",
-      "description": "Weight for Five Gold filler items. Generates five gold for the character who receives it.\nAvailable across runs, as a pool of all gold rewards.",
-      "default": "high",
-      "raw_default": 5,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "none",
-          "display_name": "None",
-          "value": 0
-        },
-        {
-          "name": "low",
-          "display_name": "Low",
-          "value": 1
-        },
-        {
-          "name": "medium",
-          "display_name": "Medium",
-          "value": 3
-        },
-        {
-          "name": "high",
-          "display_name": "High",
-          "value": 5
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Filler Items"
-    },
-    "free_attack_filler_weight": {
-      "key": "free_attack_filler_weight",
-      "class_name": "FreeAttackFillerWeight",
-      "module": "abc",
-      "kind": "choice",
-      "display_name": "Free Attack Filler Weight",
-      "description": "Weight for Free Attack filler items. Grants a buff that makes the next attack card you play free.",
-      "default": "high",
-      "raw_default": 5,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "none",
-          "display_name": "None",
-          "value": 0
-        },
-        {
-          "name": "low",
-          "display_name": "Low",
-          "value": 1
-        },
-        {
-          "name": "medium",
-          "display_name": "Medium",
-          "value": 3
-        },
-        {
-          "name": "high",
-          "display_name": "High",
-          "value": 5
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Filler Items"
-    },
-    "free_power_filler_weight": {
-      "key": "free_power_filler_weight",
-      "class_name": "FreePowerFillerWeight",
-      "module": "abc",
-      "kind": "choice",
-      "display_name": "Free Power Filler Weight",
-      "description": "Weight for Free Power filler items. Grants a buff that makes the next power card you play free.",
-      "default": "high",
-      "raw_default": 5,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "none",
-          "display_name": "None",
-          "value": 0
-        },
-        {
-          "name": "low",
-          "display_name": "Low",
-          "value": 1
-        },
-        {
-          "name": "medium",
-          "display_name": "Medium",
-          "value": 3
-        },
-        {
-          "name": "high",
-          "display_name": "High",
-          "value": 5
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Filler Items"
-    },
-    "free_skill_filler_weight": {
-      "key": "free_skill_filler_weight",
-      "class_name": "FreeSkillFillerWeight",
-      "module": "abc",
-      "kind": "choice",
-      "display_name": "Free Skill Filler Weight",
-      "description": "Weight for Free Skill filler items. Grants a buff that makes the next skill card you play free.",
-      "default": "high",
-      "raw_default": 5,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "none",
-          "display_name": "None",
-          "value": 0
-        },
-        {
-          "name": "low",
-          "display_name": "Low",
-          "value": 1
-        },
-        {
-          "name": "medium",
-          "display_name": "Medium",
-          "value": 3
-        },
-        {
-          "name": "high",
-          "display_name": "High",
-          "value": 5
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Filler Items"
-    },
-    "vigor_filler_weight": {
-      "key": "vigor_filler_weight",
-      "class_name": "VigorFillerWeight",
-      "module": "abc",
-      "kind": "choice",
-      "display_name": "Vigor Filler Weight",
-      "description": "Weight for Vigor filler items. Grants a buff that provides Vigor for the next combat.",
-      "default": "high",
-      "raw_default": 5,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "none",
-          "display_name": "None",
-          "value": 0
-        },
-        {
-          "name": "low",
-          "display_name": "Low",
-          "value": 1
-        },
-        {
-          "name": "medium",
-          "display_name": "Medium",
-          "value": 3
-        },
-        {
-          "name": "high",
-          "display_name": "High",
-          "value": 5
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Filler Items"
-    },
-    "artifact_filler_weight": {
-      "key": "artifact_filler_weight",
-      "class_name": "ArtifactFillerWeight",
-      "module": "abc",
-      "kind": "choice",
-      "display_name": "Artifact Filler Weight",
-      "description": "Weight for Artifact filler items. Grants a buff that protects you from debuffs for the next combat.",
-      "default": "high",
-      "raw_default": 5,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "none",
-          "display_name": "None",
-          "value": 0
-        },
-        {
-          "name": "low",
-          "display_name": "Low",
-          "value": 1
-        },
-        {
-          "name": "medium",
-          "display_name": "Medium",
-          "value": 3
-        },
-        {
-          "name": "high",
-          "display_name": "High",
-          "value": 5
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Filler Items"
-    },
-    "thorns_filler_weight": {
-      "key": "thorns_filler_weight",
-      "class_name": "ThornsFillerWeight",
-      "module": "abc",
-      "kind": "choice",
-      "display_name": "Thorns Filler Weight",
-      "description": "Weight for Thorns filler items. Grants a buff that provides Thorns for the next combat.",
-      "default": "high",
-      "raw_default": 5,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "none",
-          "display_name": "None",
-          "value": 0
-        },
-        {
-          "name": "low",
-          "display_name": "Low",
-          "value": 1
-        },
-        {
-          "name": "medium",
-          "display_name": "Medium",
-          "value": 3
-        },
-        {
-          "name": "high",
-          "display_name": "High",
-          "value": 5
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Filler Items"
-    },
-    "buffer_filler_weight": {
-      "key": "buffer_filler_weight",
-      "class_name": "BufferFillerWeight",
-      "module": "abc",
-      "kind": "choice",
-      "display_name": "Buffer Filler Weight",
-      "description": "Weight for Buffer filler items. Grants a buff that provides Buffer for the next combat.",
-      "default": "low",
-      "raw_default": 1,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "none",
-          "display_name": "None",
-          "value": 0
-        },
-        {
-          "name": "low",
-          "display_name": "Low",
-          "value": 1
-        },
-        {
-          "name": "medium",
-          "display_name": "Medium",
-          "value": 3
-        },
-        {
-          "name": "high",
-          "display_name": "High",
-          "value": 5
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Filler Items"
-    },
-    "dexterity_filler_weight": {
-      "key": "dexterity_filler_weight",
-      "class_name": "DexterityFillerWeight",
-      "module": "abc",
-      "kind": "choice",
-      "display_name": "Dexterity Filler Weight",
-      "description": "Weight for Dexterity filler items. Grants a buff that increases Dexterity for the next combat.",
-      "default": "medium",
-      "raw_default": 3,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "none",
-          "display_name": "None",
-          "value": 0
-        },
-        {
-          "name": "low",
-          "display_name": "Low",
-          "value": 1
-        },
-        {
-          "name": "medium",
-          "display_name": "Medium",
-          "value": 3
-        },
-        {
-          "name": "high",
-          "display_name": "High",
-          "value": 5
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Filler Items"
-    },
-    "strength_filler_weight": {
-      "key": "strength_filler_weight",
-      "class_name": "StrengthFillerWeight",
-      "module": "abc",
-      "kind": "choice",
-      "display_name": "Strength Filler Weight",
-      "description": "Weight for Strength filler items. Grants a buff that increases Strength for the next combat.",
-      "default": "medium",
-      "raw_default": 3,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "none",
-          "display_name": "None",
-          "value": 0
-        },
-        {
-          "name": "low",
-          "display_name": "Low",
-          "value": 1
-        },
-        {
-          "name": "medium",
-          "display_name": "Medium",
-          "value": 3
-        },
-        {
-          "name": "high",
-          "display_name": "High",
-          "value": 5
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Filler Items"
-    },
-    "plating_filler_weight": {
-      "key": "plating_filler_weight",
-      "class_name": "PlatingFillerWeight",
-      "module": "abc",
-      "kind": "choice",
-      "display_name": "Plating Filler Weight",
-      "description": "Weight for Plating filler items. Grants a buff that provides Plating for the next combat.",
-      "default": "medium",
-      "raw_default": 3,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "none",
-          "display_name": "None",
-          "value": 0
-        },
-        {
-          "name": "low",
-          "display_name": "Low",
-          "value": 1
-        },
-        {
-          "name": "medium",
-          "display_name": "Medium",
-          "value": 3
-        },
-        {
-          "name": "high",
-          "display_name": "High",
-          "value": 5
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Filler Items"
-    },
-    "friendship_filler_weight": {
-      "key": "friendship_filler_weight",
-      "class_name": "FriendshipFillerWeight",
-      "module": "abc",
-      "kind": "choice",
-      "display_name": "Friendship Filler Weight",
-      "description": "Weight for Friendship filler items. Raises the Max Energy per turn by 1 for the next combat.",
-      "default": "medium",
-      "raw_default": 3,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "none",
-          "display_name": "None",
-          "value": 0
-        },
-        {
-          "name": "low",
-          "display_name": "Low",
-          "value": 1
-        },
-        {
-          "name": "medium",
-          "display_name": "Medium",
-          "value": 3
-        },
-        {
-          "name": "high",
-          "display_name": "High",
-          "value": 5
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Filler Items"
-    },
-    "post_combat_card_upgrade_filler_weight": {
-      "key": "post_combat_card_upgrade_filler_weight",
-      "class_name": "PostCombatCardUpgradeFillerWeight",
-      "module": "abc",
-      "kind": "choice",
-      "display_name": "Post-Combat Card Upgrade Filler Weight",
-      "description": "Weight for Post-Combat Card Upgrade filler items. Grants a buff that randomly upgrades a card in your deck after combat.",
-      "default": "low",
-      "raw_default": 1,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "none",
-          "display_name": "None",
-          "value": 0
-        },
-        {
-          "name": "low",
-          "display_name": "Low",
-          "value": 1
-        },
-        {
-          "name": "medium",
-          "display_name": "Medium",
-          "value": 3
-        },
-        {
-          "name": "high",
-          "display_name": "High",
-          "value": 5
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Filler Items"
-    },
-    "post_combat_card_removal_filler_weight": {
-      "key": "post_combat_card_removal_filler_weight",
-      "class_name": "PostCombatCardRemovalFillerWeight",
-      "module": "abc",
-      "kind": "choice",
-      "display_name": "Post-Combat Card Removal Filler Weight",
-      "description": "Weight for Post-Combat Card Removal filler items. Grants a buff that lets you removes a card from your deck after combat.",
-      "default": "low",
-      "raw_default": 1,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "none",
-          "display_name": "None",
-          "value": 0
-        },
-        {
-          "name": "low",
-          "display_name": "Low",
-          "value": 1
-        },
-        {
-          "name": "medium",
-          "display_name": "Medium",
-          "value": 3
-        },
-        {
-          "name": "high",
-          "display_name": "High",
-          "value": 5
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Filler Items"
-    },
-    "additional_card_reward_filler_weight": {
-      "key": "additional_card_reward_filler_weight",
-      "class_name": "AdditionalCardRewardFillerWeight",
-      "module": "abc",
-      "kind": "choice",
-      "display_name": "Additional Card Reward Filler Weight",
-      "description": "Weight for Additional Card Reward filler items. Grants a buff that provides an additional card reward after combat.",
-      "default": "low",
-      "raw_default": 1,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "none",
-          "display_name": "None",
-          "value": 0
-        },
-        {
-          "name": "low",
-          "display_name": "Low",
-          "value": 1
-        },
-        {
-          "name": "medium",
-          "display_name": "Medium",
-          "value": 3
-        },
-        {
-          "name": "high",
-          "display_name": "High",
-          "value": 5
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Filler Items"
-    },
     "neow_sanity": {
       "key": "neow_sanity",
       "class_name": "NeowSanity",
@@ -1958,79 +1117,7 @@
         }
       ],
       "supports_weighting": true,
-      "group": "Other Game Options"
-    },
-    "progressive_starter_card": {
-      "key": "progressive_starter_card",
-      "class_name": "ProgressiveStarterCard",
-      "module": "worlds.spire2.options",
-      "kind": "toggle",
-      "display_name": "Progressive Starter Card",
-      "description": "Globally enables progressive special starter cards for every configured character.\n\nRequires Include Floor Checks. Each character gets two Progressive Starter Card items, which\nreplace two floor-check filler items. With none received, the character\nstarts without the special starter card that Archaic Tooth would transform (Bash, Neutralize,\nDualcast, Unleash, Falling Star, or a compatible modded equivalent). The first item restores\nthe normal card and the second grants Archaic Tooth so its normal effect performs the\ntransformation. Archaic Tooth is unavailable from Orobas while this option is enabled.\n\nCharacters without an Archaic Tooth transformation are left unchanged, although their two\nProgressive Starter Card items are still present in the multiworld.\n\nWARNING: This can make the early game significantly harder for some characters. Logic does not\naccount for the missing or upgraded starter card.",
-      "default": false,
-      "raw_default": 0,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "false",
-          "display_name": "False",
-          "value": 0
-        },
-        {
-          "name": "true",
-          "display_name": "True",
-          "value": 1
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Progressive Starters"
-    },
-    "progressive_starter_relic": {
-      "key": "progressive_starter_relic",
-      "class_name": "ProgressiveStarterRelic",
-      "module": "worlds.spire2.options",
-      "kind": "toggle",
-      "display_name": "Progressive Starter Relic",
-      "description": "Globally enables progressive starter relics for every configured character.\n\nRequires Include Floor Checks. Each character gets two Progressive Starter Relic items, which\nreplace two floor-check filler items. With none received, the character\nstarts without the starter relic that Touch of Orobas would refine (such as Burning Blood, or a\ncompatible modded equivalent). The first item restores the normal relic and the second grants\nTouch of Orobas so its normal effect performs the refinement. Touch of Orobas is unavailable\nfrom Orobas while this option is enabled.\n\nCharacters without a Touch of Orobas refinement are left unchanged, although their two\nProgressive Starter Relic items are still present in the multiworld.\n\nWARNING: This can make the early game significantly harder for characters whose starting relic\nis central to their early power. Logic does not account for the missing or upgraded starter relic.",
-      "default": false,
-      "raw_default": 0,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "false",
-          "display_name": "False",
-          "value": 0
-        },
-        {
-          "name": "true",
-          "display_name": "True",
-          "value": 1
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Progressive Starters"
+      "group": "Sanities"
     },
     "campfire_sanity": {
       "key": "campfire_sanity",
@@ -2174,7 +1261,7 @@
         }
       ],
       "supports_weighting": true,
-      "group": "Other Game Options"
+      "group": "Sanities"
     },
     "shop_card_slots": {
       "key": "shop_card_slots",
@@ -2200,7 +1287,7 @@
       "minimum": 0,
       "maximum": 5,
       "supports_weighting": true,
-      "group": "Other Game Options"
+      "group": "Sanities"
     },
     "shop_neutral_card_slots": {
       "key": "shop_neutral_card_slots",
@@ -2226,7 +1313,7 @@
       "minimum": 0,
       "maximum": 2,
       "supports_weighting": true,
-      "group": "Other Game Options"
+      "group": "Sanities"
     },
     "shop_relic_slots": {
       "key": "shop_relic_slots",
@@ -2252,7 +1339,7 @@
       "minimum": 0,
       "maximum": 3,
       "supports_weighting": true,
-      "group": "Other Game Options"
+      "group": "Sanities"
     },
     "shop_potion_slots": {
       "key": "shop_potion_slots",
@@ -2278,7 +1365,7 @@
       "minimum": 0,
       "maximum": 3,
       "supports_weighting": true,
-      "group": "Other Game Options"
+      "group": "Sanities"
     },
     "shop_remove_slots": {
       "key": "shop_remove_slots",
@@ -2314,7 +1401,7 @@
         }
       ],
       "supports_weighting": true,
-      "group": "Other Game Options"
+      "group": "Sanities"
     },
     "shop_sanity_costs": {
       "key": "shop_sanity_costs",
@@ -2360,7 +1447,141 @@
         }
       ],
       "supports_weighting": true,
-      "group": "Other Game Options"
+      "group": "Sanities"
+    },
+    "death_link": {
+      "key": "death_link",
+      "class_name": "DeathLink",
+      "module": "Options",
+      "kind": "toggle",
+      "display_name": "Death Link",
+      "description": "When you die, everyone who enabled death link dies. Of course, the reverse is true too.",
+      "default": false,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Death Link"
+    },
+    "enable_death_fragments": {
+      "key": "enable_death_fragments",
+      "class_name": "EnableDeathFragments",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Enable Death Fragments",
+      "description": "If Death Link is enabled, turning this setting on gives you a Curse Card whenever\nyou receive a Death Link.",
+      "default": true,
+      "raw_default": 1,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Death Link"
+    },
+    "death_link_damage_percent": {
+      "key": "death_link_damage_percent",
+      "class_name": "DeathLinkDamagePercent",
+      "module": "worlds.spire2.options",
+      "kind": "range",
+      "display_name": "Death Link Damage Percent",
+      "description": "If Death Link is enabled, this setting determines how much damage you take when you receive a Death Link, \nas a percentage of your max health. \nIf you do not want to take any damage, set this to 0. \nIf you want to be killed whenever you receive a Death Link, set this to 100.",
+      "default": 0,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "minimum": 0,
+      "maximum": 100,
+      "supports_weighting": true,
+      "group": "Death Link"
+    },
+    "release_on_victory": {
+      "key": "release_on_victory",
+      "class_name": "ReleaseOnVictory",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Release Checks On Victory",
+      "description": "Release the winning character's remaining checks when their goal is recorded.",
+      "default": true,
+      "raw_default": 1,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Advanced Options"
     },
     "seeded": {
       "key": "seeded",
@@ -2396,7 +1617,810 @@
         }
       ],
       "supports_weighting": true,
-      "group": "Other Game Options"
+      "group": "Advanced Options"
+    },
+    "use_advanced_characters": {
+      "key": "use_advanced_characters",
+      "class_name": "AdvancedChar",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Advanced Characters",
+      "description": "Whether to use the advanced characters feature. The normal options for character, ascension, etc. are ignored.\nSee the \"advanced_characters\" option.",
+      "default": false,
+      "raw_default": 0,
+      "visibility": {
+        "name": "template",
+        "value": 1,
+        "flags": [
+          "template"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Advanced Options"
+    },
+    "advanced_characters": {
+      "key": "advanced_characters",
+      "class_name": "CharacterOptions",
+      "module": "worlds.spire2.options",
+      "kind": "dictionary",
+      "display_name": "Advanced Characters",
+      "description": "The configuration for advanced characters.  Each character's options can be configured\nindependently of each other.  No validation is done on the character name, so use carefully.\nFormat is:\n    <char name>:\n        ascension:\n            - <string or number>\n        ascension_down:\n            - <string or number>\n\nIf using a modded character:\nEnter the internal ID of the character to use.\n\nIf you don't know the exact ID to enter with the mod installed go to\n`Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.\n\nIf the chosen character mod is not installed, checks will be sent when another character\nsends them.  If none of the chosen character mods are installed, you will be playing\na very boring Ironclad run.",
+      "default": {
+        "ironclad": {
+          "ascension": [
+            1
+          ],
+          "ascension_down": []
+        }
+      },
+      "raw_default": {
+        "ironclad": {
+          "ascension": [
+            1
+          ],
+          "ascension_down": []
+        }
+      },
+      "visibility": {
+        "name": "template",
+        "value": 1,
+        "flags": [
+          "template"
+        ]
+      },
+      "source": "game",
+      "has_validation_schema": true,
+      "supports_weighting": false,
+      "group": "Advanced Options"
+    },
+    "one_gold_filler_weight": {
+      "key": "one_gold_filler_weight",
+      "class_name": "OneGoldFillerWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "One Gold Filler Weight",
+      "description": "Weight for One Gold filler items. Generates one gold for the character who receives it.\nAvailable across runs, as a pool of all gold rewards.\n\nNote: Even if you disable this item, you may still see it in on rare occasion, \nas it's the fallback for when item generation has issues.",
+      "default": "none",
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Filler Items"
+    },
+    "five_gold_filler_weight": {
+      "key": "five_gold_filler_weight",
+      "class_name": "FiveGoldFillerWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Five Gold Filler Weight",
+      "description": "Weight for Five Gold filler items. Generates five gold for the character who receives it.\nAvailable across runs, as a pool of all gold rewards.",
+      "default": "high",
+      "raw_default": 5,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Filler Items"
+    },
+    "free_attack_filler_weight": {
+      "key": "free_attack_filler_weight",
+      "class_name": "FreeAttackFillerWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Free Attack Filler Weight",
+      "description": "Weight for Free Attack filler items. Grants a buff that makes the next attack card you play free.",
+      "default": "high",
+      "raw_default": 5,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Filler Items"
+    },
+    "free_power_filler_weight": {
+      "key": "free_power_filler_weight",
+      "class_name": "FreePowerFillerWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Free Power Filler Weight",
+      "description": "Weight for Free Power filler items. Grants a buff that makes the next power card you play free.",
+      "default": "high",
+      "raw_default": 5,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Filler Items"
+    },
+    "free_skill_filler_weight": {
+      "key": "free_skill_filler_weight",
+      "class_name": "FreeSkillFillerWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Free Skill Filler Weight",
+      "description": "Weight for Free Skill filler items. Grants a buff that makes the next skill card you play free.",
+      "default": "high",
+      "raw_default": 5,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Filler Items"
+    },
+    "vigor_filler_weight": {
+      "key": "vigor_filler_weight",
+      "class_name": "VigorFillerWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Vigor Filler Weight",
+      "description": "Weight for Vigor filler items. Grants a buff that provides Vigor for the next combat.",
+      "default": "high",
+      "raw_default": 5,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Filler Items"
+    },
+    "artifact_filler_weight": {
+      "key": "artifact_filler_weight",
+      "class_name": "ArtifactFillerWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Artifact Filler Weight",
+      "description": "Weight for Artifact filler items. Grants a buff that protects you from debuffs for the next combat.",
+      "default": "high",
+      "raw_default": 5,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Filler Items"
+    },
+    "thorns_filler_weight": {
+      "key": "thorns_filler_weight",
+      "class_name": "ThornsFillerWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Thorns Filler Weight",
+      "description": "Weight for Thorns filler items. Grants a buff that provides Thorns for the next combat.",
+      "default": "high",
+      "raw_default": 5,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Filler Items"
+    },
+    "buffer_filler_weight": {
+      "key": "buffer_filler_weight",
+      "class_name": "BufferFillerWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Buffer Filler Weight",
+      "description": "Weight for Buffer filler items. Grants a buff that provides Buffer for the next combat.",
+      "default": "low",
+      "raw_default": 1,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Filler Items"
+    },
+    "dexterity_filler_weight": {
+      "key": "dexterity_filler_weight",
+      "class_name": "DexterityFillerWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Dexterity Filler Weight",
+      "description": "Weight for Dexterity filler items. Grants a buff that increases Dexterity for the next combat.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Filler Items"
+    },
+    "strength_filler_weight": {
+      "key": "strength_filler_weight",
+      "class_name": "StrengthFillerWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Strength Filler Weight",
+      "description": "Weight for Strength filler items. Grants a buff that increases Strength for the next combat.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Filler Items"
+    },
+    "plating_filler_weight": {
+      "key": "plating_filler_weight",
+      "class_name": "PlatingFillerWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Plating Filler Weight",
+      "description": "Weight for Plating filler items. Grants a buff that provides Plating for the next combat.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Filler Items"
+    },
+    "friendship_filler_weight": {
+      "key": "friendship_filler_weight",
+      "class_name": "FriendshipFillerWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Friendship Filler Weight",
+      "description": "Weight for Friendship filler items. Raises the Max Energy per turn by 1 for the next combat.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Filler Items"
+    },
+    "post_combat_card_upgrade_filler_weight": {
+      "key": "post_combat_card_upgrade_filler_weight",
+      "class_name": "PostCombatCardUpgradeFillerWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Post-Combat Card Upgrade Filler Weight",
+      "description": "Weight for Post-Combat Card Upgrade filler items. Grants a buff that randomly upgrades a card in your deck after combat.",
+      "default": "low",
+      "raw_default": 1,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Filler Items"
+    },
+    "post_combat_card_removal_filler_weight": {
+      "key": "post_combat_card_removal_filler_weight",
+      "class_name": "PostCombatCardRemovalFillerWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Post-Combat Card Removal Filler Weight",
+      "description": "Weight for Post-Combat Card Removal filler items. Grants a buff that lets you removes a card from your deck after combat.",
+      "default": "low",
+      "raw_default": 1,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Filler Items"
+    },
+    "additional_card_reward_filler_weight": {
+      "key": "additional_card_reward_filler_weight",
+      "class_name": "AdditionalCardRewardFillerWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Additional Card Reward Filler Weight",
+      "description": "Weight for Additional Card Reward filler items. Grants a buff that provides an additional card reward after combat.",
+      "default": "low",
+      "raw_default": 1,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Filler Items"
     }
   }
 }

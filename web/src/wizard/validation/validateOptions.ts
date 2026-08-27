@@ -88,6 +88,9 @@ function validateValue(option: GeneratedOption, value: OptionValue): string[] {
   } else if (option.kind === "text_choice" && typeof value !== "string") {
     // Text choices accept canonical choice names or custom strings, but never numbers.
     errors.push("must be text");
+  } else if (option.kind === "list" && !Array.isArray(value)) {
+    // List options such as bonus_items must serialize as YAML sequences.
+    errors.push("must be a list");
   }
 
   // Return fragments instead of throwing so the outer pass can aggregate failures.
