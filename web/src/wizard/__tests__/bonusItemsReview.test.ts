@@ -60,14 +60,14 @@ function projectsConfiguredRowsInOrder(): void {
   expect(rows[0]).toEqual({
     imageUrl: getRandomWaxRelicImageUrl(),
     name: RANDOM_WAX_RELIC_NAME,
-    details: "Common, Rare",
+    details: "From Pools: Common, Rare",
   });
 
-  // The specific row uses the chosen relic's own image, name, and pool details.
+  // The specific row uses the chosen relic's own image, name, and description.
   expect(rows[1]).toEqual({
     imageUrl: specificRelic.imageUrl,
     name: `Wax ${specificRelic.name}`,
-    details: "Fake",
+    details: specificRelic.description,
   });
 }
 

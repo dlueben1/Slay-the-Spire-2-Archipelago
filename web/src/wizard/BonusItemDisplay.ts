@@ -7,7 +7,6 @@
  */
 
 import {
-  getPoolsForRelic,
   getRandomWaxRelicImageUrl,
   getRelicById,
   RANDOM_WAX_RELIC_NAME,
@@ -33,12 +32,11 @@ export function getBonusItemDisplayRow(
 ): BonusItemDisplayRow {
   if (item.kind === "WAX_RELIC" && item.mode === "specific") {
     const relic = getRelicById(item.relicId);
-    const pools = getPoolsForRelic(item.relicId);
 
     return {
       imageUrl: relic.imageUrl,
       name: `Wax ${relic.name}`,
-      details: pools.length ? pools.join(", ") : relic.rarityKey,
+      details: relic.description,
     };
   }
 
@@ -46,7 +44,7 @@ export function getBonusItemDisplayRow(
     return {
       imageUrl: getRandomWaxRelicImageUrl(),
       name: RANDOM_WAX_RELIC_NAME,
-      details: item.pools.join(", "),
+      details: `From Pools: ${item.pools.join(", ")}`,
     };
   }
 

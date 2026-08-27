@@ -47,6 +47,9 @@ function createTestAnswers() {
 /** A relic from a standard rarity pool known not to be blacklisted or a pickup. */
 const STANDARD_RELIC_ID = "AKABEKO";
 
+/** A character-specific relic that must not enter randomized shared pools. */
+const CHARACTER_SPECIFIC_RELIC_ID = "BIG_HAT";
+
 /** A relic that exists only through a custom pool (the Fake whitelist). */
 const CUSTOM_POOL_RELIC_ID = "FAKE_STRIKE_DUMMY";
 
@@ -111,6 +114,22 @@ function derivesPoolsFromSources(): void {
       expect(() => getRelicById(id)).not.toThrow();
     }
   }
+
+  // Randomized pools count only shared relics from the generated source data.
+  const rareOption = getBonusRelicPoolOptions().find(
+    (option) => option.name === "Rare",
+  );
+  const expectedSharedRareCount = relicsJson.filter(
+    (relic) =>
+      relic.rarity_key === "Rare" &&
+      relic.pool === "shared" &&
+      !blacklistJson.includes(relic.id) &&
+      !relic.description.startsWith("Upon pickup,"),
+  ).length;
+  expect(rareOption?.relicCount).toBe(expectedSharedRareCount);
+  expect(getEligiblePoolRelicIds("Rare")).not.toContain(
+    CHARACTER_SPECIFIC_RELIC_ID,
+  );
 }
 
 /**
@@ -134,6 +153,9 @@ function appliesExclusionsLast(): void {
 
   // Custom-pool relics with neutral descriptions remain eligible.
   expect(isEligibleSpecificRelicId(CUSTOM_POOL_RELIC_ID)).toBe(true);
+
+  // Character-specific relics remain available only for explicit selection.
+  expect(isEligibleSpecificRelicId(CHARACTER_SPECIFIC_RELIC_ID)).toBe(true);
 }
 
 /**
@@ -327,7 +349,7 @@ function rendersDisplayRows(): void {
   });
   expect(specific.name).toBe(`Wax ${getRelicById(CUSTOM_POOL_RELIC_ID).name}`);
   expect(specific.imageUrl).toBe(getRelicById(CUSTOM_POOL_RELIC_ID).imageUrl);
-  expect(specific.details).toContain("Fake");
+  expect(specific.details).toBe(getRelicById(CUSTOM_POOL_RELIC_ID).description);
 
   const random = getBonusItemDisplayRow({
     kind: "WAX_RELIC",
@@ -336,7 +358,7 @@ function rendersDisplayRows(): void {
   });
   expect(random.name).toBe(RANDOM_WAX_RELIC_NAME);
   expect(random.imageUrl).toBe(getRandomWaxRelicImageUrl());
-  expect(random.details).toBe("Rare, Shop");
+  expect(random.details).toBe("From Pools: Rare, Shop");
 }
 
 /**
