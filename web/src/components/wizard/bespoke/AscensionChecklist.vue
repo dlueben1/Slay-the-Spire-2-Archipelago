@@ -2,8 +2,8 @@
 import {
   ASCENSION_MODIFIERS,
   type AscensionLevel,
-} from "../../wizard/AscensionModifier";
-import type { AscensionConfigurationAnswers } from "../../wizard/WizardAnswers";
+} from "../../../wizard/AscensionModifier";
+import type { AscensionConfigurationAnswers } from "../../../wizard/WizardAnswers";
 
 const props = defineProps<{
   modelValue: AscensionConfigurationAnswers;

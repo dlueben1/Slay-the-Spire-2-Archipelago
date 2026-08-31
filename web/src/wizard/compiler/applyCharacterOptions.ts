@@ -281,7 +281,7 @@ export function applyCharacterOptions(
   catalog: OptionCatalog,
 ): void {
   // Fail immediately if schema drift removed an option owned by this compiler.
-  for (const key of CHARACTER_OPTION_KEYS) {
+  for (const key of Object.values(CHARACTER_OPTION_KEYS)) {
     if (!catalog.options[key]) {
       throw new Error(`Generated option catalog is missing '${key}'.`);
     }

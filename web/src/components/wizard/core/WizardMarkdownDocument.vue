@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import type { MarkdownDocument } from "../../models/MarkdownDocument";
-import { getMarkdownDocument } from "../../services/MarkdownService";
+import type { MarkdownDocument } from "../../../models/MarkdownDocument";
+import { getMarkdownDocument } from "../../../services/MarkdownService";
 
 const props = withDefaults(
   defineProps<{

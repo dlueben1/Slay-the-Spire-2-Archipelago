@@ -4,11 +4,11 @@ import { computed, ref } from "vue";
 import {
   getBonusItemDisplayRow,
   type BonusItemDisplayRow,
-} from "../../wizard/BonusItemDisplay";
-import type { BonusItemAnswer } from "../../wizard/WizardAnswers";
-import type { WizardQuestion as WizardQuestionDefinition } from "../../wizard/WizardStep";
+} from "../../../wizard/BonusItemDisplay";
+import type { BonusItemAnswer } from "../../../wizard/WizardAnswers";
+import type { WizardQuestion as WizardQuestionDefinition } from "../../../wizard/WizardStep";
 import WaxRelicDialog from "./WaxRelicDialog.vue";
-import WizardQuestion from "./WizardQuestion.vue";
+import WizardQuestion from "../core/WizardQuestion.vue";
 
 const props = defineProps<{
   modelValue: BonusItemAnswer[];
@@ -226,7 +226,7 @@ function submitBonusItem(item: BonusItemAnswer): void {
   </WizardQuestion>
 </template>
 
-<style scoped src="./wizard.css" />
+<style scoped src="../core/wizard.css" />
 
 <style scoped>
 .bonus-item-section {

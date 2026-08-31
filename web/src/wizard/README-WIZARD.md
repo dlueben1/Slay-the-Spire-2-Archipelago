@@ -5,8 +5,8 @@ The wizard deliberately separates what the player means from what Archipelago ac
 1. `generated/optionCatalog.ts` types and imports the generated technical schema.
 2. `WizardAnswers.ts` stores player-facing intent plus document-only input such as the player name.
 3. `WizardOptionKey.ts` records the generated keys owned by each guided section.
-4. `WizardStep.ts` declares step order, question copy, and conditional visibility.
-5. `components/wizard` renders those questions and emits answer-model changes.
+4. `WizardStep.ts` declares step order, question copy, flow predicates, and standard control descriptors.
+5. `components/wizard/core/WizardControl.vue` renders standard controls, while focused step components provide subsection layout and bespoke interfaces.
 6. `compiler/compileWizardAnswers.ts` starts with every generated default.
 7. Section compilers, such as `compiler/applyCharacterOptions.ts`, translate answers into the option keys they own.
 8. `validation/validateOptions.ts` checks the complete result against the generated schema, while `validation/validateWizardMetadata.ts` validates values outside the game option mapping.
@@ -26,7 +26,7 @@ The first-pass flow is organized as:
 
 Character Setup presents one roster model for built-in and modded characters. Shared Ascensions compile through `characters`, `modded_characters`, `ascension`, and `ascension_down`. Individual Ascensions compile through `use_advanced_characters` and `advanced_characters`; ignored standard fields are removed from guided YAML. Random roster selection, unlock behavior, starting character, and completion goal apply to both modes.
 
-Gameplay Modifiers owns immediate Relic-item availability, releasing a winning character's remaining checks, and seeded runs. Checks & Rewards begins with Starting Equipment, whose progressive starter card and relic toggles require Floor Checks, followed by the two Progressive Ancient choices. It then provides the additional checks and rewards including Neow Sanity, floor, campfire, gold, potion, and card-reward shuffling. It also owns the Shop Slots toggle, the conditional Shop Sanity subsection, and the existing Filler Items table at the bottom of the step. Shop details remain hidden until Shop Slots is enabled.
+Gameplay Modifiers owns immediate Relic-item availability, releasing a winning character's remaining checks, and seeded runs. Checks & Rewards begins with Starting Equipment, whose progressive starter card and relic toggles require Floor Checks, followed by the two Progressive Ancient choices. It then provides the additional checks and rewards including Neow Sanity, floor, campfire, gold, potion, and card-reward shuffling. It also owns the Shop Slots toggle, the conditional Shop Sanity subsection, Bonus Items, and the Filler Items table. Shop details remain hidden until Shop Slots is enabled.
 
 Progression contains the shared Archipelago settings: progression balancing and accessibility. Progression balancing is an integral 0-99 value; the named Disabled, Normal, and Extreme buttons are presentation shortcuts for 0, 50, and 99 rather than separate compiler concepts.
 
@@ -42,14 +42,28 @@ When a new question only affects an existing section:
 
 1. Add the semantic answer field and type to that section's interface in `WizardAnswers.ts`.
 2. Initialize it in `createDefaultWizardAnswers`.
-3. Add its ID, player-facing title, and optional visibility predicate to the section in `WizardStep.ts`.
-4. Add the control to the matching component under `components/wizard`. Use `WizardQuestion.vue` for top-level prompts and the shared classes in `wizard.css` for established visual patterns.
-5. Translate the answer in that section's compiler. Do not write Archipelago keys from the component or question definition.
-6. Add tests for the mapping and any conditional visibility.
+3. Add its ID, player-facing copy, and `control` descriptor to the section in `WizardStep.ts`.
+4. Translate the answer in that section's compiler. Do not write Archipelago keys from the component or question definition.
+5. Add tests for the mapping, descriptor binding, and any conditional visibility.
+
+Standard descriptors use a section-relative `field` path and one of these control kinds:
+
+- `radio` for one string choice from a labeled set.
+- `checkbox` for one boolean card.
+- `checkbox-grid` for related boolean cards.
+- `number` for one bounded whole-number input.
+- `number-grid` for related bounded whole-number inputs.
+- `slider` for a bounded whole-number slider with optional named presets.
+
+Use `help` for extra guidance, `isVisible` for conditional flow, and `isEnabled` when a question should remain visible but unavailable until a prerequisite is met. Numeric descriptors get schema-backed bounds through semantic names in `optionRanges.ts`; `WizardStep.ts` must not import Archipelago option keys.
+
+A question without a `control` descriptor is intentionally bespoke. Its step component renders the custom interface inside `WizardQuestion.vue` while still sourcing the question copy and visibility from `WizardStep.ts`. Current examples include the character portrait grid, modded-character table, Ascension editors, roster-derived selects, Bonus Items table and Wax Relic dialog, and Filler Items table.
+
+Cross-field rules belong in pure wizard modules instead of Vue setters. `deathLinkTransitions.ts` owns Death Link effect invariants, `checksTransitions.ts` owns the Floor Checks and Starting Equipment relationship, and `characterReconciliation.ts` repairs roster-dependent Character Setup answers. Components should only call those transitions and emit the resulting answer model.
 
 For a new section, also create a dedicated answer interface, step component, section compiler, and review-summary builder. Register its generated keys in `WizardOptionKey.ts`, register its compiler in `compileWizardAnswers` before final validation, and include its keys in `GuidedOption.ts`. When one visible step contains several meaningful option families, follow Checks & Rewards: keep focused family compilers behind one step-level compiler facade.
 
-The Filler Items subsection is a concrete example of this pattern: `FillerItem.ts` owns the semantic-ID-to-option-key mapping and schema-derived display data, `FillerStep.vue` edits only `FillerAnswers`, and `compiler/applyFillerOptions.ts` converts its four slider levels to canonical generated choice names. `compiler/applyChecksAndRewardsOptions.ts` composes that focused compiler with Starting Equipment, Ancient, ordinary-check, and Shop compilers. `compiler/applyStartingEquipmentOptions.ts` additionally makes the Python world's Floor Checks dependency explicit by normalizing both progressive equipment options off when their filler-slot budget does not exist. The filler compiler tests compare the mapping with the generated `Filler Items` group so newly generated filler options require an explicit UX decision.
+The Filler Items subsection is a concrete example of the bespoke pattern: `FillerItem.ts` owns the semantic-ID-to-option-key mapping and schema-derived display data, `FillerStep.vue` edits only `FillerAnswers`, and `compiler/applyFillerOptions.ts` converts its four slider levels to canonical generated choice names. Bonus Items use the same boundary: `BonusItemsStep.vue` and `WaxRelicDialog.vue` edit semantic `BonusItemAnswer` values, while `compiler/applyBonusItemOptions.ts` owns their nested YAML shape. `compiler/applyChecksAndRewardsOptions.ts` composes those focused compilers with Starting Equipment, Ancient, ordinary-check, and Shop compilers. `compiler/applyStartingEquipmentOptions.ts` additionally makes the Python world's Floor Checks dependency explicit by normalizing both progressive equipment options off when their filler-slot budget does not exist.
 
 Character Setup demonstrates one player model targeting competing generated systems. `AscensionModifier.ts` documents the A1-A10 display catalog and canonical option names. `CharacterRoster.ts` merges built-in and modded entries for shared questions. `compiler/applyCharacterOptions.ts` selects the standard or advanced YAML representation, while `GuidedOption.ts` removes fields ignored by the active mode from the review YAML. `ModdedCharacterTable.vue` loads its player instructions from `docs/modded-characters.md` through the same sanitized Markdown pipeline and Vite public-doc sync as the setup guides.
 
@@ -61,7 +75,7 @@ Validation understands accepted shapes. Generated-option validation knows that a
 
 ## Styling questions
 
-Shared question styles live in `components/wizard/wizard.css` and use `wizard-*` class names. Reuse these classes before adding new ones. Add a class to the shared stylesheet when it represents a reusable question pattern; keep truly step-specific layout in that component's scoped style block.
+Shared question styles live in `components/wizard/core/wizard.css` and use `wizard-*` class names. Reuse these classes before adding new ones. Add a class to the shared stylesheet when it represents a reusable question pattern; keep truly step-specific layout in that component's scoped style block.
 
 ## Regenerating the option catalog
 
