@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import type { TabsItem } from "@nuxt/ui";
-import { computed, reactive, ref } from "vue";
-import CharacterSetupStep from "../components/wizard/CharacterSetupStep.vue";
-import CheckSetupStep from "../components/wizard/CheckSetupStep.vue";
-import DeathLinkStep from "../components/wizard/DeathLinkStep.vue";
-import ProgressionStep from "../components/wizard/ProgressionStep.vue";
-import ReviewStep from "../components/wizard/ReviewStep.vue";
-import RunSettingsStep from "../components/wizard/RunSettingsStep.vue";
+import { computed, reactive, ref, type Component } from "vue";
+import CharacterSetupStep from "../components/wizard/steps/CharacterSetupStep.vue";
+import CheckSetupStep from "../components/wizard/steps/CheckSetupStep.vue";
+import DeathLinkStep from "../components/wizard/steps/DeathLinkStep.vue";
+import ProgressionStep from "../components/wizard/steps/ProgressionStep.vue";
+import ReviewStep from "../components/wizard/steps/ReviewStep.vue";
+import RunSettingsStep from "../components/wizard/steps/RunSettingsStep.vue";
+import { provideWizardAnswers } from "../components/wizard/core/wizardAnswersContext";
 import { optionCatalog } from "../generated/optionCatalog";
 import { buildWizardYaml } from "../services/YamlService";
 import { createDefaultWizardAnswers } from "../wizard/WizardAnswers";
@@ -16,16 +17,18 @@ import {
   createFillerDisplayItems,
 } from "../wizard/FillerItem";
 import { selectGuidedOptions } from "../wizard/GuidedOption";
-import {
-  DEATH_LINK_OPTION_KEYS,
-  getGeneratedNumberRange,
-  PROGRESSION_OPTION_KEYS,
-  RUN_OPTION_KEYS,
-  SHOP_OPTION_KEYS,
-} from "../wizard/WizardOptionKey";
 import { compileWizardAnswers } from "../wizard/compiler/compileWizardAnswers";
 import { buildWizardReviewSections } from "../wizard/review";
-import { wizardSteps } from "../wizard/WizardStep";
+import { wizardSteps, type WizardSectionKey } from "../wizard/WizardStep";
+
+/** Component responsible for each answer section declared by `wizardSteps`. */
+const sectionStepComponents: Record<WizardSectionKey, Component> = {
+  characters: CharacterSetupStep,
+  run: RunSettingsStep,
+  checksAndRewards: CheckSetupStep,
+  deathLink: DeathLinkStep,
+  progression: ProgressionStep,
+};
 
 const availableCharacters = optionCatalog.options.characters?.valid_keys ?? [];
 const fillerItems = createFillerDisplayItems(optionCatalog);
@@ -37,6 +40,10 @@ const answers = reactive(
     optionCatalog,
   ),
 );
+
+// Share the root model read-only so declarative flow logic avoids prop drilling.
+provideWizardAnswers(answers);
+
 const stepIndex = ref(0);
 const error = ref("");
 
@@ -52,34 +59,6 @@ function getHasConfiguredCharacters(): boolean {
 }
 
 const hasConfiguredCharacters = computed(getHasConfiguredCharacters);
-
-const relicRewardsAvailableAnytimeRange = getGeneratedNumberRange(
-  optionCatalog,
-  RUN_OPTION_KEYS.relicRewardsAvailableAnytime,
-);
-const progressionBalancingRange = getGeneratedNumberRange(
-  optionCatalog,
-  PROGRESSION_OPTION_KEYS.progressionBalancing,
-);
-const shopSlotRanges = {
-  cardSlots: getGeneratedNumberRange(optionCatalog, SHOP_OPTION_KEYS.cardSlots),
-  neutralCardSlots: getGeneratedNumberRange(
-    optionCatalog,
-    SHOP_OPTION_KEYS.neutralCardSlots,
-  ),
-  relicSlots: getGeneratedNumberRange(
-    optionCatalog,
-    SHOP_OPTION_KEYS.relicSlots,
-  ),
-  potionSlots: getGeneratedNumberRange(
-    optionCatalog,
-    SHOP_OPTION_KEYS.potionSlots,
-  ),
-};
-const deathLinkDamageRange = getGeneratedNumberRange(
-  optionCatalog,
-  DEATH_LINK_OPTION_KEYS.damagePercent,
-);
 
 /**
  * Compiles the current player-facing answer snapshot for Vue reactivity.
@@ -121,24 +100,34 @@ function buildCurrentYaml(): string {
   return buildWizardYaml(answers.playerName, getGuidedSettings());
 }
 
+interface WizardCompileState {
+  ok: boolean;
+  yaml: string;
+  error: string;
+}
+
 /**
- * Gets render-safe YAML for an already-open Review step.
+ * Compiles one render-safe snapshot for Review navigation and preview.
  *
- * @returns The complete current YAML, or an empty string while input is invalid.
+ * @returns Success, YAML text, and any normalized validation failure.
  * @remarks A player may edit the persistent name field while Review is open. Returning
  * an empty preview prevents a render exception; navigation still uses strict validation.
  */
-function getYamlPreview(): string {
+function getCompileState(): WizardCompileState {
   try {
-    // Reuse the strict builder so a valid preview is always production-ready.
-    return buildCurrentYaml();
-  } catch {
-    // Let Review show its inline invalid-state prompt until the name is corrected.
-    return "";
+    return { ok: true, yaml: buildCurrentYaml(), error: "" };
+  } catch (cause) {
+    return {
+      ok: false,
+      yaml: "",
+      error: cause instanceof Error ? cause.message : String(cause),
+    };
   }
 }
 
-const yamlPreview = computed(getYamlPreview);
+const compileState = computed(getCompileState);
+const yamlPreview = computed(() => compileState.value.yaml);
+const canReview = computed(() => compileState.value.ok);
 
 /**
  * Builds player-facing review sections for all implemented guided answers.
@@ -151,27 +140,6 @@ function getReviewSections() {
 }
 
 const reviewSections = computed(getReviewSections);
-
-/**
- * Determines whether current answers can safely open the review step.
- *
- * @returns `true` when compilation and final schema validation both succeed.
- * @remarks Expected invalid form state is converted to `false`; `next` displays details.
- */
-function canCompileForReview(): boolean {
-  try {
-    // The strict builder runs option compilation plus player-metadata validation.
-    void buildCurrentYaml();
-
-    // A successful read means review data can be rendered safely.
-    return true;
-  } catch {
-    // Invalid in-progress answers disable direct review navigation.
-    return false;
-  }
-}
-
-const canReview = computed(canCompileForReview);
 
 /**
  * Builds Nuxt UI tab items for wizard navigation.
@@ -208,6 +176,53 @@ function getActiveStepId(): string {
 }
 
 const activeStepId = computed(getActiveStepId);
+
+/** Active declarative step, including its answer-section ownership. */
+const activeStep = computed(
+  () => wizardSteps[stepIndex.value] ?? wizardSteps[0]!,
+);
+
+/** Component registered for the active answer section; Review is rendered separately. */
+const activeSectionComponent = computed(() => {
+  const sectionKey = activeStep.value.sectionKey;
+  return sectionKey ? sectionStepComponents[sectionKey] : null;
+});
+
+/** Reactive answer object owned by the active section step. */
+const activeSectionAnswers = computed(() => {
+  const sectionKey = activeStep.value.sectionKey;
+  return sectionKey ? answers[sectionKey] : null;
+});
+
+/** Extra presentation data required by the two bespoke section components. */
+const activeSectionProps = computed<Record<string, unknown>>(() => {
+  if (activeStep.value.sectionKey === "characters") {
+    return { availableCharacters };
+  }
+
+  if (activeStep.value.sectionKey === "checksAndRewards") {
+    return { fillerItems };
+  }
+
+  return {};
+});
+
+/**
+ * Applies a complete section value emitted by the active registered component.
+ *
+ * @param value - Immutable section answer object emitted through component `v-model`.
+ * @returns Nothing; mutates only the root reactive model owned by this view.
+ */
+function setActiveSectionAnswers(value: object): void {
+  const sectionKey = activeStep.value.sectionKey;
+
+  if (!sectionKey) {
+    return;
+  }
+
+  // Preserve the provided section reference while applying the child's immutable value.
+  Object.assign(answers[sectionKey], value);
+}
 
 /**
  * Handles a requested navigation change from Nuxt UI Tabs.
@@ -253,23 +268,27 @@ function next(): void {
     behavior: "smooth",
   });
 
-  try {
-    // Review additionally requires valid document metadata; other steps need options only.
-    const nextStep = wizardSteps[stepIndex.value + 1];
+  // Review additionally requires valid document metadata; other steps need options only.
+  const nextStep = wizardSteps[stepIndex.value + 1];
 
-    if (nextStep?.id === "review") {
-      void buildCurrentYaml();
-    } else {
-      void compileCurrentAnswers();
+  if (nextStep?.id === "review") {
+    if (!compileState.value.ok) {
+      error.value = compileState.value.error;
+      return;
     }
-
-    // Clear any previous failure and advance only after successful validation.
-    error.value = "";
-    stepIndex.value = Math.min(stepIndex.value + 1, wizardSteps.length - 1);
-  } catch (cause) {
-    // Normalize unknown thrown values into text suitable for the form footer.
-    error.value = cause instanceof Error ? cause.message : String(cause);
+  } else {
+    try {
+      void compileCurrentAnswers();
+    } catch (cause) {
+      // Normalize unknown thrown values into text suitable for the form footer.
+      error.value = cause instanceof Error ? cause.message : String(cause);
+      return;
+    }
   }
+
+  // Clear any previous failure and advance only after successful validation.
+  error.value = "";
+  stepIndex.value = Math.min(stepIndex.value + 1, wizardSteps.length - 1);
 }
 </script>
 
@@ -327,39 +346,18 @@ function next(): void {
           {{ wizardSteps[stepIndex]!.description }}
         </p></template
       >
-      <CharacterSetupStep
-        v-if="activeStepId === 'characters'"
-        v-model="answers.characters"
-        :available-characters="availableCharacters"
-      />
-      <RunSettingsStep
-        v-else-if="activeStepId === 'run'"
-        v-model="answers.run"
-        :relic-rewards-available-anytime-range="
-          relicRewardsAvailableAnytimeRange
-        "
-      />
-      <CheckSetupStep
-        v-else-if="activeStepId === 'checks'"
-        v-model="answers.checksAndRewards"
-        :filler-items="fillerItems"
-        :shop-slot-ranges="shopSlotRanges"
-      />
-      <DeathLinkStep
-        v-else-if="activeStepId === 'death-link'"
-        v-model="answers.deathLink"
-        :damage-range="deathLinkDamageRange"
-      />
-      <ProgressionStep
-        v-else-if="activeStepId === 'progression'"
-        v-model="answers.progression"
-        :progression-balancing-range="progressionBalancingRange"
-      />
       <ReviewStep
-        v-else
+        v-if="activeStepId === 'review'"
         :sections="reviewSections"
         :yaml="yamlPreview"
         :player-name="answers.playerName"
+      />
+      <component
+        :is="activeSectionComponent"
+        v-else-if="activeSectionComponent && activeSectionAnswers"
+        :model-value="activeSectionAnswers"
+        v-bind="activeSectionProps"
+        @update:model-value="setActiveSectionAnswers"
       />
       <template #footer
         ><div class="flex items-center justify-between gap-4">

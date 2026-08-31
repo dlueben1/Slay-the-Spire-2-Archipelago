@@ -16,7 +16,7 @@ import { selectGuidedOptions } from "../GuidedOption";
 import { createDefaultWizardAnswers } from "../WizardAnswers";
 import { compileWizardAnswers } from "../compiler/compileWizardAnswers";
 import { summarizeCharacterAnswers } from "../review";
-import { visibleCharacterQuestionIds } from "../WizardStep";
+import { characterSetupStep, getVisibleQuestionIds } from "../WizardStep";
 
 /**
  * Creates a complete wizard answer model for Character Setup tests.
@@ -432,15 +432,19 @@ function registerCharacterCompilerTests(): void {
 function revealsConditionalCharacterQuestions(): void {
   // Begin with modes whose dependent questions have no meaning.
   const answers = createTestAnswers(["Ironclad", "Silent"]);
-  expect(visibleCharacterQuestionIds(answers)).not.toContain("random-count");
-  expect(visibleCharacterQuestionIds(answers)).not.toContain(
+  expect(getVisibleQuestionIds(characterSetupStep, answers)).not.toContain(
+    "random-count",
+  );
+  expect(getVisibleQuestionIds(characterSetupStep, answers)).not.toContain(
     "starting-character",
   );
-  expect(visibleCharacterQuestionIds(answers)).toContain("shared-ascensions");
-  expect(visibleCharacterQuestionIds(answers)).not.toContain(
+  expect(getVisibleQuestionIds(characterSetupStep, answers)).toContain(
+    "shared-ascensions",
+  );
+  expect(getVisibleQuestionIds(characterSetupStep, answers)).not.toContain(
     "individual-ascensions",
   );
-  expect(visibleCharacterQuestionIds(answers)).not.toContain(
+  expect(getVisibleQuestionIds(characterSetupStep, answers)).not.toContain(
     "modded-characters",
   );
 
@@ -458,13 +462,19 @@ function revealsConditionalCharacterQuestions(): void {
       },
     },
   ];
-  expect(visibleCharacterQuestionIds(answers)).toContain("random-count");
-  expect(visibleCharacterQuestionIds(answers)).toContain("starting-character");
-  expect(visibleCharacterQuestionIds(answers)).toContain("modded-characters");
-  expect(visibleCharacterQuestionIds(answers)).toContain(
+  expect(getVisibleQuestionIds(characterSetupStep, answers)).toContain(
+    "random-count",
+  );
+  expect(getVisibleQuestionIds(characterSetupStep, answers)).toContain(
+    "starting-character",
+  );
+  expect(getVisibleQuestionIds(characterSetupStep, answers)).toContain(
+    "modded-characters",
+  );
+  expect(getVisibleQuestionIds(characterSetupStep, answers)).toContain(
     "individual-ascensions",
   );
-  expect(visibleCharacterQuestionIds(answers)).not.toContain(
+  expect(getVisibleQuestionIds(characterSetupStep, answers)).not.toContain(
     "shared-ascensions",
   );
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import type { WizardReviewSection } from "../../wizard/review";
+import type { WizardReviewSection } from "../../../wizard/review";
 
 const props = defineProps<{
   sections: WizardReviewSection[];

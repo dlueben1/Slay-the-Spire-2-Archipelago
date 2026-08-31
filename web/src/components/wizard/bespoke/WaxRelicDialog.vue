@@ -5,12 +5,12 @@ import {
   filterRelicsByName,
   getBonusRelicPoolOptions,
   getEligibleSpecificRelics,
-} from "../../wizard/BonusRelicData";
+} from "../../../wizard/BonusRelicData";
 import type {
   BonusItemAnswer,
   RandomWaxRelicBonusItem,
   SpecificWaxRelicBonusItem,
-} from "../../wizard/WizardAnswers";
+} from "../../../wizard/WizardAnswers";
 
 type WaxRelicMode = "specific" | "random";
 
@@ -287,7 +287,7 @@ function submit(): void {
   </UModal>
 </template>
 
-<style scoped src="./wizard.css" />
+<style scoped src="../core/wizard.css" />
 
 <style scoped>
 .wax-dialog {

@@ -1,28 +1,38 @@
 <script setup lang="ts">
-import type { AccordionItem, RadioGroupItem, SelectItem } from "@nuxt/ui";
+import type { AccordionItem, SelectItem } from "@nuxt/ui";
 import { computed, watch } from "vue";
+import { reconcileRosterDependents } from "../../../wizard/characterReconciliation";
 import {
   canDeselectBuiltInCharacter,
   copyAscensionConfiguration,
   getConfiguredCharacterNames,
-} from "../../wizard/CharacterRoster";
+} from "../../../wizard/CharacterRoster";
 import type {
   AscensionConfigurationAnswers,
   CharacterAnswers,
-  CharacterAscensionMode,
-  CharacterAvailability,
   CharacterGoal,
-  CharacterSelectionMode,
   ModdedCharacterAnswers,
-} from "../../wizard/WizardAnswers";
+} from "../../../wizard/WizardAnswers";
 import {
   characterSetupStep,
+  getQuestionById,
+  getVisibleQuestionIds,
   type WizardQuestion as WizardQuestionDefinition,
-} from "../../wizard/WizardStep";
-import AscensionChecklist from "./AscensionChecklist.vue";
-import ModdedCharacterTable from "./ModdedCharacterTable.vue";
-import WizardQuestion from "./WizardQuestion.vue";
+} from "../../../wizard/WizardStep";
+import AscensionChecklist from "../bespoke/AscensionChecklist.vue";
+import ModdedCharacterTable from "../bespoke/ModdedCharacterTable.vue";
+import WizardControl from "../core/WizardControl.vue";
+import WizardQuestion from "../core/WizardQuestion.vue";
+import { useWizardAnswers } from "../core/wizardAnswersContext";
 
+/**
+ * Character Setup step: bespoke roster interfaces around declarative radio groups.
+ *
+ * The portrait grid, modded-character table, Ascension editors, and the roster-derived
+ * selects stay custom because no generic control can express them. The three mode
+ * radios render through `WizardControl` from their `characterSetupStep` descriptors,
+ * and roster-dependent cleanup lives in `wizard/characterReconciliation.ts`.
+ */
 interface CharacterAscensionAccordionItem extends AccordionItem {
   kind: "built-in" | "modded";
   characterName: string;
@@ -39,64 +49,20 @@ const emit = defineEmits<{
   "update:modelValue": [value: CharacterAnswers];
 }>();
 
+// Flow predicates for nested and conditional questions read the complete model.
+const answers = useWizardAnswers();
+
 /** Keeps wizard dropdowns open without temporarily locking and hiding page scrolling. */
 const nonBlockingSelectContent = { bodyLock: false };
 
-const selectionModeItems: RadioGroupItem[] = [
-  {
-    label: "Use all selected characters",
-    description:
-      "Every character configured above will be included in your world.",
-    value: "all",
-  },
-  {
-    label: "Randomly select some",
-    description:
-      "The Archipelago Randomizer will choose a smaller roster from the characters you selected above.",
-    value: "random",
-  },
-];
+/** Currently visible question IDs; nested fields and editors follow their questions. */
+const visibleQuestionIds = computed(
+  () => new Set(getVisibleQuestionIds(characterSetupStep, answers)),
+);
 
-const availabilityItems: RadioGroupItem[] = [
-  {
-    label: "Start with all characters",
-    description: "Your entire generated roster is immediately playable.",
-    value: "all",
-  },
-  {
-    label: "Start with one random character",
-    description:
-      "Begin with a random member of the roster and find unlocks for the rest.",
-    value: "random",
-  },
-  {
-    label: "Choose a starting character",
-    description:
-      "Pick who begins unlocked, then find the remaining character unlocks.",
-    value: "fixed",
-  },
-];
-
-const ascensionModeItems: RadioGroupItem[] = [
-  {
-    label: "Use one setup for every character",
-    description:
-      "Every built-in and modded character uses the same Ascensions and Ascension Downs.",
-    value: "shared",
-  },
-  {
-    label: "Configure each character separately",
-    description:
-      "Give every selected character its own Ascensions and Ascension Down item pool.",
-    value: "individual",
-  },
-];
-
-// Resolve full question definitions by ID so the declarative flow remains the copy source of truth.
-const questionsById: Record<string, WizardQuestionDefinition> = {};
-
-for (const question of characterSetupStep.questions) {
-  questionsById[question.id] = question;
+/** Resolves one declared question for the template without non-null assertions. */
+function question(questionId: string): WizardQuestionDefinition {
+  return getQuestionById(characterSetupStep, questionId);
 }
 
 /**
@@ -274,6 +240,17 @@ function updateAnswers(patch: Partial<CharacterAnswers>): void {
 }
 
 /**
+ * Forwards a generically rendered section update to the owning parent view.
+ *
+ * @param value - Complete immutable section emitted by the control renderer.
+ * @returns Nothing; keeps the parent view the sole owner of persistent state.
+ */
+function forwardUpdate(value: object): void {
+  // The renderer edits this step's bound section, so the cast restores its type.
+  emit("update:modelValue", value as CharacterAnswers);
+}
+
+/**
  * Adds or removes a character in response to a checkbox change.
  *
  * @param character - Schema-provided character represented by the checkbox.
@@ -342,22 +319,6 @@ function setModdedCharacters(moddedCharacters: ModdedCharacterAnswers[]): void {
 }
 
 /**
- * Updates whether Ascensions are shared or configured for each character.
- *
- * @param value - Semantic mode emitted by Nuxt UI's radio group.
- * @returns Nothing; ignores values outside the two supported UI strategies.
- */
-function setAscensionMode(value: unknown): void {
-  // Narrow the generic component event to Character Setup's explicit mode union.
-  if (value !== "shared" && value !== "individual") {
-    return;
-  }
-
-  // The character compiler owns the translation to `use_advanced_characters`.
-  updateAnswers({ ascensionMode: value as CharacterAscensionMode });
-}
-
-/**
  * Replaces the Ascension setup shared by every character in standard mode.
  *
  * @param sharedAscensions - Complete enabled and Ascension Down checkbox state.
@@ -415,22 +376,6 @@ function setIndividualAscensions(
 }
 
 /**
- * Updates whether all selected characters or a random subset will be used.
- *
- * @param value - Selection-mode value emitted by Nuxt UI's radio group.
- * @returns Nothing; emits the changed answer when the value is recognized.
- */
-function setSelectionMode(value: unknown): void {
-  // Ignore values outside the semantic modes declared by this radio group.
-  if (value !== "all" && value !== "random") {
-    return;
-  }
-
-  // Store the semantic mode without writing `pick_num_characters` directly.
-  updateAnswers({ selectionMode: value as CharacterSelectionMode });
-}
-
-/**
  * Updates the requested size of a randomly selected character subset.
  *
  * @param value - Numeric value emitted by Nuxt UI's input-number control.
@@ -444,22 +389,6 @@ function setRandomCharacterCount(value: number | undefined): void {
 
   // Leave range enforcement to reconciliation and compiler validation.
   updateAnswers({ randomCharacterCount: value });
-}
-
-/**
- * Updates the player's chosen character availability mode.
- *
- * @param value - Availability value emitted by Nuxt UI's radio group.
- * @returns Nothing; emits the changed answer when the value is recognized.
- */
-function setAvailability(value: unknown): void {
-  // Ignore values outside the three semantic modes declared by this radio group.
-  if (value !== "all" && value !== "random" && value !== "fixed") {
-    return;
-  }
-
-  // Store the semantic answer; the compiler later chooses `lock_characters`.
-  updateAnswers({ availability: value as CharacterAvailability });
 }
 
 /**
@@ -508,62 +437,27 @@ function getRosterForReconciliation(): string[] {
 }
 
 /**
- * Reconciles dependent answers after the built-in or modded roster changes.
+ * Applies pure roster reconciliation whenever the observed roster changes.
  *
- * @param roster - Newly selected built-in names and complete modded IDs.
  * @returns Nothing; emits one patch only when a dependent answer became stale.
- * @remarks This improves form ergonomics. The compiler still performs authoritative
- * semantic checks and must not rely on this presentation-layer cleanup.
  */
-function reconcileDependentAnswers(roster: string[]): void {
-  // Accumulate every required correction before emitting, avoiding partial UI states.
-  const patch: Partial<CharacterAnswers> = {};
+function applyRosterReconciliation(): void {
+  // The rules live in `characterReconciliation.ts`; this watcher stays a thin caller.
+  const patch = reconcileRosterDependents(props.modelValue);
 
-  // Clamp random selection when its previous count exceeds the smaller pool.
-  if (props.modelValue.randomCharacterCount > roster.length) {
-    patch.randomCharacterCount = Math.max(1, roster.length);
-  }
-
-  // Replace a fixed starting character that the player just deselected.
-  if (
-    props.modelValue.startingCharacter &&
-    !roster.includes(props.modelValue.startingCharacter)
-  ) {
-    patch.startingCharacter = roster[0] ?? null;
-  }
-
-  // Resolve the post-patch generated count before checking a numeric completion goal.
-  const reconciledRandomCount =
-    patch.randomCharacterCount ?? props.modelValue.randomCharacterCount;
-  const reconciledGeneratedCount =
-    props.modelValue.selectionMode === "random"
-      ? reconciledRandomCount
-      : roster.length;
-
-  // Fall back to "all" when a previous numeric goal no longer fits the setup.
-  if (
-    props.modelValue.goal !== "all" &&
-    props.modelValue.goal > reconciledGeneratedCount
-  ) {
-    patch.goal = "all";
-  }
-
-  // Avoid emitting when the user's change did not invalidate any dependent answer.
-  if (Object.keys(patch).length > 0) {
+  if (patch) {
     updateAnswers(patch);
   }
 }
 
 // Listens for changes to the roster and reconciles dependent answers to avoid stale selections.
-watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
+watch(getRosterForReconciliation, applyRosterReconciliation, { deep: true });
 </script>
 
 <template>
   <div class="space-y-8">
     <!-- Character Selection -->
-    <WizardQuestion :question="questionsById.characters!">
-      <template #help> </template>
-
+    <WizardQuestion :question="question('characters')">
       <div class="character-portrait-grid">
         <!-- Vanilla Characters -->
         <UButton
@@ -639,8 +533,8 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
 
     <!-- Modded Character Setup -->
     <WizardQuestion
-      v-if="modelValue.moddedCharacters.length"
-      :question="questionsById['modded-characters']!"
+      v-if="visibleQuestionIds.has('modded-characters')"
+      :question="question('modded-characters')"
     >
       <ModdedCharacterTable
         :model-value="modelValue.moddedCharacters"
@@ -649,24 +543,18 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
     </WizardQuestion>
 
     <!-- Ascension Per Character (Toggles `advanced_characters`) -->
-    <WizardQuestion :question="questionsById['ascension-mode']!">
-      <URadioGroup
-        :model-value="modelValue.ascensionMode"
-        :items="ascensionModeItems"
-        value-key="value"
-        label-key="label"
-        description-key="description"
-        color="primary"
-        variant="table"
-        :ui="{ item: 'cursor-pointer' }"
-        @update:model-value="setAscensionMode"
+    <WizardQuestion :question="question('ascension-mode')">
+      <WizardControl
+        :question="question('ascension-mode')"
+        :model-value="modelValue"
+        @update:model-value="forwardUpdate"
       />
     </WizardQuestion>
 
     <!-- Ascensions for All -->
     <WizardQuestion
-      v-if="modelValue.ascensionMode === 'shared'"
-      :question="questionsById['shared-ascensions']!"
+      v-if="visibleQuestionIds.has('shared-ascensions')"
+      :question="question('shared-ascensions')"
     >
       <AscensionChecklist
         :model-value="modelValue.sharedAscensions"
@@ -675,7 +563,7 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
     </WizardQuestion>
 
     <!-- Ascensions for each Character -->
-    <WizardQuestion v-else :question="questionsById['individual-ascensions']!">
+    <WizardQuestion v-else :question="question('individual-ascensions')">
       <UAccordion
         type="multiple"
         :items="individualAscensionItems"
@@ -705,24 +593,18 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
     </WizardQuestion>
 
     <!-- Controls selection mode, whether characters are all included or only a random subset -->
-    <WizardQuestion :question="questionsById.selection!">
-      <URadioGroup
-        :model-value="modelValue.selectionMode"
-        :items="selectionModeItems"
-        value-key="value"
-        label-key="label"
-        description-key="description"
-        color="primary"
-        variant="table"
-        :ui="{ item: 'cursor-pointer' }"
-        @update:model-value="setSelectionMode"
+    <WizardQuestion :question="question('selection')">
+      <WizardControl
+        :question="question('selection')"
+        :model-value="modelValue"
+        @update:model-value="forwardUpdate"
       />
 
       <label
-        v-if="modelValue.selectionMode === 'random'"
+        v-if="visibleQuestionIds.has('random-count')"
         class="wizard-nested-field"
       >
-        {{ questionsById["random-count"]!.title }}
+        {{ question("random-count").title }}
         <UInputNumber
           :model-value="modelValue.randomCharacterCount"
           color="primary"
@@ -736,24 +618,18 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
     </WizardQuestion>
 
     <!-- Character Unlock Configuration -->
-    <WizardQuestion :question="questionsById.availability!">
-      <URadioGroup
-        :model-value="modelValue.availability"
-        :items="availabilityItems"
-        value-key="value"
-        label-key="label"
-        description-key="description"
-        color="primary"
-        variant="table"
-        :ui="{ item: 'cursor-pointer' }"
-        @update:model-value="setAvailability"
+    <WizardQuestion :question="question('availability')">
+      <WizardControl
+        :question="question('availability')"
+        :model-value="modelValue"
+        @update:model-value="forwardUpdate"
       />
 
       <label
-        v-if="modelValue.availability === 'fixed'"
+        v-if="visibleQuestionIds.has('starting-character')"
         class="wizard-nested-field"
       >
-        {{ questionsById["starting-character"]!.title }}
+        {{ question("starting-character").title }}
         <USelect
           :model-value="modelValue.startingCharacter ?? undefined"
           :items="startingCharacterItems"
@@ -769,7 +645,7 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
     </WizardQuestion>
 
     <!-- Goal Selection: May move in the future if more goals exist -->
-    <WizardQuestion :question="questionsById.goal!">
+    <WizardQuestion :question="question('goal')">
       <USelect
         :model-value="String(modelValue.goal)"
         :items="goalSelectItems"
@@ -785,4 +661,4 @@ watch(getRosterForReconciliation, reconcileDependentAnswers, { deep: true });
   </div>
 </template>
 
-<style scoped src="./wizard.css" />
+<style scoped src="../core/wizard.css" />

@@ -2,9 +2,9 @@
 import {
   copyAscensionConfiguration,
   MAX_MODDED_CHARACTERS,
-} from "../../wizard/CharacterRoster";
-import type { ModdedCharacterAnswers } from "../../wizard/WizardAnswers";
-import WizardMarkdownDocument from "./WizardMarkdownDocument.vue";
+} from "../../../wizard/CharacterRoster";
+import type { ModdedCharacterAnswers } from "../../../wizard/WizardAnswers";
+import WizardMarkdownDocument from "../core/WizardMarkdownDocument.vue";
 
 const props = defineProps<{
   modelValue: ModdedCharacterAnswers[];

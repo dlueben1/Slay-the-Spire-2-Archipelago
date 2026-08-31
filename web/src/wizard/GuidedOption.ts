@@ -42,7 +42,7 @@ const ADVANCED_CHARACTER_OPTION_KEY = "advanced_characters";
 export function getGuidedOptionKeys(): string[] {
   // Begin with each fixed section registry in navigation order.
   const optionKeys: string[] = [
-    ...CHARACTER_OPTION_KEYS,
+    ...Object.values(CHARACTER_OPTION_KEYS),
     ...Object.values(RUN_OPTION_KEYS),
     ...Object.values(STARTING_EQUIPMENT_OPTION_KEYS),
     ...Object.values(ANCIENT_OPTION_KEYS),

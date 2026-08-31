@@ -1,23 +1,23 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { FillerDisplayItem } from "../../wizard/FillerItem";
+import type { FillerDisplayItem } from "../../../wizard/FillerItem";
 import type {
   BonusItemAnswer,
   ChecksAndRewardsAnswers,
   FillerAnswers,
-} from "../../wizard/WizardAnswers";
+} from "../../../wizard/WizardAnswers";
 import {
   checkSetupStep,
   getQuestionById,
   getVisibleQuestionIds,
   resolveQuestionHelp,
   type WizardQuestion as WizardQuestionDefinition,
-} from "../../wizard/WizardStep";
-import BonusItemsStep from "./BonusItemsStep.vue";
-import FillerStep from "./FillerStep.vue";
-import WizardControl from "./WizardControl.vue";
-import WizardQuestion from "./WizardQuestion.vue";
-import { useWizardAnswers } from "./wizardAnswersContext";
+} from "../../../wizard/WizardStep";
+import BonusItemsStep from "../bespoke/BonusItemsStep.vue";
+import FillerStep from "../bespoke/FillerStep.vue";
+import WizardControl from "../core/WizardControl.vue";
+import WizardQuestion from "../core/WizardQuestion.vue";
+import { useWizardAnswers } from "../core/wizardAnswersContext";
 
 /**
  * Checks & Rewards step: subsection layout around declaratively rendered controls.
@@ -247,4 +247,4 @@ function setFillerAnswers(filler: FillerAnswers): void {
   </div>
 </template>
 
-<style scoped src="./wizard.css" />
+<style scoped src="../core/wizard.css" />

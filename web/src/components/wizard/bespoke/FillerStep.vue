@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import type { FillerDisplayItem } from "../../wizard/FillerItem";
+import type { FillerDisplayItem } from "../../../wizard/FillerItem";
 import type {
   FillerAnswers,
   FillerItemId,
   FillerWeightLevel,
-} from "../../wizard/WizardAnswers";
-import type { WizardQuestion as WizardQuestionDefinition } from "../../wizard/WizardStep";
-import WizardQuestion from "./WizardQuestion.vue";
+} from "../../../wizard/WizardAnswers";
+import type { WizardQuestion as WizardQuestionDefinition } from "../../../wizard/WizardStep";
+import WizardQuestion from "../core/WizardQuestion.vue";
 
 const props = defineProps<{
   modelValue: FillerAnswers;
