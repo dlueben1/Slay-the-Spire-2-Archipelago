@@ -37,6 +37,12 @@ namespace StS2AP
     public static class ArchipelagoClient
     {
         /// <summary>
+        /// Slot-data contract supported by this client. Increment only when a future client can
+        /// no longer safely consume worlds using the previous contract.
+        /// </summary>
+        public const int SupportedCompatFlag = 1;
+
+        /// <summary>
         /// The version of the Archipelago Mod (semantic version: major.minor.patch)
         /// </summary>
         public static string Version
@@ -399,77 +405,76 @@ namespace StS2AP
                     LogUtility.Info($"VAL: {kvp.Value.ToString()}");
                 }
 
+                if (!TryReadApWorldCompatibility(
+                        out System.Version apWorldVersion,
+                        out int apWorldCompatFlag,
+                        out string compatibilityError
+                    ))
+                {
+                    RejectIncompatibleConnection(compatibilityError);
+                    return;
+                }
+
+                System.Version clientVersion = GetClientSemanticVersion();
+                LogUtility.Info($"APWorld Version: v{apWorldVersion}");
+                LogUtility.Info($"Client Version: {Version}");
+                LogUtility.Info(
+                    $"APWorld CompatFlag: {apWorldCompatFlag}; client CompatFlag: {SupportedCompatFlag}"
+                );
+
+                if (apWorldCompatFlag != SupportedCompatFlag)
+                {
+                    RejectIncompatibleConnection(
+                        $"Incompatible APWorld contract: the APWorld uses CompatFlag "
+                            + $"{apWorldCompatFlag}, but this client requires {SupportedCompatFlag}."
+                    );
+                    return;
+                }
+
+                int majorMinorComparison = CompareMajorMinor(clientVersion, apWorldVersion);
+                if (majorMinorComparison < 0)
+                {
+                    RejectIncompatibleConnection(
+                        $"This APWorld is v{apWorldVersion}, but this client is {Version}. "
+                            + "Update the mod before connecting to this newer APWorld."
+                    );
+                    return;
+                }
+
                 Settings = GetPlayerSettings();
 
-                // Before we tell the user everything is okay, let's make sure that the mod version is correct
-                var apWorldVersion = "v" + (SlotData["mod_compat_version"] as string);
-                LogUtility.Info($"APWorld Version: {apWorldVersion}");
-                LogUtility.Info($"Client Version: {Version}");
-
-                // If there's a version mismatch, we have another step
-                if (apWorldVersion == null || apWorldVersion != Version)
+                if (majorMinorComparison > 0)
                 {
-                    // Log the mismatch
                     LogUtility.Warn(
-                        $"Version mismatch! Server expects version {apWorldVersion}, but client is version {Version}. Please update your mod."
+                        $"Client {Version} supports APWorld v{apWorldVersion} through CompatFlag "
+                            + $"{SupportedCompatFlag}, but updating the APWorld is recommended."
                     );
 
-                    // Warn the user that there's a version mismatch, and let them decide how to proceed.
-                    var popup = new ConfirmPopup();
-                    popup.Header = new LocString("main_menu_ui", "VERSION_MISMATCH.header");
-                    popup.Body = new LocString("main_menu_ui", "VERSION_MISMATCH.body");
-                    popup.Body.Add("server", apWorldVersion!);
-                    popup.Body.Add("client", Version);
-                    popup.ButtonPressed = (yesPressed) =>
+                    var warningBody = new LocString("main_menu_ui", "APWORLD_OLDER.body");
+                    warningBody.Add("server", $"v{apWorldVersion}");
+                    warningBody.Add("client", Version);
+                    var popup = new ConfirmPopup
                     {
-                        // On no, we should cancel out.
-                        if (!yesPressed)
+                        Header = new LocString("main_menu_ui", "APWORLD_OLDER.header"),
+                        Body = warningBody,
+                        ButtonPressed = continueConnecting =>
                         {
-                            LogUtility.Warn(
-                                "User was warned about version mismatch, proceeded anyways!"
-                            );
-
-                            // Show the connection UI again
-                            ArchipelagoConnectionUI.Show();
-
-                            // Disconnect from the server since we can't guarantee compatibility
-                            Disconnect();
-
-                            // Re-Enable the UI
-                            ArchipelagoConnectionUI.SetConnectButtonEnabled(true);
-                            ArchipelagoConnectionUI.SetCloseButtonEnabled(true);
-
-                            // Tell the user they need to update their mod
-                            ArchipelagoConnectionUI.SetStatus(
-                                $"Version mismatch! Server expects version {apWorldVersion}, but client is version {Version}. Please update your mod."
-                            );
-
-                            return;
-                        }
-                        // On yes, we proceed
-                        else
-                        {
-                            // Complete any locations that we have
-                            outText = $"Successfully connected to {ServerAddress} as {PlayerName}!";
-
-                            // Let the game know that we've connected
-                            OnConnected();
-                        }
+                            if (continueConnecting)
+                                OnConnected();
+                            else
+                                RejectIncompatibleConnection(
+                                    "Connection cancelled. Update the APWorld before trying again."
+                                );
+                        },
                     };
 
-                    // Hide the connection UI and show the popup
                     ArchipelagoConnectionUI.Hide();
                     popup.Show();
+                    return;
                 }
-                // Otherwise proceed
-                else
-                {
-                    // Complete any locations that we have
-                    outText = $"Successfully connected to {ServerAddress} as {PlayerName}!";
 
-                    // Let the game know that we've connected
-                    OnConnected();
-                }
+                // Patch-only differences within one major/minor line are intentionally silent.
+                OnConnected();
             }
             else
             {
@@ -484,6 +489,71 @@ namespace StS2AP
                 // End the connection
                 Disconnect();
             }
+        }
+
+        private static bool TryReadApWorldCompatibility(
+            out System.Version apWorldVersion,
+            out int compatFlag,
+            out string error
+        )
+        {
+            apWorldVersion = new System.Version(0, 0, 0);
+            compatFlag = SupportedCompatFlag;
+            error = string.Empty;
+
+            if (!SlotData.TryGetValue("mod_compat_version", out object? versionValue)
+                || !System.Version.TryParse(
+                    Convert.ToString(versionValue)?.TrimStart('v', 'V'),
+                    out System.Version? parsedVersion
+                )
+                || parsedVersion == null)
+            {
+                error = "The APWorld did not provide a valid semantic version.";
+                return false;
+            }
+            apWorldVersion = parsedVersion;
+
+            if (!SlotData.TryGetValue("CompatFlag", out object? compatValue))
+            {
+                LogUtility.Info("APWorld omitted CompatFlag; defaulting to contract 1.");
+                return true;
+            }
+
+            try
+            {
+                compatFlag = Convert.ToInt32(compatValue);
+                if (compatFlag < 1)
+                    throw new InvalidDataException("CompatFlag must be a positive integer.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = $"The APWorld supplied an invalid CompatFlag "
+                    + $"('{Convert.ToString(compatValue)}'): {ex.Message}";
+                return false;
+            }
+        }
+
+        private static System.Version GetClientSemanticVersion() =>
+            typeof(ArchipelagoClient).Assembly.GetName().Version
+            ?? throw new InvalidDataException("The client assembly version is unavailable.");
+
+        private static int CompareMajorMinor(System.Version left, System.Version right)
+        {
+            int majorComparison = left.Major.CompareTo(right.Major);
+            return majorComparison != 0
+                ? majorComparison
+                : left.Minor.CompareTo(right.Minor);
+        }
+
+        private static void RejectIncompatibleConnection(string reason)
+        {
+            LogUtility.Error($"Archipelago compatibility check failed: {reason}");
+            ArchipelagoConnectionUI.Show();
+            Disconnect();
+            ArchipelagoConnectionUI.SetConnectButtonEnabled(true);
+            ArchipelagoConnectionUI.SetCloseButtonEnabled(true);
+            ArchipelagoConnectionUI.SetStatus(reason);
         }
 
         /// <summary>
