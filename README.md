@@ -26,10 +26,10 @@ Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetai
 ## Manual installation
 
 1. Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) installed. The easiest way to obtain it is from Steam Workshop.
-2. Download the "sts2-client.zip" from the [Releases](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest) section of the Repo
+2. Download `Archipelago.zip` from the [Releases](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest) section of the repo
 3. Go to your Slay the Spire II directory (In Steam, click "Browse Local Files")
 4. If a folder called `mods` does not exist, create it
-5. Unzip the **contents** of `sts2-client.zip` into `mods`
+5. Put `Archipelago.zip` in `mods`, then extract it into the archive program's default `Archipelago` directory
 
 - If you've done this step correctly, your directory structure should look like this: `/<slay-the-spire-2-local-files>/mods/Archipelago/` and the contents of that folder should be a bunch of `.dll` files and a `.pck` file (there may be more files too, please don't touch anything in this folder)
 
