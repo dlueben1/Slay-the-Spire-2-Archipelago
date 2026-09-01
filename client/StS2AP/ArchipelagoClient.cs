@@ -142,6 +142,7 @@ namespace StS2AP
         /// Spinlock for processing incoming items to ensure that we don't have multiple threads trying to process items at the same time
         /// </summary>
         private static readonly object _itemLock = new();
+        private static LocationCheckHelper.CheckedLocationsUpdatedHandler? _checkedLocationsUpdatedHandler;
 
         // RitsuLib polls top-bar counts every frame. Cache the derived reward count and only
         // re-enumerate item history when one of its inexpensive inputs changes.
@@ -313,6 +314,13 @@ namespace StS2AP
 
             // Listen for received items
             connectionSession.Items.ItemReceived += OnItemReceived;
+
+            // Keep the mod's checked-location cache synchronized with remote checks such as
+            // !collect. Capture the owning session so a deferred callback cannot update a
+            // replacement session after disconnecting.
+            _checkedLocationsUpdatedHandler = locations =>
+                OnCheckedLocationsUpdated(connectionSession, locations);
+            connectionSession.Locations.CheckedLocationsUpdated += _checkedLocationsUpdatedHandler;
 
             // Listen for errors
             connectionSession.Socket.ErrorReceived += OnErrorReceived;
@@ -831,6 +839,11 @@ namespace StS2AP
                 // Stop the socket-close callback from re-entering this workflow after an
                 // intentional disconnect, and release the other session event handlers.
                 session.Items.ItemReceived -= OnItemReceived;
+                if (_checkedLocationsUpdatedHandler != null)
+                {
+                    session.Locations.CheckedLocationsUpdated -= _checkedLocationsUpdatedHandler;
+                    _checkedLocationsUpdatedHandler = null;
+                }
                 session.Socket.ErrorReceived -= OnErrorReceived;
                 session.Socket.SocketClosed -= OnSocketSessionEnd;
                 session.MessageLog.OnMessageReceived -= OnMessageReceived;
@@ -938,6 +951,35 @@ namespace StS2AP
             {
                 ConnectionLock.ReleaseReaderLock();
             }
+        }
+
+        private static void OnCheckedLocationsUpdated(
+            ArchipelagoSession session,
+            System.Collections.ObjectModel.ReadOnlyCollection<long> locations
+        )
+        {
+            long[] locationIds = locations.ToArray();
+            Callable.From(() =>
+            {
+                if (!ReferenceEquals(Session, session))
+                {
+                    return;
+                }
+
+                foreach (long locationId in locationIds)
+                {
+                    if (!CheckedLocations.Contains(locationId))
+                    {
+                        CheckedLocations.Add(locationId);
+                    }
+
+                    string? locationName = session.Locations.GetLocationNameFromId(locationId);
+                    if (locationName != null && Progress.CampfiresChecked.ContainsKey(locationName))
+                    {
+                        Progress.CampfiresChecked[locationName] = true;
+                    }
+                }
+            }).CallDeferred();
         }
 
         private static void OnMessageReceived(LogMessage message)
