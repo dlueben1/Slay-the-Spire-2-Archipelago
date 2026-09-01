@@ -12,6 +12,7 @@ import type { OptionCatalog } from "../../generated/optionCatalog";
 import type { ChecksAndRewardsAnswers } from "../WizardAnswers";
 import type { CompiledOptions } from "./applyCharacterOptions";
 import { applyAncientOptions } from "./applyAncientOptions";
+import { applyBonusItemOptions } from "./applyBonusItemOptions";
 import { applyCheckOptions } from "./applyCheckOptions";
 import { applyFillerOptions } from "./applyFillerOptions";
 import { applyShopOptions } from "./applyShopOptions";
@@ -49,6 +50,9 @@ export function applyChecksAndRewardsOptions(
 
   // Compile the conditional Shop Sanity family as one dependent subsection.
   applyShopOptions(target, answers.shop, catalog);
+
+  // Compile guaranteed Bonus Items between Shop and filler, mirroring the UI order.
+  applyBonusItemOptions(target, answers.bonusItems, catalog);
 
   // Compile the existing filler table last because it closes the visible section.
   applyFillerOptions(target, answers.filler, catalog);

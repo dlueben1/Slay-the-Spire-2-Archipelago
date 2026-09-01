@@ -11,18 +11,18 @@
 import type { OptionCatalog } from "../generated/optionCatalog";
 
 /** Generated option keys owned by the Character Setup compiler in both modes. */
-export const CHARACTER_OPTION_KEYS = [
-  "characters",
-  "modded_characters",
-  "pick_num_characters",
-  "num_chars_goal",
-  "lock_characters",
-  "unlocked_character",
-  "use_advanced_characters",
-  "advanced_characters",
-  "ascension",
-  "ascension_down",
-] as const;
+export const CHARACTER_OPTION_KEYS = {
+  characters: "characters",
+  moddedCharacters: "modded_characters",
+  pickNumCharacters: "pick_num_characters",
+  numCharactersGoal: "num_chars_goal",
+  lockCharacters: "lock_characters",
+  unlockedCharacter: "unlocked_character",
+  useAdvancedCharacters: "use_advanced_characters",
+  advancedCharacters: "advanced_characters",
+  ascension: "ascension",
+  ascensionDown: "ascension_down",
+} as const;
 
 /** Generated option keys owned by the Gameplay Modifiers compiler. */
 export const RUN_OPTION_KEYS = {
@@ -69,6 +69,9 @@ export const SHOP_OPTION_KEYS = {
   removeSlots: "shop_remove_slots",
   costs: "shop_sanity_costs",
 } as const;
+
+/** Generated option key owned by the Bonus Items compiler. */
+export const BONUS_ITEM_OPTION_KEY = "bonus_items" as const;
 
 /** Generated option keys owned by the Death Link compiler. */
 export const DEATH_LINK_OPTION_KEYS = {

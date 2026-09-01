@@ -10,6 +10,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildWizardYaml,
+  optionsToYaml,
   WIZARD_GAME_NAME,
   WIZARD_YAML_DESCRIPTION,
 } from "../../services/YamlService";
@@ -65,6 +66,75 @@ function rejectsInvalidPlayerNames(): void {
 }
 
 /**
+ * Verifies Bonus Items serialize as nested block sequences matching the Python schema.
+ *
+ * @returns Nothing; Vitest records assertion failures.
+ */
+function serializesNestedBonusItems(): void {
+  // Use one randomized and one specific Wax Relic to cover both selector branches.
+  const yaml = optionsToYaml({
+    bonus_items: [
+      { WAX_RELIC: { Pools: ["Common", "Uncommon"] } },
+      { WAX_RELIC: { Value: "FAKE_STRIKE_DUMMY" } },
+    ],
+  });
+
+  // The nested mapping must use block style, not inline JSON flow syntax.
+  expect(yaml).toBe(
+    [
+      "bonus_items:",
+      "  - WAX_RELIC:",
+      "      Pools:",
+      '        - "Common"',
+      '        - "Uncommon"',
+      "  - WAX_RELIC:",
+      '      Value: "FAKE_STRIKE_DUMMY"',
+      "",
+    ].join("\n"),
+  );
+}
+
+/**
+ * Verifies ordinary scalar lists and nested dictionaries keep their existing shape.
+ *
+ * @returns Nothing; Vitest records assertion failures.
+ */
+function preservesExistingListAndDictionaryOutput(): void {
+  // Character lists serialize as plain scalar sequences.
+  const listYaml = optionsToYaml({ characters: ["Ironclad", "Silent"] });
+  expect(listYaml).toBe(
+    ["characters:", '  - "Ironclad"', '  - "Silent"', ""].join("\n"),
+  );
+
+  // Advanced character dictionaries keep recursive block mappings with quoted keys.
+  const dictYaml = optionsToYaml({
+    advanced_characters: {
+      ironclad: { ascension: [1], ascension_down: [] },
+    },
+  });
+  expect(dictYaml).toBe(
+    [
+      "advanced_characters:",
+      '  "ironclad":',
+      '    "ascension":',
+      "      - 1",
+      '    "ascension_down": []',
+      "",
+    ].join("\n"),
+  );
+}
+
+/**
+ * Verifies an empty Bonus Items list stays an explicit empty YAML sequence.
+ *
+ * @returns Nothing; Vitest records assertion failures.
+ */
+function serializesEmptyBonusItems(): void {
+  const yaml = optionsToYaml({ bonus_items: [] });
+  expect(yaml).toBe("bonus_items: []\n");
+}
+
+/**
  * Registers complete-document YAML cases with Vitest.
  *
  * @returns Nothing; test registration occurs as a module-load side effect.
@@ -73,6 +143,12 @@ function registerYamlServiceTests(): void {
   // Cover the successful document shape and both metadata failure modes.
   it("serializes complete Archipelago YAML", serializesCompleteWizardYaml);
   it("rejects invalid player names", rejectsInvalidPlayerNames);
+  it("serializes nested Bonus Item blocks", serializesNestedBonusItems);
+  it(
+    "preserves existing list and dictionary output",
+    preservesExistingListAndDictionaryOutput,
+  );
+  it("serializes an empty Bonus Items list", serializesEmptyBonusItems);
 }
 
 // Register the service boundary as one focused wizard-output suite.

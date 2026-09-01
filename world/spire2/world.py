@@ -2,6 +2,7 @@ import re
 import string
 import typing
 from collections import defaultdict
+from copy import deepcopy
 from typing import List, Optional, Any
 
 from BaseClasses import Item, Location, Region, MultiWorld, ItemClassification, CollectionState
@@ -12,7 +13,7 @@ from .rules import set_rules, SpireLogic
 from .web_world import SlayTheSpire2Web
 from .characters import CharacterConfig, character_list, character_offset_map
 from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET, ASCENSIONS
-from .items import item_table, chars_to_items, universal_items, ItemType, base_event_item_pairs, ItemData, item_groups
+from .items import item_table, chars_to_items, universal_items, bonus_item_table, ItemType, base_event_item_pairs, ItemData, item_groups
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType, location_groups
 from .options import Spire2Options
 
@@ -539,6 +540,7 @@ class SlayTheSpire2World(World):
         self.build_filler_pools()
 
         pool = []
+        filler_counts: list[tuple[str, int]] = []
         card_reward_count = MAX_CARD_REWARDS if self.options.shuffle_all_cards.value else MAX_CARD_REWARDS // 2
         for config in self.characters:
             char_lookup = config.name if config.mod_num == 0 else config.mod_num
@@ -609,10 +611,7 @@ class SlayTheSpire2World(World):
                     (2 if self.options.progressive_starter_relic.value else 0)
                 )
                 filler_num = remaining_checks - progressive_starter_items
-                
-                for _ in range(filler_num):
-                    filler_item_name = self.get_filler_item(character=config.name)
-                    pool.append(self.create_item(filler_item_name))
+                filler_counts.append((config.name, filler_num))
             # Pair up our event locations with our event items
             for base_event, base_item in base_event_item_pairs.items():
                 event = f"{config.name} {base_event}"
@@ -620,6 +619,35 @@ class SlayTheSpire2World(World):
                 item_data = item_table[item]
                 event_item = SlayTheSpire2Item(item_data, item, item_data.classification, item_data.code, self.player)
                 self.multiworld.get_location(event, self.player).place_locked_item(event_item)
+
+        bonus_item_names = []
+        for bonus_entry in self.options.bonus_items.value:
+            bonus_type = next(iter(bonus_entry))
+            bonus_data = bonus_item_table.get(bonus_type)
+            if bonus_data is None:
+                raise OptionError(
+                    f"Unknown Bonus Items type '{bonus_type}'. "
+                    f"Supported types: {', '.join(sorted(bonus_item_table))}"
+                )
+            bonus_item_names.append(bonus_data.item_name)
+
+        available_filler_slots = sum(filler_count for _, filler_count in filler_counts)
+        if len(bonus_item_names) > available_filler_slots:
+            raise OptionError(
+                f"Configured {len(bonus_item_names)} Bonus Items, but only "
+                f"{available_filler_slots} filler slots are available."
+            )
+
+        # All fixed per-character rewards are already present. Bonus items now consume
+        # the earliest available filler slots before the weighted filler system runs.
+        pool.extend(self.create_item(item_name) for item_name in bonus_item_names)
+        bonus_slots_remaining = len(bonus_item_names)
+        for character, filler_count in filler_counts:
+            consumed_slots = min(bonus_slots_remaining, filler_count)
+            bonus_slots_remaining -= consumed_slots
+            for _ in range(filler_count - consumed_slots):
+                filler_item_name = self.get_filler_item(character=character)
+                pool.append(self.create_item(filler_item_name))
 
         self.multiworld.itempool += pool
 
@@ -703,6 +731,7 @@ class SlayTheSpire2World(World):
             "campfire_sanity",
             "progressive_starter_card",
             "progressive_starter_relic",
+            "bonus_items",
             "death_link",
             "enable_death_fragments",
             "death_link_damage_percent",
@@ -747,6 +776,7 @@ class SlayTheSpire2World(World):
         self.options.campfire_sanity.value = slot_data['campfire_sanity']
         self.options.progressive_starter_card.value = slot_data['progressive_starter_card']
         self.options.progressive_starter_relic.value = slot_data['progressive_starter_relic']
+        self.options.bonus_items.value = deepcopy(slot_data.get('bonus_items', []))
         if self.options.include_floor_checks.value == 0:
             self.options.progressive_starter_card.value = 0
             self.options.progressive_starter_relic.value = 0
