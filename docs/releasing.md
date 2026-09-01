@@ -41,8 +41,11 @@ dist/release-build.json
 
 `Archipelago.zip` is deliberately flat. GUI archive tools should create the
 required `Archipelago` installation directory from the archive name. The build
-also verifies required entries, excluded game/debug libraries, APWorld contents,
-artifact hashes, source commit, and both versions.
+bundles `spire2.apworld` beside the client DLL so the in-game **Install APWorld**
+button can launch it. The exact same APWorld is also kept as the standalone
+GitHub asset. The build verifies that both copies are byte-identical, alongside
+required entries, excluded game/debug libraries, APWorld contents, artifact
+hashes, source commit, and both versions.
 
 ## Publish
 

@@ -35,6 +35,12 @@ RELEASE_NOTES_PATH = Path("scripts/release-notes-template.md")
 EXPECTED_MOD_ID = "Archipelago"
 EXPECTED_WORLD_GAME = "Slay the Spire II"
 EXCLUDED_CLIENT_FILES = {"0Harmony.dll", "GodotSharp.dll", "sts2.dll"}
+REQUIRED_CLIENT_FILES = {
+    "Archipelago.json",
+    "Archipelago.dll",
+    "Archipelago.pck",
+    APWORLD_ARCHIVE_NAME,
+}
 
 
 class ReleaseError(RuntimeError):
@@ -427,6 +433,7 @@ def build_client(paths: BuildPaths, versions: Versions) -> None:
         raise ReleaseError(f"Client build output directory does not exist: {output}")
     files = [path for path in output.iterdir() if include_client_file(path)]
     files.append(pck)
+    files.append(paths.apworld_archive)
     create_flat_client_archive(files, paths.client_archive, versions)
 
 
@@ -459,8 +466,7 @@ def create_flat_client_archive(
                 f"{selected[path.name]} and {path}"
             )
         selected[path.name] = path
-    required = {"Archipelago.json", "Archipelago.dll", "Archipelago.pck"}
-    missing = sorted(required - selected.keys())
+    missing = sorted(REQUIRED_CLIENT_FILES - selected.keys())
     if missing:
         raise ReleaseError(f"Client release is missing required files: {', '.join(missing)}")
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -489,8 +495,7 @@ def verify_client_archive(path: Path, versions: Versions | None = None) -> None:
         raise ReleaseError(
             f"{path.name} must be flat so archive tools create the Archipelago install directory"
         )
-    required = {"Archipelago.json", "Archipelago.dll", "Archipelago.pck"}
-    missing = sorted(required - set(names))
+    missing = sorted(REQUIRED_CLIENT_FILES - set(names))
     if missing:
         raise ReleaseError(f"{path.name} is missing required files: {', '.join(missing)}")
     try:
@@ -545,6 +550,23 @@ def verify_apworld_archive(path: Path, versions: Versions) -> None:
         )
 
 
+def verify_bundled_apworld(client_archive: Path, standalone_apworld: Path) -> None:
+    try:
+        with zipfile.ZipFile(client_archive) as archive:
+            bundled = archive.read(APWORLD_ARCHIVE_NAME)
+    except (OSError, KeyError, zipfile.BadZipFile) as exc:
+        raise ReleaseError(
+            f"Could not read bundled {APWORLD_ARCHIVE_NAME} from {client_archive}: {exc}"
+        ) from exc
+    bundled_hash = hashlib.sha256(bundled).hexdigest()
+    standalone_hash = sha256(standalone_apworld)
+    if bundled_hash != standalone_hash:
+        raise ReleaseError(
+            f"{client_archive.name} contains a different {APWORLD_ARCHIVE_NAME} "
+            f"({bundled_hash}) than the standalone release asset ({standalone_hash})"
+        )
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as file:
@@ -579,6 +601,7 @@ def write_build_manifest(
 def validate_built_assets(paths: BuildPaths, versions: Versions) -> dict[str, Any]:
     verify_client_archive(paths.client_archive, versions)
     verify_apworld_archive(paths.apworld_archive, versions)
+    verify_bundled_apworld(paths.client_archive, paths.apworld_archive)
     manifest = load_json(paths.build_manifest, "release build manifest")
     expected = {
         "commit": current_commit(paths.repo),
@@ -627,6 +650,7 @@ def command_build(args: argparse.Namespace, paths: BuildPaths) -> None:
     build_apworld(paths)
     verify_apworld_archive(paths.apworld_archive, versions)
     build_client(paths, versions)
+    verify_bundled_apworld(paths.client_archive, paths.apworld_archive)
     write_build_manifest(
         paths,
         versions,

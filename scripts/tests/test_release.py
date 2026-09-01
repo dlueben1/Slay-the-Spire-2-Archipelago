@@ -114,6 +114,7 @@ class ClientArchiveTests(unittest.TestCase):
                 "Archipelago.dll",
                 "Archipelago.pck",
                 "Archipelago.MultiClient.Net.dll",
+                "spire2.apworld",
             ):
                 path = inputs / name
                 if name == "Archipelago.json":
@@ -142,6 +143,7 @@ class ClientArchiveTests(unittest.TestCase):
                     "Archipelago/Archipelago.json",
                     "Archipelago/Archipelago.dll",
                     "Archipelago/Archipelago.pck",
+                    "Archipelago/spire2.apworld",
                 ):
                     content = (
                         json.dumps({"id": "Archipelago", "version": "1.0.0"})
@@ -161,6 +163,7 @@ class ClientArchiveTests(unittest.TestCase):
                     "Archipelago.json",
                     "Archipelago.dll",
                     "Archipelago.pck",
+                    "spire2.apworld",
                     "sts2.dll",
                 ):
                     content = (
@@ -172,6 +175,18 @@ class ClientArchiveTests(unittest.TestCase):
 
             with self.assertRaisesRegex(release.ReleaseError, "forbidden files"):
                 release.verify_client_archive(archive_path)
+
+    def test_rejects_different_bundled_and_standalone_apworlds(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            client_archive = root / "Archipelago.zip"
+            standalone = root / "spire2.apworld"
+            standalone.write_bytes(b"standalone")
+            with zipfile.ZipFile(client_archive, "w") as archive:
+                archive.writestr("spire2.apworld", b"different")
+
+            with self.assertRaisesRegex(release.ReleaseError, "different spire2.apworld"):
+                release.verify_bundled_apworld(client_archive, standalone)
 
 
 class PublishVersionTests(unittest.TestCase):

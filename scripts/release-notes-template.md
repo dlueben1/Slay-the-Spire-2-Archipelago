@@ -34,12 +34,11 @@
 
 ### Additional Steps for **Hosts**
 
-7. Download `spire2.apworld`
-8. Open your Archipelago Launcher
-9. Click "Install APWorld"
-10. Select `spire2.apworld` in the file dialog that pops up
-11. **Restart the Archipelago Launcher**
-12. Now you should be able to properly host/generate an Archipelago Session with StS 2
+7. From the game's main menu, click **Install APWorld**. This launches the `spire2.apworld` bundled with the mod.
+8. Confirm the installation, then **restart the Archipelago Launcher**.
+9. You should now be able to host or generate an Archipelago session with Slay the Spire II.
+
+Alternatively, download the standalone `spire2.apworld` asset from this release and install it through the Archipelago Launcher.
 
 - If you want to use `archipelago.gg` to host the game, generate it locally first following the steps above, then upload the `.zip` file from the `output` folder in your Archipelago installation
 
