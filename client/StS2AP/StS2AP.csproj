@@ -19,16 +19,16 @@
     <StartProgram>$(STS2GamePath)\SlayTheSpire2.exe</StartProgram>
     <StartWorkingDirectory>$(STS2GamePath)</StartWorkingDirectory>
 
-    <!-- Fallback defaults for the Windows build machine if local.props is missing. -->
+    <!-- Machine-specific path defaults if local.props is missing. -->
     <STS2GamePath Condition="'$(STS2GamePath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2</STS2GamePath>
     <GodotExePath Condition="'$(GodotExePath)' == ''">godot</GodotExePath>
-    <ModName Condition="'$(ModName)' == ''">ExampleMod</ModName>
-    <ModDisplayName Condition="'$(ModDisplayName)' == ''">Example Mod</ModDisplayName>
-    <ModAuthor Condition="'$(ModAuthor)' == ''">Unknown</ModAuthor>
-    <ModVersion Condition="'$(ModVersion)' == ''">1.0.0</ModVersion>
+
+    <!-- Tracked mod identity. Archipelago.json owns the user-visible mod version. -->
+    <ModName>Archipelago</ModName>
+    <ModDisplayName>Archipelago Client</ModDisplayName>
+    <ModAuthor>Kirbyfanner, PlatanoBailando, Lyxn, MartyredG, Terairk</ModAuthor>
 
     <AssemblyName>$(ModName)</AssemblyName>
-    <Version>$(ModVersion)</Version>
 
     <!-- Build/deploy paths on the Windows build machine. -->
     <ModsOutputDir>$(STS2GamePath)\mods\$(ModName)</ModsOutputDir>
@@ -66,6 +66,7 @@
     <None Update="Archipelago.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <EmbeddedResource Include="Archipelago.json" LogicalName="StS2AP.Archipelago.json" />
   </ItemGroup>
 
   <!-- Create steam_appid.txt for Windows debugging outside Steam. -->

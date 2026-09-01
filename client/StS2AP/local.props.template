@@ -13,11 +13,5 @@
 
     <!-- Godot 4.5.1 .NET executable used to export the mod's PCK. -->
     <GodotExePath>???\Godot_v4.5.1-stable_mono_win64.exe</GodotExePath>
-    
-    <!-- Mod Metadata -->
-    <ModName>Archipelago</ModName>
-    <ModDisplayName>Archipelago Client</ModDisplayName>
-    <ModAuthor>Kirbyfanner, PlatanoBailando, Lyxn, Terairk</ModAuthor>
-    <ModVersion>1.0.0</ModVersion>
   </PropertyGroup>
 </Project>

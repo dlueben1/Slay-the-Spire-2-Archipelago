@@ -8,6 +8,7 @@ using Godot;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using Newtonsoft.Json.Linq;
+using System.Text.Json;
 using StS2AP.Data;
 using StS2AP.Extensions;
 using StS2AP.Models;
@@ -42,6 +43,10 @@ namespace StS2AP
         /// </summary>
         public const int SupportedCompatFlag = 1;
 
+        private const string ModManifestResourceName = "StS2AP.Archipelago.json";
+        private static readonly Lazy<System.Version> ModManifestVersion =
+            new(ReadModManifestVersion);
+
         /// <summary>
         /// The version of the Archipelago Mod (semantic version: major.minor.patch)
         /// </summary>
@@ -49,9 +54,7 @@ namespace StS2AP
         {
             get
             {
-                var version = typeof(ArchipelagoClient).Assembly.GetName().Version;
-                if (version == null)
-                    return "Version Unknown";
+                System.Version version = GetClientSemanticVersion();
                 return $"v{version.Major}.{version.Minor}.{version.Build}";
             }
         }
@@ -534,9 +537,32 @@ namespace StS2AP
             }
         }
 
-        private static System.Version GetClientSemanticVersion() =>
-            typeof(ArchipelagoClient).Assembly.GetName().Version
-            ?? throw new InvalidDataException("The client assembly version is unavailable.");
+        private static System.Version GetClientSemanticVersion() => ModManifestVersion.Value;
+
+        private static System.Version ReadModManifestVersion()
+        {
+            using Stream stream = typeof(ArchipelagoClient).Assembly.GetManifestResourceStream(
+                ModManifestResourceName
+            ) ?? throw new InvalidDataException(
+                $"Embedded mod manifest '{ModManifestResourceName}' was not found."
+            );
+            using JsonDocument manifest = JsonDocument.Parse(stream);
+            if (!manifest.RootElement.TryGetProperty("version", out JsonElement versionElement))
+            {
+                throw new InvalidDataException("Embedded mod manifest has no version field.");
+            }
+
+            string? versionText = versionElement.GetString();
+            string semanticCore = versionText?.Split('-', '+')[0] ?? string.Empty;
+            if (!System.Version.TryParse(semanticCore, out System.Version? version)
+                || version.Build < 0)
+            {
+                throw new InvalidDataException(
+                    $"Embedded mod manifest version '{versionText}' is not semantic X.Y.Z."
+                );
+            }
+            return version;
+        }
 
         private static int CompareMajorMinor(System.Version left, System.Version right)
         {
