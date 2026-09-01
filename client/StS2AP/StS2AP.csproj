@@ -67,6 +67,10 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <EmbeddedResource Include="Archipelago.json" LogicalName="StS2AP.Archipelago.json" />
+    <EmbeddedResource
+      Include="..\..\world\spire2\archipelago.json"
+      LogicalName="StS2AP.Spire2Archipelago.json"
+    />
   </ItemGroup>
 
   <!-- Create steam_appid.txt for Windows debugging outside Steam. -->

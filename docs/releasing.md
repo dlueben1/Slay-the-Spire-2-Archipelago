@@ -12,6 +12,13 @@ APWorld artifact changes, including logic, options, or user-facing APWorld
 descriptions. Increment `CompatFlag` only for an intentionally incompatible
 slot-data contract.
 
+The client embeds the tracked APWorld manifest so it can compare a server's
+APWorld with the APWorld bundled in that client release. Matching compatibility
+flags are the hard compatibility boundary. Patch-only APWorld differences are
+silent; the client recommends an update only when the server is on an older
+major/minor APWorld line than the bundled copy. Client and APWorld version
+numbers are never compared with each other.
+
 ## Validate and build
 
 On Windows, use the PowerShell wrapper:

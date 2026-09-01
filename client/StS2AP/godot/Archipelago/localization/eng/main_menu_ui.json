@@ -2,7 +2,7 @@
   "CONTINUE_RUN.header": "Continue Run?",
   "CONTINUE_RUN.body": "Would you like to resume your last AP save for this character? (Yes, AP keeps the save even if you die.)",
   "APWORLD_OLDER.header": "APWorld Update Recommended",
-  "APWORLD_OLDER.body": "This mod supports the server's older APWorld, but updating the APWorld is recommended when possible.\n\nAPWorld Version: {server}\n\nMod Version: {client}\n\nConnect anyway?",
+  "APWORLD_OLDER.body": "This mod supports the server's older APWorld, but updating the APWorld is recommended when possible.\n\nServer APWorld Version: {server}\n\nBundled APWorld Version: {bundled}\n\nConnect anyway?",
   "INSTALL_APWORLD.header": "Install/Update APWorld?",
   "INSTALL_APWORLD.body": "The APWorld is [i]only necessary[/i] if you're [b]hosting the Archipelago yourself[/b], and to install it you must have the [b]Archipelago Launcher (v0.6.7 or later) installed[/b] for this to work.\n\nThis will install in the background and take a few moments, then please restart your launcher. Proceed?"
 }
