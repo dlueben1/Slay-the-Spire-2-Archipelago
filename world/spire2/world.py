@@ -351,11 +351,11 @@ class SlayTheSpire2World(World):
         return SlayTheSpire2Item(data, name, data.classification, item_id, self.player)
 
     def build_filler_pools(self) -> None:
-        """Pre-compute filler item tier buckets for efficient repeated use.
+        """Pre-compute filler item weights for efficient repeated use.
 
-        Builds universal (buff) and per-character (gold) tier pools once so that
+        Builds universal (buff) and per-character (gold) weight maps once so that
         get_filler_item() and get_filler_item_name() can select from them without
-        rebuilding weight maps on every call.
+        rebuilding option mappings on every call.
 
         Called at the top of create_items(), and defensively by get_filler_item()
         and get_filler_item_name() in case they are invoked before create_items()
@@ -381,25 +381,18 @@ class SlayTheSpire2World(World):
             "Artifact": self.options.artifact_filler_weight.value,
         }
 
-        self.filler_universal_high: list = []
-        self.filler_universal_medium: list = []
-        self.filler_universal_low: list = []
+        # weird looking dictionary comprehension
+        self.filler_universal_weights: dict[str, int] = {
+            item_name: universal_item_option_map[item_name]
+            for item_name in universal_items
+            if universal_item_option_map.get(item_name, 0) > 0
+        }
 
-        for item_name in universal_items.keys():
-            weight = universal_item_option_map.get(item_name, 0)
-            if weight == 5:
-                self.filler_universal_high.append(item_name)
-            elif weight == 3:
-                self.filler_universal_medium.append(item_name)
-            elif weight == 1:
-                self.filler_universal_low.append(item_name)
-
-        # --- Per-character (gold) item pools ---
-        # Gold items are character-specific ("Ironclad One Gold", etc.), so we build
-        # a separate set of tier buckets for each character in the run.
-        self.filler_char_high: dict = {}
-        self.filler_char_medium: dict = {}
-        self.filler_char_low: dict = {}
+        # --- Per-character (gold) item weights ---
+        # Gold items are character-specific ("Ironclad One Gold", etc.), so keep
+        # a separate weight map and all-disabled fallback for each generated character.
+        self.filler_char_weights: dict[str, dict[str, int]] = {}
+        self.filler_char_fallbacks: dict[str, str] = {}
 
         for config in self.characters:
             # Resolve the lookup key: vanilla characters use their name, modded characters
@@ -408,7 +401,7 @@ class SlayTheSpire2World(World):
             # @Platano this is my understanding that will hopefully help while you're working on
             # modded characters, let me know if this is wrong.
             char_lookup = config.name if config.mod_num == 0 else config.mod_num
-            high, medium, low = [], [], []
+            weights: dict[str, int] = {}
 
             if char_lookup in chars_to_items:
                 char_gold_items = [
@@ -424,50 +417,19 @@ class SlayTheSpire2World(World):
                     else:
                         weight = 0
 
-                    if weight == 5:
-                        high.append(item_name)
-                    elif weight == 3:
-                        medium.append(item_name)
-                    elif weight == 1:
-                        low.append(item_name)
-
-            self.filler_char_high[config.name] = high
-            self.filler_char_medium[config.name] = medium
-            self.filler_char_low[config.name] = low
-
-        # --- Fallback item ---
-        # Used when the player has disabled every filler type (all weights set to 0).
-        # We pick "One Gold" for a random character as a safe, always-valid default.
-        self.filler_fallback: str = "Ironclad One Gold"
-        if self.characters:
-            fallback_char = self.random.choice(self.characters)
-            fallback_lookup = fallback_char.name if fallback_char.mod_num == 0 else fallback_char.mod_num
-            if fallback_lookup in chars_to_items:
-                for item_name in chars_to_items[fallback_lookup]:
+                    if weight > 0:
+                        weights[item_name] = weight
                     if "One Gold" in item_name:
-                        self.filler_fallback = item_name
-                        break
+                        self.filler_char_fallbacks[config.name] = item_name
 
-    # Returns a filler item selected using a two-stage rarity tier system.
-    #
-    # A rarity tier (HIGH / MEDIUM / LOW) is chosen first at a fixed probability,
-    # then one item is selected uniformly from all items in that tier. 
-    # 
-    # This means the number of items in a tier does not affect the probability of
-    # other tiers being selected. (I learned this the hard way while testing).
+            self.filler_char_weights[config.name] = weights
+
     def get_filler_item(self, character: Optional[str] = None) -> str:
-        """Select a filler item from pre-built tier pools.
+        """Select a filler item using its configured relative weight.
 
-        Combines the universal (buff) tier pools with the given character's gold
-        tier pools, then picks an item using two-stage rarity tier selection.
-
-        Tier probability weights:
-            HIGH   ~50% — tier chosen most often
-            MEDIUM ~33%
-            LOW    ~17% — tier chosen least often
-
-        Within a selected tier, one item is chosen uniformly (equal probability
-        regardless of how many items are in the tier).
+        Combines universal buffs with the given character's gold items, excludes
+        options set to None, and makes one weighted selection. Low, Medium, and
+        High contribute 1, 3, and 5 shares respectively.
 
         Args:
             character: Optional character name. If provided, that character's gold
@@ -479,58 +441,32 @@ class SlayTheSpire2World(World):
         """
         # Defensive: pools should be built at the top of create_items(), but
         # build them now if called before that (e.g. by the AP fill algorithm).
-        if not hasattr(self, 'filler_universal_high'):
+        if not hasattr(self, 'filler_universal_weights'):
             self.build_filler_pools()
-
-        TIER_HIGH_WEIGHT = 50
-        TIER_MEDIUM_WEIGHT = 33
-        TIER_LOW_WEIGHT = 17
 
         # If no character was specified, pick one at random.
         if character is None and self.characters:
             character = self.random.choice(self.characters).name
 
-        # Merge the universal pools with the character-specific gold pools.
-        # List concatenation is cheap here since the pools are pre-built.
-        high_items = self.filler_universal_high + self.filler_char_high.get(character, [])
-        medium_items = self.filler_universal_medium + self.filler_char_medium.get(character, [])
-        low_items = self.filler_universal_low + self.filler_char_low.get(character, [])
+        # Merge universal candidates with the selected character's gold candidates.
+        weighted_items = dict(self.filler_universal_weights)
+        weighted_items.update(self.filler_char_weights.get(character, {}))
 
         # If the player has disabled every filler item (all weights set to 0),
-        # return the pre-computed safe fallback.
-        if not high_items and not medium_items and not low_items:
-            return self.filler_fallback
+        # return the matching character's safe One Gold fallback.
+        if not weighted_items:
+            return self.filler_char_fallbacks.get(character, "Ironclad One Gold")
 
-        # --- Stage 1: Select a rarity tier ---
-        tier_selection = self.random.choices(
-            ['high', 'medium', 'low'],
-            weights=[TIER_HIGH_WEIGHT, TIER_MEDIUM_WEIGHT, TIER_LOW_WEIGHT],
-            k=1
+        return self.random.choices(
+            population=list(weighted_items),
+            weights=list(weighted_items.values()),
+            k=1,
         )[0]
-
-        # --- Stage 2: Pick an item from the selected tier, with fallback ---
-        # If the chosen tier is empty, try the next available tier:
-        #   LOW  chosen but empty: try MEDIUM, then HIGH
-        #   MEDIUM chosen but empty: try HIGH, then LOW
-        #   HIGH  chosen but empty: try MEDIUM, then LOW
-        if tier_selection == 'low':
-            tier_candidates = [low_items, medium_items, high_items]
-        elif tier_selection == 'medium':
-            tier_candidates = [medium_items, high_items, low_items]
-        else:  # 'high'
-            tier_candidates = [high_items, medium_items, low_items]
-
-        for tier in tier_candidates:
-            if tier:
-                return self.random.choice(tier)
-
-        # This should never be reached given the early fallback check above.
-        return self.filler_fallback
 
     # Randomly selects a filler item name; called by the AP framework for fill and item links.
     def get_filler_item_name(self) -> str:
         # Defensive: ensure pools are built before the AP fill algorithm calls us.
-        if not hasattr(self, 'filler_universal_high'):
+        if not hasattr(self, 'filler_universal_weights'):
             self.build_filler_pools()
         return self.get_filler_item()
 
