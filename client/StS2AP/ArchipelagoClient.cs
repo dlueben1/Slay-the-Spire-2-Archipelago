@@ -1345,6 +1345,12 @@ namespace StS2AP
             if(slotData.ContainsKey("release_on_victory"))
                 settings.ReleaseOnVictory = Convert.ToBoolean(slotData["release_on_victory"]);
 
+            if (slotData.TryGetValue("bonus_items", out object? bonusItemsValue))
+            {
+                settings.BonusItems = BonusItemDefinition.ParseAll(bonusItemsValue);
+                LogUtility.Info($"SLOT - Bonus Items configured: {settings.BonusItems.Count}");
+            }
+
             if (slotData.ContainsKey("campfire_sanity"))
                 settings.CampfireSanity = Convert.ToInt32(slotData["campfire_sanity"]) != 0;
 

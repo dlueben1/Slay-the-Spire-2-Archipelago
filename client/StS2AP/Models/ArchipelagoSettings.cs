@@ -88,6 +88,32 @@ namespace StS2AP.Models
         /// <summary>Whether a victory releases the winning character's remaining checks.</summary>
         public bool ReleaseOnVictory { get; set; } = true;
 
+        private IReadOnlyList<BonusItemDefinition> _bonusItems = Array.Empty<BonusItemDefinition>();
+        private Dictionary<string, List<BonusItemDefinition>> _bonusItemsByCategory =
+            new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Ordered bonus item definitions from the YAML. Order within a category is significant:
+        /// the Nth received bonus item of a category unlocks the Nth definition.
+        /// </summary>
+        public IReadOnlyList<BonusItemDefinition> BonusItems
+        {
+            get => _bonusItems;
+            set
+            {
+                _bonusItems = value ?? Array.Empty<BonusItemDefinition>();
+                _bonusItemsByCategory = _bonusItems
+                    .GroupBy(definition => definition.Category, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
+            }
+        }
+
+        /// <summary>Returns the ordered definitions configured for one bonus category.</summary>
+        public IReadOnlyList<BonusItemDefinition> BonusItemsFor(string category) =>
+            _bonusItemsByCategory.TryGetValue(category, out List<BonusItemDefinition>? definitions)
+                ? definitions
+                : Array.Empty<BonusItemDefinition>();
+
         public bool CampfireSanity { get; set; }
         public bool GoldSanity { get; set; }
         public bool PotionSanity { get; set; }

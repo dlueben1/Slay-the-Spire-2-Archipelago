@@ -70,6 +70,17 @@
       Include="..\..\world\spire2\archipelago.json"
       LogicalName="StS2AP.Spire2Archipelago.json"
     />
+
+    <!-- Bonus relic pool data ships next to the mod DLL so it can be updated by editing
+         the shared JSON and rebuilding, without recompiling code. -->
+    <None Include="..\..\shared\relic_custom_pools.json">
+      <Link>relic_custom_pools.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\shared\bonus_relic_blacklist.json">
+      <Link>bonus_relic_blacklist.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <!-- Create steam_appid.txt for Windows debugging outside Steam. -->
@@ -233,6 +244,16 @@ dotnet/embed_build_outputs=false
     </ItemGroup>
     <Copy SourceFiles="@(DependencyDlls)" DestinationFolder="$(ModsOutputDir)" />
     <Copy SourceFiles="Archipelago.json" DestinationFiles="$(ModsOutputDir)\Archipelago.json" />
+
+    <!-- Deploy the bonus relic pool data alongside the DLL so the running mod can read it. -->
+    <Copy
+      SourceFiles="..\..\shared\relic_custom_pools.json"
+      DestinationFiles="$(ModsOutputDir)\relic_custom_pools.json"
+    />
+    <Copy
+      SourceFiles="..\..\shared\bonus_relic_blacklist.json"
+      DestinationFiles="$(ModsOutputDir)\bonus_relic_blacklist.json"
+    />
 
     <!-- Copy the APWorld if it has already been built. -->
     <PropertyGroup>

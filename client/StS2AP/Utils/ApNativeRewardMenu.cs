@@ -31,6 +31,9 @@ public static class ApNativeRewardMenu
         Relic,
         Potion,
         Ancient,
+
+        // Kept distinct from Relic so claiming can never reach the Relic Coupon bookkeeping.
+        Bonus,
     }
 
     private sealed record ReceiptPresentation(
@@ -118,6 +121,7 @@ public static class ApNativeRewardMenu
             ItemTable.APItem.Relic => BuildRelicReward(presentation, player),
             ItemTable.APItem.Potion => BuildPotionReward(presentation, player),
             ItemTable.APItem.ProgressiveAncient => BuildAncientReward(presentation, player),
+            ItemTable.APItem.BonusWaxRelic => BuildBonusRelicReward(presentation, receipt, player),
             _ => new ApUnavailableReward(
                 presentation,
                 player,
@@ -201,9 +205,51 @@ public static class ApNativeRewardMenu
         return new ApNativePotionReward(potion, player, presentation);
     }
 
-    private static Reward BuildAncientReward(ReceiptPresentation presentation, Player player)
+    /// <summary>
+    /// Builds the row for a bonus relic. Bonus items are shared by every character and are not
+    /// gated by earned relic rewards, so this deliberately bypasses the Relic Coupon bookkeeping.
+    /// </summary>
+    private static Reward BuildBonusRelicReward(
+        ReceiptPresentation presentation,
+        IndexedItemInfo receipt,
+        Player player)
     {
-        IReadOnlyList<RelicModel> choices =
+        if (!ArchipelagoClient.Progress.TryGetBonusOrdinal(
+                receipt,
+                out string category,
+                out int ordinal))
+        {
+            return new ApUnavailableReward(
+                presentation,
+                player,
+                "This bonus item does not map to a known bonus category."
+            );
+        }
+
+        RelicModel? resolved = ArchipelagoClient.Progress.GetOrAssignBonusRelic(
+            category,
+            ordinal,
+            player
+        );
+        if (resolved == null)
+        {
+            return new ApUnavailableReward(
+                presentation,
+                player,
+                "The bonus relic could not be resolved."
+            );
+        }
+
+        RelicModel relic = CreateMutableRelic(resolved, player);
+        relic.IsWax = true;
+
+        // Show the resolved relic ("Wax The Boot") rather than the generic "Bonus Wax Relic" label.
+        var bonusPresentation = presentation with { ItemName = $"Wax {resolved.Title}" };
+        return new ApNativeRelicReward(relic, player, bonusPresentation, ApRewardKind.Bonus);
+    }
+
+    private static Reward BuildAncientReward(ReceiptPresentation presentation, Player player)
+    {        IReadOnlyList<RelicModel> choices =
             ArchipelagoClient.Progress.GetOrAssignAncientRelicChoices(
                 presentation.ItemIndex,
                 player

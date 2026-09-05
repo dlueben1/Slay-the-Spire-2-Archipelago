@@ -111,7 +111,7 @@ namespace StS2AP.Patches
             /// no matter how many characters we add in the future.
             if (item.ItemId < 10000)
             {
-                HandleUniversalItem(item, index);
+                HandleUniversalItem(indexedInfo);
                 return;
             }
 
@@ -304,11 +304,13 @@ namespace StS2AP.Patches
         /// Handles universal items that do not have a character offset baked in.
         ///
         /// Universal items have no character offset, so their ItemId is cast directly to APItem
-        /// without any modulo operation. Currently all universal items are combat buffs applied
-        /// via <see cref="BuffUtility"/> at the start of the player's next turn.
+        /// without any modulo operation. Buffs are applied via <see cref="BuffUtility"/> at the start
+        /// of the player's next turn; bonus items instead become persistent loot-menu rewards.
         /// </summary>
-        private static void HandleUniversalItem(ItemInfo item, int index)
+        private static void HandleUniversalItem(IndexedItemInfo indexedInfo)
         {
+            var item = indexedInfo.Item;
+            var index = indexedInfo.Index;
             // Cast ItemId directly � no modulo needed since universal items have no character offset.
             var universalId = (APItem)item.ItemId;
             switch (universalId)
@@ -329,12 +331,48 @@ namespace StS2AP.Patches
                 case APItem.AdditionalCardReward:
                     BuffUtility.EnqueueBuff(universalId, index);
                     break;
+                case APItem.BonusWaxRelic:
+                    HandleBonusItem(indexedInfo);
+                    break;
                 default:
                     LogUtility.Warn(
                         $"[ArchipelagoClient] Received unrecognized universal item ID {item.ItemId} ({item.ItemName}) � not handled."
                     );
                     break;
             }
+        }
+
+        /// <summary>
+        /// Records a character-agnostic bonus receipt so it can be claimed from the AP reward menu.
+        /// The Nth copy of a category unlocks the Nth entry configured in the YAML; copies beyond
+        /// the configured count are intentionally discarded rather than queued for a later entry.
+        /// </summary>
+        private static void HandleBonusItem(IndexedItemInfo indexedInfo)
+        {
+            var progress = ArchipelagoClient.Progress;
+            if (!progress.TryGetBonusOrdinal(indexedInfo, out string category, out int ordinal))
+            {
+                LogUtility.Warn(
+                    $"Received bonus item {indexedInfo.Item.ItemName} with no known category; ignoring"
+                );
+                return;
+            }
+
+            int configuredCount = ArchipelagoClient.Settings?.BonusItemsFor(category).Count ?? 0;
+            if (ordinal >= configuredCount)
+            {
+                LogUtility.Warn(
+                    $"Ignoring extra {indexedInfo.Item.ItemName}: this is copy {ordinal + 1} but only "
+                        + $"{configuredCount} {category} bonus item(s) are configured for this slot"
+                );
+                return;
+            }
+
+            progress.AllReceivedItems.Add(indexedInfo);
+            LogUtility.Success(
+                $"Unlocked {category} bonus item {ordinal + 1} of {configuredCount}"
+            );
+            NotificationUtility.HandleItemSend(indexedInfo.Item);
         }
 
         /// <summary>

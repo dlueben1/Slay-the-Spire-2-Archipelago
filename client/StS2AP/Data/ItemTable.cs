@@ -62,6 +62,13 @@ namespace StS2AP.Data
             Vigor = 511,
             Thorns = 512,
             Artifact = 513,
+
+            /// ── Bonus items (universal / character-agnostic) ───────────────────────────
+            /// Unlike the buffs above, these are persistent loot-menu rewards that can be
+            /// claimed once per run by any character, on every run. The Nth copy received
+            /// unlocks the Nth entry configured in the YAML's bonus_items list.
+            /// IDs match universal_bonus_items in items.py.
+            BonusWaxRelic = 600,
         }
 
         public static Dictionary<int, string> Items = new Dictionary<int, string>
@@ -111,6 +118,7 @@ namespace StS2AP.Data
             { 511, "Vigor" },
             { 512, "Thorns" },
             { 513, "Artifact" },
+            { 600, "Bonus Wax Relic" },
         };
 
         /// <summary>
@@ -157,6 +165,7 @@ namespace StS2AP.Data
               case APItem.BossGold:
                     return false;
               case APItem.Potion:
+              case APItem.BonusWaxRelic:
                     return true;
               case APItem.SwarmingElites:
               case APItem.WearyTraveler:

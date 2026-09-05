@@ -196,6 +196,11 @@ namespace StS2AP.Utils
             return null;
         }
 
+        /// <summary>
+        /// Handles the notification for an item being sent.
+        /// This is the default way that item notifications are handled.
+        /// </summary>
+        /// <param name="msg">The log message containing information about the item being sent.</param>
         public static void HandleItemSend(ItemSendLogMessage msg)
         {
             if (!msg.IsRelatedToActivePlayer)
@@ -223,6 +228,20 @@ namespace StS2AP.Utils
                 }
             }
             EnqueueNotification(result, type);
+        }
+
+        /// <summary>
+        /// Handles the notification for an item being sent.
+        /// This is an overload that uses the simple item info rather than the full log message.
+        /// </summary>
+        /// <param name="info">The information about the item being sent.</param>
+        public static void HandleItemSend(ItemInfo info)
+        {
+            string? itemIcon = GetItemIcon(info);
+            string iconText = itemIcon == null ? string.Empty : $"{itemIcon} ";
+            string message =
+                $"{info.Player} sent you {iconText}[sine][color=yellow]{info.ItemDisplayName}[/color][/sine]!";
+            EnqueueNotification(message, NotificationType.ItemReceived);
         }
 
         public static void HandleOtherAPMessages(

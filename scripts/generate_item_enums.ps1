@@ -34,8 +34,8 @@ character_list = list(getattr(chars, "character_list", []))
 
 # collect raw items (base + universal) with non-None codes
 raw_entries = []
-# base_item_table and universal_items are typed dicts of name->ItemData
-for src in ("universal_items", "base_item_table"):
+# base_item_table, universal_items, and universal_bonus_items are typed dicts of name->ItemData
+for src in ("universal_items", "universal_bonus_items", "base_item_table"):
     table = getattr(items, src, {})
     if table:
         for name, itemdata in table.items():
