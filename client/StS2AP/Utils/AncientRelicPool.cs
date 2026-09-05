@@ -20,31 +20,43 @@ namespace StS2AP.Utils
         /// <summary>Relics that must never appear in AP-built Ancient choice pools.</summary>
         private static readonly Type[] BlacklistedRelicTypes =
         [
-            typeof(GoldenCompass),
             typeof(Driftwood),
         ];
 
         private static bool IsBlacklisted(RelicModel relic) =>
             BlacklistedRelicTypes.Any(type => type.IsInstanceOfType(relic));
 
-        private static bool IsExcluded(RelicModel relic) =>
-            IsBlacklisted(relic) || ProgressiveStarterUtility.ShouldExcludeAncientRelic(relic);
+        private static bool IsExcluded(RelicModel relic, int? startOfActIndex) =>
+            IsBlacklisted(relic)
+            // Golden Compass regenerates the current map on pickup. Only offer it at the
+            // Act 2 Ancient, never in an Anytime reward or at the start of another act.
+            || (relic is GoldenCompass && startOfActIndex != 1)
+            || ProgressiveStarterUtility.ShouldExcludeAncientRelic(relic);
 
         /// <summary>
         /// Selects a stable set of three relics for a reward key without consuming the game's RNG.
+        /// startOfActIndex is the zero-based act of an immediate Ancient encounter, or null
+        /// for Anytime rewards. It is independent of ancientActIndex, which scopes the source
+        /// pool and is null for True Chaos even when offered at the start of a specific act.
         /// </summary>
         public static IReadOnlyList<RelicModel> CreateChoices(
             Player player,
             string choiceKey,
             IReadOnlyCollection<ModelId>? reservedRelicIds = null,
             int? ancientActIndex = null,
-            AncientEventModel? specificAncient = null)
+            AncientEventModel? specificAncient = null,
+            int? startOfActIndex = null)
         {
             var ownedOrReservedRelicIds = player.Relics.Select(relic => relic.Id).ToHashSet();
             if (reservedRelicIds != null)
                 ownedOrReservedRelicIds.UnionWith(reservedRelicIds);
             var eligibleAncients = GetEligibleAncients(ancientActIndex, specificAncient);
-            var candidatesById = CollectCandidateRelics(eligibleAncients, ownedOrReservedRelicIds, logFailures: true);
+            var candidatesById = CollectCandidateRelics(
+                eligibleAncients,
+                ownedOrReservedRelicIds,
+                logFailures: true,
+                startOfActIndex: startOfActIndex
+            );
 
             if (candidatesById.Count < ChoiceCount)
             {
@@ -241,7 +253,8 @@ namespace StS2AP.Utils
         private static Dictionary<ModelId, RelicModel> CollectCandidateRelics(
             IEnumerable<AncientEventModel> ancients,
             IReadOnlySet<ModelId> ownedOrReservedRelicIds,
-            bool logFailures)
+            bool logFailures,
+            int? startOfActIndex = null)
         {
             var candidatesById = new Dictionary<ModelId, RelicModel>();
             foreach (var ancient in ancients)
@@ -257,7 +270,7 @@ namespace StS2AP.Utils
                         // TODO: do model selection in a better way than this
                         if (relic.Id == ModelId.none ||
                             ownedOrReservedRelicIds.Contains(relic.Id) ||
-                            IsExcluded(relic))
+                            IsExcluded(relic, startOfActIndex))
                         {
                             continue;
                         }

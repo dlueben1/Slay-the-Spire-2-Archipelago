@@ -83,9 +83,6 @@ namespace StS2AP.Patches
                 // Log the results for debugging
                 LogUtility.Info($"Can Rest: {canRest}, Can Smith: {canSmith}");
 
-                // Determine if any are enabled (needed for softlock prevention)
-                bool anyEnabled = canRest || canSmith;
-
                 // Removing the heal option (potentially) in favor of the fake heal option
                 if(!canRest)
                 {
@@ -98,7 +95,13 @@ namespace StS2AP.Patches
                     __result.RemoveAll(n => "SMITH".Equals(n.OptionId));
                 }
 
-                if (!anyEnabled)
+                // Receiving Progressive Smith does not guarantee that Smith is usable: the
+                // native option is disabled when the deck has no upgradeable cards. AP check
+                // options must not be required to leave, so only count native enabled actions.
+                bool hasEnabledNativeAction = __result.Any(option =>
+                    option is not APRestOption && option.IsEnabled
+                );
+                if (!hasEnabledNativeAction)
                 {
                     // Being unable to do anything results in a softlock, so we give something to do.
                     // TODO: I wonder how this interacts with the potion when healing relic

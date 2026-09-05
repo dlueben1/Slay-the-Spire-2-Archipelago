@@ -213,7 +213,8 @@ namespace StS2AP.Patches
             var choices = AncientRelicPool.CreateChoices(
                 player,
                 choiceKey,
-                ancientActIndex: poolActIndex
+                ancientActIndex: poolActIndex,
+                startOfActIndex: currentAct - 1
             );
             if (choices.Count != AncientRelicPool.ChoiceCount)
             {

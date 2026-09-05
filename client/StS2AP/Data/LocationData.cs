@@ -11,13 +11,15 @@ namespace StS2AP.Data
 {
     public static class LocationData
     {
+        private const long CharacterLocationStride = 10000;
+
         /// <summary>
         /// Combines a base Location ID with a character's offset ID
         /// </summary>
         /// <param name="locationId">The base ID of a location</param>
         /// <param name="character">The character to offset the location by</param>
         /// <returns>The combined location ID.</returns>
-        /// <example>If characterOffset=1 and locationId=88, then we'd return 10088</example>
+        /// <example>If characterOffset=1 and locationId=88, then we'd return 88</example>
         private static long CombineLocationAndCharacterIds(long locationId, CharacterModel character)
         {
             // Character offset (for locations this is zero-based, so it needs to be shifted)
@@ -28,8 +30,9 @@ namespace StS2AP.Data
                 return -1;
             }
 
-            // Place the character offset in the leftmost position and location ID in the rightmost 4 digits (zero-padded)
-            return (long) _characterOffset + locationId;
+            // AP character offsets are one-based while location blocks are zero-based:
+            // Ironclad=0xxxx, Silent=1xxxx, Defect=2xxxx, etc.
+            return ((_characterOffset.Value - 1) * CharacterLocationStride) + locationId;
         }
 
         /// <summary>

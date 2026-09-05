@@ -226,6 +226,10 @@ namespace StS2AP.Patches
                 GameUtility.CurrentPlayer
             );
             RelicCoupons.EnsureOwnedBy(GameUtility.CurrentPlayer, silent: true);
+            // Rebuild these counts from AP history.
+            ArchipelagoClient.Progress.ProgressiveAncients.Clear();
+            ArchipelagoClient.Progress.ProgressiveRests.Clear();
+            ArchipelagoClient.Progress.ProgressiveSmiths.Clear();
             Patches_ItemProcessor.ReprocessItems();
             RelicRewardUtility.ReconcileBankedRewards(GameUtility.CurrentPlayer);
             ArchipelagoClient.Progress.InitializeFromServer(GameUtility.CurrentPlayer);
