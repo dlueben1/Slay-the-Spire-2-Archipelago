@@ -9,6 +9,7 @@ using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Multiplayer;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.Audio;
+using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
@@ -245,8 +246,17 @@ namespace StS2AP.Patches
             [HarmonyPrefix]
             public static bool intercept(NCharacterSelectScreen __instance)
             {
+                var character = BetaMainCompatibility.GetLocalCharacter(__instance.Lobby);
+                if (!ArchipelagoClient.CanSelectCharacter(character, out string blockedReason))
+                {
+                    __instance.Lobby.SetReady(ready: false);
+                    __instance.GetNode<NConfirmButton>("ConfirmButton").Disable();
+                    LogUtility.Warn($"Blocked AP singleplayer embark: {blockedReason}");
+                    NotificationUtility.ShowRawText(blockedReason);
+                    return false;
+                }
 
-                var charName = BetaMainCompatibility.GetLocalCharacter(__instance.Lobby).Id.Entry;
+                var charName = character.Id.Entry;
                 foreach(var entry in GameUtility.APSaves)
                 {
                     if (entry.Value.Length > 0)

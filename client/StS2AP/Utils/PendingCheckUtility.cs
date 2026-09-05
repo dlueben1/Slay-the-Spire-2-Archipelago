@@ -9,36 +9,79 @@ namespace StS2AP.Utils
     /// </summary>
     public static class PendingCheckUtility
     {
-        private static readonly object _fileLock = new();
+        private const string OutboxPrefix = "user://sts_ap_pending_checks_v2_";
+        private static readonly object _stateLock = new();
+        private static readonly HashSet<string> _reportedLegacyPaths = new(StringComparer.Ordinal);
+        private static BoundApSession? _boundSession;
+
+        private sealed record BoundApSession(
+            ArchipelagoSession Session,
+            ApSessionIdentity Identity
+        );
+
+        /// <summary>
+        /// Captures the authenticated AP destination used by every later outbox operation. This
+        /// must be called only after login has supplied authoritative room, team, and slot data.
+        /// </summary>
+        internal static void BindAuthenticatedSession(
+            ArchipelagoSession session,
+            string serverAddress,
+            string roomSeed
+        )
+        {
+            ArgumentNullException.ThrowIfNull(session);
+            var identity = ApSessionIdentity.Create(
+                serverAddress,
+                roomSeed,
+                session.ConnectionInfo.Team,
+                session.ConnectionInfo.Slot
+            );
+
+            lock (_stateLock)
+            {
+                _boundSession = new BoundApSession(session, identity);
+                ReportLegacyOutboxIfPresent(roomSeed);
+            }
+
+            LogUtility.Debug($"Bound pending-check outbox to AP session {identity}");
+        }
 
         /// <summary>
         /// Adds a newly earned location to the durable outbox, then attempts to send it
-        /// immediately when the Archipelago socket still reports itself as connected.
+        /// immediately when the same authenticated Archipelago session is still connected.
         /// Checks already present in the outbox are not submitted a second time here; the
         /// reconnect reconciliation path is responsible for retrying them.
         /// </summary>
         /// <param name="locationId">The Archipelago location ID earned by the player.</param>
         public static void RecordAndSend(long locationId)
         {
-            if (!TryRecord(locationId))
+            BoundApSession? bound = GetBoundSession();
+            if (bound == null)
             {
+                LogUtility.Error(
+                    $"Could not persist location check {locationId}: no authenticated AP identity is bound"
+                );
+                TrySendWithoutPersistence(locationId);
                 return;
             }
 
-            if (!ArchipelagoClient.IsConnected)
+            if (!TryRecord(bound.Identity, locationId))
+                return;
+
+            if (!IsCurrentConnectedSession(bound))
             {
                 LogUtility.Warn(
-                    $"Queued location check {locationId} until Archipelago reconnects"
+                    $"Queued location check {locationId} until its Archipelago session reconnects"
                 );
                 return;
             }
 
-            _ = SendAsync(ArchipelagoClient.Session, new[] { locationId }, replaying: false);
+            _ = SendAsync(bound, new[] { locationId }, replaying: false);
         }
 
         /// <summary>
-        /// Reconciles the durable outbox against authoritative state from a fresh login,
-        /// then resends only checks that the server still reports as missing.
+        /// Reconciles the current identity's durable outbox against authoritative state from a
+        /// fresh login, then resends only checks that the current slot recognizes and still lacks.
         /// </summary>
         /// <remarks>
         /// This must run before any new checks are submitted through the new session. At that
@@ -47,26 +90,20 @@ namespace StS2AP.Utils
         /// </remarks>
         public static void ReconcileAndSend()
         {
-            if (!ArchipelagoClient.IsConnected)
-            {
+            BoundApSession? bound = GetBoundSession();
+            if (bound == null || !IsCurrentConnectedSession(bound))
                 return;
-            }
 
-            ArchipelagoSession session = ArchipelagoClient.Session;
             HashSet<long> pending;
             try
             {
-                lock (_fileLock)
+                lock (_stateLock)
                 {
-                    var path = GetPendingCheckPath();
-                    if (path == null)
-                    {
-                        return;
-                    }
-
-                    pending = Load(path);
-                    pending.ExceptWith(session.Locations.AllLocationsChecked);
-                    Save(path, pending);
+                    string path = GetPendingCheckPath(bound.Identity);
+                    PendingCheckOutbox outbox = Load(path, bound.Identity);
+                    outbox.LocationIds.ExceptWith(bound.Session.Locations.AllLocationsChecked);
+                    Save(path, outbox);
+                    pending = new HashSet<long>(outbox.LocationIds);
                 }
             }
             catch (Exception ex)
@@ -76,91 +113,91 @@ namespace StS2AP.Utils
             }
 
             if (pending.Count == 0)
-            {
                 return;
-            }
 
-            foreach (var locationId in pending)
+            var recognized = pending
+                .Where(bound.Session.Locations.AllLocations.Contains)
+                .ToHashSet();
+            int unrecognizedCount = pending.Count - recognized.Count;
+            if (unrecognizedCount > 0)
+            {
+                LogUtility.Warn(
+                    $"Kept {unrecognizedCount} pending location check(s) that are not present "
+                        + $"in AP session {bound.Identity}"
+                );
+            }
+            if (recognized.Count == 0)
+                return;
+
+            foreach (long locationId in recognized)
             {
                 if (!ArchipelagoClient.CheckedLocations.Contains(locationId))
-                {
                     ArchipelagoClient.CheckedLocations.Add(locationId);
-                }
             }
 
             LogUtility.Info(
-                $"Replaying {pending.Count} pending location check(s) after reconnecting"
+                $"Replaying {recognized.Count} pending location check(s) after reconnecting"
             );
-            _ = SendAsync(session, pending.ToArray(), replaying: true);
+            _ = SendAsync(bound, recognized.ToArray(), replaying: true);
         }
 
         /// <summary>
-        /// Attempts to add a location to the slot-and-seed-specific outbox on disk.
+        /// Attempts to add a location to the identity-specific outbox on disk.
         /// </summary>
-        /// <param name="locationId">The location ID to persist.</param>
         /// <returns>
         /// <see langword="true"/> when the caller should attempt an immediate network send.
-        /// This means either the location was newly persisted or persistence was unavailable
-        /// and sending is still preferable to silently dropping the check.
-        /// <see langword="false"/> means the location was already present in the outbox, so
-        /// this call should not create another same-session send attempt.
+        /// <see langword="false"/> when the location was already present or could not be
+        /// associated with the supplied authenticated identity.
         /// </returns>
-        private static bool TryRecord(long locationId)
+        private static bool TryRecord(ApSessionIdentity identity, long locationId)
         {
             try
             {
-                lock (_fileLock)
+                lock (_stateLock)
                 {
-                    var path = GetPendingCheckPath();
-                    if (path == null)
-                    {
-                        LogUtility.Error(
-                            $"Could not persist location check {locationId}: slot or seed was unavailable"
-                        );
-                        return true;
-                    }
-
-                    var pending = Load(path);
-                    if (!pending.Add(locationId))
-                    {
+                    string path = GetPendingCheckPath(identity);
+                    PendingCheckOutbox outbox = Load(path, identity);
+                    if (!outbox.LocationIds.Add(locationId))
                         return false;
-                    }
 
-                    Save(path, pending);
+                    Save(path, outbox);
                     return true;
                 }
             }
             catch (Exception ex)
             {
                 LogUtility.Error($"Failed to persist location check {locationId}: {ex}");
-                // Preserve the previous behavior if local persistence is unavailable: make
-                // the immediate send attempt instead of silently suppressing the check.
+                // The currently authenticated session is still the correct destination. Preserve
+                // the previous best-effort behavior rather than silently dropping the check.
                 return true;
             }
         }
 
         /// <summary>
-        /// Submits one or more recorded location IDs without removing them from the outbox.
-        /// A later fresh login is required to prove that the server received the submission.
+        /// Submits recorded location IDs without removing them from the outbox. A later fresh
+        /// login to the same identity is required to prove that the server received them.
         /// </summary>
-        /// <param name="session">The session that should transmit the locations.</param>
-        /// <param name="locationIds">The exact location IDs to submit.</param>
-        /// <param name="replaying">
-        /// <see langword="true"/> when these IDs came from reconnect reconciliation;
-        /// <see langword="false"/> for the first send attempt when a check is earned.
-        /// </param>
         private static async Task SendAsync(
-            ArchipelagoSession session,
+            BoundApSession bound,
             long[] locationIds,
             bool replaying
         )
         {
+            if (!IsCurrentConnectedSession(bound))
+            {
+                LogUtility.Warn(
+                    $"Location check transmission cancelled because AP session {bound.Identity} "
+                        + "is no longer current"
+                );
+                return;
+            }
+
             try
             {
                 // Keep the IDs in the durable outbox after this call. The SDK marks checks
                 // locally before its socket write completes, so only a later fresh login can
                 // prove that the server received them.
-                await session.Locations.CompleteLocationChecksAsync(locationIds);
+                await bound.Session.Locations.CompleteLocationChecksAsync(locationIds);
                 LogUtility.Info(
                     replaying
                         ? $"Resubmitted {locationIds.Length} pending location check(s)"
@@ -176,52 +213,73 @@ namespace StS2AP.Utils
         }
 
         /// <summary>
-        /// Builds the Godot user-data path for the current slot's pending-check outbox.
+        /// Preserves the old immediate-send behavior if identity binding failed. Nothing is
+        /// persisted or replayed because ownership could not be proven.
         /// </summary>
-        /// <returns>
-        /// A slot-and-seed-specific <c>user://</c> path, or <see langword="null"/> before the
-        /// client has enough authenticated session information to identify the multiworld.
-        /// </returns>
-        private static string? GetPendingCheckPath()
+        private static void TrySendWithoutPersistence(long locationId)
+        {
+            if (!ArchipelagoClient.IsConnected)
+                return;
+
+            ArchipelagoSession session = ArchipelagoClient.Session;
+            _ = SendWithoutPersistenceAsync(session, locationId);
+        }
+
+        private static async Task SendWithoutPersistenceAsync(
+            ArchipelagoSession session,
+            long locationId
+        )
         {
             if (
-                string.IsNullOrWhiteSpace(ArchipelagoClient.PlayerName)
-                || string.IsNullOrWhiteSpace(ArchipelagoClient.Seed)
+                !ArchipelagoClient.IsConnected
+                || !ReferenceEquals(ArchipelagoClient.Session, session)
             )
+                return;
+
+            try
             {
-                return null;
+                await session.Locations.CompleteLocationChecksAsync(locationId);
+                LogUtility.Warn(
+                    $"Submitted location check {locationId} without durable outbox protection"
+                );
             }
-
-            var safeName = SanitizeFileNamePart(ArchipelagoClient.PlayerName);
-            var safeSeed = SanitizeFileNamePart(ArchipelagoClient.Seed);
-            return $"user://sts_ap_pending_checks_{safeName}_{safeSeed}.json";
+            catch (Exception ex)
+            {
+                LogUtility.Error(
+                    $"Location check {locationId} could not be persisted or submitted: {ex.Message}"
+                );
+            }
         }
 
-        /// <summary>
-        /// Replaces characters that cannot safely appear in a local filename.
-        /// </summary>
-        /// <param name="value">The slot name or room seed to sanitize.</param>
-        /// <returns>A filesystem-safe filename component.</returns>
-        private static string SanitizeFileNamePart(string value)
+        private static BoundApSession? GetBoundSession()
         {
-            return string.Join("_", value.Split(System.IO.Path.GetInvalidFileNameChars()));
+            lock (_stateLock)
+                return _boundSession;
         }
 
+        private static bool IsCurrentConnectedSession(BoundApSession bound)
+        {
+            if (!ArchipelagoClient.IsConnected)
+                return false;
+
+            lock (_stateLock)
+            {
+                return ReferenceEquals(_boundSession, bound)
+                    && ReferenceEquals(ArchipelagoClient.Session, bound.Session);
+            }
+        }
+
+        private static string GetPendingCheckPath(ApSessionIdentity identity) =>
+            $"{OutboxPrefix}{identity.GetFileKey()}.json";
+
         /// <summary>
-        /// Reads all pending location IDs from an outbox file.
+        /// Reads and validates an outbox. Its embedded identity, not its filename, is the
+        /// authority that prevents checks from crossing AP sessions.
         /// </summary>
-        /// <param name="path">The Godot user-data path to read.</param>
-        /// <returns>
-        /// The persisted set of location IDs, or an empty set when no outbox exists yet.
-        /// </returns>
-        /// <exception cref="IOException">The existing outbox could not be opened.</exception>
-        /// <exception cref="JsonException">The existing outbox contains invalid JSON.</exception>
-        private static HashSet<long> Load(string path)
+        private static PendingCheckOutbox Load(string path, ApSessionIdentity expectedIdentity)
         {
             if (!Godot.FileAccess.FileExists(path))
-            {
-                return new HashSet<long>();
-            }
+                return PendingCheckOutbox.Create(expectedIdentity);
 
             using var file = Godot.FileAccess.Open(path, Godot.FileAccess.ModeFlags.Read);
             if (file == null)
@@ -231,25 +289,36 @@ namespace StS2AP.Utils
                 );
             }
 
-            var json = file.GetAsText();
-            return JsonSerializer.Deserialize<HashSet<long>>(json) ?? new HashSet<long>();
+            string json = file.GetAsText();
+            PendingCheckOutbox outbox = JsonSerializer.Deserialize<PendingCheckOutbox>(json)
+                ?? throw new JsonException("The pending-check outbox was empty.");
+            if (outbox.SchemaVersion != PendingCheckOutbox.CurrentSchemaVersion)
+            {
+                throw new InvalidDataException(
+                    $"Unsupported pending-check schema {outbox.SchemaVersion}."
+                );
+            }
+            if (outbox.Identity != expectedIdentity)
+            {
+                throw new InvalidDataException(
+                    $"Pending-check identity mismatch: expected {expectedIdentity}, "
+                        + $"found {outbox.Identity}."
+                );
+            }
+
+            return outbox;
         }
 
         /// <summary>
-        /// Replaces the outbox contents with the supplied pending IDs, deleting the outbox
-        /// when no checks remain after server reconciliation.
+        /// Replaces the outbox contents, deleting only the exact identity-bound file when no
+        /// checks remain after server reconciliation.
         /// </summary>
-        /// <param name="path">The Godot user-data path to update.</param>
-        /// <param name="pending">The complete set of IDs that still require confirmation.</param>
-        /// <exception cref="IOException">The outbox could not be written.</exception>
-        private static void Save(string path, HashSet<long> pending)
+        private static void Save(string path, PendingCheckOutbox outbox)
         {
-            if (pending.Count == 0)
+            if (outbox.LocationIds.Count == 0)
             {
                 if (Godot.FileAccess.FileExists(path))
-                {
                     Godot.DirAccess.RemoveAbsolute(path);
-                }
                 return;
             }
 
@@ -261,7 +330,37 @@ namespace StS2AP.Utils
                 );
             }
 
-            file.StoreString(JsonSerializer.Serialize(pending.OrderBy(id => id)));
+            var persisted = new PendingCheckOutbox
+            {
+                SchemaVersion = outbox.SchemaVersion,
+                Identity = outbox.Identity,
+                LocationIds = new SortedSet<long>(outbox.LocationIds),
+            };
+            file.StoreString(JsonSerializer.Serialize(persisted));
         }
+
+        /// <summary>
+        /// Legacy files contain only location IDs and cannot prove their AP destination. Leave
+        /// them untouched and report them once instead of guessing and replaying them.
+        /// </summary>
+        private static void ReportLegacyOutboxIfPresent(string roomSeed)
+        {
+            if (string.IsNullOrWhiteSpace(ArchipelagoClient.PlayerName))
+                return;
+
+            string safeName = SanitizeLegacyFileNamePart(ArchipelagoClient.PlayerName);
+            string safeSeed = SanitizeLegacyFileNamePart(roomSeed);
+            string path = $"user://sts_ap_pending_checks_{safeName}_{safeSeed}.json";
+            if (!Godot.FileAccess.FileExists(path) || !_reportedLegacyPaths.Add(path))
+                return;
+
+            LogUtility.Warn(
+                $"Ignored legacy pending-check outbox '{path}' because it has no authenticated "
+                    + "AP identity. The file was left untouched."
+            );
+        }
+
+        private static string SanitizeLegacyFileNamePart(string value) =>
+            string.Join("_", value.Split(System.IO.Path.GetInvalidFileNameChars()));
     }
 }

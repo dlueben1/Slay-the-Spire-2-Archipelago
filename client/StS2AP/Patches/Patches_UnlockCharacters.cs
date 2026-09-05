@@ -2,6 +2,7 @@
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Unlocks;
 using StS2AP.Models;
@@ -58,7 +59,8 @@ namespace StS2AP.Patches
                 }
 
                 LogUtility.Debug($"OverrideCharacterSelectMenuOptions: Found character button container '{container.Name}'. Iterating through buttons...");
-                foreach (NCharacterSelectButton button in container.GetChildren().OfType<NCharacterSelectButton>())
+                var buttons = container.GetChildren().OfType<NCharacterSelectButton>().ToArray();
+                foreach (NCharacterSelectButton button in buttons)
                 {
                     var charModel = button.Character;
                     LogUtility.Info($"Character Model id: {charModel.Id.Entry}");
@@ -70,12 +72,53 @@ namespace StS2AP.Patches
                     LogUtility.Info($"OverrideCharacterSelectMenuOptions: '{name}' isVisible={isVisible}");
                     LogUtility.Info($"Current Configured Characters: {string.Join(",", ArchipelagoClient.Settings.Characters.Keys)}");
 
-                    if (!isVisible)
+                    button.Visible = isVisible;
+
+                    // The main menu owns one character-select screen for the lifetime of the
+                    // process. UnlockIfPossible is intentionally one-way, so a character from a
+                    // departed AP slot otherwise remains unlocked on this reused button. Re-run
+                    // the native initialization against the current patched UnlockState first.
+                    bool wasLocked = button.IsLocked;
+                    button.Init(charModel, __instance);
+                    if (!wasLocked && button.IsLocked)
                     {
-                        LogUtility.Debug($"OverrideCharacterSelectMenuOptions: Hiding button for character '{name}' (character not in slot)");
-                        button.Visible = false;
+                        LogUtility.Info(
+                            $"Relocked stale character button {name} for the current AP slot"
+                        );
                     }
+                    if (!isVisible)
+                        LogUtility.Debug($"OverrideCharacterSelectMenuOptions: Hiding button for character '{name}' (character not in slot)");
+                    else
+                        button.UnlockIfPossible();
                 }
+
+                bool hasValidSelection = buttons.Any(button =>
+                    button.IsSelected
+                    && button.Visible
+                    && !button.IsRandom
+                    && ArchipelagoClient.CanSelectCharacter(button.Character, out _)
+                );
+                if (hasValidSelection)
+                    return;
+
+                NCharacterSelectButton? replacement = buttons.FirstOrDefault(button =>
+                    button.Visible
+                    && !button.IsRandom
+                    && ArchipelagoClient.CanSelectCharacter(button.Character, out _)
+                );
+                if (replacement != null)
+                {
+                    LogUtility.Info(
+                        $"Selecting {replacement.Character.Id.Entry} because the previous "
+                            + "character is unavailable for this AP slot"
+                    );
+                    replacement.Select();
+                    replacement.GrabFocus();
+                    return;
+                }
+
+                __instance.GetNode<NConfirmButton>("ConfirmButton").Disable();
+                LogUtility.Error("No selectable character is available for this AP slot");
             }
         }
 

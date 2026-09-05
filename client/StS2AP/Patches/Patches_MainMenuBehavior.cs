@@ -21,6 +21,72 @@ namespace StS2AP.Patches
     /// </summary>
     public static class Patches_MainMenuBehavior
     {
+        private static NMainMenuTextButton? _singleplayerButton;
+        private static NMainMenuTextButton? _connectButton;
+
+        private static void RefreshConnectionPresentation()
+        {
+            if (_singleplayerButton != null && GodotObject.IsInstanceValid(_singleplayerButton))
+            {
+                if (ArchipelagoClient.IsConnected)
+                    _singleplayerButton.Enable();
+                else
+                    _singleplayerButton.Disable();
+            }
+
+            if (_connectButton == null || !GodotObject.IsInstanceValid(_connectButton))
+                return;
+
+            _connectButton.Enable();
+
+            if (_connectButton.label != null)
+            {
+                _connectButton.label.Text = ArchipelagoClient.State switch
+                {
+                    ConnectionState.Connecting => "Cancel Archipelago Connection",
+                    ConnectionState.Reconnecting => "Cancel Archipelago Reconnect",
+                    _ when ArchipelagoClient.HasSlotConnection => "Disconnect from Archipelago",
+                    _ => "Connect to Archipelago",
+                };
+            }
+        }
+
+        private static void OnConnectionStateChanged(ConnectionState _) =>
+            RefreshConnectionPresentation();
+
+        private static void OnConnectButtonPressed()
+        {
+            if (ArchipelagoClient.State is ConnectionState.Connecting or ConnectionState.Reconnecting)
+            {
+                ArchipelagoConnectionUI.CancelPendingAttempt();
+                ApReconnectController.Stop("cancelled from the main menu");
+                ArchipelagoClient.Disconnect(showLostConnectionPrompt: false);
+                return;
+            }
+
+            if (!ArchipelagoClient.HasSlotConnection)
+            {
+                ArchipelagoConnectionUI.InjectUI();
+                ArchipelagoNotificationUI.InjectUI();
+                return;
+            }
+
+            // Bind the confirmation to this session; a late confirmation must not disconnect a
+            // replacement session after an automatic reconnect or another menu action.
+            var session = ArchipelagoClient.Session;
+            var popup = new ConfirmPopup
+            {
+                Header = new LocString("main_menu_ui", "AP_DISCONNECT.header"),
+                Body = new LocString("main_menu_ui", "AP_DISCONNECT.body"),
+                ButtonPressed = confirmed =>
+                {
+                    if (confirmed && ReferenceEquals(session, ArchipelagoClient.Session))
+                        ArchipelagoClient.TryLeaveSlot();
+                },
+            };
+            popup.Show();
+        }
+
         #region Clone Target References
 
         // The path that StS2 stores the main menu buttons in
@@ -28,6 +94,9 @@ namespace StS2AP.Patches
 
         // The subpath to the "Single Player" button, which we rename to "Archipelago"
         private const string SingleplayerButtonPath = MainMenuButtonsPath + "/SingleplayerButton";
+
+        private const string ConnectButtonName = "ArchipelagoConnectButton";
+        private const string ConnectButtonPath = MainMenuButtonsPath + "/" + ConnectButtonName;
 
         // The subpath to the "Settings" button, which we will clone many times
         private const string SettingsButtonPath = MainMenuButtonsPath + "/SettingsButton";
@@ -84,6 +153,12 @@ namespace StS2AP.Patches
                 var singleplayerButton = __instance.GetNode<NMainMenuTextButton>(
                     SingleplayerButtonPath
                 );
+                _singleplayerButton = singleplayerButton;
+
+                var connectButton = __instance.GetNodeOrNull<NMainMenuTextButton>(
+                    ConnectButtonPath
+                );
+                _connectButton = connectButton;
 
                 // Grab the custom Archipelago settings button
                 var archipelagoSettingsButton = __instance.GetNodeOrNull<NMainMenuTextButton>(
@@ -133,12 +208,18 @@ namespace StS2AP.Patches
                 openProfileScreenButton.Visible = false;
 
                 // Some buttons need this additional Enable()/Disable() call I'm honestly still not sure why this worked
-                singleplayerButton.Enable();
                 timelineButton.Disable();
                 compendiumButton.Disable();
 
                 // Change the name of "Single Player" for Archipelago
                 singleplayerButton!.label!.Text = "Play";
+
+                if (connectButton?.label != null)
+                    connectButton.Visible = true;
+
+                ArchipelagoClient.ConnectionStateChanged -= OnConnectionStateChanged;
+                ArchipelagoClient.ConnectionStateChanged += OnConnectionStateChanged;
+                RefreshConnectionPresentation();
 
                 // Change the name of "Settings" to "Game Settings" to avoid confusion with the injected Archipelago Settings button
                 settingsButton!.label!.Text = "Game Settings";
@@ -190,6 +271,19 @@ namespace StS2AP.Patches
             // Grab references to the buttons we need to manipulate
             var singleplayerButton = mainMenu.GetNode<NMainMenuTextButton>(SingleplayerButtonPath);
             var settingsButton = mainMenu.GetNode<NMainMenuTextButton>(SettingsButtonPath);
+
+            var connectButton = (NMainMenuTextButton)settingsButton.Duplicate();
+            connectButton.Name = ConnectButtonName;
+            connectButton.Connect(
+                NClickableControl.SignalName.Released,
+                Callable.From<NButton>(_ => OnConnectButtonPressed())
+            );
+            singleplayerButton.AddSibling(connectButton);
+            singleplayerButton.GetParent().MoveChild(connectButton, singleplayerButton.GetIndex());
+            connectButton.CustomMinimumSize = new Vector2(
+                300f,
+                connectButton.CustomMinimumSize.Y
+            );
 
             // Create the new Archipelago Settings button by duplicating the vanilla Settings button
             var archipelagoSettingsButton = (NMainMenuTextButton)settingsButton.Duplicate();

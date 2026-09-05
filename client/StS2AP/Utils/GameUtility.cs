@@ -78,6 +78,15 @@ namespace StS2AP.Utils
         /// </summary>
         public static Dictionary<string, string> APSaves { get; set; } = new Dictionary<string, string>();
 
+        /// <summary>Clears projections owned by an intentionally departed AP slot.</summary>
+        internal static void ResetSlotState()
+        {
+            CurrentPlayer = null;
+            CurrentConfig = null;
+            APSaves = new Dictionary<string, string>();
+            _goaledCharacters = new HashSet<string>();
+        }
+
         /// <summary>
         /// Returns the Current Player's `APItemCharID`
         /// </summary>
@@ -353,12 +362,13 @@ namespace StS2AP.Utils
         public static async Task RestoreGoaledCharsFromStorage()
         {
             if (!ArchipelagoClient.IsConnected) return;
+            var session = ArchipelagoClient.Session;
 
             // Debug: Let's see the goal progress before we try to restore it
             try
             {
                 // Debug: Dump all values in the DataStorage
-                var ds = await ArchipelagoClient.Session.DataStorage[
+                var ds = await session.DataStorage[
                     Archipelago.MultiClient.Net.Enums.Scope.Slot, "StS2AP_GoaledChars"].GetAsync<Dictionary<string, bool>>();
                 if(ds == null)
                 {
@@ -383,38 +393,35 @@ namespace StS2AP.Utils
 
                 /// Initialize the key with an empty JObject (JSON object) if it doesn't exist yet.
                 /// Must use JObject, not Dictionary, to match the JSON structure stored on the server.
-                ArchipelagoClient.Session.DataStorage[
+                if (!ReferenceEquals(ArchipelagoClient.Session, session)) return;
+                session.DataStorage[
                     Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
                     .Initialize(new JObject());
 
                 // Read back whatever is stored and deserialize it as a Dictionary<string, bool>
-                var stored = await ArchipelagoClient.Session.DataStorage[
+                var stored = await session.DataStorage[
                     Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
                     .GetAsync<Dictionary<string, bool>>();
 
                 // Debug: Dump all values in the DataStorage
-                foreach (var x in stored)
+                foreach (var x in stored ?? new Dictionary<string, bool>())
                 {
                     LogUtility.Debug($"RestoreGoaledCharsFromStorage: Goaled DataStorage (After Restore Attempt) - Key: {x.Key} / Value: {x.Value.ToString()}");
                 }
 
                 LogUtility.Debug($"RestoreGoaledCharsFromStorage: stored is null? {stored == null}");
-                _goaledCharacters = stored != null
-                    ? new HashSet<string>(stored.Keys)
-                    : new HashSet<string>();
-
-                // Debug: Dump local cache of goaled chars
-                foreach (var x in _goaledCharacters)
+                ArchipelagoClient.RunForSession(session, () =>
                 {
-                    LogUtility.Debug($"RestoreGoaledCharsFromStorage: Local Cache Goaled Char - {x}");
-                }
-
-                LogUtility.Info($"Restored {_goaledCharacters.Count} goaled character(s) from DataStorage: {string.Join(", ", _goaledCharacters)}");
+                    _goaledCharacters = stored != null
+                        ? new HashSet<string>(stored.Keys)
+                        : new HashSet<string>();
+                    LogUtility.Info($"Restored {_goaledCharacters.Count} goaled character(s) from DataStorage: {string.Join(", ", _goaledCharacters)}");
+                });
             }
             catch (Exception ex)
             {
                 LogUtility.Warn($"Could not restore goaled characters from DataStorage: {ex.Message}. Starting with empty set.");
-                _goaledCharacters = new HashSet<string>();
+                ArchipelagoClient.RunForSession(session, () => _goaledCharacters = new HashSet<string>());
             }
         }
 
@@ -423,29 +430,35 @@ namespace StS2AP.Utils
         /// </summary>
         public static async Task SetupOnChangedSaves()
         {
+            var session = ArchipelagoClient.Session;
             try
             {
                 LogUtility.Info("Setting up StS Saves on the server");
                 var storageKey = "StS2AP_Saves";
 
                 // Initialize the key with an empty dict if it doesn't exist yet
-                ArchipelagoClient.Session.DataStorage[
+                session.DataStorage[
                     Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
                     .Initialize(new JObject()); 
                 // replace inside () with `new Newtonsoft.Json.Linq.JObject()` in case it breaks not sure if this is correct
 
                 // Read back whatever is stored
-                ArchipelagoClient.Session.DataStorage[Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
+                session.DataStorage[Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
                     .OnValueChanged += (oldData, newData, additionalArguments) =>
                     {
                         if (newData != null)
                         {
-                            GameUtility.APSaves = newData?.ToObject<Dictionary<string, string>>() ?? GameUtility.APSaves;
-                            LogUtility.Info($"Loaded saves from datastorage; got characters {GameUtility.APSaves?.Keys}");
+                            var saves = newData.ToObject<Dictionary<string, string>>();
+                            ArchipelagoClient.RunForSession(session, () =>
+                            {
+                                APSaves = saves ?? new();
+                                LogUtility.Info($"Loaded saves from datastorage; got characters {string.Join(", ", APSaves.Keys)}");
+                            });
                         }
                     };
-                GameUtility.APSaves = await ArchipelagoClient.Session.DataStorage[Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
+                var loaded = await session.DataStorage[Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
                     .GetAsync<Dictionary<string, string>>();
+                ArchipelagoClient.RunForSession(session, () => APSaves = loaded ?? new());
             }
             catch(Exception ex)
             {

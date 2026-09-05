@@ -90,6 +90,7 @@ namespace StS2AP.UI
         /// </summary>
         public static void RemoveUI()
         {
+            ArchipelagoClient.ConnectionStateChanged -= OnConnectionResult;
             if (_rootPanel != null && IsInstanceValid(_rootPanel))
             {
                 var parent = _rootPanel.GetParent();
@@ -99,6 +100,15 @@ namespace StS2AP.UI
                 }
                 _rootPanel = null;
             }
+        }
+
+        internal static void CancelPendingAttempt()
+        {
+            ArchipelagoClient.ConnectionStateChanged -= OnConnectionResult;
+            SetConnectButtonEnabled(true);
+            SetCloseButtonEnabled(true);
+            SetStatus("");
+            Hide();
         }
 
         /// <summary>
@@ -155,6 +165,10 @@ namespace StS2AP.UI
             if (_closeButton != null && IsInstanceValid(_closeButton))
             {
                 _closeButton.Disabled = !enabled;
+                _closeButton.Text = enabled && ArchipelagoClient.State is
+                    ConnectionState.Connecting or ConnectionState.Reconnecting
+                        ? "Cancel connection"
+                        : "Close";
             }
         }
 
@@ -481,6 +495,9 @@ namespace StS2AP.UI
         /// </summary>
         private static void OnConnectButtonPressed()
         {
+            if (ArchipelagoClient.State != ConnectionState.Disconnected)
+                return;
+
             var slotName = _slotNameInput?.Text ?? "";
             var url = _urlInput?.Text ?? "";
             var password = _passwordInput?.Text ?? "";
@@ -499,11 +516,21 @@ namespace StS2AP.UI
                 return;
             }
 
+            if (ArchipelagoClient.HasSlotConnection)
+            {
+                // A failed or offline attempt may leave this form open with authenticated state
+                // from the previous slot. Apply the same departure boundary before retrying.
+                if (!ArchipelagoClient.TryLeaveSlot())
+                    return;
+                Show();
+                ArchipelagoNotificationUI.InjectUI();
+            }
+
             // Begin Connecting
             LogUtility.Info($"Connect pressed - Slot: {slotName}, URL: {url}");
             SetStatus("Connecting...");
             SetConnectButtonEnabled(false);
-            SetCloseButtonEnabled(false);
+            SetCloseButtonEnabled(true);
             ArchipelagoClient.ServerAddress = url;
             ArchipelagoClient.ServerPassword = password;
             ArchipelagoClient.PlayerName = slotName;
@@ -513,6 +540,7 @@ namespace StS2AP.UI
             ArchipelagoClient.ConnectionStateChanged -= OnConnectionResult;
             ArchipelagoClient.ConnectionStateChanged += OnConnectionResult;
             ArchipelagoClient.Connect();
+            SetCloseButtonEnabled(true);
 
             var connectionData = new ConnectionData()
             {
@@ -567,6 +595,14 @@ namespace StS2AP.UI
         /// </summary>
         private static void OnCloseButtonPressed()
         {
+            if (ArchipelagoClient.State is ConnectionState.Connecting or ConnectionState.Reconnecting)
+            {
+                CancelPendingAttempt();
+                ApReconnectController.Stop("connection cancelled");
+                ArchipelagoClient.Disconnect(showLostConnectionPrompt: false);
+                return;
+            }
+
             // Hide the connection UI
             Hide();
 

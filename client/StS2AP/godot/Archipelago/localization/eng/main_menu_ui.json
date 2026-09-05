@@ -1,4 +1,6 @@
 {
+  "AP_DISCONNECT.header": "Disconnect from Archipelago?",
+  "AP_DISCONNECT.body": "Disconnect from the current Archipelago slot? Pending location checks will stay queued for the next successful connection.",
   "CONTINUE_RUN.header": "Continue Run?",
   "CONTINUE_RUN.body": "Would you like to resume your last AP save for this character? (Yes, AP keeps the save even if you die.)",
   "VERSION_MISMATCH.header": "Version Mismatch",
