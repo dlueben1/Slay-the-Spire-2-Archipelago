@@ -372,7 +372,6 @@ namespace StS2AP.Patches
             LogUtility.Success(
                 $"Unlocked {category} bonus item {ordinal + 1} of {configuredCount}"
             );
-            NotificationUtility.HandleItemSend(indexedInfo.Item);
         }
 
         /// <summary>

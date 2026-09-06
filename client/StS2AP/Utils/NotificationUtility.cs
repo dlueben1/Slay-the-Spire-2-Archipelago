@@ -183,11 +183,21 @@ namespace StS2AP.Utils
                 case APItem.Unlock:
                     var iconPath = item.GetCharacterOffset() switch
                     {
-                        (int)APItemCharID.Ironclad => ModelDb.CardPool<IroncladCardPool>().EnergyIconPath,
-                        (int)APItemCharID.Silent => ModelDb.CardPool<SilentCardPool>().EnergyIconPath,
-                        (int)APItemCharID.Defect => ModelDb.CardPool<DefectCardPool>().EnergyIconPath,
-                        (int)APItemCharID.Necrobinder => ModelDb.CardPool<NecrobinderCardPool>().EnergyIconPath,
-                        (int)APItemCharID.Regent => ModelDb.CardPool<RegentCardPool>().EnergyIconPath,
+                        (int)APItemCharID.Ironclad => ModelDb
+                            .CardPool<IroncladCardPool>()
+                            .EnergyIconPath,
+                        (int)APItemCharID.Silent => ModelDb
+                            .CardPool<SilentCardPool>()
+                            .EnergyIconPath,
+                        (int)APItemCharID.Defect => ModelDb
+                            .CardPool<DefectCardPool>()
+                            .EnergyIconPath,
+                        (int)APItemCharID.Necrobinder => ModelDb
+                            .CardPool<NecrobinderCardPool>()
+                            .EnergyIconPath,
+                        (int)APItemCharID.Regent => ModelDb
+                            .CardPool<RegentCardPool>()
+                            .EnergyIconPath,
                         // TODO: What to do for modded characters?
                         _ => ModelDb.CardPool<IroncladCardPool>().EnergyIconPath,
                     };
@@ -230,20 +240,6 @@ namespace StS2AP.Utils
             EnqueueNotification(result, type);
         }
 
-        /// <summary>
-        /// Handles the notification for an item being sent.
-        /// This is an overload that uses the simple item info rather than the full log message.
-        /// </summary>
-        /// <param name="info">The information about the item being sent.</param>
-        public static void HandleItemSend(ItemInfo info)
-        {
-            string? itemIcon = GetItemIcon(info);
-            string iconText = itemIcon == null ? string.Empty : $"{itemIcon} ";
-            string message =
-                $"{info.Player} sent you {iconText}[sine][color=yellow]{info.ItemDisplayName}[/color][/sine]!";
-            EnqueueNotification(message, NotificationType.ItemReceived);
-        }
-
         public static void HandleOtherAPMessages(
             LogMessage message,
             bool devConsoleOnly = false,
@@ -251,12 +247,7 @@ namespace StS2AP.Utils
         )
         {
             var result = ToColoredString(message, null);
-            EnqueueNotification(
-                result,
-                NotificationType.Info,
-                devConsoleOnly,
-                timeout
-            );
+            EnqueueNotification(result, NotificationType.Info, devConsoleOnly, timeout);
         }
 
         private static String ToColoredString(ItemSendLogMessage msg)
