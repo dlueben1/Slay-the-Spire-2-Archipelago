@@ -361,7 +361,7 @@ class BonusItems(OptionList):
 
     Generation fails if more bonus items are configured than there are filler slots.
 
-    It's recommended to use the YAML Builder on our website to easily generate this value, which you can find at https://sts2ap.net
+    It's HIGHLY recommended to use the YAML Builder on our website to easily generate this option, which you can find at https://sts2ap.net
     """
     display_name = "Bonus Items"
     visibility = Visibility.template
