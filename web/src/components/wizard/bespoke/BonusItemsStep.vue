@@ -124,7 +124,12 @@ function submitBonusItem(item: BonusItemAnswer): void {
       filler slots for them.
     </template>
 
-    <div class="bonus-item-section">
+    <WizardMarkdownDocument
+      source="docs/faq-bonusitems.md"
+      fallback-title="What are Bonus Items?"
+    />
+
+    <div class="bonus-item-section pt-4">
       <div class="bonus-item-table" role="table" aria-label="Bonus Items">
         <div class="bonus-item-table__header" role="row">
           <span class="bonus-item-table__image-heading" role="columnheader">

@@ -546,8 +546,7 @@ export const checkSetupStep: WizardStep = {
     {
       id: "bonus-items",
       title: "Which Bonus Items should be added to the item pool?",
-      description:
-        "Bonus Items are guaranteed additions placed before any filler items. Generation fails if there are not enough filler slots for them.",
+      description: "Additional Items to help you Slay the Spire.",
     },
     {
       id: "filler-weights",
