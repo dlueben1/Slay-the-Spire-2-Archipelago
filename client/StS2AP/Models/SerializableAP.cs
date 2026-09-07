@@ -23,6 +23,8 @@ namespace StS2AP.Models
         public int RareCardRewardsAttempted { get; set; }
         [JsonPropertyName("relic_rewards_attempted")]
         public int RelicRewardsAttempted { get; set; }
+        [JsonPropertyName("combats_since_last_wax_melt")]
+        public int CombatsSinceLastWaxMelt { get; set; }
         /// <summary>Earned relic rewards not yet paired with an AP Relic receipt.</summary>
         [JsonPropertyName("banked_relic_rewards")]
         public int BankedRelicRewards { get; set; }

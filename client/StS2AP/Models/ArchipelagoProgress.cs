@@ -102,6 +102,9 @@ namespace StS2AP.Models
         /// </summary>
         public int RelicRewardsAttempted { get; set; } = 0;
 
+        // This cadence must survive a checkpoint so a reload cannot grant extra combats.
+        public int CombatsSinceLastWaxMelt { get; set; } = 0;
+
         /// <summary>
         /// Earned relic rewards not yet paired with a received Relic item. A bank is spent when
         /// the receipt is committed to either a native reward or a saved AP-menu assignment.
@@ -420,6 +423,7 @@ namespace StS2AP.Models
             RareCardRewardsAttempted = 0;
             BossRewardsDistributed = 0;
             RelicRewardsAttempted = 0;
+            CombatsSinceLastWaxMelt = 0;
             BankedRelicRewards = 0;
             RelicRewardsAvailableAnytimeForRun = RelicRewardUtility.EffectiveAvailableAnytime;
             GoldRewardsAttempted = 0;
@@ -750,6 +754,7 @@ namespace StS2AP.Models
                 CardRewardsAttempted = CardRewardsAttempted,
                 RareCardRewardsAttempted = RareCardRewardsAttempted,
                 RelicRewardsAttempted = RelicRewardsAttempted,
+                CombatsSinceLastWaxMelt = CombatsSinceLastWaxMelt,
                 BankedRelicRewards = BankedRelicRewards,
                 RelicRewardsAvailableAnytimeForRun = RelicRewardsAvailableAnytimeForRun,
                 GoldRewardsAttempted = GoldRewardsAttempted,
@@ -797,6 +802,7 @@ namespace StS2AP.Models
                 CardRewardsAttempted = saveData.CardRewardsAttempted,
                 RareCardRewardsAttempted = saveData.RareCardRewardsAttempted,
                 RelicRewardsAttempted = saveData.RelicRewardsAttempted,
+                CombatsSinceLastWaxMelt = saveData.CombatsSinceLastWaxMelt,
                 BankedRelicRewards = saveData.BankedRelicRewards,
                 RelicRewardsAvailableAnytimeForRun = saveData.RelicRewardsAvailableAnytimeForRun,
                 GoldRewardsAttempted = saveData.GoldRewardsAttempted,

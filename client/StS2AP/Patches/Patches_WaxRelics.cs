@@ -36,34 +36,11 @@ namespace StS2AP.Patches
         /// </summary>
         private const int CombatsBetweenMelts = 3;
 
-        /// <summary>
-        /// Tracks the number of combats since the last time we melted a wax relic
-        /// </summary>
-        private static int combatsSinceLastMelt;
-
-        /// <summary>
-        /// The player we're tracking. Instance checking is used to see if the run has changed.
-        /// </summary>
-        private static Player? trackingPlayer;
-
         #endregion
 
         #region Helper Functions
 
-        /// <summary>
-        /// Resets the Tracker when the Player object is refreshed
-        /// </summary>
-        private static void ResetTracker(Player? player = null)
-        {
-            combatsSinceLastMelt = 0;
-            trackingPlayer = player;
-        }
-
-        /// <summary>
-        /// Comparison to see if the current player is different than the one we're tracking.
-        /// This is to handle the many situations in which runs can change, restart, etc. without just relying on a hook for a run start
-        /// (i.e. loading from saves, etc.)
-        /// </summary>
+        /// <summary>Returns whether a relic callback belongs to the active run.</summary>
         private static bool IsCurrentPlayer(Player player)
         {
             Player? currentPlayer = GameUtility.CurrentPlayer;
@@ -90,22 +67,17 @@ namespace StS2AP.Patches
                 return;
             }
 
-            if (!ReferenceEquals(trackingPlayer, player))
-            {
-                ResetTracker(player);
-            }
-
             RelicModel? waxRelic = player.Relics.FirstOrDefault(relic =>
                 relic != null && relic.IsWax && !relic.IsMelted
             );
             if (waxRelic == null)
             {
-                ResetTracker(player);
+                ArchipelagoClient.Progress.CombatsSinceLastWaxMelt = 0;
                 return;
             }
 
-            combatsSinceLastMelt++;
-            if (combatsSinceLastMelt < CombatsBetweenMelts)
+            ArchipelagoClient.Progress.CombatsSinceLastWaxMelt++;
+            if (ArchipelagoClient.Progress.CombatsSinceLastWaxMelt < CombatsBetweenMelts)
             {
                 return;
             }
@@ -113,8 +85,8 @@ namespace StS2AP.Patches
             try
             {
                 await RelicCmd.Melt(waxRelic);
+                ArchipelagoClient.Progress.CombatsSinceLastWaxMelt = 0;
                 await Cmd.CustomScaledWait(0.5f, 0.75f);
-                ResetTracker(player);
             }
             catch (Exception ex)
             {
@@ -124,7 +96,7 @@ namespace StS2AP.Patches
 
         #endregion
 
-        #region Harmony Patches
+        #region Harmony Patches - ToyBox
 
         /// <summary>
         /// Prevents the Toy Box relic from controlling the melting of Wax Relics.
@@ -146,6 +118,23 @@ namespace StS2AP.Patches
         }
 
         /// <summary>
+        /// Hides the counter on the Toy Box relic, since we are handling the melting of Wax Relics ourselves.
+        /// </summary>
+        [HarmonyPatch(typeof(ToyBox), nameof(ToyBox.ShowCounter), MethodType.Getter)]
+        public static class Patch_HideToyBoxCounter
+        {
+            [HarmonyPostfix]
+            private static void Postfix(ref bool __result)
+            {
+                __result = false;
+            }
+        }
+
+        #endregion
+
+        #region Harmony Patches - Melting
+
+        /// <summary>
         /// Counts completed combats once at the game's canonical combat-end boundary and melts
         /// the leftmost unmelted wax relic after the defined number of combats between melts.
         /// </summary>
@@ -161,36 +150,6 @@ namespace StS2AP.Patches
             private static void Postfix(IRunState runState, ref Task __result)
             {
                 __result = ProcessWaxRelicsAfterCombatEnd(__result, runState);
-            }
-        }
-
-        /// <summary>
-        /// Resets the transient cadence whenever a new player/run is created.
-        /// </summary>
-        [HarmonyPatch(
-            typeof(Player),
-            nameof(Player.CreateForNewRun),
-            new[] { typeof(CharacterModel), typeof(UnlockState), typeof(ulong) }
-        )]
-        public static class Patch_ResetWaxTrackerOnNewRun
-        {
-            [HarmonyPostfix]
-            private static void Postfix(Player __result)
-            {
-                ResetTracker(__result);
-            }
-        }
-
-        /// <summary>
-        /// Clears the tracker when leaving a run so its state cannot leak into the next run.
-        /// </summary>
-        [HarmonyPatch(typeof(NGame), nameof(NGame.ReturnToMainMenu))]
-        public static class Patch_ResetWaxTrackerOnReturnToMainMenu
-        {
-            [HarmonyPostfix]
-            private static void Postfix()
-            {
-                ResetTracker();
             }
         }
 
