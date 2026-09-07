@@ -1,0 +1,35 @@
+name: Test domain and client regressions
+
+on:
+  push:
+    paths:
+      - 'client/StS2AP.Domain/**'
+      - 'client/StS2AP.Domain.Tests/**'
+      - 'client/StS2AP.RegressionTests/**'
+      - 'client/StS2AP/**'
+      - '.github/workflows/test-domain.yml'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Domain tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            9.0.x
+            10.0.x
+      - name: Run unit and property tests without game dependencies
+        run: dotnet test client/StS2AP.Domain.Tests/StS2AP.Domain.Tests.fsproj -c Release --logger "trx;LogFileName=domain-tests.trx"
+      - name: Run client policy, persistence, and interop regressions
+        run: dotnet test client/StS2AP.RegressionTests/StS2AP.RegressionTests.csproj -c Release --filter "Category!=Manifest&Category!=Bundle" --logger "trx;LogFileName=regression-tests.trx"

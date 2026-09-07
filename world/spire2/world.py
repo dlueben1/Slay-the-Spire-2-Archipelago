@@ -2,6 +2,7 @@ import re
 import string
 import typing
 from collections import defaultdict
+from copy import deepcopy
 from typing import List, Optional, Any
 
 from BaseClasses import Item, Location, Region, MultiWorld, ItemClassification, CollectionState
@@ -15,6 +16,7 @@ from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET, ASCENSIONS
 from .items import item_table, chars_to_items, universal_items, ItemType, base_event_item_pairs, ItemData, item_groups
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType, location_groups
 from .options import Spire2Options
+from .coop import player_name, split_player_name, PLAYER_OFFSET
 
 COMBAT_GOLD_ITEM_COUNT = 13
 ELITE_GOLD_ITEM_COUNT = 7
@@ -38,7 +40,7 @@ class SlayTheSpire2World(World):
     web = SlayTheSpire2Web()
     options_dataclass = Spire2Options
     options: Spire2Options
-    mod_compat_version = "1.0.1"
+    mod_compat_version = "1.1.0"
     compat_flag = 1
     origin_region_name = "Neow's Room"
 
@@ -56,6 +58,7 @@ class SlayTheSpire2World(World):
     def __init__(self, mw: MultiWorld, player: int):
         super().__init__(mw, player)
         self.characters: List[CharacterConfig] = []
+        self.player_characters: dict[int, List[CharacterConfig]] = {}
         self.modded_num: int = 0
         self.modded_chars: List[CharacterConfig] = []
         self.total_shop_locations: int = 0
@@ -99,14 +102,41 @@ class SlayTheSpire2World(World):
         if num_chars_goal != 0:
             if num_chars_goal > len(self.characters):
                 self.options.num_chars_goal.value = 0
-        for char in self.characters:
-            if not char.locked:
-                self.options.start_inventory.value[f"{char.name} Unlock"] = 1
+        self._setup_players()
         # for weight in self.options.trap_weights.values():
         #     if weight > 0:
         #         break
         # else:
         #     self.options.trap_chance.value = 0
+
+    @property
+    def all_player_characters(self) -> List[CharacterConfig]:
+        return [config for configs in self.player_characters.values() for config in configs]
+
+    def _setup_players(self) -> None:
+        count = self.options.player_count.value
+        if len(self.characters) < count:
+            raise OptionError(f"player_count={count} requires at least {count} generated characters; "
+                              f"the final roster contains {len(self.characters)}. Check characters and pick_num_characters.")
+        self.player_characters = {1: self.characters}
+        first = next((c.name for c in self.characters if not c.locked), None)
+        remaining = sorted(c.name for c in self.characters if c.name != first)
+        starts = self.random.sample(remaining, count - 1) if count > 1 and self.options.lock_characters.value else []
+        for number in range(2, count + 1):
+            configs = deepcopy(self.characters)
+            for config in configs:
+                config.player_number = number
+                config.locked = bool(self.options.lock_characters.value) and config.name != starts[number - 2]
+            self.player_characters[number] = configs
+        # A YAML's unqualified starting items apply independently to every player.
+        original_inventory = dict(self.options.start_inventory.value)
+        for number in range(2, count + 1):
+            for name, amount in original_inventory.items():
+                if split_player_name(name)[0] == 1:
+                    self.options.start_inventory.value[player_name(name, number)] = amount
+        for config in self.all_player_characters:
+            if not config.locked:
+                self.options.start_inventory.value[f"{config.ap_name} Unlock"] = 1
 
     def _get_unlocked_char(self, characters: List[str]) -> Optional[str]:
         if len(characters) <= 0:
@@ -348,7 +378,7 @@ class SlayTheSpire2World(World):
     # Creates individual items based on the item table
     def create_item(self, name: str) -> SlayTheSpire2Item:
         data = item_table[name]
-        item_id = self.item_name_to_id[name]
+        item_id = data.code
         return SlayTheSpire2Item(data, name, data.classification, item_id, self.player)
 
     def build_filler_pools(self) -> None:
@@ -533,7 +563,9 @@ class SlayTheSpire2World(World):
         # Defensive: ensure pools are built before the AP fill algorithm calls us.
         if not hasattr(self, 'filler_universal_high'):
             self.build_filler_pools()
-        return self.get_filler_item()
+        name = self.get_filler_item()
+        return name if self.options.player_count.value == 1 else player_name(
+            name, self.random.randint(1, self.options.player_count.value))
 
     def create_items(self) -> None:
         # Pre-compute filler item pools once here so `get_filler_item()` is just a simple lookup
@@ -541,7 +573,7 @@ class SlayTheSpire2World(World):
 
         pool = []
         card_reward_count = MAX_CARD_REWARDS if self.options.shuffle_all_cards.value else MAX_CARD_REWARDS // 2
-        for config in self.characters:
+        for config in self.all_player_characters:
             char_lookup = config.name if config.mod_num == 0 else config.mod_num
             # ascension_downs = min(config.ascension_down, config.ascension)
             for name, data in chars_to_items[char_lookup].items():
@@ -566,7 +598,7 @@ class SlayTheSpire2World(World):
                     if self.options.lock_characters.value != 0 and config.locked:
                         amount = 1
                     else:
-                        self.push_precollected(self.create_item(name))
+                        self.push_precollected(self.create_item(player_name(name, config.player_number)))
                 elif ItemType.GOLD == data.type:
                     if self.options.gold_sanity.value != 0:
                         if 'Combat Gold' in name:
@@ -595,7 +627,7 @@ class SlayTheSpire2World(World):
                     elif ItemType.SHOP_REMOVE == data.type and self.options.shop_remove_slots.value != 0:
                         amount = 3
                 for _ in range(amount):
-                    pool.append(self.create_item(name))
+                    pool.append(self.create_item(player_name(name, config.player_number)))
 
             if self.options.include_floor_checks.value:
 
@@ -613,11 +645,11 @@ class SlayTheSpire2World(World):
                 
                 for _ in range(filler_num):
                     filler_item_name = self.get_filler_item(character=config.name)
-                    pool.append(self.create_item(filler_item_name))
+                    pool.append(self.create_item(player_name(filler_item_name, config.player_number)))
             # Pair up our event locations with our event items
             for base_event, base_item in base_event_item_pairs.items():
-                event = f"{config.name} {base_event}"
-                item = f"{config.name} {base_item}"
+                event = f"{config.ap_name} {base_event}"
+                item = f"{config.ap_name} {base_item}"
                 item_data = item_table[item]
                 event_item = SlayTheSpire2Item(item_data, item, item_data.classification, item_data.code, self.player)
                 self.multiworld.get_location(event, self.player).place_locked_item(event_item)
@@ -651,6 +683,14 @@ class SlayTheSpire2World(World):
     def set_rules(self) -> None:
         set_rules(self)
 
+    @classmethod
+    def stage_fill_hook(cls, multiworld: MultiWorld, progitempool: list[Item],
+                        usefulitempool: list[Item], filleritempool: list[Item],
+                        fill_locations: list[Location]) -> None:
+        from .fill import fill_shared_slots
+        fill_shared_slots(multiworld, multiworld.get_game_worlds(cls.game),
+                          progitempool, fill_locations)
+
     def collect(self, state: CollectionState, item: Item) -> bool:
         change = super().collect(state, item)
         item_data = typing.cast(SlayTheSpire2Item, item).item_data
@@ -675,6 +715,9 @@ class SlayTheSpire2World(World):
 
     def fill_slot_data(self) -> dict:
         slot_data = {
+            'player_count': self.options.player_count.value,
+            'players': {str(number): [c.to_dict() for c in configs]
+                        for number, configs in self.player_characters.items()},
             'characters': [
                 c.to_dict() for c in self.characters
             ],
@@ -690,6 +733,8 @@ class SlayTheSpire2World(World):
             "CompatFlag": self.compat_flag,
         }
         slot_data.update(self.options.as_dict(
+            "lock_characters",
+            "seeded",
             "ascension",
             "num_chars_goal",
             "shuffle_all_cards",
@@ -716,6 +761,8 @@ class SlayTheSpire2World(World):
         return slot_data
 
     def _setup_ut(self, slot_data: dict[str, Any]) -> None:
+        self.options.player_count.value = slot_data['player_count']
+        self.options.lock_characters.value = slot_data['lock_characters']
         self.options.shop_card_slots.value = slot_data["shop_sanity_options"]["card_slots"]
         self.options.shop_remove_slots.value = slot_data["shop_sanity_options"]["card_remove"]
         self.options.shop_neutral_card_slots.value = slot_data["shop_sanity_options"]["neutral_slots"]
@@ -730,10 +777,18 @@ class SlayTheSpire2World(World):
                 char_dict['seed'],
                 char_dict['locked'],
                 ascension=char_dict['ascension'],
+                ascension_down=char_dict['ascension_down'],
             )
             self.characters.append(config)
             if char_dict['mod_num'] > 0:
                 self.modded_chars.append(config)
+        self.player_characters = {
+            int(number): [CharacterConfig(
+                c['name'], c['option_name'], c['char_offset'], c['mod_num'], c['seed'], c['locked'],
+                ascension=c['ascension'], ascension_down=c['ascension_down'], player_number=int(number))
+                for c in configs]
+            for number, configs in slot_data['players'].items()
+        }
         self.total_shop_items = (self.options.shop_card_slots.value + self.options.shop_neutral_card_slots.value +
                                  self.options.shop_relic_slots.value + self.options.shop_potion_slots.value)
         self.total_shop_locations = self.total_shop_items + (3 if self.options.shop_remove_slots else 0)
@@ -760,16 +815,18 @@ class SlayTheSpire2World(World):
         pattern = re.compile("Custom Character [0-9]+ (?P<location_name>.*?)$")
         # for i in range(1, len(self.modded_chars) + 1):
         for key, value in SlayTheSpire2World.location_id_to_name.items():
-            if key < (len(character_list)) * CHAR_OFFSET:
+            base_key = key % PLAYER_OFFSET
+            if base_key < (len(character_list)) * CHAR_OFFSET:
                 continue
-            modded_index = (key // CHAR_OFFSET) - len(character_list)
+            modded_index = (base_key // CHAR_OFFSET) - len(character_list)
             # self.logger.info(f"Modded index: {modded_index}")
             # self.logger.info(f"modded_chars index: {self.modded_chars}")
             if modded_index >= len(self.modded_chars):
                 continue
-            match = pattern.match(value)
+            number, base_name = split_player_name(value)
+            match = pattern.match(base_name)
             if match is None:
                 raise Exception("Failed to match " + value)
             name = self.modded_chars[modded_index].official_name
             # self.logger.info(name)
-            self.location_id_to_alias[key] = name + " " + match.group("location_name")
+            self.location_id_to_alias[key] = player_name(name + " " + match.group("location_name"), number)

@@ -1,0 +1,2359 @@
+{
+  "base": "7a1535c7cfd6f4de972eb72cf7e18d5073c78ba4",
+  "head": "0650885b5b30d6fe0167b6c76091409817a5d051",
+  "comparison": "local upstream/main to multiplayer-squashed HEAD; base is merge-base",
+  "rows": [
+    {
+      "path": ".github/workflows/build-sts2-compat.yml",
+      "old_path": null,
+      "status": "A",
+      "added": "61",
+      "deleted": "0",
+      "group": "15",
+      "change": "Added path",
+      "surface": "Build/tooling"
+    },
+    {
+      "path": ".github/workflows/test-domain.yml",
+      "old_path": null,
+      "status": "A",
+      "added": "35",
+      "deleted": "0",
+      "group": "15",
+      "change": "Added path",
+      "surface": "Build/tooling"
+    },
+    {
+      "path": ".gitignore",
+      "old_path": null,
+      "status": "M",
+      "added": "4",
+      "deleted": "0",
+      "group": "17",
+      "change": "Modified",
+      "surface": "Configuration/asset"
+    },
+    {
+      "path": ".vscode/settings.json",
+      "old_path": ".vscode/settings.json",
+      "status": "D",
+      "added": "0",
+      "deleted": "4",
+      "group": "17",
+      "change": "Deleted path",
+      "surface": "Configuration/asset"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "old_path": null,
+      "status": "M",
+      "added": "5",
+      "deleted": "2",
+      "group": "14",
+      "change": "Modified",
+      "surface": "Documentation"
+    },
+    {
+      "path": "README.md",
+      "old_path": null,
+      "status": "M",
+      "added": "11",
+      "deleted": "4",
+      "group": "14",
+      "change": "Modified",
+      "surface": "Documentation"
+    },
+    {
+      "path": "StS2AP.sln",
+      "old_path": null,
+      "status": "M",
+      "added": "18",
+      "deleted": "0",
+      "group": "14",
+      "change": "Modified",
+      "surface": "Build/tooling"
+    },
+    {
+      "path": "client/StS2AP.Domain.Tests/MirroredRewardTests.fs",
+      "old_path": null,
+      "status": "A",
+      "added": "169",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.Domain.Tests/ParticipantTests.fs",
+      "old_path": null,
+      "status": "A",
+      "added": "143",
+      "deleted": "0",
+      "group": "01",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.Domain.Tests/README.md",
+      "old_path": null,
+      "status": "A",
+      "added": "40",
+      "deleted": "0",
+      "group": "15",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.Domain.Tests/RewardMaterializationTests.fs",
+      "old_path": null,
+      "status": "A",
+      "added": "75",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.Domain.Tests/StS2AP.Domain.Tests.fsproj",
+      "old_path": null,
+      "status": "A",
+      "added": "25",
+      "deleted": "0",
+      "group": "15",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.Domain/MirroredReward.fs",
+      "old_path": null,
+      "status": "A",
+      "added": "253",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP.Domain/Participant.fs",
+      "old_path": null,
+      "status": "A",
+      "added": "175",
+      "deleted": "0",
+      "group": "01",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP.Domain/ProgressiveStarter.fs",
+      "old_path": null,
+      "status": "A",
+      "added": "235",
+      "deleted": "0",
+      "group": "10",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP.Domain/RewardMaterialization.fs",
+      "old_path": null,
+      "status": "A",
+      "added": "40",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP.Domain/StS2AP.Domain.fsproj",
+      "old_path": null,
+      "status": "A",
+      "added": "15",
+      "deleted": "0",
+      "group": "14",
+      "change": "Added path",
+      "surface": "Build/tooling"
+    },
+    {
+      "path": "client/StS2AP.Loader/Bootstrap.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "288",
+      "deleted": "0",
+      "group": "14",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP.Loader/Patches_VariantTypeDiscovery.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "110",
+      "deleted": "0",
+      "group": "14",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP.Loader/StS2AP.Loader.csproj",
+      "old_path": null,
+      "status": "A",
+      "added": "33",
+      "deleted": "0",
+      "group": "14",
+      "change": "Added path",
+      "surface": "Build/tooling"
+    },
+    {
+      "path": "client/StS2AP.RegressionTests/ApSessionIdentityTests.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "139",
+      "deleted": "0",
+      "group": "01",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.RegressionTests/ArtifactFactAttribute.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "12",
+      "deleted": "0",
+      "group": "15",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.RegressionTests/BugReportTests.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "100",
+      "deleted": "0",
+      "group": "13",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.RegressionTests/CampaignSaveTests.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "90",
+      "deleted": "0",
+      "group": "09",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.RegressionTests/DeathLinkTests.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "112",
+      "deleted": "0",
+      "group": "12",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.RegressionTests/MirroredRewardAdapterTests.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "241",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.RegressionTests/NonCombatActionAdmissionTests.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "50",
+      "deleted": "0",
+      "group": "04",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.RegressionTests/PackagingTests.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "118",
+      "deleted": "0",
+      "group": "14",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.RegressionTests/ParticipantInteropTests.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "65",
+      "deleted": "0",
+      "group": "01",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.RegressionTests/ProgressiveStarterTests.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "227",
+      "deleted": "0",
+      "group": "10",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.RegressionTests/README.md",
+      "old_path": null,
+      "status": "A",
+      "added": "90",
+      "deleted": "0",
+      "group": "15",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.RegressionTests/ReceivedItemLedgerTests.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "178",
+      "deleted": "0",
+      "group": "03",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.RegressionTests/RelicReceiptTests.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "193",
+      "deleted": "0",
+      "group": "07",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.RegressionTests/ReplicaConstructionTests.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "47",
+      "deleted": "0",
+      "group": "03",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.RegressionTests/RestSitePolicyTests.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "127",
+      "deleted": "0",
+      "group": "11",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.RegressionTests/RewardMaterializationInteropTests.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "36",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.RegressionTests/RewardTravelTests.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "69",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.RegressionTests/StS2AP.RegressionTests.csproj",
+      "old_path": null,
+      "status": "A",
+      "added": "61",
+      "deleted": "0",
+      "group": "15",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP.RegressionTests/UniversalBuffGoldTests.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "112",
+      "deleted": "0",
+      "group": "06",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "client/StS2AP/Archipelago.json",
+      "old_path": null,
+      "status": "M",
+      "added": "2",
+      "deleted": "2",
+      "group": "14",
+      "change": "Modified",
+      "surface": "Configuration/asset"
+    },
+    {
+      "path": "client/StS2AP/ArchipelagoClient.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "459",
+      "deleted": "270",
+      "group": "02",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Data/ArchipelagoIdCodec.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "56",
+      "deleted": "0",
+      "group": "01",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Data/CharTable.cs",
+      "old_path": "client/StS2AP/Data/CharTable.cs",
+      "status": "D",
+      "added": "0",
+      "deleted": "20",
+      "group": "01",
+      "change": "Deleted path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Data/Constants.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "0",
+      "deleted": "2",
+      "group": "17",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Data/ItemTable.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "15",
+      "deleted": "8",
+      "group": "06",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Data/LocationData.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "90",
+      "deleted": "31",
+      "group": "08",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/DomainAdapters/MirroredRewardAdapter.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "135",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/DomainAdapters/ParticipantAdapter.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "44",
+      "deleted": "0",
+      "group": "01",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/DomainAdapters/ProgressiveStarterAdapter.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "86",
+      "deleted": "0",
+      "group": "10",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Entities/RestSite/ApRestSiteOption.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "112",
+      "deleted": "0",
+      "group": "11",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Entities/RestSite/FakeRestSiteOption.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "18",
+      "deleted": "0",
+      "group": "11",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Extensions/CharacterModelExtensions.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "10",
+      "deleted": "22",
+      "group": "01",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Extensions/ItemInfoExtensions.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "26",
+      "deleted": "32",
+      "group": "01",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Extensions/PlayerExtensions.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "28",
+      "deleted": "15",
+      "group": "01",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Extensions/RestSiteOptionExtensions.cs",
+      "old_path": "client/StS2AP/Extensions/RestSiteOptionExtensions.cs",
+      "status": "D",
+      "added": "0",
+      "deleted": "44",
+      "group": "11",
+      "change": "Deleted path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/GlobalUsings.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "4",
+      "deleted": "0",
+      "group": "17",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/ModEntry.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "10",
+      "deleted": "11",
+      "group": "14",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/ModSettingsRegistration.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "17",
+      "deleted": "3",
+      "group": "14",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/ApAscensionDownActionMessage.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "14",
+      "deleted": "0",
+      "group": "10",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/ApProgressiveStarterActionMessage.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "40",
+      "deleted": "0",
+      "group": "10",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/ApReceivedItemLedger.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "138",
+      "deleted": "0",
+      "group": "03",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/ArchipelagoProgress.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "261",
+      "deleted": "101",
+      "group": "03",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/ArchipelagoReward.cs",
+      "old_path": "client/StS2AP/Models/ArchipelagoReward.cs",
+      "status": "D",
+      "added": "0",
+      "deleted": "147",
+      "group": "05",
+      "change": "Deleted path",
+      "surface": "Source",
+      "successor": "client/StS2AP/Models/Rewards/Presentation/ArchipelagoReward.cs"
+    },
+    {
+      "path": "client/StS2AP/Models/Configuration/ArchipelagoSettings.cs",
+      "old_path": "client/StS2AP/Models/ArchipelagoSettings.cs",
+      "status": "R083",
+      "added": "24",
+      "deleted": "14",
+      "group": "01",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/Configuration/CharacterConfig.cs",
+      "old_path": "client/StS2AP/Models/CharacterConfig.cs",
+      "status": "R091",
+      "added": "5",
+      "deleted": "5",
+      "group": "01",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/Configuration/ClientSettings.cs",
+      "old_path": "client/StS2AP/Models/ClientSettings.cs",
+      "status": "R094",
+      "added": "1",
+      "deleted": "7",
+      "group": "17",
+      "change": "Move + imports/whitespace only",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/Custom/DeathLinkCurse.cs",
+      "old_path": "client/StS2AP/Models/DeathLinkCurse.cs",
+      "status": "R100",
+      "added": "0",
+      "deleted": "0",
+      "group": "12",
+      "change": "Exact move",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/Custom/RelicCoupons.cs",
+      "old_path": "client/StS2AP/Models/RelicCoupons.cs",
+      "status": "R099",
+      "added": "0",
+      "deleted": "1",
+      "group": "17",
+      "change": "Move + imports/whitespace only",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/IndexedItemInfo.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "7",
+      "deleted": "9",
+      "group": "03",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/Rewards/Grants/ApGoldClaim.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "11",
+      "deleted": "0",
+      "group": "06",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/Rewards/Grants/ApGrantId.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "10",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/Rewards/Grants/ArchipelagoGoldOffer.cs",
+      "old_path": "client/StS2AP/Models/ArchipelagoGoldOffer.cs",
+      "status": "R100",
+      "added": "0",
+      "deleted": "0",
+      "group": "06",
+      "change": "Exact move",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/Rewards/Presentation/ApItemCardModel.cs",
+      "old_path": "client/StS2AP/Models/ApItemCardModel.cs",
+      "status": "R099",
+      "added": "0",
+      "deleted": "1",
+      "group": "05",
+      "change": "Move + imports/whitespace only",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/Rewards/Presentation/ApItemPotionModel.cs",
+      "old_path": "client/StS2AP/Models/ApItemPotionModel.cs",
+      "status": "R098",
+      "added": "0",
+      "deleted": "1",
+      "group": "05",
+      "change": "Move + imports/whitespace only",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/Rewards/Presentation/ApItemRelicModel.cs",
+      "old_path": "client/StS2AP/Models/ApItemRelicModel.cs",
+      "status": "R098",
+      "added": "0",
+      "deleted": "1",
+      "group": "05",
+      "change": "Move + imports/whitespace only",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/Rewards/Presentation/ArchipelagoReward.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "129",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/Rewards/Specs/ApMenuGoldSpec.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "11",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/Rewards/Specs/ApMirroredRewardKind.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "13",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/Rewards/Specs/ApMirroredRewardSpec.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "70",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/Rewards/Specs/ApRewardEffectSpec.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "12",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/Rewards/Specs/ApRewardMenuSpec.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "16",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Models/SerializableAP.cs",
+      "old_path": "client/StS2AP/Models/SerializableAP.cs",
+      "status": "D",
+      "added": "0",
+      "deleted": "101",
+      "group": "09",
+      "change": "Deleted path",
+      "surface": "Source",
+      "successor": "client/StS2AP/Persistence/SerializableAP.cs"
+    },
+    {
+      "path": "client/StS2AP/Models/Singleton/ApRestSiteModel.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "115",
+      "deleted": "0",
+      "group": "11",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Multiplayer/ApMultiplayerCampaignFlow.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "130",
+      "deleted": "0",
+      "group": "09",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Multiplayer/ApMultiplayerCampaignStore.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "788",
+      "deleted": "0",
+      "group": "09",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Multiplayer/ApParticipationKind.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "8",
+      "deleted": "0",
+      "group": "01",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Multiplayer/ApPlayDestination.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "8",
+      "deleted": "0",
+      "group": "02",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Multiplayer/ApPlayerContextResolver.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "167",
+      "deleted": "0",
+      "group": "01",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Multiplayer/ApRunData.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "881",
+      "deleted": "0",
+      "group": "03",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Multiplayer/Messages/ApProgressDeltaMessage.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "11",
+      "deleted": "0",
+      "group": "03",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Multiplayer/Messages/ApProgressSnapshotMessage.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "10",
+      "deleted": "0",
+      "group": "03",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Multiplayer/Messages/DeathLinkActionMessage.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "23",
+      "deleted": "0",
+      "group": "12",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Multiplayer/Messages/DeathLinkInboundRequestMessage.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "16",
+      "deleted": "0",
+      "group": "12",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Multiplayer/Messages/DeathLinkSendInstructionMessage.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "15",
+      "deleted": "0",
+      "group": "12",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Multiplayer/MultiplayerFeature.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "30",
+      "deleted": "0",
+      "group": "02",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Multiplayer/MultiplayerLocationChecks.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "329",
+      "deleted": "0",
+      "group": "08",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Multiplayer/MultiplayerSupport.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "1059",
+      "deleted": "0",
+      "group": "02",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Multiplayer/RelicReceiptMultiplayer.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "465",
+      "deleted": "0",
+      "group": "07",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Lifecycle/Patches_DeathLink.cs",
+      "old_path": "client/StS2AP/Patches/Patches_DeathLink.cs",
+      "status": "R078",
+      "added": "18",
+      "deleted": "8",
+      "group": "12",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Lifecycle/Patches_DeathLinkPlayerDeath.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "29",
+      "deleted": "0",
+      "group": "12",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Lifecycle/Patches_DisableTutorial.cs",
+      "old_path": "client/StS2AP/Patches/Patches_DisableTutorial.cs",
+      "status": "R089",
+      "added": "0",
+      "deleted": "7",
+      "group": "17",
+      "change": "Move + imports/whitespace only",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Lifecycle/Patches_DisplayAPVersion.cs",
+      "old_path": "client/StS2AP/Patches/Patches_DisplayAPVersion.cs",
+      "status": "R053",
+      "added": "3",
+      "deleted": "9",
+      "group": "14",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Lifecycle/Patches_HookRunStart.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "337",
+      "deleted": "0",
+      "group": "02",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Lifecycle/Patches_MainMenuBehavior.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "945",
+      "deleted": "0",
+      "group": "02",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Lifecycle/Patches_PauseMenuBehavior.cs",
+      "old_path": "client/StS2AP/Patches/Patches_PauseMenuBehavior.cs",
+      "status": "R099",
+      "added": "1",
+      "deleted": "4",
+      "group": "17",
+      "change": "Move + imports/whitespace only",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Lifecycle/Patches_SaveManagement.cs",
+      "old_path": "client/StS2AP/Patches/Patches_SaveManagement.cs",
+      "status": "R068",
+      "added": "138",
+      "deleted": "47",
+      "group": "09",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Patches_APCardRewardUpgradeOdds.cs",
+      "old_path": "client/StS2AP/Patches/Patches_APCardRewardUpgradeOdds.cs",
+      "status": "D",
+      "added": "0",
+      "deleted": "57",
+      "group": "05",
+      "change": "Deleted path",
+      "surface": "Source",
+      "successor": "client/StS2AP/Patches/Rewards/Patches_APCardRewardUpgradeOdds.cs"
+    },
+    {
+      "path": "client/StS2AP/Patches/Patches_CampfireSanity.cs",
+      "old_path": "client/StS2AP/Patches/Patches_CampfireSanity.cs",
+      "status": "D",
+      "added": "0",
+      "deleted": "268",
+      "group": "11",
+      "change": "Deleted path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Patches_Floorsanity.cs",
+      "old_path": "client/StS2AP/Patches/Patches_Floorsanity.cs",
+      "status": "D",
+      "added": "0",
+      "deleted": "128",
+      "group": "08",
+      "change": "Deleted path",
+      "surface": "Source",
+      "successor": "client/StS2AP/Patches/Progression/Patches_Floorsanity.cs"
+    },
+    {
+      "path": "client/StS2AP/Patches/Patches_HookRunStart.cs",
+      "old_path": "client/StS2AP/Patches/Patches_HookRunStart.cs",
+      "status": "D",
+      "added": "0",
+      "deleted": "146",
+      "group": "02",
+      "change": "Deleted path",
+      "surface": "Source",
+      "successor": "client/StS2AP/Patches/Lifecycle/Patches_HookRunStart.cs"
+    },
+    {
+      "path": "client/StS2AP/Patches/Patches_MainMenuBehavior.cs",
+      "old_path": "client/StS2AP/Patches/Patches_MainMenuBehavior.cs",
+      "status": "D",
+      "added": "0",
+      "deleted": "469",
+      "group": "02",
+      "change": "Deleted path",
+      "surface": "Source",
+      "successor": "client/StS2AP/Patches/Lifecycle/Patches_MainMenuBehavior.cs"
+    },
+    {
+      "path": "client/StS2AP/Patches/Patches_UnlockAllCards.cs",
+      "old_path": "client/StS2AP/Patches/Patches_UnlockAllCards.cs",
+      "status": "D",
+      "added": "0",
+      "deleted": "64",
+      "group": "10",
+      "change": "Deleted path",
+      "surface": "Source",
+      "successor": "client/StS2AP/Patches/Progression/Patches_UnlockAllCards.cs"
+    },
+    {
+      "path": "client/StS2AP/Patches/Patches_UnlockAllPotions.cs",
+      "old_path": "client/StS2AP/Patches/Patches_UnlockAllPotions.cs",
+      "status": "D",
+      "added": "0",
+      "deleted": "64",
+      "group": "10",
+      "change": "Deleted path",
+      "surface": "Source",
+      "successor": "client/StS2AP/Patches/Progression/Patches_UnlockAllPotions.cs"
+    },
+    {
+      "path": "client/StS2AP/Patches/Patches_UnlockAllRelics.cs",
+      "old_path": "client/StS2AP/Patches/Patches_UnlockAllRelics.cs",
+      "status": "D",
+      "added": "0",
+      "deleted": "62",
+      "group": "10",
+      "change": "Deleted path",
+      "surface": "Source",
+      "successor": "client/StS2AP/Patches/Progression/Patches_UnlockAllRelics.cs"
+    },
+    {
+      "path": "client/StS2AP/Patches/Patches_Victory.cs",
+      "old_path": "client/StS2AP/Patches/Patches_Victory.cs",
+      "status": "D",
+      "added": "0",
+      "deleted": "39",
+      "group": "08",
+      "change": "Deleted path",
+      "surface": "Source",
+      "successor": "client/StS2AP/Patches/Progression/Patches_Victory.cs"
+    },
+    {
+      "path": "client/StS2AP/Patches/Progression/Patches_APProgressOnCharSelect.cs",
+      "old_path": "client/StS2AP/Patches/Patches_APProgressOnCharSelect.cs",
+      "status": "R086",
+      "added": "30",
+      "deleted": "19",
+      "group": "10",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Progression/Patches_AncientsUnlock.cs",
+      "old_path": "client/StS2AP/Patches/Patches_AncientsUnlock.cs",
+      "status": "R072",
+      "added": "23",
+      "deleted": "5",
+      "group": "10",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Progression/Patches_AscensionOverride.cs",
+      "old_path": "client/StS2AP/Patches/Patches_AscensionOverride.cs",
+      "status": "R069",
+      "added": "63",
+      "deleted": "21",
+      "group": "10",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Progression/Patches_Floorsanity.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "174",
+      "deleted": "0",
+      "group": "08",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Progression/Patches_PreventEpochTriggers.cs",
+      "old_path": "client/StS2AP/Patches/Patches_PreventEpochTriggers.cs",
+      "status": "R091",
+      "added": "0",
+      "deleted": "5",
+      "group": "10",
+      "change": "Move + imports/whitespace only",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Progression/Patches_UnlockAllCards.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "35",
+      "deleted": "0",
+      "group": "10",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Progression/Patches_UnlockAllPotions.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "66",
+      "deleted": "0",
+      "group": "10",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Progression/Patches_UnlockAllRelics.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "66",
+      "deleted": "0",
+      "group": "10",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Progression/Patches_UnlockCharacters.cs",
+      "old_path": "client/StS2AP/Patches/Patches_UnlockCharacters.cs",
+      "status": "R086",
+      "added": "50",
+      "deleted": "22",
+      "group": "01",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Progression/Patches_UnlockUnderdocks.cs",
+      "old_path": "client/StS2AP/Patches/Patches_UnlockUnderdocks.cs",
+      "status": "R100",
+      "added": "0",
+      "deleted": "0",
+      "group": "10",
+      "change": "Exact move",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Progression/Patches_Victory.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "59",
+      "deleted": "0",
+      "group": "08",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Rewards/Patches_APCardRewardUpgradeOdds.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "423",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Rewards/Patches_APRewardScreen.cs",
+      "old_path": "client/StS2AP/Patches/Patches_APRewardScreen.cs",
+      "status": "R088",
+      "added": "32",
+      "deleted": "18",
+      "group": "05",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Rewards/Patches_APRewardTravel.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "37",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Rewards/Patches_AncientRelics.cs",
+      "old_path": "client/StS2AP/Patches/Patches_AncientRelics.cs",
+      "status": "R058",
+      "added": "170",
+      "deleted": "63",
+      "group": "10",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Rewards/Patches_InjectAPRewards.cs",
+      "old_path": "client/StS2AP/Patches/Patches_InjectAPRewards.cs",
+      "status": "R057",
+      "added": "176",
+      "deleted": "50",
+      "group": "08",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Rewards/Patches_ItemProcessor.cs",
+      "old_path": "client/StS2AP/Patches/Patches_ItemProcessor.cs",
+      "status": "R065",
+      "added": "167",
+      "deleted": "30",
+      "group": "06",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Rewards/Patches_LastingCandy.cs",
+      "old_path": "client/StS2AP/Patches/Patches_LastingCandy.cs",
+      "status": "R100",
+      "added": "0",
+      "deleted": "0",
+      "group": "05",
+      "change": "Exact move",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Rewards/Patches_WingCharmMultiplayer.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "21",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Rooms/Patches_LordsParasolFix.cs",
+      "old_path": "client/StS2AP/Patches/Patches_LordsParasolFix.cs",
+      "status": "R097",
+      "added": "0",
+      "deleted": "2",
+      "group": "17",
+      "change": "Move + imports/whitespace only",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Rooms/Patches_MerchantTransitionDiagnostics.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "479",
+      "deleted": "0",
+      "group": "13",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Rooms/Patches_RestSiteRoom.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "52",
+      "deleted": "0",
+      "group": "11",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Rooms/Patches_ShopPages.cs",
+      "old_path": "client/StS2AP/Patches/Patches_ShopPages.cs",
+      "status": "R091",
+      "added": "48",
+      "deleted": "39",
+      "group": "11",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Rooms/Patches_ShopSanity.cs",
+      "old_path": "client/StS2AP/Patches/Patches_ShopSanity.cs",
+      "status": "R063",
+      "added": "334",
+      "deleted": "199",
+      "group": "11",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Rooms/Patches_TreasureReceiptAgreement.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "65",
+      "deleted": "0",
+      "group": "07",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Patches/Rooms/Patches_TreasureRoomRelicScarcity.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "61",
+      "deleted": "0",
+      "group": "07",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Persistence/ApCardAssignmentState.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "27",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Persistence/ApPlayerRunState.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "23",
+      "deleted": "0",
+      "group": "03",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Persistence/ApProgressDelta.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "414",
+      "deleted": "0",
+      "group": "03",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Persistence/ApProgressiveStarterKindState.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "18",
+      "deleted": "0",
+      "group": "10",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Persistence/ApProgressiveStarterPlayerState.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "8",
+      "deleted": "0",
+      "group": "10",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Persistence/ApProgressiveStarterState.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "9",
+      "deleted": "0",
+      "group": "10",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Persistence/ApRelicReceiptState.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "159",
+      "deleted": "0",
+      "group": "07",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Persistence/ApReplicaConstructionState.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "62",
+      "deleted": "0",
+      "group": "03",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Persistence/ApRunProgressState.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "70",
+      "deleted": "0",
+      "group": "03",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Persistence/ApRunSharedState.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "15",
+      "deleted": "0",
+      "group": "03",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Persistence/ApSerializationContext.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "7",
+      "deleted": "0",
+      "group": "09",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Persistence/CampaignSaveFiles.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "51",
+      "deleted": "0",
+      "group": "09",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Persistence/SerializableAP.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "14",
+      "deleted": "0",
+      "group": "09",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Persistence/SerializationUtility.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "24",
+      "deleted": "0",
+      "group": "09",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/README.md",
+      "old_path": null,
+      "status": "A",
+      "added": "56",
+      "deleted": "0",
+      "group": "17",
+      "change": "Added path",
+      "surface": "Documentation"
+    },
+    {
+      "path": "client/StS2AP/StS2AP.csproj",
+      "old_path": null,
+      "status": "M",
+      "added": "180",
+      "deleted": "173",
+      "group": "14",
+      "change": "Modified",
+      "surface": "Build/tooling"
+    },
+    {
+      "path": "client/StS2AP/UI/ApMultiplayerCampaignPicker.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "464",
+      "deleted": "0",
+      "group": "09",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/UI/ArchipelagoCharTrackerUI.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "10",
+      "deleted": "7",
+      "group": "13",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/UI/ArchipelagoConnectionUI.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "39",
+      "deleted": "29",
+      "group": "02",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/UI/ArchipelagoGoalTrackerUI.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "7",
+      "deleted": "2",
+      "group": "13",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/UI/ArchipelagoNotificationUI.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "13",
+      "deleted": "17",
+      "group": "13",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/UI/ArchipelagoRewardUI.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "213",
+      "deleted": "26",
+      "group": "05",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/UI/Components/ItemCountLabel.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "2",
+      "deleted": "3",
+      "group": "13",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/UI/ConfirmPopupUI.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "22",
+      "deleted": "18",
+      "group": "13",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/UI/ProgressiveCampfireTopBarUI.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "3",
+      "deleted": "2",
+      "group": "11",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Actions/ManagedActionRequestScheduler.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "151",
+      "deleted": "0",
+      "group": "04",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Actions/NonCombatActionAdmission.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "64",
+      "deleted": "0",
+      "group": "04",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Actions/NonCombatActionAdmissionState.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "33",
+      "deleted": "0",
+      "group": "04",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/ApNativeRewardMenu.cs",
+      "old_path": "client/StS2AP/Utils/ApNativeRewardMenu.cs",
+      "status": "D",
+      "added": "0",
+      "deleted": "505",
+      "group": "05",
+      "change": "Deleted path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/BetaMainCompatibility.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "118",
+      "deleted": "31",
+      "group": "14",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Connection/ApFastMpLaunchController.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "237",
+      "deleted": "0",
+      "group": "02",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Connection/ApReconnectController.cs",
+      "old_path": "client/StS2AP/Utils/ApReconnectController.cs",
+      "status": "R094",
+      "added": "3",
+      "deleted": "4",
+      "group": "02",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Connection/ApSessionIdentity.cs",
+      "old_path": "client/StS2AP/Utils/ApSessionIdentity.cs",
+      "status": "R060",
+      "added": "18",
+      "deleted": "23",
+      "group": "01",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Connection/ApSessionIdentityJsonConverter.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "55",
+      "deleted": "0",
+      "group": "01",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Connection/ApSlotIdentity.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "40",
+      "deleted": "0",
+      "group": "01",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Connection/PendingCheckOutbox.cs",
+      "old_path": "client/StS2AP/Utils/PendingCheckOutbox.cs",
+      "status": "R100",
+      "added": "0",
+      "deleted": "0",
+      "group": "08",
+      "change": "Exact move",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Connection/PendingCheckUtility.cs",
+      "old_path": "client/StS2AP/Utils/PendingCheckUtility.cs",
+      "status": "R076",
+      "added": "111",
+      "deleted": "1",
+      "group": "08",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/DeathLink/DeathLinkEventLedger.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "64",
+      "deleted": "0",
+      "group": "12",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/DeathLink/DeathLinkMultiplayer.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "992",
+      "deleted": "0",
+      "group": "12",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/DeathLink/DeathLinkUtility.cs",
+      "old_path": "client/StS2AP/Utils/DeathLinkUtility.cs",
+      "status": "R083",
+      "added": "30",
+      "deleted": "8",
+      "group": "12",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Diagnostics/APDevCommand.cs",
+      "old_path": "client/StS2AP/Utils/APDevCommand.cs",
+      "status": "R056",
+      "added": "33",
+      "deleted": "15",
+      "group": "13",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Diagnostics/ApBugReport.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "71",
+      "deleted": "0",
+      "group": "13",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Diagnostics/ApBugReportFiles.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "119",
+      "deleted": "0",
+      "group": "13",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/GameUtility.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "175",
+      "deleted": "146",
+      "group": "08",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/GodotUtility.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "1",
+      "deleted": "6",
+      "group": "13",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/LogUtility.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "1",
+      "deleted": "2",
+      "group": "13",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/MenuUtility.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "39",
+      "deleted": "10",
+      "group": "13",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/NotificationUtility.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "24",
+      "deleted": "19",
+      "group": "13",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Progression/AncientMultiplayer.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "161",
+      "deleted": "0",
+      "group": "10",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Progression/AscensionManager.cs",
+      "old_path": "client/StS2AP/Utils/AscensionManager.cs",
+      "status": "R082",
+      "added": "45",
+      "deleted": "6",
+      "group": "10",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Progression/AscensionMultiplayer.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "634",
+      "deleted": "0",
+      "group": "10",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Progression/ProgressiveStarterMultiplayer.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "691",
+      "deleted": "0",
+      "group": "10",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Progression/ProgressiveStarterUtility.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "351",
+      "deleted": "0",
+      "group": "10",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/ProgressiveStarterUtility.cs",
+      "old_path": "client/StS2AP/Utils/ProgressiveStarterUtility.cs",
+      "status": "D",
+      "added": "0",
+      "deleted": "422",
+      "group": "10",
+      "change": "Deleted path",
+      "surface": "Source",
+      "successor": "client/StS2AP/Utils/Progression/ProgressiveStarterUtility.cs"
+    },
+    {
+      "path": "client/StS2AP/Utils/RelicRewardUtility.cs",
+      "old_path": "client/StS2AP/Utils/RelicRewardUtility.cs",
+      "status": "D",
+      "added": "0",
+      "deleted": "239",
+      "group": "07",
+      "change": "Deleted path",
+      "surface": "Source",
+      "successor": "client/StS2AP/Utils/Rewards/RelicRewardUtility.cs"
+    },
+    {
+      "path": "client/StS2AP/Utils/RestSitePolicy.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "55",
+      "deleted": "0",
+      "group": "11",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Rewards/AncientRelicPool.cs",
+      "old_path": "client/StS2AP/Utils/AncientRelicPool.cs",
+      "status": "R084",
+      "added": "55",
+      "deleted": "12",
+      "group": "10",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Rewards/ApGrantDispatcher.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "176",
+      "deleted": "0",
+      "group": "06",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Rewards/ApMirroredRewardDispatcher.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "1238",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Rewards/ApRewardTravelGuard.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "34",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Rewards/BuffUtility.cs",
+      "old_path": "client/StS2AP/Utils/BuffUtility.cs",
+      "status": "R091",
+      "added": "51",
+      "deleted": "12",
+      "group": "06",
+      "change": "Move + edits",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Rewards/RelicRewardUtility.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "397",
+      "deleted": "0",
+      "group": "07",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Rewards/StandardRelicPool.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "251",
+      "deleted": "0",
+      "group": "07",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/Rewards/UniversalBuffGold.cs",
+      "old_path": null,
+      "status": "A",
+      "added": "35",
+      "deleted": "0",
+      "group": "06",
+      "change": "Added path",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/Utils/TextUtility.cs",
+      "old_path": null,
+      "status": "M",
+      "added": "4",
+      "deleted": "17",
+      "group": "13",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "client/StS2AP/godot/.godot/imported/APIcon.png-b030ed7a050dcd9ae78eaea3be50ed9f.ctex",
+      "old_path": "client/StS2AP/godot/.godot/imported/APIcon.png-b030ed7a050dcd9ae78eaea3be50ed9f.ctex",
+      "status": "D",
+      "added": "-",
+      "deleted": "-",
+      "group": "17",
+      "change": "Deleted path",
+      "surface": "Configuration/asset"
+    },
+    {
+      "path": "client/StS2AP/godot/.godot/imported/APIcon.png-b030ed7a050dcd9ae78eaea3be50ed9f.md5",
+      "old_path": "client/StS2AP/godot/.godot/imported/APIcon.png-b030ed7a050dcd9ae78eaea3be50ed9f.md5",
+      "status": "D",
+      "added": "0",
+      "deleted": "3",
+      "group": "17",
+      "change": "Deleted path",
+      "surface": "Configuration/asset"
+    },
+    {
+      "path": "client/StS2AP/godot/Archipelago/localization/eng/main_menu_ui.json",
+      "old_path": null,
+      "status": "M",
+      "added": "2",
+      "deleted": "0",
+      "group": "02",
+      "change": "Modified",
+      "surface": "Configuration/asset"
+    },
+    {
+      "path": "client/StS2AP/godot/Archipelago/localization/eng/rest_site_ui.json",
+      "old_path": null,
+      "status": "M",
+      "added": "0",
+      "deleted": "1",
+      "group": "11",
+      "change": "Modified",
+      "surface": "Configuration/asset"
+    },
+    {
+      "path": "client/StS2AP/godot/images/APIcon.png.import",
+      "old_path": "client/StS2AP/godot/images/APIcon.png.import",
+      "status": "D",
+      "added": "0",
+      "deleted": "40",
+      "group": "17",
+      "change": "Deleted path",
+      "surface": "Configuration/asset"
+    },
+    {
+      "path": "client/StS2AP/godot/images/ui/rest_site/option_filler.png.import",
+      "old_path": "client/StS2AP/godot/images/ui/rest_site/option_filler.png.import",
+      "status": "D",
+      "added": "0",
+      "deleted": "40",
+      "group": "17",
+      "change": "Deleted path",
+      "surface": "Configuration/asset"
+    },
+    {
+      "path": "client/StS2AP/godot/images/ui/rest_site/option_progression.png.import",
+      "old_path": "client/StS2AP/godot/images/ui/rest_site/option_progression.png.import",
+      "status": "D",
+      "added": "0",
+      "deleted": "40",
+      "group": "17",
+      "change": "Deleted path",
+      "surface": "Configuration/asset"
+    },
+    {
+      "path": "client/StS2AP/godot/images/ui/rest_site/option_trap.png.import",
+      "old_path": "client/StS2AP/godot/images/ui/rest_site/option_trap.png.import",
+      "status": "D",
+      "added": "0",
+      "deleted": "40",
+      "group": "17",
+      "change": "Deleted path",
+      "surface": "Configuration/asset"
+    },
+    {
+      "path": "client/StS2AP/godot/images/ui/rest_site/option_useful.png.import",
+      "old_path": "client/StS2AP/godot/images/ui/rest_site/option_useful.png.import",
+      "status": "D",
+      "added": "0",
+      "deleted": "40",
+      "group": "17",
+      "change": "Deleted path",
+      "surface": "Configuration/asset"
+    },
+    {
+      "path": "client/StS2AP/local.props.template",
+      "old_path": null,
+      "status": "M",
+      "added": "20",
+      "deleted": "10",
+      "group": "14",
+      "change": "Modified",
+      "surface": "Configuration/asset"
+    },
+    {
+      "path": "docs/design/mirrored-reward-domain.md",
+      "old_path": null,
+      "status": "A",
+      "added": "183",
+      "deleted": "0",
+      "group": "05",
+      "change": "Added path",
+      "surface": "Documentation"
+    },
+    {
+      "path": "docs/design/progressive-starter-domain.md",
+      "old_path": null,
+      "status": "A",
+      "added": "94",
+      "deleted": "0",
+      "group": "10",
+      "change": "Added path",
+      "surface": "Documentation"
+    },
+    {
+      "path": "docs/multiplayer-bug-reports.md",
+      "old_path": null,
+      "status": "A",
+      "added": "55",
+      "deleted": "0",
+      "group": "13",
+      "change": "Added path",
+      "surface": "Documentation"
+    },
+    {
+      "path": "docs/releasing.md",
+      "old_path": null,
+      "status": "A",
+      "added": "100",
+      "deleted": "0",
+      "group": "14",
+      "change": "Added path",
+      "surface": "Documentation"
+    },
+    {
+      "path": "docs/sts2-api-compat.md",
+      "old_path": null,
+      "status": "A",
+      "added": "41",
+      "deleted": "0",
+      "group": "14",
+      "change": "Added path",
+      "surface": "Documentation"
+    },
+    {
+      "path": "scripts/README.md",
+      "old_path": null,
+      "status": "A",
+      "added": "162",
+      "deleted": "0",
+      "group": "14",
+      "change": "Added path",
+      "surface": "Documentation"
+    },
+    {
+      "path": "scripts/analyze_multiplayer_divergence.ps1",
+      "old_path": null,
+      "status": "A",
+      "added": "400",
+      "deleted": "0",
+      "group": "13",
+      "change": "Added path",
+      "surface": "Build/tooling"
+    },
+    {
+      "path": "scripts/assemble_client_variants.ps1",
+      "old_path": null,
+      "status": "A",
+      "added": "135",
+      "deleted": "0",
+      "group": "14",
+      "change": "Added path",
+      "surface": "Build/tooling"
+    },
+    {
+      "path": "scripts/release-notes-template.md",
+      "old_path": null,
+      "status": "M",
+      "added": "11",
+      "deleted": "5",
+      "group": "14",
+      "change": "Modified",
+      "surface": "Documentation"
+    },
+    {
+      "path": "scripts/release.ps1",
+      "old_path": null,
+      "status": "M",
+      "added": "8",
+      "deleted": "401",
+      "group": "14",
+      "change": "Modified",
+      "surface": "Build/tooling"
+    },
+    {
+      "path": "scripts/release.py",
+      "old_path": null,
+      "status": "A",
+      "added": "912",
+      "deleted": "0",
+      "group": "14",
+      "change": "Added path",
+      "surface": "Build/tooling"
+    },
+    {
+      "path": "scripts/test_multiplayer_local.ps1",
+      "old_path": null,
+      "status": "A",
+      "added": "244",
+      "deleted": "0",
+      "group": "13",
+      "change": "Added path",
+      "surface": "Build/tooling"
+    },
+    {
+      "path": "scripts/tests/test_release.py",
+      "old_path": null,
+      "status": "A",
+      "added": "253",
+      "deleted": "0",
+      "group": "14",
+      "change": "Added path",
+      "surface": "Test"
+    },
+    {
+      "path": "world/spire2/archipelago.json",
+      "old_path": null,
+      "status": "M",
+      "added": "1",
+      "deleted": "1",
+      "group": "16",
+      "change": "Modified",
+      "surface": "Configuration/asset"
+    },
+    {
+      "path": "world/spire2/options.py",
+      "old_path": null,
+      "status": "M",
+      "added": "5",
+      "deleted": "7",
+      "group": "16",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "world/spire2/regions.py",
+      "old_path": null,
+      "status": "M",
+      "added": "5",
+      "deleted": "0",
+      "group": "16",
+      "change": "Modified",
+      "surface": "Source"
+    },
+    {
+      "path": "world/spire2/test/option_tests.py",
+      "old_path": null,
+      "status": "M",
+      "added": "28",
+      "deleted": "1",
+      "group": "16",
+      "change": "Modified",
+      "surface": "Test"
+    },
+    {
+      "path": "world/spire2/world.py",
+      "old_path": null,
+      "status": "M",
+      "added": "1",
+      "deleted": "1",
+      "group": "16",
+      "change": "Modified",
+      "surface": "Source"
+    }
+  ]
+}

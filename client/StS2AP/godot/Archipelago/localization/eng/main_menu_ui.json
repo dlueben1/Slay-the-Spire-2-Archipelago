@@ -1,4 +1,6 @@
 {
+  "AP_DISCONNECT.header": "Disconnect from Archipelago?",
+  "AP_DISCONNECT.body": "Disconnect from slot '{slot}'? Your saved runs and pending location checks will be kept. You can then connect to another room or slot.",
   "CONTINUE_RUN.header": "Continue Run?",
   "CONTINUE_RUN.body": "Would you like to resume your last AP save for this character? (Yes, AP keeps the save even if you die.)",
   "APWORLD_OLDER.header": "APWorld Update Recommended",

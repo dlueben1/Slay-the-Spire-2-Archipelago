@@ -1,5 +1,7 @@
+import unittest
+
 from Utils import restricted_dumps
-from test.general import setup_solo_multiworld
+from test.general import setup_multiworld, setup_solo_multiworld
 from worlds.AutoWorld import call_all
 from worlds.spire2 import SlayTheSpire2World
 from worlds.spire2.options import CharacterOptions, UnlockedCharacter, filler_item_options
@@ -119,6 +121,31 @@ class TestAncientRelicOptionsTrueChaos(Spire2TestBase):
     def test_true_chaos_value_is_sent_in_slot_data(self):
         self.assertEqual(2, self.world.options.ancient_relic_pool.value)
         self.assertEqual(2, self.world.fill_slot_data()["ancient_relic_pool"])
+
+
+class TestAnytimeNeowContract(unittest.TestCase):
+    def test_neow_location_and_receipts_match_slot_settings_in_every_pool(self):
+        for neow_sanity in (0, 1):
+            for pool in (0, 1, 2):
+                with self.subTest(neow_sanity=neow_sanity, pool=pool):
+                    multiworld = setup_multiworld(SlayTheSpire2World, options={
+                        "characters": ["silent"],
+                        "neow_sanity": neow_sanity,
+                        "ancient_relic_location": 1,
+                        "ancient_relic_pool": pool,
+                    })
+                    slot_data = multiworld.worlds[1].fill_slot_data()
+                    self.assertEqual(neow_sanity, slot_data["neow_sanity"])
+                    self.assertEqual(1, slot_data["ancient_relic_location"])
+                    self.assertEqual(pool, slot_data["ancient_relic_pool"])
+                    self.assertEqual(2 + neow_sanity, sum(
+                        item.name == "Silent Progressive Ancient"
+                        for item in multiworld.itempool
+                    ))
+                    self.assertEqual(bool(neow_sanity), any(
+                        location.name == "Silent Ancient Act 1"
+                        for location in multiworld.get_locations(1)
+                    ))
 
 
 class TestProgressiveRelicOptionsDefault(Spire2TestBase):

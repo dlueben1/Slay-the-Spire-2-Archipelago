@@ -5,7 +5,11 @@ Archipelago Client & APWorld for STS2
 # Download the Latest Playable Release [Here](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest)
 
 > [!IMPORTANT]
-> We **currently** support the Beta Branch (v0.111.0), and also the Main Branch of the game! (v.107.1) The Beta Branch may break our mod whenever it updates so be aware if a fix could take several days to fix and hence we recommend using the Main Branch (though Beta Branch does work for now).
+> The client contains exact builds for the public **v0.107.1** and public-beta
+> **v0.111.0** game versions. Later patch releases on those same version lines
+> can use the newest earlier build (for example, v0.107.2 uses v0.107.1).
+> The loader refuses unreadable versions, earlier patches, and new major/minor
+> lines.
 
 ## 1.0 Development onwards
 
@@ -26,12 +30,15 @@ Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetai
 ## Manual installation
 
 1. Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) installed. The easiest way to obtain it is from Steam Workshop.
-2. Download the "sts2-client.zip" from the [Releases](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest) section of the Repo
+2. Download `Archipelago.zip` from the [Releases](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest) section of the repo
 3. Go to your Slay the Spire II directory (In Steam, click "Browse Local Files")
 4. If a folder called `mods` does not exist, create it
-5. Unzip the **contents** of `sts2-client.zip` into `mods`
+5. Put `Archipelago.zip` in `mods`, then extract it into the archive program's default `Archipelago` directory
 
-- If you've done this step correctly, your directory structure should look like this: `/<slay-the-spire-2-local-files>/mods/Archipelago/` and the contents of that folder should be a bunch of `.dll` files and a `.pck` file (there may be more files too, please don't touch anything in this folder)
+- If you've done this step correctly, `mods/Archipelago/` contains the loader DLL,
+  common dependencies, the PCK, and `lib/0.107.1/` plus `lib/0.111.0/`. Keep that
+  directory structure intact.
+- The bundled `spire2.apworld` lets hosts use the **Install APWorld** button from the game's main menu.
 
 6. Start the game
 

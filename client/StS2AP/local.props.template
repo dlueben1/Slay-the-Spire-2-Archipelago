@@ -1,22 +1,32 @@
 <Project>
   <PropertyGroup>
+    <!-- MSBuild-based IDEs and editors resolve this API version. -->
+    <Sts2ApiCompat>0.111.0</Sts2ApiCompat>
+
+    <!-- Use MegaCrit-permissioned, stripped reference assemblies from NuGet. -->
+    <UseSts2RefLib>true</UseSts2RefLib>
+
     <!-- Active game installation used for debugging and deploying the built mod. -->
     <STS2GamePath>???\steamapps\common\Slay the Spire 2</STS2GamePath>
 
     <!--
-      Optional compile-time reference directory. For reproducible cross-branch release builds,
-      point this at a preserved Public Branch 0.107.1 data_sts2_windows_x86_64 directory.
-      I recommend, copying that directory on main branch so you can better test the beta branch 
-      If omitted, the build uses the active installation under STS2GamePath.
+      Optional authoritative local references. To use DLLs extracted from your
+      own game installations, set UseSts2RefLib to false and uncomment
+      Sts2ApiSignatureRoot. Keep only the three assemblies in each numeric
+      version directory:
+
+      ???\sts2-reference\0.107.1\sts2.dll
+      ???\sts2-reference\0.107.1\0Harmony.dll
+      ???\sts2-reference\0.107.1\GodotSharp.dll
+      ???\sts2-reference\0.111.0\sts2.dll
+      ???\sts2-reference\0.111.0\0Harmony.dll
+      ???\sts2-reference\0.111.0\GodotSharp.dll
+
+      The selected Sts2ApiCompat chooses the matching directory below this root.
     -->
-    <!-- <STS2ReferenceDataDir>???\sts2-reference\0.107.1\data_sts2_windows_x86_64</STS2ReferenceDataDir> -->
+    <!-- <Sts2ApiSignatureRoot>???\sts2-reference</Sts2ApiSignatureRoot> -->
 
     <!-- Godot 4.5.1 .NET executable used to export the mod's PCK. -->
     <GodotExePath>???\Godot_v4.5.1-stable_mono_win64.exe</GodotExePath>
-    
-    <!-- Mod Metadata -->
-    <ModName>Archipelago</ModName>
-    <ModDisplayName>Archipelago Client</ModDisplayName>
-    <ModAuthor>Kirbyfanner, PlatanoBailando, Lyxn, Terairk</ModAuthor>
   </PropertyGroup>
 </Project>

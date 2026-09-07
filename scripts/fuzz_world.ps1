@@ -50,6 +50,10 @@
 .PARAMETER SkipSync
   Do not copy world/spire2 into the sibling checkout.
 
+.PARAMETER MetaPath
+  Optional fuzzer meta YAML to constrain randomized options, for example
+  scripts/fuzz/player_count.yaml for valid shared-slot multiplayer rosters.
+
 .PARAMETER SkipVersionCheck
   Do not require the expected Archipelago branch and ref.
 
@@ -93,6 +97,8 @@ param(
 
     [string]$ResultPath,
 
+    [string]$MetaPath,
+
     [switch]$SkipSync,
 
     [switch]$SkipVersionCheck
@@ -119,6 +125,9 @@ if (-not $ResultPath) {
     $ResultPath = Join-Path $RepoRoot "artifacts\fuzz\$timestamp-$($Suite.ToLowerInvariant())"
 }
 $ResultPath = [System.IO.Path]::GetFullPath($ResultPath)
+if ($MetaPath) {
+    $MetaPath = (Resolve-Path -LiteralPath $MetaPath).Path
+}
 
 $SourceWorldPath = Join-Path $RepoRoot "world\spire2"
 $DestinationWorldPath = Join-Path $ArchipelagoPath "worlds\spire2"
@@ -229,7 +238,8 @@ function Test-ArchipelagoVersion {
 
 function Invoke-CoreTests {
     $testModules = @(
-        "worlds.spire2.test.id_tests",
+        "worlds.spire2.test.coop_tests",
+        "worlds.spire2.test.fill_tests",
         "worlds.spire2.test.group_tests",
         "worlds.spire2.test.option_tests",
         "worlds.spire2.test.logic_tests",
@@ -287,6 +297,9 @@ function Invoke-FuzzJob {
     )
     if ($Hook) {
         $arguments += @("--hook", $Hook)
+    }
+    if ($MetaPath) {
+        $arguments += @("--meta", $MetaPath)
     }
 
     $safeName = $Name.ToLowerInvariant() -replace "[^a-z0-9-]", "-"

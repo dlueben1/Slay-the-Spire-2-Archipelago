@@ -172,3 +172,12 @@ def create_location_groups(
 
 
 location_groups = create_location_groups(characters_to_locs)
+
+from .coop import MAX_PLAYERS, player_name, player_id, expand_player_groups
+_base_locations = dict(location_table)
+_base_location_data = dict(loc_ids_to_data)
+for number in range(2, MAX_PLAYERS + 1):
+    location_table.update({player_name(name, number): player_id(code, number)
+                           for name, code in _base_locations.items()})
+    loc_ids_to_data.update({player_id(code, number): data for code, data in _base_location_data.items()})
+expand_player_groups(location_groups, character_list + [f"Custom Character {n}" for n in range(1, NUM_CUSTOM + 1)])

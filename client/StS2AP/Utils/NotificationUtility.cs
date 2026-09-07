@@ -1,18 +1,10 @@
 ﻿using System.Collections.Concurrent;
-using System.Drawing;
-using System.Reflection;
 using System.Text;
 using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
 using Archipelago.MultiClient.Net.MessageLog.Messages;
 using Archipelago.MultiClient.Net.Models;
-using Godot;
-using MegaCrit.Sts2.Core.DevConsole;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.CardPools;
-using MegaCrit.Sts2.Core.Nodes.Debug;
-using MegaCrit.Sts2.Core.RichTextTags;
-using StS2AP.UI;
-using static StS2AP.Data.CharTable;
+using StS2AP.Data;
 using static StS2AP.Data.ItemTable;
 
 namespace StS2AP.Utils
@@ -167,7 +159,10 @@ namespace StS2AP.Utils
         /// <returns></returns>
         private static string? GetItemIcon(ItemInfo item)
         {
-            switch (item.GetCharacterSpecificItemID())
+            if (ArchipelagoIdCodec.IsUniversalItemId(item.ItemId))
+                return null;
+
+            switch (item.GetCharacterItemType())
             {
                 case APItem.OneGold:
                 case APItem.FiveGold:
@@ -181,16 +176,26 @@ namespace StS2AP.Utils
                 case APItem.Potion:
                     return @"[img]res://images/packed/sprite_fonts/potion_icon.png[/img]";
                 case APItem.Unlock:
-                    var iconPath = item.GetCharacterOffset() switch
+                    ArchipelagoSettings? settings = ArchipelagoClient.Settings;
+                    if (settings == null)
+                        return null;
+
+                    var apCharacterNumber = item.GetAPCharacterNumber();
+                    var config = settings.Characters.Values.FirstOrDefault(
+                        candidate => candidate.CharOffset == apCharacterNumber
+                    );
+                    var character = ModelDb.AllCharacters.FirstOrDefault(candidate =>
+                        string.Equals(
+                            candidate.Id.Entry,
+                            config?.OfficialName,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    );
+                    var iconPath = character?.CardPool.EnergyIconPath;
+                    if (iconPath == null)
                     {
-                        (int)APItemCharID.Ironclad => ModelDb.CardPool<IroncladCardPool>().EnergyIconPath,
-                        (int)APItemCharID.Silent => ModelDb.CardPool<SilentCardPool>().EnergyIconPath,
-                        (int)APItemCharID.Defect => ModelDb.CardPool<DefectCardPool>().EnergyIconPath,
-                        (int)APItemCharID.Necrobinder => ModelDb.CardPool<NecrobinderCardPool>().EnergyIconPath,
-                        (int)APItemCharID.Regent => ModelDb.CardPool<RegentCardPool>().EnergyIconPath,
-                        // TODO: What to do for modded characters?
-                        _ => ModelDb.CardPool<IroncladCardPool>().EnergyIconPath,
-                    };
+                        return null;
+                    }
                     return $"[img]{iconPath}[/img]";
             }
             return null;

@@ -15,7 +15,7 @@ def create_regions(world: 'SlayTheSpire2World', player: int):
     neow = world.create_region(player, None, "Neow's Room", None)
     multiworld.regions.append(neow)
 
-    for config in world.characters:
+    for config in world.all_player_characters:
         _create_regions(world, player, config, neow)
 
     for region in multiworld.get_regions(player):
@@ -26,10 +26,15 @@ def create_regions(world: 'SlayTheSpire2World', player: int):
 
 
 def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'CharacterConfig', neow: Region) -> None:
-    prefix = config.name
+    prefix = config.ap_name
     multiworld = world.multiworld
     every_other = not world.options.shuffle_all_cards
     ascension_mod = 1 if 'DoubleBoss'.lower() in config.ascension and 'DoubleBoss'.lower() not in config.ascension_down else 0
+
+    # IMPORTANT: Keep these location ranges at the canonical singleplayer counts. Multiplayer
+    # has one fewer physical floor per act and fewer associated reward opportunities; the client
+    # compensates at deterministic boss-room boundaries. Reducing the APWorld counts here would
+    # also reduce singleplayer and prevent one generated slot from supporting either play mode.
     first_char_region = world.create_region(player, prefix, 'Early Act 1', config,
                                             [
                                                 "Press Start",

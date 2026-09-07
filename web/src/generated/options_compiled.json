@@ -4,11 +4,11 @@
   "sources": {
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "d89be97401aaea2ea99d330ab9c3701c405684ef87b8981dc2f455a3ce21a8ad"
+      "sha256": "10e002400c226eff0cac3cf5f014edf0536d3860d19f561c6e6804437c266d11"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "d7711352fee671e710950a85266ea826c829f54b34357736108ec8890381ee6c"
+      "sha256": "2e43e8dd1cb1860d5f3487b35682d7be467e69dc1d1423dcaa6a3b0d2dcc6d94"
     }
   },
   "option_order": [
@@ -26,6 +26,7 @@
     "death_link",
     "enable_death_fragments",
     "death_link_damage_percent",
+    "player_count",
     "characters",
     "modded_characters",
     "pick_num_characters",
@@ -89,6 +90,7 @@
     {
       "name": "Game Options",
       "option_keys": [
+        "player_count",
         "ancient_relic_location",
         "ancient_relic_pool",
         "relic_rewards_available_anytime",
@@ -601,6 +603,32 @@
       "maximum": 100,
       "supports_weighting": true,
       "group": "Death Link"
+    },
+    "player_count": {
+      "key": "player_count",
+      "class_name": "PlayerCount",
+      "module": "worlds.spire2.options",
+      "kind": "range",
+      "display_name": "Player Count",
+      "description": "Number of co-op players sharing this AP slot, each with separate items, checks and goals.\nThe final character roster must contain at least this many characters.\nRandom locks give distinct seeded starts. Fixed locks give Player 1 the configured start\nand the other players distinct seeded starts. Unlocked makes every character available to everyone.\nEach client must select its own player number before connecting.",
+      "default": 1,
+      "raw_default": 1,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "minimum": 1,
+      "maximum": 4,
+      "supports_weighting": true,
+      "group": "Game Options"
     },
     "characters": {
       "key": "characters",

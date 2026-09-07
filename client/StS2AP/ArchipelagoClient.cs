@@ -10,14 +10,11 @@ using MegaCrit.Sts2.Core.Models;
 using Newtonsoft.Json.Linq;
 using System.Text.Json;
 using StS2AP.Data;
-using StS2AP.Extensions;
-using StS2AP.Models;
 using StS2AP.Patches;
 using StS2AP.UI;
 using StS2AP.Utils;
 using STS2RitsuLib;
 using STS2RitsuLib.Data;
-using static StS2AP.Data.ItemTable;
 
 namespace StS2AP
 {
@@ -57,17 +54,17 @@ namespace StS2AP
         {
             get
             {
-                System.Version version = ModManifestVersion.Value;
+                System.Version version = GetClientSemanticVersion();
                 return $"v{version.Major}.{version.Minor}.{version.Build}";
             }
         }
 
         #region Connection Info
 
-        public static string ServerAddress { get; set; }
-        public static string ServerPassword { get; set; }
-        public static string PlayerName { get; set; }
-        public static string Seed { get; set; }
+        public static string ServerAddress { get; set; } = string.Empty;
+        public static string ServerPassword { get; set; } = string.Empty;
+        public static string PlayerName { get; set; } = string.Empty;
+        public static string Seed { get; set; } = string.Empty;
 
         /// <summary>
         /// The name of the Game
@@ -114,7 +111,78 @@ namespace StS2AP
         /// It should not be written to after initialization, as it represents the server's authoritative configuration for this slot,
         /// which we can't change.
         /// </summary>
-        public static ArchipelagoSettings Settings { get; private set; }
+        public static ArchipelagoSettings? Settings { get; private set; }
+
+        // Retain YAML defaults even when multiplayer installs an effective settings snapshot.
+        public static AncientRewardSettings AncientSlotDefaults { get; private set; } =
+            new(AncientRelicLocation.StartOfAct, AncientRelicPoolMode.Balanced);
+
+        /// <summary>Restores the fixed host's frozen settings on its own process.</summary>
+        internal static bool TryUseMultiplayerHostSettings(
+            ArchipelagoSettings settings,
+            out string reason)
+        {
+            ArgumentNullException.ThrowIfNull(settings);
+            if (settings.PlayerNumber != CoopSlot.PlayerNumber)
+            {
+                reason = $"The saved host uses Player {settings.PlayerNumber}, but this connection uses Player {CoopSlot.PlayerNumber}.";
+                return false;
+            }
+
+            // RitsuLib's JSON round-trip does not preserve the comparer from the initialized
+            // ConcurrentDictionary. Native character IDs are upper-case while AP slot-data keys
+            // use title case, so normalize the map again whenever frozen settings are installed.
+            settings.Characters = new System.Collections.Concurrent.ConcurrentDictionary<
+                string,
+                CharacterConfig
+            >(
+                settings.Characters,
+                StringComparer.InvariantCultureIgnoreCase
+            );
+
+            if (!TryValidateConfiguredCharacters(settings, out reason))
+                return false;
+
+            Settings = settings;
+            return true;
+        }
+
+        internal static bool TryValidateConfiguredCharacters(
+            ArchipelagoSettings settings,
+            out string reason)
+        {
+            var installedCharacterIds = ModelDb.AllCharacters
+                .Select(character => character.Id.Entry)
+                .ToHashSet(StringComparer.InvariantCultureIgnoreCase);
+            var missingCharacterIds = settings.Characters.Values
+                .Select(config => config.OfficialName)
+                .Where(characterId =>
+                    string.IsNullOrWhiteSpace(characterId)
+                    || !installedCharacterIds.Contains(characterId)
+                )
+                .Distinct(StringComparer.InvariantCultureIgnoreCase)
+                .Order(StringComparer.InvariantCultureIgnoreCase)
+                .ToArray();
+
+            if (missingCharacterIds.Length > 0)
+            {
+                reason = "The AP slot configures character model(s) that are not loaded: "
+                    + string.Join(", ", missingCharacterIds.Select(characterId =>
+                        string.IsNullOrWhiteSpace(characterId) ? "<missing id>" : characterId
+                    ))
+                    + ". Enable the matching character mod(s) and reconnect.";
+                return false;
+            }
+
+            reason = string.Empty;
+            return true;
+        }
+
+        internal static void RebuildUnlockedCharactersFromSettings()
+        {
+            Progress.UnlockedCharacters.Clear();
+            SetupUnlockedCharacters();
+        }
 
         /// <summary>
         /// Validates a character against the current slot rather than the reused native
@@ -144,7 +212,7 @@ namespace StS2AP
             return true;
         }
 
-        public static ArchipelagoSession Session { get; set; }
+        public static ArchipelagoSession? Session { get; set; }
 
         /// <summary>
         /// Progress of the player through their Archipelago game.
@@ -157,12 +225,13 @@ namespace StS2AP
         /// </summary>
         private static int Index;
 
-        public static Dictionary<string, object> SlotData { get; set; }
+        public static Dictionary<string, object> SlotData { get; set; } = new();
 
         /// <summary>
         /// Archipelago Item Locations that we've already found so far, collected by their Location ID
         /// </summary>
-        public static List<long> CheckedLocations { get; set; }
+        // The SDK may publish its initial checked locations before login preparation runs.
+        public static List<long> CheckedLocations { get; set; } = new();
 
         #endregion
 
@@ -170,17 +239,16 @@ namespace StS2AP
         /// Spinlock for processing incoming items to ensure that we don't have multiple threads trying to process items at the same time
         /// </summary>
         private static readonly object _itemLock = new();
-        private static LocationCheckHelper.CheckedLocationsUpdatedHandler? _checkedLocationsUpdatedHandler;
 
         // RitsuLib polls top-bar counts every frame. Cache the derived reward count and only
         // re-enumerate item history when one of its inexpensive inputs changes.
         private static ArchipelagoProgress? _rewardCountProgress;
         private static long? _rewardCountCharacterOffset;
-        private static int _rewardCountReceivedItems = -1;
-        private static int _rewardCountUsedItems = -1;
+        private static long _rewardCountItemRevision = -1;
         private static int _rewardCountGoldRemaining = int.MinValue;
         private static int _rewardCountRelicChoiceAssignments = -1;
         private static int _rewardCountRelicsAvailableAnytime = -1;
+        private static int _rewardCountDeferredMultiplayerItems = -1;
         private static int _cachedAvailableRewardCount;
 
         /// <summary>
@@ -206,22 +274,30 @@ namespace StS2AP
         /// </summary>
         internal static int GetAvailableRewardCount()
         {
+            // TODO: doesn't this depend on what type of guest you are:
+            if (MultiplayerSupport.IsLocalGuest)
+                return 0;
+
             lock (_itemLock)
             {
                 long? characterOffset = GameUtility.CurrentConfig?.CharOffset;
-                int receivedItems = Progress.AllReceivedItems.Count;
-                int usedItems = Progress.UsedItems.Count;
+                long itemRevision = Progress.Items.Revision;
                 int goldRemaining = Progress.GoldRemaining;
                 int relicChoiceAssignments = Progress.RelicChoiceAssignments.Count;
                 int relicsAvailableAnytime = Progress.RelicRewardsAvailableAnytimeForRun;
+                int deferredMultiplayerItems =
+                    MultiplayerSupport.PendingUnsupportedItems.Count(item =>
+                        ArchipelagoIdCodec.IsUniversalItemId(item.Item.ItemId)
+                        || item.Item.GetAPCharacterNumber() == characterOffset
+                    );
 
                 if (ReferenceEquals(_rewardCountProgress, Progress) &&
                     _rewardCountCharacterOffset == characterOffset &&
-                    _rewardCountReceivedItems == receivedItems &&
-                    _rewardCountUsedItems == usedItems &&
+                    _rewardCountItemRevision == itemRevision &&
                     _rewardCountGoldRemaining == goldRemaining &&
                     _rewardCountRelicChoiceAssignments == relicChoiceAssignments &&
-                    _rewardCountRelicsAvailableAnytime == relicsAvailableAnytime)
+                    _rewardCountRelicsAvailableAnytime == relicsAvailableAnytime &&
+                    _rewardCountDeferredMultiplayerItems == deferredMultiplayerItems)
                 {
                     return _cachedAvailableRewardCount;
                 }
@@ -229,14 +305,15 @@ namespace StS2AP
                 int count = Progress.UnusedItemCount;
                 if (goldRemaining > 0)
                     count++;
+                count += deferredMultiplayerItems;
 
                 _rewardCountProgress = Progress;
                 _rewardCountCharacterOffset = characterOffset;
-                _rewardCountReceivedItems = receivedItems;
-                _rewardCountUsedItems = usedItems;
+                _rewardCountItemRevision = itemRevision;
                 _rewardCountGoldRemaining = goldRemaining;
                 _rewardCountRelicChoiceAssignments = relicChoiceAssignments;
                 _rewardCountRelicsAvailableAnytime = relicsAvailableAnytime;
+                _rewardCountDeferredMultiplayerItems = deferredMultiplayerItems;
                 _cachedAvailableRewardCount = count;
                 return _cachedAvailableRewardCount;
             }
@@ -245,7 +322,7 @@ namespace StS2AP
         /// <summary>
         /// Fires when the connection state changes
         /// </summary>
-        public static event Action<ConnectionState> ConnectionStateChanged;
+        public static event Action<ConnectionState>? ConnectionStateChanged;
 
         /// <summary>
         /// Pre-scouted location data. Key is location ID, value is a tuple of (ItemName, PlayerName).
@@ -258,7 +335,7 @@ namespace StS2AP
         /// <summary>
         /// Handles Death Link functionality, which allows players to share deaths across the multiworld.
         /// </summary>
-        public static DeathLinkService DeathLinkController { get; set; }
+        public static DeathLinkService? DeathLinkController { get; set; }
 
         /// <summary>
         /// A cache of the last Death Link message received, which will be loaded into a clone of the Death Link Curse after it
@@ -297,24 +374,9 @@ namespace StS2AP
         private static ReaderWriterLock ConnectionLock { get; } = new ReaderWriterLock();
         private static readonly object _connectionStateLock = new();
         private static bool _currentAttemptIsAutomaticReconnect;
-        private static ApSessionIdentity? _authenticatedIdentity;
-        private static ReceivedItemsHelper.ItemReceivedHandler? _itemReceivedHandler;
+        private static SessionCallbacks? _sessionCallbacks;
 
-        internal static bool HasSlotConnection =>
-            State != ConnectionState.Disconnected || Settings != null || ApReconnectController.IsActive;
-
-        private static void PublishConnectionState()
-        {
-            ArchipelagoSession? session = Session;
-            ConnectionState state = State;
-            Callable.From(() =>
-            {
-                if (ReferenceEquals(Session, session) && State == state)
-                    ConnectionStateChanged?.Invoke(state);
-            }).CallDeferred();
-        }
-
-        /// <summary>Runs a main-thread callback only while its SDK session is still current.</summary>
+        /// <summary>Runs session callbacks on Godot's thread only while their owner is current.</summary>
         internal static void RunForSession(ArchipelagoSession session, Action action) =>
             Callable.From(() =>
             {
@@ -322,21 +384,43 @@ namespace StS2AP
                     action();
             }).CallDeferred();
 
-        /// <summary>
-        /// Intentionally leaves the authenticated slot at the main menu. This is distinct from a
-        /// recoverable socket disconnect, which must retain the slot state for automatic retry.
-        /// </summary>
+        private static void PublishConnectionState()
+        {
+            var session = Session;
+            var state = State;
+            Callable.From(() =>
+            {
+                if (ReferenceEquals(Session, session) && State == state)
+                    ConnectionStateChanged?.Invoke(state);
+            }).CallDeferred();
+        }
+
+        /// <summary>Only the home screen can discard a slot; live runs retain their AP identity.</summary>
+        internal static bool CanLeaveSlot =>
+            MenuUtility.MainMenu is { } menu
+            && GodotObject.IsInstanceValid(menu) && menu.IsInsideTree() && menu.IsVisibleInTree()
+            && !menu.SubmenuStack.SubmenusOpen
+            && !MegaCrit.Sts2.Core.Runs.RunManager.Instance.IsInProgress
+            && !GameUtility.IsInRun && !MultiplayerSupport.IsRealMultiplayerRun
+            && !MultiplayerSupport.TryGetObservedStartLobby(out _);
+
+        internal static bool HasSlotConnection =>
+            State != ConnectionState.Disconnected || Settings != null || ApReconnectController.IsActive;
+
+        /// <summary>Intentional home-screen departure, distinct from a recoverable socket loss.</summary>
         internal static bool TryLeaveSlot()
         {
-            if (GameUtility.IsInRun)
+            if (!CanLeaveSlot)
             {
-                LogUtility.Warn("Refused to leave the Archipelago slot while a run is active");
+                LogUtility.Warn("[AP Session] Refused slot switch outside the home screen");
                 return false;
             }
+            if (!PendingCheckUtility.PreserveForSlotSwitch())
+                return false;
 
-            LogUtility.Info($"[AP Session] Leaving slot {PlayerName}, seed {Seed}");
+            LogUtility.Info($"[AP Session] Leaving slot {PlayerName}, seed {Seed}; saved runs are preserved");
             ApReconnectController.Stop();
-            Disconnect(showLostConnectionPrompt: false);
+            Disconnect(showMultiplayerNotice: false);
             ResetSlotState();
             ArchipelagoConnectionUI.CancelPendingAttempt();
             ArchipelagoRewardUI.RemoveUI();
@@ -349,28 +433,27 @@ namespace StS2AP
 
         private static void ResetSlotState()
         {
-            // The item callback checks its session under this same lock. An old callback cannot
-            // repopulate the queue after this reset, even if it was already in flight.
+            // The item callback checks its session under this same lock. An old callback
+            // cannot repopulate the queue after this reset, even if it was already in flight.
             lock (_itemLock)
             {
                 Patches_ItemProcessor.ClearQueue();
                 Index = 0;
                 Progress = new ArchipelagoProgress();
             }
-
-            Settings = null!;
+            Settings = null;
             SlotData = new();
             CheckedLocations = new();
             ScoutedLocations = new();
             Seed = string.Empty;
-            _authenticatedIdentity = null;
-            DeathLinkController = null!;
+            DeathLinkController = null;
             LastDeathLinkMessage = null;
             LastDeathLinkReceivedAt = null;
             _rewardCountProgress = null;
-            BuffUtility.ClearQueue();
+            BuffUtility.ResetSlotState();
             NotificationUtility.ClearQueue();
             GameUtility.ResetSlotState();
+            MultiplayerSupport.ForgetApSession();
             LogUtility.Info("[AP Session] Cleared slot caches and receipt indexes");
         }
 
@@ -403,15 +486,9 @@ namespace StS2AP
                 _currentAttemptIsAutomaticReconnect = isAutomaticReconnect;
             }
 
-            // A live run can continue earning checks while reconnection is in progress.
-            // Retain its slot and location caches until the replacement session is authenticated.
-            if (!isAutomaticReconnect)
-            {
-                SlotData?.Clear();
-                SlotData = new Dictionary<string, object>();
-                CheckedLocations = new List<long>();
-                ScoutedLocations.Clear();
-            }
+            // A live run can continue earning checks during asynchronous reconnection.
+            // Retain its location cache until login validates the replacement session.
+            // Intentional slot departure already clears these caches in ResetSlotState.
 
             // Attempt to create the AP Session
             ArchipelagoSession connectionSession;
@@ -422,17 +499,12 @@ namespace StS2AP
             catch (Exception e)
             {
                 LogUtility.Error($"Failed to create Archipelago session: {e.Message}");
-                Disconnect(showLostConnectionPrompt: !isAutomaticReconnect);
+                Disconnect(showMultiplayerNotice: !isAutomaticReconnect);
                 if (isAutomaticReconnect)
                     ApReconnectController.OnAttemptFailed();
                 return;
             }
 
-            ReceivedItemsHelper.ItemReceivedHandler itemReceivedHandler = helper =>
-                OnItemReceived(connectionSession, helper);
-            // Capture the owning session so deferred !collect updates cannot affect a replacement.
-            LocationCheckHelper.CheckedLocationsUpdatedHandler checkedLocationsUpdatedHandler = locations =>
-                OnCheckedLocationsUpdated(connectionSession, locations);
             lock (_connectionStateLock)
             {
                 if (State is not ConnectionState.Connecting and not ConnectionState.Reconnecting)
@@ -442,85 +514,90 @@ namespace StS2AP
                     return;
                 }
                 Session = connectionSession;
-                _itemReceivedHandler = itemReceivedHandler;
-                connectionSession.Items.ItemReceived += itemReceivedHandler;
-                _checkedLocationsUpdatedHandler = checkedLocationsUpdatedHandler;
-                connectionSession.Locations.CheckedLocationsUpdated += checkedLocationsUpdatedHandler;
             }
-            PublishConnectionState();
 
-            // Listen for errors
-            connectionSession.Socket.ErrorReceived += OnErrorReceived;
-
-            // Listen for connection termination
-            connectionSession.Socket.SocketClosed += OnSocketSessionEnd;
-            connectionSession.MessageLog.OnMessageReceived += OnMessageReceived;
-
-            // Setup the Death Link Service (even if the player isn't using Death Link)
             DeathLinkController = connectionSession.CreateDeathLinkService();
-            DeathLinkController.OnDeathLinkReceived += deathLinkInfo =>
-            {
-                Callable
-                    .From(() => DeathLinkUtility.OnDeathLinkReceived(deathLinkInfo))
-                    .CallDeferred();
-            };
-
-            // Login blocks in the SDK. Keep it off Godot's thread so gameplay and the main
-            // menu stay responsive, while the writer lock preserves item/setup ordering.
+            _sessionCallbacks = new SessionCallbacks(connectionSession, DeathLinkController);
+            PublishConnectionState();
             string playerName = PlayerName;
             string password = ServerPassword;
-            _ = Task.Run(() =>
+
+            // Login is blocking in the SDK. Keep it off Godot's thread so the home-screen
+            // Cancel action remains usable, but hold incoming receipts until preparation
+            // has completed on the main thread (the same ordering as the original login).
+            try
             {
-                try
-                {
-                    ConnectionLock.AcquireWriterLock(30000);
-                    try
+                _ = Task.Run(() =>
                     {
-                        LoginResult loginResult;
+                        if (!ReferenceEquals(Session, connectionSession))
+                            return;
                         try
                         {
-                            loginResult = connectionSession.TryConnectAndLogin(
-                                Game,
-                                playerName,
-                                ItemsHandlingFlags.AllItems,
-                                new Version(APVersion),
-                                password: password,
-                                requestSlotData: true
-                            );
-                        }
-                        catch (Exception ex)
-                        {
-                            loginResult = new LoginFailure(ex.ToString());
-                        }
-
-                        var prepared = new TaskCompletionSource(
-                            TaskCreationOptions.RunContinuationsAsynchronously
-                        );
-                        Callable.From(() =>
-                        {
+                            ConnectionLock.AcquireWriterLock(30000);
                             try
                             {
-                                HandleConnectResult(connectionSession, loginResult);
+                                if (!ReferenceEquals(Session, connectionSession))
+                                    return;
+                                LoginResult loginResult;
+                                try
+                                {
+                                    loginResult = connectionSession.TryConnectAndLogin(
+                                        Game,
+                                        playerName,
+                                        ItemsHandlingFlags.AllItems,
+                                        new Version(APVersion),
+                                        password: password,
+                                        requestSlotData: true
+                                    );
+                                }
+                                catch (Exception ex)
+                                {
+                                    loginResult = new LoginFailure(ex.ToString());
+                                }
+
+                                var prepared = new TaskCompletionSource();
+                                Callable.From(() =>
+                                {
+                                    try
+                                    {
+                                        HandleConnectResult(connectionSession, loginResult);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        LogUtility.Error($"Failed to prepare Archipelago connection: {ex}");
+                                        if (ReferenceEquals(Session, connectionSession))
+                                        {
+                                            ApReconnectController.Stop();
+                                            Disconnect();
+                                        }
+                                    }
+                                    finally
+                                    {
+                                        prepared.SetResult();
+                                    }
+                                }).CallDeferred();
+                                prepared.Task.GetAwaiter().GetResult();
                             }
                             finally
                             {
-                                prepared.SetResult();
+                                ConnectionLock.ReleaseWriterLock();
                             }
-                        }).CallDeferred();
-                        prepared.Task.GetAwaiter().GetResult();
-                    }
-                    finally
-                    {
-                        ConnectionLock.ReleaseWriterLock();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Callable.From(() =>
-                        HandleConnectResult(connectionSession, new LoginFailure(ex.ToString()))
-                    ).CallDeferred();
-                }
-            });
+                        }
+                        catch (Exception ex)
+                        {
+                            RunForSession(connectionSession, () => HandleConnectResult(
+                                connectionSession, new LoginFailure(ex.ToString())));
+                        }
+                    });
+            }
+            catch (Exception e)
+            {
+                Callable
+                    .From(() =>
+                        HandleConnectResult(connectionSession, new LoginFailure(e.ToString()))
+                    )
+                    .CallDeferred();
+            }
         }
 
         /// <summary>
@@ -531,6 +608,8 @@ namespace StS2AP
             LoginResult result
         )
         {
+            if (result.Successful && !connectionSession.Socket.Connected)
+                result = new LoginFailure("The Archipelago connection closed during login.");
             string outText;
             bool wasAutomaticReconnect;
             lock (_connectionStateLock)
@@ -556,30 +635,26 @@ namespace StS2AP
             {
                 var success = (LoginSuccessful)result;
 
-                string connectedSeed = connectionSession.RoomState.Seed;
-                var connectedIdentity = ApSessionIdentity.Create(
-                    ServerAddress,
-                    connectedSeed,
-                    connectionSession.ConnectionInfo.Team,
-                    connectionSession.ConnectionInfo.Slot
-                );
-                if (wasAutomaticReconnect
-                    && _authenticatedIdentity != null
-                    && connectedIdentity != _authenticatedIdentity)
+                int apTeamId = connectionSession.ConnectionInfo.Team;
+                int apSlotId = connectionSession.ConnectionInfo.Slot;
+                if (!MultiplayerSupport.ValidateApSessionIdentity(
+                        connectionSession.RoomState.Seed,
+                        apTeamId,
+                        apSlotId,
+                        out string identityError))
                 {
-                    string reason = $"authenticated as {connectedIdentity}, expected {_authenticatedIdentity}";
-                    LogUtility.Error($"Refusing Archipelago reconnect: {reason}");
-                    ApReconnectController.Stop(reason);
-                    Disconnect(showLostConnectionPrompt: false);
+                    LogUtility.Error($"Refusing Archipelago reconnect: {identityError}");
+                    ApReconnectController.Stop(identityError);
+                    Disconnect();
                     NotificationUtility.ShowRawText(
                         "Archipelago reconnected to a different room or slot. This run remains disconnected."
                     );
                     return;
                 }
 
-                // Store Session information
+                // Validate ownership before replacing the active run's authenticated identity.
                 SlotData = success.SlotData;
-                Seed = connectedSeed;
+                Seed = connectionSession.RoomState.Seed;
 
                 // Log all slot data
                 LogUtility.Info("Dumping Slot Data:");
@@ -595,7 +670,7 @@ namespace StS2AP
                         out string compatibilityError
                     ))
                 {
-                    RejectIncompatibleConnection(compatibilityError);
+                    RejectIncompatibleConnection(compatibilityError, wasAutomaticReconnect);
                     return;
                 }
 
@@ -611,12 +686,27 @@ namespace StS2AP
                 {
                     RejectIncompatibleConnection(
                         $"Incompatible APWorld contract: the APWorld uses CompatFlag "
-                            + $"{apWorldCompatFlag}, but this client requires {SupportedCompatFlag}."
+                            + $"{apWorldCompatFlag}, but this client requires {SupportedCompatFlag}.",
+                        wasAutomaticReconnect
                     );
                     return;
                 }
 
-                Settings = GetPlayerSettings();
+                try
+                {
+                    Settings = GetPlayerSettings(apWorldVersion);
+                }
+                catch (Exception ex)
+                {
+                    RejectIncompatibleConnection($"Invalid AP player settings: {ex.Message}", wasAutomaticReconnect);
+                    return;
+                }
+                LogUtility.Info($"Using co-op Player {Settings.PlayerNumber}/{Settings.PlayerCount} in AP slot {apSlotId}.");
+                if (!TryValidateConfiguredCharacters(Settings, out string characterError))
+                {
+                    RejectIncompatibleConnection(characterError, wasAutomaticReconnect);
+                    return;
+                }
 
                 int apWorldAgeComparison = CompareMajorMinor(
                     bundledApWorldVersion,
@@ -624,19 +714,20 @@ namespace StS2AP
                 );
                 if (apWorldAgeComparison > 0)
                 {
-                    LogUtility.Warn(
+                    string warning =
                         $"The server's APWorld v{apWorldVersion} is older than the bundled APWorld "
                             + $"v{bundledApWorldVersion}. CompatFlag {SupportedCompatFlag} still matches, "
-                            + "but updating the APWorld is recommended."
-                    );
+                            + "but updating the APWorld is recommended.";
+                    LogUtility.Warn(warning);
 
                     if (wasAutomaticReconnect)
                     {
-                        ApReconnectController.Stop("the older APWorld requires manual confirmation");
-                        Disconnect(showLostConnectionPrompt: false);
                         NotificationUtility.ShowRawText(
-                            "Automatic reconnect stopped because the server uses an older APWorld. Reconnect manually to review the warning."
+                            warning,
+                            timeout: 8.0,
+                            priority: NotificationUtility.NotificationPriority.High
                         );
+                        OnConnected();
                         return;
                     }
 
@@ -677,7 +768,7 @@ namespace StS2AP
                 );
 
                 // End the connection
-                Disconnect(showLostConnectionPrompt: !wasAutomaticReconnect);
+                Disconnect(showMultiplayerNotice: !wasAutomaticReconnect);
                 if (wasAutomaticReconnect)
                     ApReconnectController.OnAttemptFailed();
             }
@@ -725,6 +816,8 @@ namespace StS2AP
                 return false;
             }
         }
+
+        private static System.Version GetClientSemanticVersion() => ModManifestVersion.Value;
 
         private static System.Version ReadModManifestVersion() => ReadEmbeddedSemanticVersion(
             ModManifestResourceName,
@@ -778,22 +871,26 @@ namespace StS2AP
                 : left.Minor.CompareTo(right.Minor);
         }
 
-        private static void RejectIncompatibleConnection(string reason)
+        private static void RejectIncompatibleConnection(
+            string reason,
+            bool wasAutomaticReconnect = false
+        )
         {
             LogUtility.Error($"Archipelago compatibility check failed: {reason}");
-            bool wasAutomaticReconnect = _currentAttemptIsAutomaticReconnect;
             ApReconnectController.Stop(reason);
             if (wasAutomaticReconnect)
             {
-                Disconnect(showLostConnectionPrompt: false);
+                Disconnect(showMultiplayerNotice: false);
                 NotificationUtility.ShowRawText(
-                    $"Automatic reconnect stopped: {reason} Reconnect manually after updating the APWorld or client."
+                    reason,
+                    timeout: 8.0,
+                    priority: NotificationUtility.NotificationPriority.High
                 );
                 return;
             }
 
             ArchipelagoConnectionUI.Show();
-            Disconnect();
+            Disconnect(showMultiplayerNotice: false);
             ArchipelagoConnectionUI.SetConnectButtonEnabled(true);
             ArchipelagoConnectionUI.SetCloseButtonEnabled(true);
             ArchipelagoConnectionUI.SetStatus(reason);
@@ -805,7 +902,14 @@ namespace StS2AP
         /// </summary>
         private static void SetupUnlockedCharacters()
         {
-            var characters = Settings.Characters;
+            ArchipelagoSettings? settings = Settings;
+            if (settings == null)
+            {
+                LogUtility.Error("Cannot set up unlocked characters without AP slot settings.");
+                return;
+            }
+
+            var characters = settings.Characters;
             var ids = new HashSet<string>(
                 Progress.UnlockedCharacters.Select(c => c.Id.Entry),
                 StringComparer.InvariantCultureIgnoreCase
@@ -879,20 +983,32 @@ namespace StS2AP
         public static void OnConnected()
         {
             LogUtility.Success("Successfully Connected to Archipelago Server");
+            ArchipelagoSession? session = Session;
+            ArchipelagoSettings? settings = Settings;
+            DeathLinkService? deathLinkController = DeathLinkController;
+            if (session == null || settings == null || deathLinkController == null)
+            {
+                string reason = "The Archipelago connection completed without a fully initialized "
+                    + "session, slot settings, and Death Link service.";
+                LogUtility.Error(reason);
+                ApReconnectController.Stop(reason);
+                Disconnect();
+                ArchipelagoConnectionUI.SetConnectButtonEnabled(true);
+                ArchipelagoConnectionUI.SetCloseButtonEnabled(true);
+                ArchipelagoConnectionUI.SetStatus(reason);
+                return;
+            }
 
-            _authenticatedIdentity = ApSessionIdentity.Create(
-                ServerAddress,
-                Seed,
-                Session.ConnectionInfo.Team,
-                Session.ConnectionInfo.Slot
-            );
+            int apTeamId = session.ConnectionInfo.Team;
+            int apSlotId = session.ConnectionInfo.Slot;
+            MultiplayerSupport.NoteApSessionConnected(Seed, apTeamId, apSlotId);
 
             // Bind durable external effects only after login has authenticated the exact room,
             // team, and slot represented by this session.
-            PendingCheckUtility.BindAuthenticatedSession(Session, ServerAddress, Seed);
+            PendingCheckUtility.BindAuthenticatedSession(session, ServerAddress, Seed);
 
             // Restore checked locations from server so "Claimed" state survives restarts
-            CheckedLocations = new List<long>(Session.Locations.AllLocationsChecked);
+            CheckedLocations = session.Locations.AllLocationsChecked.Where(CoopSlot.Owns).ToList();
             LogUtility.Info(
                 $"Restored {CheckedLocations.Count} previously checked location(s) from server."
             );
@@ -905,13 +1021,13 @@ namespace StS2AP
             {
                 // Enable/Disable the Death Link Service based on user settings
                 LogUtility.Info(
-                    $"SLOT - Is Death Link Enabled: {Settings.IsDeathLinkEnabled.ToString()}"
+                    $"SLOT - Is Death Link Enabled: {settings.IsDeathLinkEnabled.ToString()}"
                 );
                 LogUtility.Info(
-                    $"SLOT - Death Link Damage Percentage: {Settings.DeathLinkDamagePercent.ToString()}%"
+                    $"SLOT - Death Link Damage Percentage: {settings.DeathLinkDamagePercent.ToString()}%"
                 );
                 LogUtility.Info(
-                    $"SLOT - Death Link Curse Enabled: {Settings.EnableDeathFragments.ToString()}"
+                    $"SLOT - Death Link Curse Enabled: {settings.EnableDeathFragments.ToString()}"
                 );
                 LogUtility.Info(
                     $"LOCAL - Death Link Settings Override: {LocalSettings.Value.OverrideDeathLinkOptions.ToString()}"
@@ -927,11 +1043,11 @@ namespace StS2AP
                 );
                 if (DeathLinkUtility.IsDeathLinkEnabled)
                 {
-                    DeathLinkController.EnableDeathLink();
+                    deathLinkController.EnableDeathLink();
                 }
                 else
                 {
-                    DeathLinkController.DisableDeathLink();
+                    deathLinkController.DisableDeathLink();
                 }
             }
             catch (Exception ex)
@@ -945,24 +1061,78 @@ namespace StS2AP
                 return;
             }
 
-            SetupUnlockedCharacters();
+            if (MultiplayerSupport.IsMultiplayerScope)
+            {
+                if (!TryPrepareCurrentMultiplayerSession(out string preparationError))
+                {
+                    LogUtility.Error($"AP multiplayer preparation failed: {preparationError}");
+                    ApReconnectController.Stop(preparationError);
+                    Disconnect();
+                    ArchipelagoConnectionUI.SetConnectButtonEnabled(true);
+                    ArchipelagoConnectionUI.SetCloseButtonEnabled(true);
+                    ArchipelagoConnectionUI.SetStatus(preparationError);
+                    return;
+                }
+            }
+            else
+            {
+                SetupUnlockedCharacters();
+            }
 
             // Pre-scout all locations so we have item info available for notifications
-            ArchipelagoSession connectedSession = Session;
-            ThreadPool.QueueUserWorkItem(_ => PreScoutAllLocations(connectedSession));
+            ThreadPool.QueueUserWorkItem(_ => PreScoutAllLocations(session));
 
             // Restore goaled characters from DataStorage so cross-session goal tracking works
             _ = GameUtility.RestoreGoaledCharsFromStorage();
 
-            _ = GameUtility.SetupOnChangedSaves();
+            // Multiplayer progress is checkpointed only in the native host save. Do not attach
+            // the singleplayer AP DataStorage save mirror to a multiplayer session.
+            if (!MultiplayerSupport.IsMultiplayerScope)
+                _ = GameUtility.SetupOnChangedSaves();
 
             // Load the set of already-consumed buff indices from DataStorage before item processing begins.
-            _ = BuffUtility.LoadFromStorageAsync();
+            if (!MultiplayerSupport.IsMultiplayerScope)
+                _ = BuffUtility.LoadFromStorageAsync();
 
             // Let the game know that we've connected
             PublishConnectionState();
             if (ApReconnectController.IsActive)
                 ApReconnectController.OnConnected();
+        }
+
+        /// <summary>
+        /// Rebuilds the approved multiplayer receipt profile from authoritative SDK history,
+        /// then advances both callback watermarks so the SDK's initial replay cannot double-count it.
+        /// </summary>
+        internal static bool TryPrepareCurrentMultiplayerSession(out string reason)
+        {
+            reason = string.Empty;
+            if (!IsConnected || Session == null)
+            {
+                reason = "Archipelago is not connected.";
+                return false;
+            }
+
+            IReadOnlyList<ItemInfo> receivedItems = Session.Items.AllItemsReceived;
+            // A different AP owner may have used this process previously. Rebuild the
+            // selectable set only from this slot's settings and authoritative history.
+            RebuildUnlockedCharactersFromSettings();
+            if (!MultiplayerSupport.PrepareApSession(
+                    Seed,
+                    Session.ConnectionInfo.Team,
+                    Session.ConnectionInfo.Slot,
+                    receivedItems,
+                    out reason))
+            {
+                return false;
+            }
+
+            Patches_ItemProcessor.ClearQueue();
+            Index = receivedItems.Count;
+            Patches_ItemProcessor.LastIndexHandled = Index;
+            MultiplayerSupport.RestoreFrozenHostSettingsForActiveRun();
+            AscensionMultiplayer.QueueReconnectReconciliation();
+            return true;
         }
 
         /// <summary>
@@ -1008,16 +1178,12 @@ namespace StS2AP
                         $"{loc.Key}:{loc.Value.LocationName}:{loc.Value.LocationDisplayName}"
                     );
                 }
-                Callable.From(() =>
+                RunForSession(session, () =>
                 {
-                    if (!ReferenceEquals(Session, session))
-                        return;
                     ScoutedLocations = scoutedLocations;
                     TextUtility.RegisterLocTableAtRuntime("ap", locationLocalizations);
-                    LogUtility.Success(
-                        $"Pre-scouted {ScoutedLocations.Count} locations successfully"
-                    );
-                }).CallDeferred();
+                    LogUtility.Success($"Pre-scouted {ScoutedLocations.Count} locations successfully");
+                });
             }
             catch (Exception ex)
             {
@@ -1028,11 +1194,9 @@ namespace StS2AP
         /// <summary>
         /// Cleans up our Session with Archipelago
         /// </summary>
-        public static void Disconnect(bool showLostConnectionPrompt = true)
+        public static void Disconnect(bool showMultiplayerNotice = true)
         {
             ArchipelagoSession? session;
-            ReceivedItemsHelper.ItemReceivedHandler? itemReceivedHandler;
-            LocationCheckHelper.CheckedLocationsUpdatedHandler? checkedLocationsUpdatedHandler;
             lock (_connectionStateLock)
             {
                 if (State == ConnectionState.Disconnected)
@@ -1046,42 +1210,50 @@ namespace StS2AP
                 Session = null;
                 State = ConnectionState.Disconnected;
                 _currentAttemptIsAutomaticReconnect = false;
-                itemReceivedHandler = _itemReceivedHandler;
-                _itemReceivedHandler = null;
-                checkedLocationsUpdatedHandler = _checkedLocationsUpdatedHandler;
-                _checkedLocationsUpdatedHandler = null;
             }
 
             if (session != null)
             {
                 // Stop the socket-close callback from re-entering this workflow after an
                 // intentional disconnect, and release the other session event handlers.
-                if (itemReceivedHandler != null)
-                    session.Items.ItemReceived -= itemReceivedHandler;
-                if (checkedLocationsUpdatedHandler != null)
-                    session.Locations.CheckedLocationsUpdated -= checkedLocationsUpdatedHandler;
-                session.Socket.ErrorReceived -= OnErrorReceived;
-                session.Socket.SocketClosed -= OnSocketSessionEnd;
-                session.MessageLog.OnMessageReceived -= OnMessageReceived;
+                _sessionCallbacks?.Dispose();
+                _sessionCallbacks = null;
                 Task.Run(() => session.Socket.DisconnectAsync());
             }
 
             // Clear session queues so stale entries don't carry over after reconnecting
             BuffUtility.ClearQueue();
             NotificationUtility.ClearQueue();
+            MultiplayerSupport.OnApDisconnected();
 
             // Let the game know that we've disconnected
             PublishConnectionState();
 
-            // If we were in-game when we disconnected, we have to back out to the main menu. Before doing so, we prompt the user on how they want to quit.
-            if (showLostConnectionPrompt)
+            // An already-received AP item remains authoritative. The experimental multiplayer
+            // slice may therefore claim banked gold while AP itself is offline. MegaCrit restores
+            // an absent peer from the host's rejoin snapshot; permanent claim invalidation is
+            // reserved for an actual unrecoverable binding or grant failure.
+            if (MultiplayerSupport.IsMultiplayerScope)
+            {
+                if (showMultiplayerNotice)
+                {
+                    string message = MultiplayerSupport.IsRealMultiplayerRun
+                        ? "Disconnected from Archipelago. Already received rewards remain available."
+                        : "Disconnected from Archipelago. Embark is disabled until reconnection completes.";
+                    Callable.From(() => NotificationUtility.ShowRawText(message)).CallDeferred();
+                }
+            }
+            else if (showMultiplayerNotice)
+            {
+                // Existing singleplayer behavior prompts the user to leave or recover the run.
                 Callable.From(GameUtility.ShowOptionsOnLostConnection).CallDeferred();
+            }
         }
 
         /// <summary>
         /// Log errors to the console and handle connection-terminating errors
         /// </summary>
-        private static void OnErrorReceived(Exception e, string message)
+        private static void OnErrorReceived(Exception? e, string message)
         {
             LogUtility.Error($"Archipelago Error: {message}");
             if (e != null)
@@ -1107,7 +1279,7 @@ namespace StS2AP
         ///
         /// And yeah, there are probably more elegant ways to check this - feel free to refactor in the future :)
         /// </summary>
-        private static bool IsConnectionTerminatingError(Exception e, string message)
+        private static bool IsConnectionTerminatingError(Exception? e, string message)
         {
             if (e == null || string.IsNullOrEmpty(message))
                 return false;
@@ -1133,10 +1305,6 @@ namespace StS2AP
         private static void OnSocketSessionEnd(string reason)
         {
             LogUtility.Warn($"Socket session ended: {reason}");
-            // Login owns failure and retry scheduling until the session is fully prepared.
-            // Racing its result here would discard OnAttemptFailed and stall the backoff loop.
-            if (State != ConnectionState.Connected)
-                return;
             HandleUnexpectedDisconnect();
         }
 
@@ -1145,13 +1313,15 @@ namespace StS2AP
             bool shouldReconnect;
             lock (_connectionStateLock)
             {
-                // ErrorReceived and SocketClosed may describe the same failed socket.
+                // SocketClosed can arrive after an intentional Disconnect, and ErrorReceived
+                // plus SocketClosed may describe the same failure. Claim the transition once.
                 if (State == ConnectionState.Disconnected)
                     return;
 
-                shouldReconnect = State == ConnectionState.Connected
-                    && _authenticatedIdentity != null;
-                Disconnect(showLostConnectionPrompt: !shouldReconnect);
+                shouldReconnect =
+                    MultiplayerSupport.IsMultiplayerScope
+                    && MultiplayerSupport.PreparedApRoomSeed != null;
+                Disconnect();
             }
 
             if (shouldReconnect)
@@ -1161,10 +1331,7 @@ namespace StS2AP
         /// <summary>
         /// Handle incoming items that come from Archipelago
         /// </summary>
-        private static void OnItemReceived(
-            ArchipelagoSession session,
-            ReceivedItemsHelper helper
-        )
+        private static void OnItemReceived(ArchipelagoSession session, ReceivedItemsHelper helper)
         {
             ConnectionLock.AcquireReaderLock(120000);
 
@@ -1175,7 +1342,6 @@ namespace StS2AP
                 {
                     if (!ReferenceEquals(Session, session))
                         return;
-
                     // Grab the item data
                     var receivedItem = helper.DequeueItem();
 
@@ -1194,35 +1360,6 @@ namespace StS2AP
             {
                 ConnectionLock.ReleaseReaderLock();
             }
-        }
-
-        private static void OnCheckedLocationsUpdated(
-            ArchipelagoSession session,
-            System.Collections.ObjectModel.ReadOnlyCollection<long> locations
-        )
-        {
-            long[] locationIds = locations.ToArray();
-            Callable.From(() =>
-            {
-                if (!ReferenceEquals(Session, session))
-                {
-                    return;
-                }
-
-                foreach (long locationId in locationIds)
-                {
-                    if (!CheckedLocations.Contains(locationId))
-                    {
-                        CheckedLocations.Add(locationId);
-                    }
-
-                    string? locationName = session.Locations.GetLocationNameFromId(locationId);
-                    if (locationName != null && Progress.CampfiresChecked.ContainsKey(locationName))
-                    {
-                        Progress.CampfiresChecked[locationName] = true;
-                    }
-                }
-            }).CallDeferred();
         }
 
         private static void OnMessageReceived(LogMessage message)
@@ -1249,6 +1386,88 @@ namespace StS2AP
             }
         }
 
+        /// <summary>Owns and detaches every callback for one SDK session.</summary>
+        private sealed class SessionCallbacks : IDisposable
+        {
+            private readonly ArchipelagoSession _session;
+            private readonly DeathLinkService _deathLink;
+
+            public SessionCallbacks(ArchipelagoSession session, DeathLinkService deathLink)
+            {
+                _session = session;
+                _deathLink = deathLink;
+                session.Items.ItemReceived += ItemReceived;
+                session.Socket.ErrorReceived += ErrorReceived;
+                session.Socket.SocketClosed += SocketClosed;
+                session.MessageLog.OnMessageReceived += MessageReceived;
+                session.Locations.CheckedLocationsUpdated += LocationsUpdated;
+                deathLink.OnDeathLinkReceived += DeathLinkReceived;
+            }
+
+            private void ItemReceived(ReceivedItemsHelper helper) => OnItemReceived(_session, helper);
+            private void ErrorReceived(Exception error, string message) =>
+                RunForSession(_session, () => OnErrorReceived(error, message));
+            private void SocketClosed(string reason) =>
+                RunForSession(_session, () =>
+                {
+                    // Login owns failure/retry scheduling until preparation finishes.
+                    // Racing its result here would discard OnAttemptFailed and stall retries.
+                    if (State == ConnectionState.Connected)
+                        OnSocketSessionEnd(reason);
+                });
+            private void MessageReceived(LogMessage message) =>
+                RunForSession(_session, () => OnMessageReceived(message));
+            private void DeathLinkReceived(DeathLink deathLink) =>
+                RunForSession(_session, () => DeathLinkUtility.OnDeathLinkReceived(deathLink));
+            private void LocationsUpdated(System.Collections.ObjectModel.ReadOnlyCollection<long> locations)
+            {
+                long[] ids = locations.ToArray();
+                RunForSession(_session, () =>
+                {
+                    foreach (long id in ids)
+                        if (CoopSlot.Owns(id) && !CheckedLocations.Contains(id))
+                            CheckedLocations.Add(id);
+                    // This SDK event also includes optimistic local checks. Do not use it
+                    // to acknowledge durable outbox entries; fresh login still owns that.
+                    int previousCampfireCount = Progress.CheckedCampfireLocationIds.Count;
+                    Progress.RefreshCheckedCampfiresFromClient();
+                    int addedCampfires = Progress.CheckedCampfireLocationIds.Count - previousCampfireCount;
+                    if (addedCampfires > 0
+                        && MultiplayerSupport.IsRealMultiplayerRun
+                        && MultiplayerSupport.IsLocalOwnApSlot
+                        && GameUtility.CurrentPlayer is { } player)
+                    {
+                        // !collect bypasses the local check writer. Publish its campfire
+                        // changes so every replica builds options from the updated owner state.
+                        if (!MultiplayerLocationChecks.PublishEffectiveCheckProgress(player))
+                        {
+                            LogUtility.Error(
+                                $"AP location update added {addedCampfires} campfire check(s), "
+                                    + $"but progress for player {player.NetId} could not be published"
+                            );
+                        }
+                        else
+                        {
+                            LogUtility.Info(
+                                $"Published {addedCampfires} campfire check(s) from an AP location "
+                                    + $"update for player {player.NetId}"
+                            );
+                        }
+                    }
+                });
+            }
+
+            public void Dispose()
+            {
+                _session.Items.ItemReceived -= ItemReceived;
+                _session.Socket.ErrorReceived -= ErrorReceived;
+                _session.Socket.SocketClosed -= SocketClosed;
+                _session.MessageLog.OnMessageReceived -= MessageReceived;
+                _session.Locations.CheckedLocationsUpdated -= LocationsUpdated;
+                _deathLink.OnDeathLinkReceived -= DeathLinkReceived;
+            }
+        }
+
         #endregion
 
         #region Slot Information
@@ -1256,7 +1475,7 @@ namespace StS2AP
         /// <summary>
         /// Get all of the Player's Settings for their Archipelago Slot
         /// </summary>
-        private static ArchipelagoSettings GetPlayerSettings()
+        private static ArchipelagoSettings GetPlayerSettings(System.Version apWorldVersion)
         {
             // Use the SlotData that was already retrieved during login
             // instead of calling Session.DataStorage.GetSlotData() which performs
@@ -1268,11 +1487,17 @@ namespace StS2AP
                 LogUtility.Error("No slot data found for this player!");
                 throw new InvalidDataException("No slot data found for this player!");
             }
-            ArchipelagoSettings settings = new();
-
-            if(slotData.ContainsKey("mod_compat_version"))
-                if(System.Version.TryParse(Convert.ToString(slotData["mod_compat_version"]), out var apworldVersion))
-                    settings.APWorldVersion = apworldVersion;
+            ArchipelagoSettings settings = new()
+            {
+                APWorldVersion = apWorldVersion,
+                PlayerCount = Convert.ToInt32(slotData["player_count"]),
+                PlayerNumber = LocalSettings.Value.MultiplayerPlayerNumber,
+            };
+            if (!CoopPlayerSelection.IsValid(settings.PlayerCount, settings.PlayerNumber))
+                throw new InvalidDataException($"Player {settings.PlayerNumber} is outside this slot's player_count={settings.PlayerCount}. Change Player Number in Multiplayer Settings before connecting.");
+            if (slotData["players"] is not JObject players
+                || players[settings.PlayerNumber.ToString()] is not JArray playerCharacters)
+                throw new InvalidDataException("The AP slot is missing the selected player's character configuration.");
 
             // Apply all found settings
             if (slotData.ContainsKey("seeded"))
@@ -1292,10 +1517,7 @@ namespace StS2AP
                 );
             if (slotData.ContainsKey("num_chars_goal"))
                 settings.NumCharsGoal = Convert.ToInt32(slotData["num_chars_goal"]);
-            if (
-                slotData.ContainsKey("characters")
-                && slotData["characters"] is System.Collections.IList charsList
-            )
+            if (playerCharacters is System.Collections.IList charsList)
             {
                 // Grab the total number of characters
                 settings.TotalCharacters = charsList.Count;
@@ -1305,9 +1527,12 @@ namespace StS2AP
                 // so each entry arrives as a JObject, NOT a Dictionary<string, object>.
                 foreach (var charData in charsList)
                 {
-                    if (charData is JObject)
+                    if (charData is JObject characterData)
                     {
-                        var config = CharacterConfig.fromJObject(charData as JObject, settings.APWorldVersion);
+                        var config = CharacterConfig.fromJObject(
+                            characterData,
+                            settings.APWorldVersion
+                        );
                         if (config != null)
                         {
                             settings.Characters.Add(config.OfficialName, config);
@@ -1315,20 +1540,6 @@ namespace StS2AP
                     }
                 }
 
-                foreach (var config in settings.Characters.Values)
-                {
-                    var model = ModelDb.AllCharacters.FirstOrDefault(model =>
-                        string.Equals(
-                            model.Id.Entry,
-                            config.OfficialName,
-                            StringComparison.OrdinalIgnoreCase
-                        )
-                    );
-                    if (model == null)
-                    {
-                        settings.UnrecognizedCharacters[config.OfficialName] = config;
-                    }
-                }
             }
 
             if (slotData.ContainsKey("neow_sanity"))
@@ -1338,6 +1549,7 @@ namespace StS2AP
                 settings.AncientRelicLocation = (AncientRelicLocation)Convert.ToInt32(slotData["ancient_relic_location"]);
             if(slotData.ContainsKey("ancient_relic_pool"))
                 settings.AncientRelicPool = (AncientRelicPoolMode)Convert.ToInt32(slotData["ancient_relic_pool"]);
+            AncientSlotDefaults = new(settings.AncientRelicLocation, settings.AncientRelicPool);
             // These keys are one APWorld/client contract. Missing values should reject the slot
             // instead of silently changing the run's reward rules.
             if(slotData.ContainsKey("relic_rewards_available_anytime"))

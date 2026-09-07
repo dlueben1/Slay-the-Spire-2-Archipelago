@@ -1,0 +1,69 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+    <TargetFramework>net9.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Archipelago.MultiClient.Net" Version="6.7.0" />
+    <Compile Include="..\StS2AP\Data\ArchipelagoIdCodec.cs" Link="Data\ArchipelagoIdCodec.cs" />
+    <Compile Include="..\StS2AP\Utils\CoopGoalPolicy.cs" Link="Utils\CoopGoalPolicy.cs" />
+    <Compile Include="..\StS2AP\Utils\CoopPlayerSelection.cs" Link="Utils\CoopPlayerSelection.cs" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <ProjectReference Include="..\StS2AP.Domain\StS2AP.Domain.fsproj" />
+    <Compile Include="..\StS2AP\Models\ApReceivedItemLedger.cs" Link="Models\ApReceivedItemLedger.cs" />
+    <Compile Include="..\StS2AP\Models\IndexedItemInfo.cs" Link="Models\IndexedItemInfo.cs" />
+    <Compile Include="..\StS2AP\Multiplayer\ApParticipationKind.cs" Link="Multiplayer\ApParticipationKind.cs" />
+    <Compile Include="..\StS2AP\DomainAdapters\MirroredRewardAdapter.cs"
+             Link="DomainAdapters\MirroredRewardAdapter.cs" />
+    <Compile Include="..\StS2AP\DomainAdapters\ProgressiveStarterAdapter.cs"
+             Link="DomainAdapters\ProgressiveStarterAdapter.cs" />
+    <Compile Include="..\StS2AP\Persistence\ApProgressiveStarterKindState.cs"
+             Link="Persistence\ApProgressiveStarterKindState.cs" />
+    <Compile Include="..\StS2AP\Models\ApProgressiveStarterActionMessage.cs"
+             Link="Models\ApProgressiveStarterActionMessage.cs" />
+    <Compile Include="..\StS2AP\Models\Rewards\Grants\ApGrantId.cs" Link="Models\Rewards\Grants\ApGrantId.cs" />
+    <Compile Include="..\StS2AP\Models\Rewards\Specs\ApMirroredRewardKind.cs" Link="Models\Rewards\Specs\ApMirroredRewardKind.cs" />
+    <Compile Include="..\StS2AP\Models\Rewards\Specs\ApMirroredRewardSpec.cs" Link="Models\Rewards\Specs\ApMirroredRewardSpec.cs" />
+    <Compile Include="..\StS2AP\Models\Rewards\Specs\ApMenuGoldSpec.cs" Link="Models\Rewards\Specs\ApMenuGoldSpec.cs" />
+    <Compile Include="..\StS2AP\Models\Rewards\Specs\ApRewardMenuSpec.cs" Link="Models\Rewards\Specs\ApRewardMenuSpec.cs" />
+    <Compile Include="..\StS2AP\Models\Rewards\Grants\ApGoldClaim.cs" Link="Models\Rewards\Grants\ApGoldClaim.cs" />
+    <Compile Include="..\StS2AP\Persistence\ApReplicaConstructionState.cs"
+             Link="Persistence\ApReplicaConstructionState.cs" />
+    <Compile Include="..\StS2AP\Utils\Connection\ApSessionIdentity.cs"
+             Link="Utils\Connection\ApSessionIdentity.cs" />
+    <Compile Include="..\StS2AP\Utils\Connection\ApSlotIdentity.cs"
+             Link="Utils\Connection\ApSlotIdentity.cs" />
+    <Compile Include="..\StS2AP\Utils\Connection\ApSessionIdentityJsonConverter.cs"
+             Link="Utils\Connection\ApSessionIdentityJsonConverter.cs" />
+    <Compile Include="..\StS2AP\Utils\Connection\PendingCheckOutbox.cs"
+             Link="Utils\Connection\PendingCheckOutbox.cs" />
+    <Compile Include="..\StS2AP\Utils\Diagnostics\ApBugReportFiles.cs" Link="Utils\Diagnostics\ApBugReportFiles.cs" />
+    <Compile Include="..\StS2AP\Utils\Actions\NonCombatActionAdmissionState.cs" Link="Utils\Actions\NonCombatActionAdmissionState.cs" />
+    <Compile Include="..\StS2AP\Utils\DeathLink\DeathLinkEventLedger.cs" Link="Utils\DeathLink\DeathLinkEventLedger.cs" />
+    <Compile Include="..\StS2AP\Utils\Rewards\UniversalBuffGold.cs" Link="Utils\Rewards\UniversalBuffGold.cs" />
+    <Compile Include="..\StS2AP\Utils\Rewards\ApRewardTravelGuard.cs" Link="Utils\Rewards\ApRewardTravelGuard.cs" />
+    <Compile Include="..\StS2AP\Utils\RestSitePolicy.cs" Link="Utils\RestSitePolicy.cs" />
+    <Compile Include="..\StS2AP\Persistence\CampaignSaveFiles.cs" Link="Persistence\CampaignSaveFiles.cs" />
+    <Compile Include="..\StS2AP\Persistence\ApRelicReceiptState.cs" Link="Persistence\ApRelicReceiptState.cs" />
+    <Using Include="StS2AP.Models" />
+    <Compile Include="..\StS2AP\Persistence\ApProgressDelta.cs" Link="Persistence\ApProgressDelta.cs" />
+    <Compile Include="..\StS2AP\Persistence\ApProgressiveStarterState.cs" Link="Persistence\ApProgressiveStarterState.cs" />
+    <Compile Include="..\StS2AP\Models\Configuration\AncientRewardSettings.cs" Link="Models\AncientRewardSettings.cs" />
+    <Compile Include="..\StS2AP\Models\Configuration\ClientSettings.cs" Link="Models\ClientSettings.cs" />
+    <Compile Include="..\StS2AP\Persistence\ApRunProgressState.cs" Link="Persistence\ApRunProgressState.cs" />
+    <Compile Include="..\StS2AP\Persistence\ApCardAssignmentState.cs" Link="Persistence\ApCardAssignmentState.cs" />
+    <Compile Include="..\StS2AP\Models\ProgressiveStarterTier.cs" Link="Models\ProgressiveStarterTier.cs" />
+    <Compile Include="..\StS2AP\Models\Rewards\Specs\ApRewardEffectSpec.cs" Link="Models\Rewards\Specs\ApRewardEffectSpec.cs" />
+    <Using Include="StS2AP.Models" />
+  </ItemGroup>
+</Project>

@@ -1,26 +1,24 @@
 ﻿using Archipelago.MultiClient.Net.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace StS2AP.Models
 {
-    public class IndexedItemInfo
+    public sealed class IndexedItemInfo
     {
         /// <summary>
         /// The Item Info from Archipelago
         /// </summary>
-        public ItemInfo Item { get; set; }
+        public ItemInfo Item { get; }
 
         /// <summary>
-        /// The received Index of the Item, the only true unique way to handle this
+        /// The SDK receipt index, unique only within the owning AP session's item history.
+        /// Repeated copies of the same item have different indexes.
         /// </summary>
-        public int Index { get; set; }
+        public int Index { get; }
 
         public IndexedItemInfo(ItemInfo item, int index)
         {
+            ArgumentNullException.ThrowIfNull(item);
+            ArgumentOutOfRangeException.ThrowIfNegative(index);
             Item = item;
             Index = index;
         }

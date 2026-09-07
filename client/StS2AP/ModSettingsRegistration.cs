@@ -1,5 +1,4 @@
 ﻿using MegaCrit.Sts2.Core.Models;
-using StS2AP.Models;
 using StS2AP.UI;
 using StS2AP.Utils;
 using STS2RitsuLib;
@@ -19,8 +18,8 @@ public static class ModSettingsRegistration
     // Keybindings
     private const string KeyBinds_APMenuId = "keybind_ap_menu";
 
-    // Controller.joystickPress was renamed to Controller.lStickPress in 0.108. Keep both
-    // action strings so the same mod binary can open the AP menu on 0.107.1 and 0.111.0.
+    // Controller.joystickPress was renamed to Controller.lStickPress in 0.108. Keeping both
+    // action strings lets the multiplayer branch retain the cross-version runtime binding.
     private const string LegacyControllerStickPress = "controller_joystick_press";
     private const string CurrentControllerStickPress = "controller_l_stick_press";
 
@@ -118,8 +117,11 @@ public static class ModSettingsRegistration
                     .AddSection("charnames", ConfigureModdedCharactersSection)
                     .AddSection("keybinds", ConfigureKeybindsSection)
                     .AddSection("notifications", ConfigureNotificationsSection)
+                    .AddSection("multiplayer", ConfigureMultiplayerSection)
                     .AddSection("relic_rewards", ConfigureRelicRewardsSection)
+                    .AddSection("ancient_rewards", ConfigureAncientRewardsSection)
                     .AddSection("deathlink", ConfigureDeathLinkSection)
+                    .AddSection("bug_reports", ConfigureBugReportsSection)
         );
         RegisterHotkeys();
     }
@@ -130,6 +132,20 @@ public static class ModSettingsRegistration
                 .WithDescription(ModSettingsText.Literal("Internal Names of Installed Modded Characters"))
                 .AddInfoCard("ap-modded-chars", ModSettingsText.Literal("Character Names"), ModSettingsText.Dynamic(GetModdedNames));
 
+    }
+
+    private static void ConfigureBugReportsSection(ModSettingsSectionBuilder section)
+    {
+        section.WithTitle(ModSettingsText.Literal("Bug Reports"))
+            .AddButton("export_bug_report", ModSettingsText.Literal("Multiplayer diagnostics"),
+                ModSettingsText.Literal("Export Bug Report"), host =>
+                {
+                    ApBugReport.TryStart(out _, host.RequestRefresh);
+                    host.RequestRefresh();
+                }, description: ModSettingsText.Literal(
+                    "Packages the newest divergence report and available game logs, then opens the ZIP's folder. You can also type ap report in the console."))
+            .AddInfoCard("bug_report_status", ModSettingsText.Literal("Export status"),
+                ModSettingsText.Dynamic(() => ApBugReport.Status));
     }
 
     private static string GetModdedNames()
@@ -317,6 +333,81 @@ public static class ModSettingsRegistration
             )
             .ConfigureEntryMenu(DeathLink_DamageId, ModSettingsMenuCapabilities.None)
             .WithEntryEnabledWhen(DeathLink_DamageId, IsDeathLinkOverriden);
+    }
+
+    private static void ConfigureAncientRewardsSection(ModSettingsSectionBuilder section)
+    {
+        section.WithTitle(ModSettingsText.Literal("Ancient Rewards"))
+            .WithDescription(ModSettingsText.Literal(
+                "Applies only to new runs, including multiplayer. Continuing a run keeps its saved mode and pool."))
+            .WithMenuCapabilities(ModSettingsMenuCapabilities.None)
+            .AddChoice(
+                "ancient_mode", ModSettingsText.Literal("Ancient Mode"),
+                CreateBinding(
+                    static settings => settings.AncientRelicLocationOverride is { } mode ? (int)mode : -1,
+                    static (settings, value) => settings.AncientRelicLocationOverride =
+                        value == -1 ? null : (AncientRelicLocation)value),
+                options: new[]
+                {
+                    new ModSettingsChoiceOption<int>(-1, ModSettingsText.Literal("Use AP Slot Setting")),
+                    new ModSettingsChoiceOption<int>(0, ModSettingsText.Literal("Start of Act")),
+                    new ModSettingsChoiceOption<int>(1, ModSettingsText.Literal("Anytime")),
+                },
+                description: ModSettingsText.Literal(
+                    "Anytime is recommended for multiplayer. Start of Act rewards missed before a checkpoint cannot be claimed later in that run."))
+            .AddChoice(
+                "ancient_pool", ModSettingsText.Literal("Ancient Pool"),
+                CreateBinding(
+                    static settings => settings.AncientRelicPoolOverride is { } pool ? (int)pool : -1,
+                    static (settings, value) => settings.AncientRelicPoolOverride =
+                        value == -1 ? null : (AncientRelicPoolMode)value),
+                options: new[]
+                {
+                    new ModSettingsChoiceOption<int>(-1, ModSettingsText.Literal("Use AP Slot Setting")),
+                    new ModSettingsChoiceOption<int>(0, ModSettingsText.Literal("Balanced")),
+                    new ModSettingsChoiceOption<int>(1, ModSettingsText.Literal("Chaos")),
+                    new ModSettingsChoiceOption<int>(2, ModSettingsText.Literal("True Chaos")),
+                },
+                description: ModSettingsText.Literal(
+                    "Balanced uses the run's Ancient; Chaos uses the act's pool; True Chaos combines Acts 2 and 3. Neow remains Neow-only."));
+    }
+
+    private static void ConfigureMultiplayerSection(ModSettingsSectionBuilder section)
+    {
+        const string key = "multiplayer_player_number";
+        section.WithTitle(ModSettingsText.Literal("Multiplayer Settings"))
+            .WithDescription(ModSettingsText.Literal(
+                "Select the player whose items and checks you own in a shared AP slot. "
+                + "Choose a number within the YAML's player_count. People choosing the same number share its AP items and checks. "
+                + "Set this before connecting to Archipelago."))
+            .AddIntSlider(key, ModSettingsText.Literal("Player Number"),
+                CreateBinding(static settings => settings.MultiplayerPlayerNumber,
+                    static (settings, value) =>
+                    {
+                        if (CanChangePlayerNumber())
+                        {
+                            settings.MultiplayerPlayerNumber = value;
+                            LogUtility.Info($"[AP Settings] Player Number set to {value}");
+                        }
+                    }),
+                minValue: 1, maxValue: 4, step: 1,
+                valueFormatter: static value => $"Player {value}",
+                description: ModSettingsText.Dynamic(() => GetPlayerNumberLockReason()
+                    ?? "Choose your player number, then connect to Archipelago."))
+            .ConfigureEntryMenu(key, ModSettingsMenuCapabilities.None)
+            .WithEntryEnabledWhen(key, CanChangePlayerNumber);
+    }
+
+    private static bool CanChangePlayerNumber() => GetPlayerNumberLockReason() == null;
+
+    private static string? GetPlayerNumberLockReason()
+    {
+        if (GameUtility.IsInRun || MultiplayerSupport.IsMultiplayerScope)
+            return "Locked while in a run or multiplayer menu/lobby. Return to the main menu first.";
+        if (ArchipelagoClient.HasSlotConnection)
+            return "Locked to the selected AP slot. Use Disconnect from Archipelago (or Cancel Connection/Reconnect) "
+                + "on the main menu, then reopen these settings.";
+        return null;
     }
 
     private static void ConfigureRelicRewardsSection(ModSettingsSectionBuilder section)

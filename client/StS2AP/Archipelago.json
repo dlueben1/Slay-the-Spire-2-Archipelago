@@ -3,11 +3,11 @@
   "name": "Archipelago Client",
   "author": "Kirbyfanner, Platano Bailando, Lyxn, MartyredG, Terairk",
   "description": "Adds support for the Archipelago Randomizer. This mod is in-development and is a total conversion, so it likely won't play well with other mods.",
-  "version": "1.0.1",
+  "version": "2.1.0",
   "has_pck": true,
   "has_dll": true,
   "dependencies": [
-    { "id": "STS2-RitsuLib" }
+    { "id": "STS2-RitsuLib", "min_version": "0.5.17" }
   ],
   "affects_gameplay": true
 }

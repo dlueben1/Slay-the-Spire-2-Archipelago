@@ -1,12 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Archipelago.MultiClient.Net.Models;
-using static StS2AP.Data.CharTable;
+﻿using Archipelago.MultiClient.Net.Models;
+using StS2AP.Data;
 using static StS2AP.Data.ItemTable;
 
 namespace StS2AP
@@ -14,45 +7,46 @@ namespace StS2AP
     public static class ItemInfoExtensions
     {
         /// <summary>
-        /// Extracts the character-specific item ID from the ItemInfo object by stripping the character offset.
-        /// Only valid for character-specific items (ItemId > 10000). For universal items (ItemId < 10000),
-        /// cast ItemId directly to APItem instead — there is no character offset to strip.
+        /// Extracts the character item type from a character-specific item ID.
         /// Example: An item with ID 20003 represents an item from the Silent (Character ID: 2)
         /// where the character-specific item ID is (3).
         /// </summary>
-        public static APItem GetCharacterSpecificItemID(this ItemInfo item)
+        public static APItem GetCharacterItemType(this ItemInfo item)
         {
-            if (item is null || item.ItemId < 0)
+            if (item is null || !ArchipelagoIdCodec.IsCharacterItemId(item.ItemId))
             {
                 LogUtility.Error($"Could not Parse Raw Item ID for Item #{item?.ItemId}");
                 return 0L;
             }
-            return (APItem)(item.ItemId % 10000L);
+            return (APItem)ArchipelagoIdCodec.GetCharacterItemTypeId(item.ItemId);
         }
 
-        // /// <summary>
-        // /// Similar to the function above, but it extracts the Character ID of the Item from the ItemInfo object.
-        // /// </summary>
-        // public static APItemCharID GetStSCharID(this ItemInfo item)
-        // {
-        //     if (item is null || item.ItemId < 0)
-        //     {
-        //         LogUtility.Error($"Could not Parse Raw Character ID for Item #{item?.ItemId}");
-        //         return 0L;
-        //     }
-        //     return (APItemCharID)(Math.Abs(item.ItemId) / 10000L);
-        // }
-
-        public static long GetCharacterOffset(this ItemInfo item)
+        /// <summary>
+        /// Extracts the one-based AP character number from a character-specific item ID.
+        /// </summary>
+        public static long GetAPCharacterNumber(this ItemInfo item)
         {
-            if (item is null || item.ItemId < 0)
+            if (item is null || !ArchipelagoIdCodec.IsCharacterItemId(item.ItemId))
             {
                 LogUtility.Error(
-                    $"Could not Parse Raw Character offset ID for Item #{item?.ItemId}"
+                    $"Could not parse AP character number from item #{item?.ItemId}"
                 );
                 return 0L;
             }
-            return (Math.Abs(item.ItemId) / 10000L);
+            return ArchipelagoIdCodec.GetAPCharacterNumberFromItemId(item.ItemId);
+        }
+
+        /// <summary>
+        /// Reads a complete universal item ID without applying character-block decoding.
+        /// </summary>
+        public static APItem GetUniversalItemId(this ItemInfo item)
+        {
+            if (item is null || !ArchipelagoIdCodec.IsUniversalItemId(item.ItemId))
+            {
+                LogUtility.Error($"Could not parse universal item ID from item #{item?.ItemId}");
+                return 0L;
+            }
+            return (APItem)ArchipelagoIdCodec.WithoutPlayer(item.ItemId);
         }
 
         public static bool Advancement(this ItemInfo info)

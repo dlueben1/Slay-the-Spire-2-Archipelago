@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using StS2AP.Models;
-
-namespace StS2AP.Data
+﻿namespace StS2AP.Data
 {
     public static class ItemTable
     {
@@ -125,6 +118,20 @@ namespace StS2AP.Data
             { APItem.BossGold, 100 },
         };
 
+        /// <summary>Whether an item ID is one of the universal ephemeral combat buffs.</summary>
+        public static bool IsUniversalCombatBuff(long itemId)
+        {
+            return (APItem)ArchipelagoIdCodec.WithoutPlayer(itemId) switch
+            {
+                APItem.FreeAttack or APItem.FreePower or APItem.FreeSkill
+                    or APItem.Dexterity or APItem.Strength or APItem.Plating
+                    or APItem.Friendship or APItem.PostCombatCardUpgrade
+                    or APItem.PostCombatCardRemoval or APItem.AdditionalCardReward
+                    or APItem.Buffer or APItem.Vigor or APItem.Thorns or APItem.Artifact => true,
+                _ => false,
+            };
+        }
+
         public static bool CanBePickedUp(this APItem item)
         {
             switch(item)
@@ -137,7 +144,7 @@ namespace StS2AP.Data
                     return true;
               case APItem.ProgressiveAncient:
                     // pickup is true if Anytime since Relics are in AP reward menu, false otherwise
-                    return (ArchipelagoClient.Settings?.AncientRelicLocation ?? AncientRelicLocation.Anytime) == AncientRelicLocation.Anytime;
+                    return StS2AP.Utils.AncientSettingsUtility.Current.Location == AncientRelicLocation.Anytime;
               case APItem.ProgressiveRest:
               case APItem.ProgressiveSmith:
               case APItem.ShopCardSlot:

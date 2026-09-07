@@ -1,38 +1,44 @@
-﻿using MegaCrit.Sts2.Core.Models;
+﻿using Archipelago.MultiClient.Net;
+using MegaCrit.Sts2.Core.Models;
 using StS2AP.Extensions;
-using StS2AP.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using StS2AP.Utils;
 
 namespace StS2AP.Data
 {
     public static class LocationData
     {
-        private const long CharacterLocationStride = 10000;
+        private const long FirstCampfireBaseId = 89;
+        private const int CampfiresPerAct = 2;
 
         /// <summary>
-        /// Combines a base Location ID with a character's offset ID
+        /// Combines a base location ID with a one-based AP character number.
         /// </summary>
         /// <param name="locationId">The base ID of a location</param>
-        /// <param name="character">The character to offset the location by</param>
+        /// <param name="character">The character whose AP location block should be used</param>
         /// <returns>The combined location ID.</returns>
-        /// <example>If characterOffset=1 and locationId=88, then we'd return 88</example>
+        /// <example>If the AP character number is 1 and locationId is 88, this returns 88.</example>
         private static long CombineLocationAndCharacterIds(long locationId, CharacterModel character)
         {
-            // Character offset (for locations this is zero-based, so it needs to be shifted)
-            long? _characterOffset = character.GetCharacterOffset();
-            if(_characterOffset == null)
+            var apCharacterNumber = character.GetAPCharacterNumber();
+            if (!apCharacterNumber.HasValue)
             {
                 LogUtility.Error($"Got unsupported character {character.APName()}");
                 return -1;
             }
 
-            // AP character offsets are one-based while location blocks are zero-based:
-            // Ironclad=0xxxx, Silent=1xxxx, Defect=2xxxx, etc.
-            return ((_characterOffset.Value - 1) * CharacterLocationStride) + locationId;
+            if (!ArchipelagoIdCodec.TryComposeLocationId(
+                locationId,
+                apCharacterNumber.Value,
+                out var combinedLocationId
+            ))
+            {
+                LogUtility.Error(
+                    $"Could not compose location {locationId} for AP character #{apCharacterNumber.Value}"
+                );
+                return -1;
+            }
+
+            return CoopSlot.Location(combinedLocationId);
         }
 
         /// <summary>
@@ -48,18 +54,16 @@ namespace StS2AP.Data
         
         /// <summary>
         /// Returns whether or not the character has a "Press Start" location.
-        /// Locked characters have this location.
+        /// The slot-data lock flag is authoritative; scouting completes asynchronously and is
+        /// therefore not a reliable way to decide whether the location exists.
         /// </summary>
         public static bool DoesThisCharacterHavePressStartLocation(CharacterModel character)
         {
-            // Get the location ID
-            long id = GetPressStartLocation(character);
-
-            // If the ID isn't valid, assume the location doesn't exist
-            if (id == -1) return false;
-
-            // If it's valid, see if it's in our Scouted Locations
-            return ArchipelagoClient.ScoutedLocations.ContainsKey(id);
+            ArchipelagoSettings? settings = ArchipelagoClient.Settings;
+            return settings != null && settings.Characters.TryGetValue(
+                character.Id.Entry,
+                out var config
+            ) && config.Locked;
         }
 
         /// <summary>
@@ -69,8 +73,14 @@ namespace StS2AP.Data
         /// <returns>A list of location IDs for the specified character's Card Rewards.</returns>
         public static List<long> GetCardRewardLocations(CharacterModel character)
         {
+            ArchipelagoSettings? settings = ArchipelagoClient.Settings;
+            if (settings == null)
+            {
+                LogUtility.Error("Cannot enumerate Card Reward locations without AP slot settings.");
+                return new List<long>();
+            }
             // Get the number of Card Rewards based on user settings
-            var numCardRewards = ArchipelagoClient.Settings.ShouldShuffleAllCards ? ArchipelagoProgress._maxCardRewards : (ArchipelagoProgress._maxCardRewards / 2);
+            var numCardRewards = settings.ShouldShuffleAllCards ? ArchipelagoProgress._maxCardRewards : (ArchipelagoProgress._maxCardRewards / 2);
             return GetLocationsByPattern($"{character.APName()} Card Reward #", numCardRewards);
         }
 
@@ -111,7 +121,13 @@ namespace StS2AP.Data
         /// <returns>A list of location IDs for the specified character's Ancient Rewards.</returns>
         public static List<long> GetAncientRewardLocations(CharacterModel character)
         {
-            var start = ArchipelagoClient.Settings.NeowSanity ? 1 : 2;
+            ArchipelagoSettings? settings = ArchipelagoClient.Settings;
+            if (settings == null)
+            {
+                LogUtility.Error("Cannot enumerate Ancient Reward locations without AP slot settings.");
+                return new List<long>();
+            }
+            var start = settings.NeowSanity ? 1 : 2;
             return GetLocationsByPattern($"{character.APName()} Ancient Act #", ArchipelagoProgress._maxAncientChecks, start);
         }
 
@@ -143,6 +159,12 @@ namespace StS2AP.Data
         public static List<long> GetCampfiresanityLocations(CharacterModel character)
         {
             List<long> ids = new();
+            ArchipelagoSession? session = ArchipelagoClient.Session;
+            if (session == null)
+            {
+                LogUtility.Error("Cannot enumerate Campfiresanity locations without an AP session.");
+                return ids;
+            }
             const int acts = 3;
             const int campfiresPerAct = 2;
             for(int a = 1; a <= acts; a++)
@@ -151,7 +173,7 @@ namespace StS2AP.Data
                 {
                     try
                     {
-                        var id = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", $"{character.APName()} Act {a} Campfire {c}");
+                        var id = session.Locations.GetLocationIdFromName("Slay the Spire II", CoopSlot.Name($"{character.APName()} Act {a} Campfire {c}"));
                         ids.Add(id);
                     } 
                     catch 
@@ -162,11 +184,43 @@ namespace StS2AP.Data
             }
             return ids;
         }
+
+        /// <summary>
+        /// Resolves a Campfiresanity location without consulting a process-local AP session.
+        /// Every multiplayer replica can therefore construct the same owner-specific option list.
+        /// </summary>
+        public static long GetCampfireLocationId(long apCharacterNumber, int act, int campfire)
+        {
+            if (apCharacterNumber < 1 || act is < 1 or > 3 || campfire is < 1 or > 2)
+                return -1;
+
+            long baseId = FirstCampfireBaseId
+                + ((act - 1) * CampfiresPerAct)
+                + (campfire - 1);
+            return ArchipelagoIdCodec.TryComposeLocationId(
+                baseId,
+                apCharacterNumber,
+                out var locationId
+            ) ? locationId : -1;
+        }
+
+        public static bool IsCampfireLocationId(long locationId)
+        {
+            long baseId = ArchipelagoIdCodec.GetBaseLocationId(locationId);
+            return baseId is >= FirstCampfireBaseId
+                and < FirstCampfireBaseId + (3 * CampfiresPerAct);
+        }
         public static List<long> GetShopsanityLocations(CharacterModel character)
         {
+            ArchipelagoSettings? settings = ArchipelagoClient.Settings;
+            if (settings == null)
+            {
+                LogUtility.Error("Cannot enumerate ShopSanity locations without AP slot settings.");
+                return new List<long>();
+            }
             return GetLocationsByPattern(
                 $"{character.APName()} Shop Slot #",
-                ArchipelagoClient.Settings.TotalShopLocations);
+                settings.TotalShopLocations);
         }
 
         /// <summary>
@@ -178,11 +232,17 @@ namespace StS2AP.Data
         private static List<long> GetLocationsByPattern(string pattern, int count, int start = 1 )
         {
             List<long> ids = new();
+            ArchipelagoSession? session = ArchipelagoClient.Session;
+            if (session == null)
+            {
+                LogUtility.Error($"Cannot enumerate locations matching '{pattern}' without an AP session.");
+                return ids;
+            }
             for(int i = start; i <= count; i++)
             {
                 try
                 {
-                    var id = ArchipelagoClient.Session.Locations.GetLocationIdFromName("Slay the Spire II", pattern.Replace("#", i.ToString()));
+                    var id = session.Locations.GetLocationIdFromName("Slay the Spire II", CoopSlot.Name(pattern.Replace("#", i.ToString())));
                     ids.Add(id);
                 } catch { }
             }

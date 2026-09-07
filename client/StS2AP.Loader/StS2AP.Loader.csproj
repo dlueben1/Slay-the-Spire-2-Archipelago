@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\StS2AP\local.props" Condition="Exists('..\StS2AP\local.props')" />
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>14.0</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Archipelago.Loader</AssemblyName>
+    <RootNamespace>StS2AP.Loader</RootNamespace>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <IsPackable>false</IsPackable>
+    <Sts2ApiCompat>0.107.1</Sts2ApiCompat>
+    <Sts2ApiSignatureDir Condition="'$(STS2ReferenceDataDir01071)' != ''">$(STS2ReferenceDataDir01071)</Sts2ApiSignatureDir>
+    <Sts2ApiSignatureDir Condition="'$(Sts2ApiSignatureDir)' == '' and '$(Sts2ApiSignatureRoot)' != ''">$(Sts2ApiSignatureRoot)\$(Sts2ApiCompat)</Sts2ApiSignatureDir>
+    <STS2ReferenceDataDir Condition="'$(Sts2ApiSignatureDir)' != ''">$(Sts2ApiSignatureDir)</STS2ReferenceDataDir>
+    <STS2GamePath Condition="'$(STS2GamePath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2</STS2GamePath>
+    <STS2ReferenceDataDir Condition="'$(STS2ReferenceDataDir)' == ''">$(STS2GamePath)\data_sts2_windows_x86_64</STS2ReferenceDataDir>
+  </PropertyGroup>
+
+  <Target Name="ValidateSts2ApiSignatures" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(STS2ReferenceDataDir)\sts2.dll')"
+           Text="Missing oldest supported sts2.dll for the loader: '$(STS2ReferenceDataDir)\sts2.dll'." />
+    <Error Condition="!Exists('$(STS2ReferenceDataDir)\GodotSharp.dll')"
+           Text="Missing oldest supported GodotSharp.dll for the loader: '$(STS2ReferenceDataDir)\GodotSharp.dll'." />
+  </Target>
+
+  <ItemGroup>
+    <Reference Include="0Harmony" HintPath="$(STS2ReferenceDataDir)\0Harmony.dll" Private="false" />
+    <Reference Include="GodotSharp" HintPath="$(STS2ReferenceDataDir)\GodotSharp.dll" Private="false" />
+    <Reference Include="sts2" HintPath="$(STS2ReferenceDataDir)\sts2.dll" Private="false" />
+  </ItemGroup>
+</Project>

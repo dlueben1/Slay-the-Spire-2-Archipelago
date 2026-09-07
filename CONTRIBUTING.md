@@ -8,14 +8,17 @@ You need the following installed:
 - Godot v4.5.1 (the .NET version, _NOT_ the standalone version and _NOT_ the Megadot version)
 - Visual Studio 2022 (for the Game Client / C# part)
 - Visual Studio Code (for the AP World)
-- .NET 9
+- .NET 10 SDK (the client still targets `net9.0`)
 
 You also need to:
 
 - Create a clone of Archipelago's repo should live in `../Archipelago` or Python will complain about the APWorld's `.py` files
-- Copy `client/StS2AP/local.props.template` to `client/StS2AP/local.props` and update `<STS2GamePath>` and `<GodotExePath>` to match your local installations
+- Copy `client/StS2AP/local.props.template` to `client/StS2AP/local.props` and update its paths to match your local installations
   - `<STS2GamePath>` should point to the directory for the game in Steam
+  - Keep `<UseSts2RefLib>true</UseSts2RefLib>` for portable, permissioned compile-time references from NuGet
+  - Optionally set `<UseSts2RefLib>false</UseSts2RefLib>` and configure `<Sts2ApiSignatureRoot>` to compile against DLLs extracted from your own game installations
   - `<GodotExePath>` should point to the Godot Directory that has `Godot_v4.5.1-stable_mono_win64.exe`
+  - See [Selecting an STS2 API for development](docs/sts2-api-compat.md) for configuring your editor and compatibility builds
 
 > [!CAUTION]
 > For the moment this mod only supports Windows, primarily because of the way I'm handling real-time logging for the purpose of debugging the app. This should not be the case in the future.

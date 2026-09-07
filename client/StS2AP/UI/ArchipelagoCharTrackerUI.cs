@@ -4,7 +4,6 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Potions;
 using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
-using StS2AP.Models;
 using StS2AP.UI.Components;
 using static StS2AP.Patches.Patches_APProgressOnCharSelect;
 
@@ -381,6 +380,10 @@ namespace StS2AP.UI
         /// <param name="character">The initial character to display information for</param>
         private static Control CreateUI(CharacterModel character)
         {
+            ArchipelagoSettings settings = ArchipelagoClient.Settings
+                ?? throw new InvalidOperationException(
+                    "Cannot build the character tracker without AP slot settings."
+                );
             // Create the Root
             var root = new Control();
             root.Name = "ArchipelagoCharTrackerUI";
@@ -514,39 +517,39 @@ namespace StS2AP.UI
             AddCheckRow(AncientChecks);
 
             // Floorsanity Checks Counter (Note: When the Winged Boots are in main, we should use that relic here instead)
-            if(ArchipelagoClient.Settings.Floorsanity)
+            if(settings.Floorsanity)
             {
                 FloorsanityChecks = new ItemCountLabel(ModelDb.Relic<Planisphere>().IconPath, "(0 / 0)", "AP_REWARD_FLOORSANITY_CHECKS");
                 AddCheckRow(FloorsanityChecks);
             }
 
             // Potionsanity Checks Counter
-            if(ArchipelagoClient.Settings.PotionSanity)
+            if(settings.PotionSanity)
             {
                 PotionsanityChecks = new ItemCountLabel(ModelDb.Potion<SkillPotion>().ImagePath, "(0 / 0)", "AP_REWARD_POTIONSANITY_CHECKS");
                 AddCheckRow(PotionsanityChecks);
             }
 
             // Goldsanity Checks Counter
-            if(ArchipelagoClient.Settings.GoldSanity)
+            if(settings.GoldSanity)
             {
                 GoldsanityChecks = new ItemCountLabel("res://images/ui/reward_screen/reward_icon_money.png", "(0 / 0)", "AP_REWARD_GOLDSANITY_CHECKS");
                 AddCheckRow(GoldsanityChecks);
             }
 
             // Campfiresanity Checks Counter
-            if(ArchipelagoClient.Settings.CampfireSanity)
+            if(settings.CampfireSanity)
             {
                 CampfiresanityChecks = new ItemCountLabel("res://images/ui/run_history/rest_site.png", "(0 / 0)", "AP_REWARD_CAMPFIRESANITY_CHECKS");
                 AddCheckRow(CampfiresanityChecks);
             }
 
             // Shopsanity Checks Counter (placed before Press Start and Slayed the Spire)
-            if (ArchipelagoClient.Settings.ShopSanity)
+            if (settings.ShopSanity)
             {
                 ShopsanityChecks = new ItemCountLabel(
                     "res://images/ui/run_history/shop.png",
-                    $"(0 / {ArchipelagoClient.Settings.TotalShopLocations})",
+                    $"(0 / {settings.TotalShopLocations})",
                     "AP_REWARD_SHOPSANITY_CHECKS");
                 AddCheckRow(ShopsanityChecks);
             }

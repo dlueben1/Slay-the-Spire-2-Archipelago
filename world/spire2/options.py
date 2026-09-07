@@ -13,6 +13,18 @@ from .characters import character_list
 from .constants import NUM_CUSTOM, ASCENSIONS
 
 
+class PlayerCount(Range):
+    """Number of co-op players sharing this AP slot, each with separate items, checks and goals.
+    The final character roster must contain at least this many characters.
+    Random locks give distinct seeded starts. Fixed locks give Player 1 the configured start
+    and the other players distinct seeded starts. Unlocked makes every character available to everyone.
+    Each client must select its own player number before connecting."""
+    display_name = "Player Count"
+    range_start = 1
+    range_end = 4
+    default = 1
+
+
 class Characters(OptionSet):
     """Enter the list of characters to play as.  Valid characters are:
         'Ironclad'
@@ -35,9 +47,8 @@ class ModdedCharacters(OptionSet):
     If you don't know the exact ID to enter with the mod installed go to
     `Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.
 
-    If a configured mod is missing or its ID is wrong, the client treats that character as
-    unrecognized and mirrors its checks from playable configured characters. Configure at least
-    one character that the client can load so it has a valid starting character.
+    Every configured character must be installed with the matching internal ID. The client
+    rejects the AP connection if a configured character cannot be loaded.
     """
     display_name = "Modded Characters"
     default = []
@@ -154,7 +165,7 @@ class RelicRewardsAvailableAnytime(Range):
 
     The client snapshots this value at run start. Later Relic items need a reward from an
     Elite, treasure chest, or Black Star before they appear in the AP reward menu. The client's
-    local AP relic availability can be overriden in client settings for new runs only."""
+    local AP relic availability can be overridden in client settings for new runs only."""
     display_name = "Relic Rewards Available Anytime"
     range_start = 0
     range_end = 10
@@ -321,9 +332,8 @@ class CharacterOptions(OptionDict):
     If you don't know the exact ID to enter with the mod installed go to
     `Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.
 
-    If a configured mod is missing or its ID is wrong, the client treats that character as
-    unrecognized and mirrors its checks from playable configured characters. Configure at least
-    one character that the client can load so it has a valid starting character.
+    Every configured character must be installed with the matching internal ID. The client
+    rejects the AP connection if a configured character cannot be loaded.
     """
     # For those wondering why on earth there's an advanced character option
     # it's to support modded characters.
@@ -589,6 +599,7 @@ filler_item_options = OptionGroup(
 
 @dataclass
 class Spire2Options(PerGameCommonOptions):
+    player_count: PlayerCount
     # Character options
     characters: Characters
     modded_characters: ModdedCharacters
