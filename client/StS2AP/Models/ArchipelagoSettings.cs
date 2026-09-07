@@ -88,7 +88,6 @@ namespace StS2AP.Models
         /// <summary>Whether a victory releases the winning character's remaining checks.</summary>
         public bool ReleaseOnVictory { get; set; } = true;
 
-        private IReadOnlyList<BonusItemDefinition> _bonusItems = Array.Empty<BonusItemDefinition>();
         private Dictionary<string, List<BonusItemDefinition>> _bonusItemsByCategory =
             new(StringComparer.OrdinalIgnoreCase);
 
@@ -98,15 +97,15 @@ namespace StS2AP.Models
         /// </summary>
         public IReadOnlyList<BonusItemDefinition> BonusItems
         {
-            get => _bonusItems;
+            get;
             set
             {
-                _bonusItems = value ?? Array.Empty<BonusItemDefinition>();
-                _bonusItemsByCategory = _bonusItems
+                field = value ?? Array.Empty<BonusItemDefinition>();
+                _bonusItemsByCategory = field
                     .GroupBy(definition => definition.Category, StringComparer.OrdinalIgnoreCase)
                     .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
             }
-        }
+        } = Array.Empty<BonusItemDefinition>();
 
         /// <summary>Returns the ordered definitions configured for one bonus category.</summary>
         public IReadOnlyList<BonusItemDefinition> BonusItemsFor(string category) =>
