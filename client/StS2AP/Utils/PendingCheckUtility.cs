@@ -46,6 +46,12 @@ namespace StS2AP.Utils
             LogUtility.Debug($"Bound pending-check outbox to AP session {identity}");
         }
 
+        internal static void ClearSlotBinding()
+        {
+            lock (_stateLock)
+                _boundSession = null;
+        }
+
         /// <summary>
         /// Adds a newly earned location to the durable outbox, then attempts to send it
         /// immediately when the same authenticated Archipelago session is still connected.
@@ -61,7 +67,6 @@ namespace StS2AP.Utils
                 LogUtility.Error(
                     $"Could not persist location check {locationId}: no authenticated AP identity is bound"
                 );
-                TrySendWithoutPersistence(locationId);
                 return;
             }
 
@@ -71,7 +76,7 @@ namespace StS2AP.Utils
             if (!IsCurrentConnectedSession(bound))
             {
                 LogUtility.Warn(
-                    $"Queued location check {locationId} until its Archipelago session reconnects"
+                    $"Queued location check {locationId} for AP session {bound.Identity} until it reconnects"
                 );
                 return;
             }
@@ -136,7 +141,7 @@ namespace StS2AP.Utils
             }
 
             LogUtility.Info(
-                $"Replaying {recognized.Count} pending location check(s) after reconnecting"
+                $"Replaying {recognized.Count} pending location check(s) for AP session {bound.Identity} after reconnecting"
             );
             _ = SendAsync(bound, recognized.ToArray(), replaying: true);
         }
@@ -200,53 +205,14 @@ namespace StS2AP.Utils
                 await bound.Session.Locations.CompleteLocationChecksAsync(locationIds);
                 LogUtility.Info(
                     replaying
-                        ? $"Resubmitted {locationIds.Length} pending location check(s)"
-                        : $"Submitted location check: {locationIds[0]}"
+                        ? $"Resubmitted {locationIds.Length} pending location check(s) for AP session {bound.Identity}"
+                        : $"Submitted location check: {locationIds[0]} for AP session {bound.Identity}"
                 );
             }
             catch (Exception ex)
             {
                 LogUtility.Warn(
                     $"Location check transmission failed; {locationIds.Length} check(s) remain queued: {ex.Message}"
-                );
-            }
-        }
-
-        /// <summary>
-        /// Preserves the old immediate-send behavior if identity binding failed. Nothing is
-        /// persisted or replayed because ownership could not be proven.
-        /// </summary>
-        private static void TrySendWithoutPersistence(long locationId)
-        {
-            if (!ArchipelagoClient.IsConnected)
-                return;
-
-            ArchipelagoSession session = ArchipelagoClient.Session;
-            _ = SendWithoutPersistenceAsync(session, locationId);
-        }
-
-        private static async Task SendWithoutPersistenceAsync(
-            ArchipelagoSession session,
-            long locationId
-        )
-        {
-            if (
-                !ArchipelagoClient.IsConnected
-                || !ReferenceEquals(ArchipelagoClient.Session, session)
-            )
-                return;
-
-            try
-            {
-                await session.Locations.CompleteLocationChecksAsync(locationId);
-                LogUtility.Warn(
-                    $"Submitted location check {locationId} without durable outbox protection"
-                );
-            }
-            catch (Exception ex)
-            {
-                LogUtility.Error(
-                    $"Location check {locationId} could not be persisted or submitted: {ex.Message}"
                 );
             }
         }
