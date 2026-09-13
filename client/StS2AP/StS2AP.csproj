@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <!-- Import user-specific Windows development/deployment paths. -->
   <Import Project="local.props" Condition="Exists('local.props')" />
 
@@ -16,47 +16,103 @@
 
     <!-- Windows-only development launch settings; they do not affect the DLL. -->
     <StartAction>Program</StartAction>
-    <StartProgram>$(STS2GamePath)\SlayTheSpire2.exe</StartProgram>
+    <StartProgram>$(STS2GamePath)/SlayTheSpire2.exe</StartProgram>
     <StartWorkingDirectory>$(STS2GamePath)</StartWorkingDirectory>
 
     <!-- Fallback defaults for the Windows build machine if local.props is missing. -->
-    <STS2GamePath Condition="'$(STS2GamePath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2</STS2GamePath>
+    <STS2GamePath Condition="'$(STS2GamePath)' == ''"
+      >C:/Program Files (x86)/Steam/steamapps/common/Slay the Spire 2</STS2GamePath>
     <GodotExePath Condition="'$(GodotExePath)' == ''">godot</GodotExePath>
     <ModName Condition="'$(ModName)' == ''">Archipelago</ModName>
     <ModDisplayName Condition="'$(ModDisplayName)' == ''">Archipelago Client</ModDisplayName>
-    <ModAuthor Condition="'$(ModAuthor)' == ''">Kirbyfanner, Platano Bailando, Lyxn, MartyredG, Terairk</ModAuthor>
+    <ModAuthor Condition="'$(ModAuthor)' == ''"
+      >Kirbyfanner, Platano Bailando, Lyxn, MartyredG, Terairk</ModAuthor>
 
     <AssemblyName>$(ModName)</AssemblyName>
+
+    <!-- Client Release Version -->
     <Version>1.1.1</Version>
 
     <!-- Build/deploy paths on the Windows build machine. -->
-    <ModsOutputDir>$(STS2GamePath)\mods\$(ModName)</ModsOutputDir>
-    <GameDataDir>$(STS2GamePath)\data_sts2_windows_x86_64</GameDataDir>
-    <STS2ReferenceDataDir Condition="'$(STS2ReferenceDataDir)' == ''">$(GameDataDir)</STS2ReferenceDataDir>
+    <ModsOutputDir Condition="'$(ModsOutputDir)' == ''"
+      >$(STS2GamePath)/mods/$(ModName)</ModsOutputDir>
+    <GameDataDir>$(STS2GamePath)/data_sts2_windows_x86_64</GameDataDir>
+    <STS2ReferenceDataDir Condition="'$(STS2ReferenceDataDir)' == ''"
+      >$(GameDataDir)</STS2ReferenceDataDir>
     <GodotProject>$(ProjectDir)godot</GodotProject>
     <GodotPackPreset>Windows Desktop</GodotPackPreset>
+
+    <!-- The Versions of StS2 we support (the public branch version and the beta version) -->
+    <Sts2PublicApiCompat>0.107.1</Sts2PublicApiCompat>
+    <Sts2BetaApiCompat>0.111.0</Sts2BetaApiCompat>
+    <SupportedSts2ApiCompats>
+      $(Sts2PublicApiCompat);$(Sts2BetaApiCompat)
+    </SupportedSts2ApiCompats>
+
+    <!-- The Default Version of StS2 we support, if not specified -->
+    <DefaultSts2ApiCompat>$(Sts2PublicApiCompat)</DefaultSts2ApiCompat>
+
+    <!-- The Version of StS2 we are currently targeting (defaults to the specified version above) -->
+    <Sts2ApiCompat Condition="'$(Sts2ApiCompat)' == ''">$(DefaultSts2ApiCompat)</Sts2ApiCompat>
+
+    <!-- Resolves the proper version string for the Reference Library based on the targeted game version -->
+    <Sts2RefLibPackageVersion Condition="'$(Sts2ApiCompat)' == '$(Sts2PublicApiCompat)'">
+      $(Sts2PublicApiCompat)
+    </Sts2RefLibPackageVersion>
+    <Sts2RefLibPackageVersion Condition="'$(Sts2ApiCompat)' == '$(Sts2BetaApiCompat)'">
+      $(Sts2BetaApiCompat)-beta
+    </Sts2RefLibPackageVersion>
+
+    <!-- Whether to use the Reference Library or the actual game assemblies (If we can find the sts2.dll, we use the real thing) -->
+    <UseSts2RefLib
+      Condition="'$(UseSts2RefLib)' == '' and Exists('$(STS2ReferenceDataDir)/sts2.dll')"
+    >
+      false
+    </UseSts2RefLib>
+    <UseSts2RefLib Condition="'$(UseSts2RefLib)' == ''">
+      true
+    </UseSts2RefLib>
+
+    <!-- Differentiate build outputs based on beta/public build -->
+    <IntermediateOutputPath>$(MSBuildProjectDirectory)/obj/$(Sts2ApiCompat)/$(Configuration)/</IntermediateOutputPath>
+    <OutputPath>$(MSBuildProjectDirectory)/bin/$(Sts2ApiCompat)/$(Configuration)/</OutputPath>
+
+    <!-- Create pre-processor directives for each supported game version -->
+    <DefineConstants Condition="'$(Sts2ApiCompat)' == '$(Sts2PublicApiCompat)'"
+      >$(DefineConstants);STS_PUBLIC</DefineConstants>
+    <DefineConstants Condition="'$(Sts2ApiCompat)' == '$(Sts2BetaApiCompat)'"
+      >$(DefineConstants);STS_BETA</DefineConstants>
+
+    <!-- Defines a flag for how we want to build the app, which excludes/includes certain features. Valid options are Local, CompileOnly, and Package. -->
+    <BuildMode Condition="'$(BuildMode)' == ''">Local</BuildMode>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Archipelago.MultiClient.Net" Version="6.7.1" />
+    <PackageReference
+      Include="Book.StS2.RefLib"
+      Version="$(Sts2RefLibPackageVersion)"
+      PrivateAssets="all"
+      Condition="'$(UseSts2RefLib)' == 'true' and '$(Sts2RefLibPackageVersion)' != ''"
+    />
     <PackageReference Include="STS2.RitsuLib.Compat.0.107.1" Version="0.5.14" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(UseSts2RefLib)' != 'true'">
     <!--
       These are compile-time references to managed game assemblies. Referencing
       the Windows copies does not make the output DLL Windows-native.
     -->
     <Reference Include="0Harmony">
-      <HintPath>$(STS2ReferenceDataDir)\0Harmony.dll</HintPath>
+      <HintPath>$(STS2ReferenceDataDir)/0Harmony.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="GodotSharp">
-      <HintPath>$(STS2ReferenceDataDir)\GodotSharp.dll</HintPath>
+      <HintPath>$(STS2ReferenceDataDir)/GodotSharp.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="sts2">
-      <HintPath>$(STS2ReferenceDataDir)\sts2.dll</HintPath>
+      <HintPath>$(STS2ReferenceDataDir)/sts2.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>
@@ -67,34 +123,64 @@
     </None>
     <EmbeddedResource Include="Archipelago.json" LogicalName="StS2AP.Archipelago.json" />
     <EmbeddedResource
-      Include="..\..\world\spire2\archipelago.json"
+      Include="../../world/spire2/archipelago.json"
       LogicalName="StS2AP.Spire2Archipelago.json"
     />
 
     <!-- Keep shared sources as JSON; deploy .data files to avoid recursive mod manifest discovery. -->
-    <None Include="..\..\shared\relic_custom_pools.json">
-      <Link>data\relic_custom_pools.data</Link>
+    <None Include="../../shared/relic_custom_pools.json">
+      <Link>data/relic_custom_pools.data</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\shared\bonus_relic_blacklist.json">
-      <Link>data\bonus_relic_blacklist.data</Link>
+    <None Include="../../shared/bonus_relic_blacklist.json">
+      <Link>data/bonus_relic_blacklist.data</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
   <!-- Clean stale catalog JSON even when only building output for packaging. -->
   <Target Name="RemoveObsoleteBonusCatalogOutput" AfterTargets="CopyFilesToOutputDirectory">
-    <Delete Files="$(TargetDir)relic_custom_pools.json;$(TargetDir)bonus_relic_blacklist.json;$(TargetDir)data\relic_custom_pools.json;$(TargetDir)data\bonus_relic_blacklist.json" />
+    <Delete Files="$(TargetDir)relic_custom_pools.json;$(TargetDir)bonus_relic_blacklist.json;$(TargetDir)data/relic_custom_pools.json;$(TargetDir)data/bonus_relic_blacklist.json" />
   </Target>
 
   <!-- Compile-only checks must embed the manifests too, since a later incremental
        build can reuse their assembly for deployment. -->
-  <Target Name="PrepareManifestResourcesForCompile" BeforeTargets="_GenerateCompileInputs" DependsOnTargets="PrepareResources" />
+  <Target
+    Name="PrepareManifestResourcesForCompile"
+    BeforeTargets="_GenerateCompileInputs"
+    DependsOnTargets="PrepareResources"
+  />
+
+  <!-- Prevent unsupported StS2 versions from building -->
+  <Target Name="ValidateSts2ApiCompat" BeforeTargets="ResolveAssemblyReferences">
+    <Error
+      Condition="'$(Sts2ApiCompat)' != '$(Sts2PublicApiCompat)' and '$(Sts2ApiCompat)' != '$(Sts2BetaApiCompat)'"
+      Text="Unsupported Sts2ApiCompat '$(Sts2ApiCompat)'. Supported targets: $(SupportedSts2ApiCompats)."
+    />
+
+    <Error
+      Condition="'$(UseSts2RefLib)' == 'true' and '$(Sts2RefLibPackageVersion)' == ''"
+      Text="No Book.StS2.RefLib package is mapped for STS2 API $(Sts2ApiCompat)."
+    />
+
+    <Error
+      Condition="'$(UseSts2RefLib)' != 'true' and !Exists('$(STS2ReferenceDataDir)/sts2.dll')"
+      Text="Missing sts2.dll: '$(STS2ReferenceDataDir)/sts2.dll'. Set UseSts2RefLib=true to build using reference assemblies."
+    />
+  </Target>
+
+  <!-- Prevent invalid options for BuildMode -->
+  <Target Name="ValidateBuildMode" BeforeTargets="PrepareForBuild">
+    <Error
+      Condition="'$(BuildMode)' != 'Local' and '$(BuildMode)' != 'CompileOnly' and '$(BuildMode)' != 'Package'"
+      Text="Unsupported BuildMode '$(BuildMode)'. Valid modes: Local, CompileOnly, Package."
+    />
+  </Target>
 
   <!-- Create steam_appid.txt for Windows debugging outside Steam. -->
-  <Target Name="CreateSteamAppId" BeforeTargets="Build">
+  <Target Name="CreateSteamAppId" BeforeTargets="Build" Condition="'$(BuildMode)' == 'Local'">
     <PropertyGroup>
-      <SteamAppIdPath>$(STS2GamePath)\steam_appid.txt</SteamAppIdPath>
+      <SteamAppIdPath>$(STS2GamePath)/steam_appid.txt</SteamAppIdPath>
       <SteamAppId>2868840</SteamAppId>
     </PropertyGroup>
     <WriteLinesToFile
@@ -107,7 +193,11 @@
     <Message Text="Created steam_appid.txt with App ID $(SteamAppId)" Importance="high" />
   </Target>
 
-  <Target Name="CreateGodotFolder" BeforeTargets="BeforeBuild">
+  <Target
+    Name="CreateGodotFolder"
+    BeforeTargets="BeforeBuild"
+    Condition="'$(BuildMode)' != 'CompileOnly'"
+  >
     <MakeDir Directories="$(GodotProject)" />
     <Message Text="Created Godot folder structure" Importance="high" />
   </Target>
@@ -116,9 +206,10 @@
     Name="GenerateProjectGodot"
     BeforeTargets="BeforeBuild"
     DependsOnTargets="CreateGodotFolder"
+    Condition="'$(BuildMode)' != 'CompileOnly'"
   >
     <PropertyGroup>
-      <ProjectGodotPath>$(GodotProject)\project.godot</ProjectGodotPath>
+      <ProjectGodotPath>$(GodotProject)/project.godot</ProjectGodotPath>
       <ProjectGodotContent>
 config_version=5
 
@@ -148,9 +239,10 @@ project/assembly_name="$(ModName)"
     Name="GenerateExportPresets"
     BeforeTargets="BeforeBuild"
     DependsOnTargets="CreateGodotFolder"
+    Condition="'$(BuildMode)' != 'CompileOnly'"
   >
     <PropertyGroup>
-      <ExportPresetsPath>$(GodotProject)\export_presets.cfg</ExportPresetsPath>
+      <ExportPresetsPath>$(GodotProject)/export_presets.cfg</ExportPresetsPath>
       <ExportPresetsContent>
         <![CDATA[config_version=5
 
@@ -209,8 +301,8 @@ ssh_remote_deploy/host="user@host_ip"
 ssh_remote_deploy/port="22"
 ssh_remote_deploy/extra_args_ssh=""
 ssh_remote_deploy/extra_args_scp=""
-ssh_remote_deploy/run_script="Expand-Archive -LiteralPath '{temp_dir}\\{archive_name}' -DestinationPath '{temp_dir}'
-$action = New-ScheduledTaskAction -Execute '{temp_dir}\\{exe_name}' -Argument '{cmd_args}'
+ssh_remote_deploy/run_script="Expand-Archive -LiteralPath '{temp_dir}/{archive_name}' -DestinationPath '{temp_dir}'
+$action = New-ScheduledTaskAction -Execute '{temp_dir}/{exe_name}' -Argument '{cmd_args}'
 $trigger = New-ScheduledTaskTrigger -Once -At 00:00
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 $task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings
@@ -237,7 +329,7 @@ dotnet/embed_build_outputs=false
     <Message Text="Generated export_presets.cfg" Importance="high" />
   </Target>
 
-  <Target Name="PostBuild" AfterTargets="Build">
+  <Target Name="PostBuild" AfterTargets="Build" Condition="'$(BuildMode)' != 'CompileOnly'">
     <MakeDir Directories="$(ModsOutputDir)" />
 
     <!-- Copy the AnyCPU mod assembly. -->
@@ -251,38 +343,42 @@ dotnet/embed_build_outputs=false
       />
     </ItemGroup>
     <Copy SourceFiles="@(DependencyDlls)" DestinationFolder="$(ModsOutputDir)" />
-    <Copy SourceFiles="Archipelago.json" DestinationFiles="$(ModsOutputDir)\Archipelago.json" />
+    <Copy SourceFiles="Archipelago.json" DestinationFiles="$(ModsOutputDir)/Archipelago.json" />
 
     <!-- Deploy the catalogs in the same data/ layout used by the build output and runtime. -->
-    <MakeDir Directories="$(ModsOutputDir)\data" />
+    <MakeDir Directories="$(ModsOutputDir)/data" />
     <Copy
-      SourceFiles="$(TargetDir)data\relic_custom_pools.data"
-      DestinationFiles="$(ModsOutputDir)\data\relic_custom_pools.data"
+      SourceFiles="$(TargetDir)data/relic_custom_pools.data"
+      DestinationFiles="$(ModsOutputDir)/data/relic_custom_pools.data"
     />
     <Copy
-      SourceFiles="$(TargetDir)data\bonus_relic_blacklist.data"
-      DestinationFiles="$(ModsOutputDir)\data\bonus_relic_blacklist.data"
+      SourceFiles="$(TargetDir)data/bonus_relic_blacklist.data"
+      DestinationFiles="$(ModsOutputDir)/data/bonus_relic_blacklist.data"
     />
 
     <!-- Remove only obsolete catalog copies, including the former data/ JSON layout. -->
-    <Delete Files="$(ModsOutputDir)\relic_custom_pools.json;$(ModsOutputDir)\bonus_relic_blacklist.json;$(ModsOutputDir)\data\relic_custom_pools.json;$(ModsOutputDir)\data\bonus_relic_blacklist.json" />
+    <Delete Files="$(ModsOutputDir)/relic_custom_pools.json;$(ModsOutputDir)/bonus_relic_blacklist.json;$(ModsOutputDir)/data/relic_custom_pools.json;$(ModsOutputDir)/data/bonus_relic_blacklist.json" />
 
     <!-- Copy the APWorld if it has already been built. -->
     <PropertyGroup>
-      <ApWorldSource>$(MSBuildProjectDirectory)\..\..\dist\spire2.apworld</ApWorldSource>
-      <ApWorldDest>$(ModsOutputDir)\spire2.apworld</ApWorldDest>
+      <ApWorldSource>$(MSBuildProjectDirectory)/../../dist/spire2.apworld</ApWorldSource>
+      <ApWorldDest>$(ModsOutputDir)/spire2.apworld</ApWorldDest>
     </PropertyGroup>
     <Copy
       SourceFiles="$(ApWorldSource)"
       DestinationFiles="$(ApWorldDest)"
       Condition="Exists('$(ApWorldSource)')"
     />
+    <Error
+      Text="spire2.apworld is required when BuildMode=Package."
+      Condition="'$(BuildMode)' == 'Package' and !Exists('$(ApWorldSource)')"
+    />
     <Warning
-      Text="spire2.apworld not found in dist folder. Run scripts\build_world.ps1 to build it."
-      Condition="!Exists('$(ApWorldSource)')"
+      Text="spire2.apworld not found in dist folder. Run scripts/build_world.ps1 to build it."
+      Condition="'$(BuildMode)' != 'Package' and !Exists('$(ApWorldSource)')"
     />
 
     <!-- The preset architecture applies to executables, not this PCK-only export. -->
-    <Exec Command="&quot;$(GodotExePath)&quot; --headless --path &quot;$(GodotProject)&quot; --export-pack &quot;$(GodotPackPreset)&quot; &quot;$(ModsOutputDir)\$(ModName).pck&quot;" />
+    <Exec Command="&quot;$(GodotExePath)&quot; --headless --path &quot;$(GodotProject)&quot; --export-pack &quot;$(GodotPackPreset)&quot; &quot;$(ModsOutputDir)/$(ModName).pck&quot;" />
   </Target>
 </Project>
