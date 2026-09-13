@@ -13,14 +13,13 @@ on:
         required: true
         type: string
 
-      archipelago_ref:
-        description: "Archipelago branch, tag, or commit used to build the APWorld"
+      apworld_artifact:
+        description: "Artifact containing spire2.apworld; required for Package mode"
         required: false
         type: string
-        default: main
 
       upload_artifact:
-        description: "Upload packaged build as a temporary Actions artifact"
+        description: "Upload the finished client package"
         required: false
         type: boolean
         default: false

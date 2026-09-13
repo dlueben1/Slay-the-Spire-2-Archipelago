@@ -14,16 +14,58 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Fast compile-time API checks.
-  compile:
-    name: Compile against StS2 v${{ matrix.sts2-version }}
+  # Grab the StS2 Versions we want to validate against
+  versions:
+    name: Read supported StS2 versions
+    runs-on: ubuntu-latest
+
+    outputs:
+      matrix: ${{ steps.versions.outputs.matrix }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Read versions from project
+        id: versions
+        shell: bash
+        run: |
+          properties=$(dotnet msbuild client/StS2AP/StS2AP.csproj \
+            -getProperty:Sts2PublicApiCompat,Sts2BetaApiCompat)
+
+          public=$(echo "$properties" | jq -r '.Properties.Sts2PublicApiCompat')
+          beta=$(echo "$properties" | jq -r '.Properties.Sts2BetaApiCompat')
+
+          matrix=$(jq -cn \
+            --arg public "$public" \
+            --arg beta "$beta" \
+            '[$public, $beta]')
+
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+          echo "Public StS2 API: $public"
+          echo "Beta StS2 API: $beta"
+
+  apworld:
+    name: Validate APWorld
+    uses: ./.github/workflows/build-apworld.yml
+    with:
+      archipelago_ref: main
+      upload_artifact: false
+
+  client:
+    name: Validate C# - StS2 v${{ matrix.sts2-version }}
+    needs: versions
 
     strategy:
       fail-fast: false
       matrix:
-        sts2-version:
-          - "0.107.1"
-          - "0.111.0"
+        sts2-version: ${{ fromJSON(needs.versions.outputs.matrix) }}
 
     uses: ./.github/workflows/build-client.yml
     with:

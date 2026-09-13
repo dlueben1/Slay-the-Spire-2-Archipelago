@@ -1,0 +1,74 @@
+name: Build APWorld
+
+on:
+  workflow_call:
+    inputs:
+      archipelago_ref:
+        description: "Archipelago branch, tag, or commit"
+        required: false
+        type: string
+        default: main
+
+      upload_artifact:
+        description: "Upload spire2.apworld for another job to consume"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    name: Build APWorld
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out StS2 AP repository
+        uses: actions/checkout@v4
+
+      - name: Check out Archipelago
+        uses: actions/checkout@v4
+        with:
+          repository: ArchipelagoMW/Archipelago
+          ref: ${{ inputs.archipelago_ref }}
+          path: external/Archipelago
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: external/Archipelago/requirements.txt
+
+      - name: Install Archipelago dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r external/Archipelago/requirements.txt
+
+      - name: Install StS2 world into Archipelago
+        shell: bash
+        run: |
+          rm -rf external/Archipelago/worlds/spire2
+          cp -R world/spire2 external/Archipelago/worlds/spire2
+
+      - name: Build APWorld
+        shell: bash
+        working-directory: external/Archipelago
+        run: |
+          python Launcher.py "Build APWorlds" -- "Slay the Spire II" --skip_open_folder
+
+      - name: Collect APWorld
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp external/Archipelago/build/apworlds/spire2.apworld dist/spire2.apworld
+
+      - name: Upload APWorld artifact
+        if: inputs.upload_artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sts2-apworld
+          path: dist/spire2.apworld
+          if-no-files-found: error
+          retention-days: 14
