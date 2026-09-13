@@ -59,7 +59,7 @@ jobs:
       upload_artifact: false
 
   client:
-    name: Validate C# - StS2 v${{ matrix.sts2-version }}
+    name: Validate C# Client - StS2 v${{ matrix.sts2-version }}
     needs: versions
 
     strategy:
