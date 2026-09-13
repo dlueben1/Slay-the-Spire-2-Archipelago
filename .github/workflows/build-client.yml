@@ -1,0 +1,154 @@
+name: Build Mod
+
+on:
+  workflow_call:
+    inputs:
+      build_mode:
+        description: "Build mode from StS2AP.csproj: CompileOnly or Package"
+        required: true
+        type: string
+
+      sts2_api_compat:
+        description: "StS2 version to compile against"
+        required: true
+        type: string
+
+      archipelago_ref:
+        description: "Archipelago branch, tag, or commit used to build the APWorld"
+        required: false
+        type: string
+        default: main
+
+      upload_artifact:
+        description: "Upload packaged build as a temporary Actions artifact"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+  # Same MegaDot release currently used by Spireverse (thanks again Arquebus!)
+  MEGADOT_VERSION: 4.5.1-m.11
+  MEGADOT_BINARY: MegaDot_v4.5.1-stable_mono_linux.x86_64
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # ------------------------------------------------------------
+      # Initialization
+      # ------------------------------------------------------------
+
+      - name: Validate workflow inputs
+        shell: bash
+        run: |
+          case "${{ inputs.build_mode }}" in
+            CompileOnly|Package)
+              ;;
+            *)
+              echo "::error::build_mode must be CompileOnly or Package."
+              exit 1
+              ;;
+          esac
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+        # Note: C# 14 needs the .NET 10 compiler even though StS2AP targets .NET 9
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      # ------------------------------------------------------------
+      # MegaDot (Godot) Installation
+      # ------------------------------------------------------------
+
+      - name: Cache MegaDot
+        if: inputs.build_mode == 'Package'
+        id: cache-megadot
+        uses: actions/cache@v4
+        with:
+          path: .tools/megadot
+          key: megadot-${{ env.MEGADOT_VERSION }}-linux-x86_64
+
+      - name: Download MegaDot
+        if: inputs.build_mode == 'Package' && steps.cache-megadot.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          mkdir -p .tools/megadot
+
+          curl -fL \
+            --retry 3 \
+            --retry-delay 5 \
+            -o megadot.zip \
+            "https://megadot.megacrit.com/${MEGADOT_VERSION}/megadot-${MEGADOT_VERSION}-linux-x86_64-editor-csharp.zip"
+
+          unzip -q megadot.zip -d .tools/megadot
+
+          chmod +x ".tools/megadot/${MEGADOT_BINARY}"
+
+      - name: Configure MegaDot path
+        if: inputs.build_mode == 'Package'
+        shell: bash
+        run: |
+          echo "GODOT_PATH=${{ github.workspace }}/.tools/megadot/${MEGADOT_BINARY}" >> "$GITHUB_ENV"
+
+      # ------------------------------------------------------------
+      # C# Client Build
+      # ------------------------------------------------------------
+
+      - name: Build C# client
+        shell: bash
+        run: |
+          dotnet build client/StS2AP/StS2AP.csproj \
+            --configuration Release \
+            -p:BuildMode="${{ inputs.build_mode }}" \
+            -p:UseSts2RefLib=true \
+            -p:Sts2ApiCompat="${{ inputs.sts2_api_compat }}" \
+            -p:ModsOutputDir="${{ github.workspace }}/dist/Archipelago" \
+            -p:GodotExePath="${GODOT_PATH:-godot}"
+
+      - name: Zip the Client for Distribution
+        if: inputs.build_mode == 'Package'
+        shell: bash
+        run: |
+          python - <<'PY'
+          import shutil
+
+          shutil.make_archive(
+              "dist/sts2-client",
+              "zip",
+              root_dir="dist",
+              base_dir="Archipelago"
+          )
+          PY
+
+      - name: Review Packaged Files
+        if: inputs.build_mode == 'Package'
+        shell: bash
+        run: |
+          echo "Package contents:"
+          find dist/Archipelago -type f -print | sort
+
+          echo
+          echo "Release artifacts:"
+          ls -lh dist/sts2-client.zip dist/spire2.apworld
+
+      - name: Upload Build Artifact
+        if: inputs.build_mode == 'Package' && inputs.upload_artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sts2-package-${{ inputs.sts2_api_compat }}
+          path: |
+            dist/sts2-client.zip
+            dist/spire2.apworld
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,31 @@
+name: Validate Mod
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+# If someone pushes 3 commits rapidly, don't waste time finishing the obsolete builds for commits 1 and 2
+concurrency:
+  group: validate-mod-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # Fast compile-time API checks.
+  compile:
+    name: Compile against StS2 v${{ matrix.sts2-version }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        sts2-version:
+          - "0.107.1"
+          - "0.111.0"
+
+    uses: ./.github/workflows/build-client.yml
+    with:
+      build_mode: CompileOnly
+      sts2_api_compat: ${{ matrix.sts2-version }}

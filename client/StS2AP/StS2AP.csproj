@@ -66,12 +66,8 @@
     <!-- Whether to use the Reference Library or the actual game assemblies (If we can find the sts2.dll, we use the real thing) -->
     <UseSts2RefLib
       Condition="'$(UseSts2RefLib)' == '' and Exists('$(STS2ReferenceDataDir)/sts2.dll')"
-    >
-      false
-    </UseSts2RefLib>
-    <UseSts2RefLib Condition="'$(UseSts2RefLib)' == ''">
-      true
-    </UseSts2RefLib>
+      >false</UseSts2RefLib>
+    <UseSts2RefLib Condition="'$(UseSts2RefLib)' == ''">true</UseSts2RefLib>
 
     <!-- Differentiate build outputs based on beta/public build -->
     <IntermediateOutputPath>$(MSBuildProjectDirectory)/obj/$(Sts2ApiCompat)/$(Configuration)/</IntermediateOutputPath>
