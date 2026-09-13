@@ -1,0 +1,23 @@
+name: Build Complete Mod
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  apworld:
+    uses: ./.github/workflows/build-apworld.yml
+    with:
+      archipelago_ref: main
+      upload_artifact: true
+
+  package:
+    needs: apworld
+    uses: ./.github/workflows/build-client.yml
+    with:
+      build_mode: Package
+      sts2_api_compat: "0.107.1"
+      apworld_artifact: sts2-apworld
+      upload_artifact: true
