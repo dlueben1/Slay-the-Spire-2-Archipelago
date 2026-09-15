@@ -51,7 +51,7 @@ jobs:
           {
             echo "### 🎮 StS2 Version Targets"
             echo ""
-            echo "| Branch | API Version |"
+            echo "| Branch | Version |"
             echo "| --- | --- |"
             echo "| Public | \`$public\` |"
             echo "| Beta | \`$beta\` |"
@@ -61,7 +61,6 @@ jobs:
     name: Validate APWorld
     uses: ./.github/workflows/build-apworld.yml
     with:
-      archipelago_ref: main
       upload_artifact: false
 
   client:
