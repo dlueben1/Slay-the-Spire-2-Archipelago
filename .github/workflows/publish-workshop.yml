@@ -1,0 +1,102 @@
+name: Publish Steam Workshop
+
+on:
+  workflow_call:
+    inputs:
+      artifact_name:
+        description: "GitHub Actions artifact containing Archipelago.zip"
+        required: true
+        type: string
+
+      client_version:
+        description: "Client release version used for the Steam changenote"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  workshop-upload:
+    name: Publish to Steam Workshop
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # This is the approval/security boundary.
+    environment: workshop
+
+    steps:
+      - name: Validate Workshop configuration
+        env:
+          ARTIFACT_NAME: ${{ inputs.artifact_name }}
+          CLIENT_VERSION: ${{ inputs.client_version }}
+          STEAM_USERNAME: ${{ secrets.STEAM_USERNAME }}
+          STEAM_CONFIG_VDF: ${{ secrets.STEAM_CONFIG_VDF }}
+          WORKSHOP_ITEM_ID: ${{ vars.WORKSHOP_ITEM_ID }}
+        shell: bash
+        run: |
+          missing=()
+          [[ -n "$ARTIFACT_NAME" ]] || missing+=("workflow input artifact_name")
+          [[ -n "$CLIENT_VERSION" ]] || missing+=("workflow input client_version")
+          [[ -n "$STEAM_USERNAME" ]] || missing+=("workshop secret STEAM_USERNAME")
+          [[ -n "$STEAM_CONFIG_VDF" ]] || missing+=("workshop secret STEAM_CONFIG_VDF")
+          [[ -n "$WORKSHOP_ITEM_ID" ]] || missing+=("workshop variable WORKSHOP_ITEM_ID")
+
+          if (( ${#missing[@]} > 0 )); then
+            printf '::error::Missing required Workshop configuration: %s\n' \
+              "$(IFS=', '; echo "${missing[*]}")"
+            exit 1
+          fi
+
+          if [[ ! "$WORKSHOP_ITEM_ID" =~ ^[0-9]+$ ]]; then
+            echo "::error::workshop variable WORKSHOP_ITEM_ID must contain only digits."
+            exit 1
+          fi
+
+      - name: Download release package
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: release-assets
+
+      - name: Prepare Workshop content
+        shell: bash
+        run: |
+          mkdir -p workshop-content
+          test -f release-assets/Archipelago.zip
+          unzip -q release-assets/Archipelago.zip -d workshop-content
+
+          for required_file in \
+            Archipelago.dll \
+            Archipelago.pck \
+            Archipelago.json \
+            spire2.apworld; do
+            if [[ ! -f "workshop-content/$required_file" ]]; then
+              echo "::error::Archipelago.zip is missing required root file $required_file."
+              exit 1
+            fi
+          done
+
+          echo "Workshop upload contents:"
+          find workshop-content -type f -print | sort
+
+      - name: Upload to Steam Workshop
+        uses: m00nl1ght-dev/steam-workshop-deploy@913f0844e2153d798189397036918f4ceb0911e0 # v4
+        with:
+          username: ${{ secrets.STEAM_USERNAME }}
+          configVdf: ${{ secrets.STEAM_CONFIG_VDF }}
+          appId: "2868840"
+          publishedFileId: ${{ vars.WORKSHOP_ITEM_ID }}
+          path: workshop-content
+          changeNote: "Archipelago Client ${{ inputs.client_version }}"
+
+      - name: Write Workshop summary
+        shell: bash
+        run: |
+          {
+            echo "## Steam Workshop Published"
+            echo ""
+            echo "- Client: ${{ inputs.client_version }}"
+            echo "- Workshop Item: ${{ vars.WORKSHOP_ITEM_ID }}"
+            echo "- Content source: \`Archipelago.zip\`"
+          } >> "$GITHUB_STEP_SUMMARY"

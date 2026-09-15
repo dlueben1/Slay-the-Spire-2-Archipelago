@@ -369,3 +369,17 @@ jobs:
             echo "- Archipelago.zip"
             echo "- spire2-${WORLD_VERSION}.apworld"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  workshop:
+    name: Publish to Steam Workshop
+
+    needs:
+      - release
+      - prepare
+      - versions
+
+    uses: ./.github/workflows/publish-workshop.yml
+
+    with:
+      artifact_name: sts2-package-${{ needs.versions.outputs.public_api }}
+      client_version: ${{ needs.prepare.outputs.new_client_version }}

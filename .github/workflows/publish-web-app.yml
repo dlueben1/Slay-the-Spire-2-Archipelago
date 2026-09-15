@@ -1,14 +1,14 @@
-name: Deploy web app to GitHub Pages
+name: Publish web app to GitHub Pages
 
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+  pull_request_target:
+    branches:
+      - main
+    types:
+      - closed
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -16,17 +16,28 @@ concurrency:
 
 jobs:
   build:
+    name: Build web app
+    if: >-
+      github.event.pull_request.merged == true &&
+      contains(github.event.pull_request.labels.*.name, 'release-web')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
 
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      # pull_request_target has access to deployment credentials, so only build
+      # trusted code from main after the labeled PR has been merged.
+      - name: Check out trusted main
+        uses: actions/checkout@v7
+        with:
+          ref: main
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -41,13 +52,18 @@ jobs:
         run: npm run build
 
       - name: Upload GitHub Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: web/dist
 
   deploy:
+    name: Publish web app
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
