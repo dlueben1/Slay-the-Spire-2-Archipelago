@@ -58,7 +58,7 @@ Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetai
 - Polish
 
 > [!CAUTION]
-> I don't recommend having any other mods installed whatsoever, especially while this is in Alpha development. Do it at your own risk.
+> With the exception of character mods, we don't recommend having any other mods installed whatsoever. Do it at your own risk.
 
 # Special Thanks
 
