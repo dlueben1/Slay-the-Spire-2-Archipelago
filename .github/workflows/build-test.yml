@@ -7,17 +7,24 @@ permissions:
   contents: read
 
 jobs:
+  versions:
+    uses: ./.github/workflows/get-sts2-versions.yml
+
   apworld:
+    name: Build APWorld
     uses: ./.github/workflows/build-apworld.yml
     with:
-      archipelago_ref: main
       upload_artifact: true
 
   package:
-    needs: apworld
+    name: Build Complete Mod
+    needs:
+      - versions
+      - apworld
+
     uses: ./.github/workflows/build-client.yml
     with:
       build_mode: Package
-      sts2_api_compat: "0.107.1"
+      sts2_api_compat: ${{ needs.versions.outputs.public_api }}
       apworld_artifact: sts2-apworld
       upload_artifact: true
