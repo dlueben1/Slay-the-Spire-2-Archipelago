@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   release-scripts:
-    name: Test Release Automation
+    name: Run Release Tests
     runs-on: ubuntu-latest
 
     steps:
