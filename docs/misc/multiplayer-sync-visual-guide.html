@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>One run. Every replica. — STS2 AP Multiplayer</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#f4f3ee, #101318);
+  --panel: light-dark(#fffefa, #171b22);
+  --ink: light-dark(#202633, #edece6);
+  --muted: light-dark(#596170, #a6aeba);
+  --line: light-dark(#dadbd5, #303743);
+  --owner: light-dark(#875311, #e9b76d);
+  --host: light-dark(#7053a0, #b6a0e5);
+  --replica: light-dark(#197368, #82c6b6);
+  --save: light-dark(#386993, #8cb8e2);
+  --halo: light-dark(#ebe2d0, #28251f);
+  --shadow: light-dark(#2633430d, #0000002b);
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--ink); }
+button, a { -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid var(--owner); outline-offset: 5px; }
+button:disabled { cursor: default; opacity: .35; }
+button, a, summary { touch-action: manipulation; }
+.shell { max-width: 1510px; padding: 34px 48px 50px; margin: auto; }
+.mast { display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--line); padding-bottom: 21px; }
+.brand { font-size: 13px; letter-spacing: .19em; font-weight: 650; }
+.brand span { color: var(--owner); }
+.mast-note { color: var(--muted); font-size: 12px; letter-spacing: .08em; }
+.hero { display: grid; grid-template-columns: 1.25fr 1fr; gap: 50px; padding: 40px 0 36px; align-items: end; }
+.eyebrow { font-size: 11px; font-weight: 650; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 14px 0 0; font-size: clamp(42px, 4.8vw, 72px); font-weight: 500; letter-spacing: -.055em; line-height: 1.04; }
+h1 em { font-family: ui-serif, Georgia, serif; font-weight: 400; color: var(--owner); }
+.hero-copy { color: var(--muted); max-width: 480px; font-size: 16px; line-height: 1.75; margin: 0 0 5px; }
+.hero-copy strong { font-weight: 550; color: var(--ink); }
+.workspace { display: grid; grid-template-columns: 234px minmax(0, 1fr); border-top: 1px solid var(--line); }
+.index { padding: 25px 24px 0 0; border-right: 1px solid var(--line); }
+.index-label { padding: 0 10px 18px; }
+.feature-list { display: flex; flex-direction: column; gap: 5px; }
+.feature { display: grid; grid-template-columns: 29px minmax(0, 1fr); text-align: left; align-items: center; width: 100%; padding: 13px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 13px; min-height: 48px; transition: color .2s, background .2s; }
+.feature-number { font-size: 11px; font-variant-numeric: tabular-nums; opacity: .75; }
+.feature:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.feature[aria-selected="true"] { color: var(--ink); background: var(--halo); }
+.feature[aria-selected="true"] .feature-number { color: var(--owner); opacity: 1; }
+.index-footer { padding: 23px 10px; margin-top: 16px; border-top: 1px solid var(--line); font-size: 12px; line-height: 1.8; color: var(--muted); }
+.index-footer strong { color: var(--ink); font-weight: 500; }
+.focus { min-width: 0; padding: 27px 0 0 34px; }
+.focus-top { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+.chapter { color: var(--owner); }
+h2 { font-size: clamp(25px, 3vw, 38px); letter-spacing: -.035em; font-weight: 500; margin: 10px 0 11px; }
+.subtitle { color: var(--muted); font-size: 14px; line-height: 1.65; margin: 0; max-width: 670px; }
+.feature-counter { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; padding-top: 2px; }
+.view-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.view-button { padding: 8px 14px; font-size: 12px; border: 1px solid var(--line); background: transparent; border-radius: 30px; min-height: 36px; }
+.view-button[aria-pressed="true"] { border-color: var(--ink); color: var(--bg); background: var(--ink); }
+.legend { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; padding: 22px 0 17px; font-size: 11px; color: var(--muted); }
+.legend-item { display: flex; gap: 7px; align-items: center; }
+.legend-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--tone); }
+.diagram-wrap { position: relative; padding: 8px 0 0; border-top: 1px solid var(--line); }
+.lane-heads { display: grid; gap: 14px; margin: 0 9px 17px; }
+.lane-heading { color: var(--muted); font-size: 10px; letter-spacing: .09em; text-transform: uppercase; text-align: center; padding-top: 15px; }
+.diagram { position: relative; min-width: 0; isolation: isolate; }
+.wires { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: -1; }
+.wire { stroke: var(--line); stroke-width: 1.35; fill: none; }
+.wire-active { stroke: var(--owner); stroke-width: 1.8; }
+.wire-label { fill: var(--muted); font-size: 10px; }
+.packet { fill: var(--owner); }
+.node { position: absolute; border: 1px solid var(--line); border-radius: 10px; padding: 12px 13px; background: var(--panel); text-align: left; box-shadow: 0 3px 14px var(--shadow); transition: border-color .2s, background .2s, box-shadow .2s; display: flex; flex-direction: column; justify-content: center; }
+.node::before { content: ""; position: absolute; height: 17px; width: 3px; border-radius: 3px; left: -2px; top: 20px; background: var(--tone); }
+.node:hover { border-color: var(--tone); }
+.node[aria-pressed="true"] { border-color: var(--tone); background: color-mix(in srgb, var(--tone) 7%, var(--panel)); box-shadow: 0 0 24px color-mix(in srgb, var(--tone) 8%, transparent); }
+.node-meta { display: flex; gap: 8px; justify-content: space-between; align-items: center; color: var(--muted); font-size: 10px; letter-spacing: .04em; margin-bottom: 7px; }
+.node-meta span:first-child { color: var(--tone); font-variant-numeric: tabular-nums; }
+.node-title { font-size: 13px; font-weight: 500; line-height: 1.45; }
+.detail { border-top: 1px solid var(--line); padding: 21px 0 0; margin-top: 9px; }
+.detail-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.detail-role { font-size: 10px; letter-spacing: .13em; text-transform: uppercase; color: var(--muted); }
+.detail-role span { color: var(--owner); }
+.step-controls { display: flex; gap: 7px; }
+.step-button { width: 33px; height: 31px; border: 1px solid var(--line); border-radius: 5px; background: transparent; font-size: 16px; }
+h3 { font-size: 19px; font-weight: 500; margin: 10px 0 7px; letter-spacing: -.02em; }
+.detail-copy { font-size: 14px; line-height: 1.8; color: var(--muted); margin: 0; max-width: 780px; }
+.invariant { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 15px; margin: 23px 0 0; padding: 17px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 1.7; }
+.invariant-label { color: var(--replica); font-size: 10px; text-transform: uppercase; letter-spacing: .12em; padding-top: 2px; }
+.extra { margin-top: 1px; }
+.extra:empty { display: none; }
+details { border-top: 1px solid var(--line); padding: 13px 0; font-size: 12px; color: var(--muted); }
+summary { cursor: pointer; color: var(--ink); padding: 5px 0; }
+.token-list { display: flex; flex-wrap: wrap; gap: 7px; padding: 10px 0 5px; }
+.token { border: 1px solid var(--line); border-radius: 5px; padding: 7px 10px; color: var(--muted); font-size: 11px; }
+.extra-copy { line-height: 1.75; margin: 9px 0 0; }
+.odds { display: flex; flex-wrap: wrap; gap: 15px; padding: 12px 0; }
+.odds-item { min-width: 130px; }
+.odds-title { font-size: 10px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .08em; }
+.odds-value { font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.footer { margin-top: 32px; padding-top: 18px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px; color: var(--muted); font-size: 11px; line-height: 1.7; }
+.footer a { color: var(--ink); text-decoration-color: var(--line); text-underline-offset: 4px; }
+.reveal { animation: reveal .28s ease-out; }
+@keyframes reveal { from { opacity: .45; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@media (min-width: 1300px) { .node-title { font-size: 14px; } }
+@media (max-width: 1000px) {
+  .shell { padding: 25px 26px 36px; }
+  .workspace { grid-template-columns: 190px minmax(0, 1fr); }
+  .index { padding-right: 16px; }
+  .focus { padding-left: 22px; }
+  .hero { gap: 30px; }
+}
+@media (max-width: 780px) {
+  .hero { grid-template-columns: 1fr; gap: 24px; padding: 32px 0; }
+  .hero-copy { max-width: 600px; }
+  .workspace { display: block; }
+  .index { border-right: 0; padding: 18px 0; border-bottom: 1px solid var(--line); }
+  .index-label { padding: 0 0 12px; }
+  .feature-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; }
+  .feature { padding: 9px 10px; min-height: 39px; }
+  .index-footer { display: none; }
+  .focus { padding: 24px 0 0; }
+  .mast-note { font-size: 10px; }
+}
+@media (max-width: 440px) {
+  .shell { padding: 20px 17px 28px; }
+  .brand { font-size: 11px; letter-spacing: .12em; }
+  .mast-note { max-width: 112px; text-align: right; }
+  .feature { font-size: 12px; }
+  .legend { gap: 12px; }
+  .invariant { grid-template-columns: 1fr; gap: 6px; }
+  .feature-counter { padding-top: 5px; }
+}
+@media (pointer: coarse) { .feature, .view-button, .step-button { min-height: 44px; } .step-button { min-width: 44px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
+@media print {
+  .shell { padding: 0; } .index, .step-controls { display: none; }
+  .workspace { display: block; } .focus { padding-left: 0; }
+  .hero { padding: 20px 0; } .node { box-shadow: none; }
+}
+</style>
+</head>
+<body>
+<div class="shell" id="sts2-sync-guide">
+  <header class="mast">
+    <div class="brand"><span>STS2</span> / ARCHIPELAGO</div>
+    <div class="mast-note">MULTIPLAYER · HOW IT WORKS</div>
+  </header>
+  <section class="hero" aria-labelledby="guide-title">
+    <div>
+      <div class="eyebrow">A visual field guide to syncing</div>
+      <h1 id="guide-title">One run.<br><em>Every replica.</em></h1>
+    </div>
+    <p class="hero-copy">Every machine holds the <strong>whole multiplayer run</strong>. AP owners contribute their state, native synchronizers carry gameplay, and the fixed host saves the checkpoint.</p>
+  </section>
+  <div class="workspace">
+    <nav class="index" aria-label="Multiplayer features">
+      <div class="eyebrow index-label">Explore the systems</div>
+      <div class="feature-list" role="tablist" aria-label="Feature diagrams" id="feature-list"></div>
+      <div class="index-footer"><strong>Read the route.</strong><br>Choose a feature, then select a step to see who does what.<br><br>AP state ≠ native gameplay ≠ a saved checkpoint.</div>
+    </nav>
+    <main class="focus" id="feature-panel" role="tabpanel">
+      <div class="focus-top">
+        <div>
+          <div class="eyebrow chapter" id="chapter"></div>
+          <h2 id="feature-title"></h2>
+          <p class="subtitle" id="feature-subtitle"></p>
+        </div>
+        <div class="feature-counter" id="feature-counter"></div>
+      </div>
+      <div class="view-options" id="view-options" role="group" aria-label="Sync paths" hidden></div>
+      <div class="legend" id="legend" aria-label="Who executes each step"></div>
+      <div class="diagram-wrap">
+        <div class="lane-heads" id="lane-heads" aria-hidden="true"></div>
+        <div class="diagram" id="diagram" role="group" aria-label="Interactive synchronization diagram"></div>
+      </div>
+      <section class="detail" aria-labelledby="step-title">
+        <div class="detail-head">
+          <div class="detail-role" id="detail-role"></div>
+          <div class="step-controls" role="group" aria-label="Navigate sync steps">
+            <button class="step-button" id="previous-step" type="button" aria-label="Previous step">←</button>
+            <button class="step-button" id="next-step" type="button" aria-label="Next step">→</button>
+          </div>
+        </div>
+        <div id="step-detail" aria-live="polite" aria-atomic="true">
+          <h3 id="step-title"></h3>
+          <p class="detail-copy" id="step-copy"></p>
+        </div>
+      </section>
+      <div class="invariant"><div class="invariant-label">Keep in sync</div><div id="invariant-copy"></div></div>
+      <div class="extra" id="extra"></div>
+    </main>
+  </div>
+  <footer class="footer">
+    <span>Current design · source audit updated 15 September 2026</span>
+    <span><a href="multiplayer-sync-history-audit.md">Full source and history audit ↗</a> · Static design evidence; gameplay verification not run.</span>
+  </footer>
+  <noscript><p>This interactive guide requires JavaScript. All historical and design explanations are also available in the linked Markdown audit.</p></noscript>
+</div>
+<script>
+(() => {
+  'use strict';
+  const root = document.getElementById('sts2-sync-guide');
+  const q = id => root.querySelector('#' + id);
+  const roles = {
+    owner: {name:'AP owner', short:'Owner', color:'var(--owner)', lane:'Local AP owner'},
+    host: {name:'Fixed host', short:'Host', color:'var(--host)', lane:'Fixed STS host'},
+    replica: {name:'Every replica', short:'All replicas', color:'var(--replica)', lane:'Every run replica'},
+    save: {name:'Checkpoint', short:'Host save', color:'var(--save)', lane:'Host checkpoint'}
+  };
+  const node = (role, row, title, detail) => ({role, row, title, detail});
+  const features = [
+    {
+      name:'Rest-site options', title:'The same option. The same index.', subtitle:'Build each player’s rest-site choices from that player’s AP state. Let the native rest-site synchronizer carry the selection.',
+      views:[{label:'Rest-site options', invariant:'All machines need the same ordered backend options for the selected player. AP checks have one writer; scout descriptions can stay local.', nodes:[
+        node('owner',0,'Resolve player context','Use the selected player’s frozen slot settings, character configuration, and checked/unlock progress. Another player’s options must not come from this process’s own global AP settings.'),
+        node('replica',0,'Build matching options','Every replica applies Progressive Rest and Smith locks, including Mend, then appends unchecked AP locations in fixed act/campfire order. A harmless fallback preserves an enabled exit action.'),
+        node('owner',1,'Choose option index','The owning player selects an option. MegaCrit sends its position in the ordered backend list; equality for AP options uses location ID and owner.'),
+        node('replica',1,'Execute the same option','The native RestSiteSynchronizer executes that index for the same player on every machine. Normal rest/relic actions keep their native behavior.'),
+        node('owner',2,'Queue one AP check','For an AP option, only the responsible connection queues the location and marks effective check progress. Remote replicas report the same native success without sending the AP check again.'),
+        node('host',2,'Confirm and relay progress','Owner progress travels through the host, so future backend option construction sees the updated checked locations on other machines.')
+      ]}]
+    },
+    {
+      name:'Gold & potions', title:'One concrete grant. All wallets agree.', subtitle:'Gold carries an aggregate amount and source cursor. Potions carry a stable, serialized model. Both use native reward selection.',
+      views:[
+        {label:'Gold', invariant:'Apply native wallet gain first, then advance the owner’s raw AP gold cursor. A later sync failure must not duplicate the grant.', nodes:[
+          node('owner',0,'Build the raw gold bank','The AP owner rebuilds cumulative per-character gold from received-item history. The redeemed raw-gold cursor identifies how much has already been claimed.'),
+          node('owner',1,'Freeze a concrete claim','Prepare source amount, actual wallet grant amount, and the raw cursor after redemption. Poverty can make granted wallet gold differ from raw AP accounting.'),
+          node('replica',1,'Install matching GoldReward','The immutable menu carries the concrete claim via the host. Each replica builds the same native GoldReward for this player.'),
+          node('replica',2,'Execute native wallet gain','MegaCrit’s reward selection lifecycle applies the same gold reward on every run replica. Multiplayer AP claims take place outside combat.'),
+          node('owner',2,'Advance the source cursor','Only the local AP owner commits GoldRedeemed after native success. Observers do not independently redeem AP history.'),
+          node('host',3,'Relay committed progress','The host accepts and relays owner bookkeeping. Live publication becomes durable only at a later successful host checkpoint.')
+        ]},
+        {label:'Potions', invariant:'One received item index keeps one exact potion. No free inventory slot means the original reward remains claimable.', nodes:[
+          node('owner',0,'Identify the receipt','Use the AP received item index as the stable assignment key. Reopening first checks whether that receipt already has an assigned potion.'),
+          node('owner',1,'Roll once with AP RNG','For a new receipt, generate the potion through the native factory using a receipt-local stream in the potion domain. Save the mutable model as the assignment.'),
+          node('replica',1,'Load the exact potion','The owner publishes the serialized potion in the immutable reward menu. Remote replicas load that model instead of rolling another potion.'),
+          node('replica',2,'Try native potion obtain','Native PotionReward selection handles inventory constraints on every replica. A full inventory is an expected non-consumption outcome.'),
+          node('owner',2,'Consume only on success','After successful obtain, the owner marks the receipt used. If no slot was available, the same potion assignment stays claimable.'),
+          node('host',3,'Confirm owner progress','The host relays the consumed receipt state. Stable assignment and consumption state enter the next host save together with the native run.')
+        ]}
+      ]
+    },
+    {
+      name:'Settings & progress', title:'Freeze the rules. Publish the facts.', subtitle:'Lobby contributions define who owns each AP view. Mid-run updates carry AP bookkeeping; MegaCrit still carries concrete gameplay.',
+      views:[
+        {label:'Lobby contract', invariant:'The merged payload is a sidecar attached to the native run: one shared host record plus one record per native NetId. It does not contain AP credentials or replace native character/run data.', nodes:[
+          node('owner',0,'Prepare current AP history','Each AP owner waits for slot settings and the complete received-item replay. The launch refresh reads the SDK’s current receipt list, including items delivered while character select was open.'),
+          node('owner',1,'Contribute one NetId record','Stage participation, AP room/team/slot identity, Player Number, a full effective SlotSettings snapshot, initial relic receipt indexes, progressive Ancient counts and a receipt-ready flag. Existing run progress fields are preserved.'),
+          node('host',1,'Contribute host-wide facts','The fixed host stages its own player record too, plus the shared RunId, HostSettings and the Ascension contract. Shared relic destination state begins in this host-owned run record.'),
+          node('host',2,'Merge contributions by sender','RitsuLib carries each client record with character-change traffic and flushes it before Ready. The host stores it under that sender’s native NetId; it does not combine everybody’s AP settings into one global setting.'),
+          node('host',3,'Validate the latest roster','At Ready and again at launch, require every active NetId to have a valid contribution, require AP owners’ receipt sources to be ready, and require the fixed host to own a prepared AP slot and Ascension state.'),
+          node('replica',4,'Commit with native launch','RitsuLib serializes the shared and per-player records into the run payload distributed by MegaCrit’s normal launch. Character choices, native seed and normal run topology remain base-game data.')
+        ], extra:'lobby'},
+        {label:'Live AP progress', invariant:'A delta must match RunId, owner and exact BaseRevision. This protects AP bookkeeping; it is not a second synchronizer for the underlying gold, relic, card or HP command.', nodes:[
+          node('owner',0,'Change an AP fact','The AP connection owner is authoritative for receipt history, used indexes, pending checks and stable AP assignments. A native reward action may trigger the corresponding local bookkeeping change.'),
+          node('owner',1,'Publish baseline or delta','The first publication sends a full ApRunProgressState. Later publications send only changed fields with BaseRevision and the next Revision; no-change publications are skipped.'),
+          node('host',1,'Authenticate and order','“Validate” means check RunId, sender owns OwnerNetId, and the revision is exactly contiguous. It does not compare entire native game state or prove that all replicas are synchronized.'),
+          node('host',2,'Rebroadcast accepted AP facts','The host stores the accepted current copy and relays it so every replica has the same AP inputs for later option and reward construction. Clients accept these updates only from the host.'),
+          node('replica',3,'Keep construction cursors local','Each replica updates owner AP facts but does not overwrite its already-advancing native reward counters. Concrete gameplay continues through native synchronizers or host-ordered managed actions.'),
+          node('save',4,'Checkpoint the current copy','A later host save embeds the accepted AP records with the native run. Until that succeeds, the host has live current state in memory while the retained disk checkpoint is older.')
+        ], extra:'progress'}
+      ]
+    },
+    {
+      name:'Joining the lobby', title:'Contribute. Validate. Commit.', subtitle:'Direct AP connections and vanilla guests contribute to one native lobby. Launch readiness belongs to the host’s latest merged roster.',
+      views:[{label:'Joining the lobby', invariant:'The fixed host needs a prepared AP slot. An AP-bound returning player must match the saved identity; disconnecting does not silently make them vanilla.', nodes:[
+        node('owner',0,'Prepare participation','Enter with a direct AP slot connection and prepared receipt history, or use vanilla guest participation. AP-aware hosting requires the connected, prepared AP role.'),
+        node('owner',1,'Stage a NetId contribution','Contribute room/team/slot identity, frozen settings and receipt readiness under the native player’s NetId. Vanilla guests contribute their guest role without an AP reward source.'),
+        node('host',1,'Merge before Ready','RitsuLib attaches contributions to native character-change messages and flushes them before Ready. The host merges client data under the sender’s identity; it merges its own contribution locally.'),
+        node('host',2,'Validate the active roster','Recompute readiness from the current participants and latest contributions, including the fixed host’s settings and shared Ascension contract. Repeat the guard at launch.'),
+        node('replica',2,'Start from one committed run','Native launch distributes the merged run data. The saved participant identities and settings now define how each machine constructs this multiplayer run.'),
+        node('owner',3,'Rejoin with the saved identity','Continue-run entry additionally checks roster and AP identity. Fresh AP history is prepared while the selected host snapshot supplies the run’s recovery baseline.')
+      ]}]
+    },
+    {
+      name:'Shops', title:'A private AP shelf. Native gold loss.', subtitle:'Only the local AP check writer sees and buys AP shop checks. The purchase’s concrete gold loss uses MegaCrit synchronization.',
+      views:[{label:'Shops', invariant:'The AP page can stay local because it grants no card, relic or potion. The gold delta must be native-synchronized, and only the responsible AP connection may send the location check.', nodes:[
+        node('replica',0,'Roll the native shop once','MegaCrit creates the normal merchant inventory. The mod clones those already-rolled entries for the AP page, avoiding a second shop RNG advance.'),
+        node('owner',1,'Read this owner’s frozen rules','For the local player only, use their committed SlotSettings and current received shop-unlock counts. Received card, colourless, relic and potion slot items reopen positions on the vanilla page.'),
+        node('owner',2,'Build a local AP-check page','Fill configured AP positions with fake card, relic or potion entries backed by the next unchecked Shop Slot location. The fake models show scouted item information but are not real rewards.'),
+        node('owner',3,'Buy one fake entry','Validate stock, gold and local check ownership. Spend gold with PlayerCmd.LoseGold, then call RewardSynchronizer.SyncLocalGoldLost so every replica sees the same wallet change.'),
+        node('owner',4,'Send the location check','Queue the backing AP location, mark that shop slot checked locally, clear the fake entry so Courier cannot refill it, and run the native post-purchase hooks.'),
+        node('host',5,'Retain progress at checkpoint','The owner’s checked/pending AP facts reach the host through normal progress publication. The native wallet is already part of the host’s normal run snapshot.')
+      ]}]
+    },
+    {
+      name:'Multiplayer saves', title:'The checkpoint lives with the host.', subtitle:'Native run state and run-scoped AP recovery data share one snapshot. Floor recovery and the eligible AP checkpoint have separate pointers.',
+      views:[{label:'Multiplayer saves', invariant:'The host checkpoint supplies the exact run baseline; each AP server supplies newer owner receipt/check history. Continue needs both, and reconciliation must never replay a saved receipt that was already consumed.', nodes:[
+        node('owner',0,'Publish player progress','AP owners send their run-scoped progress, consumed indexes and assignments to the fixed host. This creates the host’s per-player AP recovery view.'),
+        node('host',0,'Reach a safe save boundary','Only the native host writes the multiplayer campaign. Before capture it publishes local host progress and reconciles retained relic receipt decisions.'),
+        node('host',1,'Capture native + AP state','RunManager creates one native snapshot containing shared settings and the per-NetId AP payload: progress revisions, stable offers, starter state, wax cadence and the host’s construction baseline.'),
+        node('save',1,'Write one locked snapshot','A save lock keeps overlapping native writes and their campaign copies associated correctly. Campaign metadata records identity, roster and snapshot digest.'),
+        node('save',2,'Update recovery pointers','Every native floor save updates FloorRecovery. Only an eligible AP boundary also updates ApCheckpoint; otherwise its older pointer remains available.'),
+        node('host',3,'Restore the checkpoint baseline','The fixed host resumes the selected native snapshot and distributes its embedded AP records with the saved roster. This is the last exact common view, not necessarily the owner’s newest AP history.'),
+        node('owner',4,'Refresh newer server history','Each returning AP owner reconnects and reads the SDK’s complete current received-item/check history. Items delivered since the host checkpoint are now visible to that owner.'),
+        node('owner',5,'Reconcile and republish','Combine authoritative server history with saved used indexes, stable assignments and pending checks. Rebuild derived entitlements such as gold and relic coupons, publish the cleaned current owner view to the host, then continue with that as the next delta baseline.')
+      ]}]
+    },
+    {
+      name:'Starters & DeathLink', title:'External causes. Native action order.', subtitle:'AP callbacks become concrete actions admitted at safe boundaries. Every machine executes the same target transition.',
+      views:[
+        {label:'Progressive Starter', invariant:'Capture one native starter mapping, then apply persisted tier transitions. Do not independently select another starter recipe on every replica.', nodes:[
+          node('owner',0,'Receive a starter transition','New-run initialization or a live receipt targets this player’s progressive starter tier. Receipts for an inactive character remain banked for later initialization.'),
+          node('owner',1,'Capture a concrete recipe','Use Archaic Tooth for starter cards or Touch of Orobas for starter relics to capture base/upgrade identities and serialized models. Clean up setup-only cards; keep the captured mapping for later transitions.'),
+          node('host',1,'Order a managed action','The owner submits run, action, player and slot identity plus the target tier and recipe. The native host orders the managed action with the rest of gameplay.'),
+          node('host',2,'Wait for safe noncombat','Admission defers the request while native execution or room transitions make the mutation unsafe. This action is explicitly NonCombat.'),
+          node('replica',2,'Execute the same operations','Every replica validates and executes the same plan: remove the base, restore it or grant the native upgrading relic. Unsupported mappings leave the starter unchanged.'),
+          node('save',3,'Retain recipe and applied tier','Successful transition state enters the run payload. Recorded intermediate operations are preserved if a later command fails; there is no speculative rollback or blind duplicate obtain.')
+        ]},
+        {label:'DeathLink', invariant:'Deduplicate AP source + timestamp per recipient NetId. Keep every distinct event in FIFO order, apply it only in combat, and let each local AP owner report their own synchronized death.', nodes:[
+          node('owner',0,'Receive and queue an external death','The local AP SDK callback belongs to this connected player. Defer handling onto the Godot main thread, deduplicate by recipient NetId, source and timestamp, then append every distinct event to the owner-local FIFO.'),
+          node('owner',1,'Wait for stable combat','Do nothing in shops, events, map rooms, combat setup, enemy turns or teardown. Submit only the head event when the native synchronizer is in player PlayPhase and the executor and action queues are idle.'),
+          node('owner',2,'Author raw damage','Calculate one raw amount from the recipient’s frozen Max-HP percentage and request a managed action under this owner’s native identity. Later queued events remain separate actions.'),
+          node('host',2,'Order through the native queue','MegaCrit receives a client-owned action request, orders it with ordinary gameplay and broadcasts it. No separate inbound DeathLink sidecar request is needed.'),
+          node('replica',2,'Run native unblockable damage','Every replica calls CreatureCmd.Damage with Unblockable and Unpowered through the managed action context. Block is bypassed, while Buffer, Intangible, HP-loss hooks and death prevention can modify the result; native damage feedback runs.'),
+          node('replica',3,'Suppress an incoming echo','Mark the target while damage executes so a resulting death does not bounce another DeathLink outward. A mitigated nonlethal hit does not suppress a later ordinary death.'),
+          node('owner',4,'Report the local player’s death','Every replica observes the synchronized post-prevention death callback. Only the process where LocalContext.IsMe(deadPlayer) is true validates its AP ownership and sends through that player’s AP connection; no host instruction is needed.')
+        ], extra:'deathlink'}
+      ]
+    },
+    {
+      name:'Relics & treasure', title:'A receipt has one destination.', subtitle:'AP menu assignments and natural treasure generation use different contracts. The host arbitrates which source spends each relic receipt.',
+      views:[
+        {label:'AP menu relics', invariant:'NetId + receipt index belongs to either an approved menu or a frozen chest. Native grab-bag removals must match across replicas.', nodes:[
+          node('owner',0,'Request receipt destinations','Find available anytime receipts and later receipts eligible to pair with previously gained relic coupons. Publish current progress before requesting menu approval.'),
+          node('host',0,'Reserve the approved subset','The shared receipt state reserves approved indexes for the menu. A receipt already assigned to a chest cannot simultaneously materialize as a menu reward.'),
+          node('owner',1,'Pick a stable AP relic','Read eligible candidates from the native grab bag without advancing native reward RNG. Stable rarity and SHA-256 ranking use run seed, character, NetId:itemIndex and candidate identity.'),
+          node('replica',1,'Install the exact assignment','The owner saves and publishes the concrete serialized relic. Every machine removes that exact model from relevant native bags; idempotent removal preserves reopen/continue behavior.'),
+          node('replica',2,'Execute native relic obtain','Matching native relic reward objects enter the synchronized reward set. The native selection and obtain commands run for the same player on every replica.'),
+          node('owner',2,'Record one successful redemption','After native relic obtain succeeds, mark the shared menu reservation consumed on every replica. The local AP owner also marks that receipt index used, removes its pending assignment and publishes that progress to the host.')
+        ]},
+        {label:'Treasure chests', invariant:'The chest-entry agreement decides which native candidates survive. The later Proceed barrier only protects reward-set construction order before anybody opens the AP reward menu.', nodes:[
+          node('host',0,'Freeze and publish receipts','After all room-entry hooks and immediately before native BeginRelicPicking, iterate the run’s current Player order. Freeze whether each player generates treasure, the next numbered Relic check, its AP gate, and the exact waiting receipt. Broadcast that immutable keep mask before the host rolls any relic.'),
+          node('replica',0,'Wait only for the receipt mask','A client pauses its room-entry hook until the host decision arrives. The normal path is the host broadcast; after one second without it, the client sends a direct recovery request. Early chest clicks are ignored with a waiting message.'),
+          node('replica',1,'Generate every native candidate','Once the receipt mask exists, every machine independently lets MegaCrit pop all candidates in native player order. Host and clients can now generate concurrently using the base game’s synchronized run RNG and matching relic bags.'),
+          node('replica',2,'Check the local candidate shape','Before filtering, each machine verifies that candidate count, Player order and ShouldGenerateTreasure results still match the frozen host record. MegaCrit owns model-list determinism; AP no longer broadcasts or compares native relic IDs.'),
+          node('replica',3,'Show the kept shared choices','Remove exactly the candidates excluded by the frozen mask. The remaining native list is one shared multiplayer picker, so any player may win any visible relic even when another player’s receipt allowed that candidate to survive.'),
+          node('replica',4,'Open and settle each source once','Opening records the numbered Relic location. If the frozen receipt exists, redeem that exact receipt; otherwise gain one relic coupon for later AP-menu use. Empty chests finish through the native open animation once.'),
+          node('replica',5,'Finish local OpenChest work','After this replica’s OpenChest task and any per-player extra reward-set construction finish, report that this machine has reached the safe Proceed point.'),
+          node('host',5,'Release AP-menu barrier','When every native NetId has reported, the host broadcasts all-ready. Only then may any replica insert an AP RewardsSet without assigning a different meaning to MegaCrit’s next reward-set ID.')
+        ], extra:'treasure'}
+      ]
+    },
+    {
+      name:'AP card rewards', title:'Generate together. Verify. Then choose.', subtitle:'A receipt-local AP stream makes first offers reproducible, while native hooks and player-choice synchronization preserve the full reward lifecycle.',
+      views:[{label:'AP card rewards', invariant:'The ordered offer must match before any picker choice is applied. Reopening reuses saved cards; generation-time one-shot hooks do not run again.', nodes:[
+        node('owner',0,'Publish an unrevealed recipe','The outer AP menu stores receipt identity, rare/regular type, assigned act and the replicated generation strategy. Merely browsing the reward list generates no card offer.'),
+        node('replica',0,'Install matching reward rows','Every replica builds the same immutable backend RewardsSet for the owner. The native selection system can therefore identify the same AP card row everywhere.'),
+        node('replica',1,'Order reveal and reserve IDs','Queue prior AP selections through their awaited callbacks. Reserve verification and first-picker choice IDs before card generation can await native callbacks.'),
+        node('replica',2,'Generate with AP RNG + native hooks','Every machine uses the same receipt-local seed and native card factory. Fixed AP rarity rolls bypass native pity; normal pool, upgrade and modifier hooks still run. Explicitly await post-modifier callbacks.'),
+        node('owner',2,'Send the ordered-offer digest','The owner sends a SHA-256 digest through the native choice synchronizer. It covers receipt/owner recipe identity and serialized offered cards, with array order preserved.'),
+        node('replica',3,'Verify and retain the offer','Remote machines compare their independently generated offer. A disagreement blocks picker choice and invalidates further AP claims. Generation hooks already ran; verification is not an atomic rollback.'),
+        node('replica',4,'Use native card or alternative choice','Native picker synchronization carries selections, deck-add hooks and alternatives such as Pael’s Wing sacrifice. Glam comes from Silken Tress; replicated generation runs its used-state callback everywhere.'),
+        node('owner',4,'Publish assignment or consumption','Persist revealed cards so skip/close and reopen reuse them. On successful reward completion, consume the AP receipt. Egg-only refresh can update eligible choices on reopen without replaying general generation.')
+      ], extra:'cards'}]
+    },
+    {
+      name:'Bonus wax relics', title:'A stable bonus. A shared lifetime.', subtitle:'Bonus receipts assign exact wax relics without competing with Elite or chest coupon sources. Their combat cadence is replicated per player.',
+      views:[{label:'Bonus wax relics', invariant:'Reuse the saved receipt assignment. Random player-slot rankings may still select the same relic; they do not promise uniqueness.', nodes:[
+        node('owner',0,'Resolve the bonus ordinal','Count earlier same-item receipts to find the configured bonus definition. Read this player’s frozen bonus settings, or reuse an assignment already stored for the receipt index.'),
+        node('owner',1,'Choose the configured wax relic','Resolve an explicit configured relic or deterministically rank eligible pool candidates. Random multiplayer rankings include native player slot index. Pickup-effect relics are rejected by this resolver.'),
+        node('replica',1,'Obtain the exact wax model','Mark the selected model IsWax, serialize its receipt assignment and publish it in the mirrored menu. Every replica grants that exact model through native relic reward selection.'),
+        node('replica',2,'Count combats per player','After native combat-end hooks, each replica advances the AP-managed cadence for each eligible NetId. The count resets when no available wax relic remains.'),
+        node('replica',3,'Melt after three combats','Use the native melt command on the first unmelted wax relic. Suppress native Toy Box melting for AP-managed players so two systems do not melt the same cadence.'),
+        node('save',3,'Save assignments and cadence','Per-player wax combat count and exact assignments enter the host run snapshot. This requires no standard-relic coupon or chest-destination arbitration.')
+      ]}]
+    },
+    {
+      name:'Universal buffs → gold', title:'Five gold. Shared across characters.', subtitle:'Multiplayer converts universal combat buffs into a cumulative AP gold pool, divided across the slot’s configured characters.',
+      views:[{label:'Universal buffs → gold', invariant:'Use cumulative whole-gold shares so incremental processing and rebuilding from history agree. The conversion also avoids unsynchronized reward-shape mutations such as The Hunt adding a card reward.', nodes:[
+        node('owner',0,'Accept an owned universal buff','Check numbered-player ownership, then identify the universal buff without treating its ID as a character-offset item. Multiplayer combat buffs use the gold-conversion route.'),
+        node('owner',1,'Add five to the cumulative pool','Increase the converted-buff count. Each eligible buff adds five total raw AP gold, rather than five new gold for every configured character.'),
+        node('owner',2,'Increase each whole-gold share','For each distinct configured character, add only the difference between the new and previous cumulative whole-gold shares. Fractions carry through the cumulative count.'),
+        node('replica',2,'Claim via native GoldReward','The current character’s bank enters the same immutable aggregate gold menu and native wallet synchronization as ordinary AP gold. Poverty uses the same accounting path.'),
+        node('owner',3,'Advance the raw cursor','Only the AP owner commits redeemed raw gold after native success. Rebuilding from received history reproduces the same cumulative per-character banks.'),
+        node('save',3,'Persist the run baseline','The converted count, gold bank and redemption cursor are retained with the host’s per-player AP state and the native wallet snapshot.')
+      ], extra:'buffs'}]
+    }
+  ];
+  let featureIndex = 0, viewIndex = 0, selectedStep = 0, currentNodes = [], nodeButtons = [], paths = [], packet = null, animation = null;
+  const diagram = q('diagram');
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const svgNS = 'http://www.w3.org/2000/svg';
+  function makeSvg(tag, attrs) {
+    const el = document.createElementNS(svgNS, tag);
+    for (const [key, value] of Object.entries(attrs || {})) el.setAttribute(key, String(value));
+    return el;
+  }
+  function currentView() { return features[featureIndex].views[viewIndex]; }
+  const featureButtons = features.map((f, i) => {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'feature'; button.role = 'tab'; button.id = 'feature-tab-' + i;
+    button.setAttribute('aria-controls','feature-panel'); button.setAttribute('aria-selected', String(i === 0));
+    const number = document.createElement('span'); number.className='feature-number'; number.textContent=String(i + 1).padStart(2,'0');
+    const name = document.createElement('span'); name.textContent=f.name;
+    button.append(number,name); button.addEventListener('click', () => selectFeature(i));
+    q('feature-list').append(button); return button;
+  });
+  function selectFeature(index) {
+    featureIndex=index; viewIndex=0; selectedStep=0;
+    featureButtons.forEach((button,i) => button.setAttribute('aria-selected',String(i===index)));
+    q('feature-panel').setAttribute('aria-labelledby','feature-tab-' + index);
+    renderFeature();
+  }
+  function renderFeature() {
+    const feature = features[featureIndex];
+    q('chapter').textContent='System ' + String(featureIndex + 1).padStart(2,'0');
+    q('feature-counter').textContent=String(featureIndex + 1).padStart(2,'0') + ' / ' + features.length;
+    q('feature-title').textContent=feature.title;
+    q('feature-subtitle').textContent=feature.subtitle;
+    const views=q('view-options'); views.replaceChildren(); views.hidden=feature.views.length<2;
+    feature.views.forEach((view,i) => {
+      const button=document.createElement('button'); button.type='button'; button.className='view-button';
+      button.textContent=view.label; button.setAttribute('aria-pressed',String(i===viewIndex));
+      button.addEventListener('click', () => { viewIndex=i; selectedStep=0; renderFeature(); }); views.append(button);
+    });
+    const view=currentView(); currentNodes=view.nodes;
+    q('invariant-copy').textContent=view.invariant;
+    renderExtra(view.extra);
+    const usedRoles=Object.keys(roles).filter(role => currentNodes.some(n => n.role===role));
+    const legend=q('legend'); legend.replaceChildren();
+    for (const role of usedRoles) {
+      const item=document.createElement('span'); item.className='legend-item';
+      const dot=document.createElement('span'); dot.className='legend-dot'; dot.style.setProperty('--tone',roles[role].color); dot.setAttribute('aria-hidden','true');
+      const text=document.createElement('span'); text.textContent=roles[role].name; item.append(dot,text); legend.append(item);
+    }
+    diagram.replaceChildren();
+    const svg=makeSvg('svg',{'class':'wires','aria-hidden':'true'});
+    const defs=makeSvg('defs');
+    for (const type of ['normal','active']) {
+      const marker=makeSvg('marker',{id:'arrow-'+type,viewBox:'0 0 8 8',refX:7,refY:4,markerWidth:5,markerHeight:5,orient:'auto'});
+      marker.append(makeSvg('path',{d:'M 0 1 L 7 4 L 0 7',fill:'none',stroke:type==='active'?'var(--owner)':'var(--line)','stroke-width':1.2})); defs.append(marker);
+    }
+    svg.append(defs); paths=[];
+    for (let i=0; i<currentNodes.length-1; i++) {
+      const path=makeSvg('path',{'class':'wire','marker-end':'url(#arrow-normal)'}); svg.append(path); paths.push(path);
+    }
+    packet=makeSvg('circle',{'class':'packet',r:3.5,visibility:'hidden'}); svg.append(packet); diagram.append(svg);
+    nodeButtons=currentNodes.map((n,i) => {
+      const button=document.createElement('button'); button.type='button'; button.className='node';
+      button.style.setProperty('--tone',roles[n.role].color); button.setAttribute('aria-pressed',String(i===selectedStep));
+      button.setAttribute('aria-label','Step '+(i+1)+', '+roles[n.role].name+': '+n.title);
+      const meta=document.createElement('span'); meta.className='node-meta';
+      const number=document.createElement('span'); number.textContent=String(i+1).padStart(2,'0');
+      const role=document.createElement('span'); role.textContent=roles[n.role].short; meta.append(number,role);
+      const title=document.createElement('span'); title.className='node-title'; title.textContent=n.title;
+      button.append(meta,title); button.addEventListener('click', () => selectStep(i,true)); diagram.append(button); return button;
+    });
+    layout(); selectStep(0,false);
+  }
+  function layout() {
+    if (!currentNodes.length) return;
+    if(animation) { cancelAnimationFrame(animation); animation=null; }
+    if(packet) packet.setAttribute('visibility','hidden');
+    const width=diagram.clientWidth;
+    const usedRoles=Object.keys(roles).filter(role => currentNodes.some(n=>n.role===role));
+    const compact=width<540;
+    const laneHeads=q('lane-heads'); laneHeads.replaceChildren(); laneHeads.hidden=compact;
+    laneHeads.style.gridTemplateColumns='repeat('+usedRoles.length+',minmax(0,1fr))';
+    for (const role of usedRoles) { const el=document.createElement('div'); el.className='lane-heading'; el.textContent=roles[role].lane; laneHeads.append(el); }
+    const height=compact?87:94;
+    const rowGap=compact?32:42;
+    const gutter=12;
+    const laneWidth=(width-2*gutter)/usedRoles.length;
+    const boxWidth=compact?Math.min(width-36,440):Math.max(0,laneWidth-16);
+    const positions=currentNodes.map((n,i)=>({
+      x:compact?(width-boxWidth)/2:gutter+usedRoles.indexOf(n.role)*laneWidth+8,
+      y:compact?i*(height+rowGap):n.row*(height+rowGap),w:boxWidth,h:height
+    }));
+    const totalHeight=Math.max(...positions.map(p=>p.y+p.h))+19;
+    diagram.style.height=totalHeight+'px';
+    const svg=diagram.querySelector('svg'); svg.setAttribute('viewBox','0 0 '+width+' '+totalHeight);
+    positions.forEach((p,i)=>Object.assign(nodeButtons[i].style,{left:p.x+'px',top:p.y+'px',width:p.w+'px',height:p.h+'px'}));
+    paths.forEach((path,i)=>{
+      const a=positions[i],b=positions[i+1]; let d;
+      if (Math.abs(a.y-b.y)<1) {
+        const forward=b.x>a.x;
+        const ax=forward?a.x+a.w:a.x,bx=forward?b.x:b.x+b.w,y=a.y+a.h/2;
+        d='M '+ax+' '+y+' C '+(ax+(bx-ax)/3)+' '+y+' '+(bx-(bx-ax)/3)+' '+y+' '+bx+' '+y;
+      } else {
+        const x1=a.x+a.w/2,y1=a.y+a.h,x2=b.x+b.w/2,y2=b.y;
+        const cy=(y1+y2)/2;
+        d='M '+x1+' '+y1+' C '+x1+' '+cy+' '+x2+' '+cy+' '+x2+' '+y2;
+      }
+      path.setAttribute('d',d);
+    });
+    setActivePaths();
+  }
+  function setActivePaths() {
+    paths.forEach((path,i)=>{
+      const active=i===selectedStep-1;
+      path.setAttribute('class',active?'wire wire-active':'wire');
+      path.setAttribute('marker-end',active?'url(#arrow-active)':'url(#arrow-normal)');
+    });
+  }
+  function selectStep(index,animate) {
+    selectedStep=Math.max(0,Math.min(index,currentNodes.length-1));
+    const n=currentNodes[selectedStep];
+    nodeButtons.forEach((button,i)=>button.setAttribute('aria-pressed',String(i===selectedStep)));
+    q('detail-role').replaceChildren();
+    const number=document.createElement('span'); number.textContent='Step '+String(selectedStep+1).padStart(2,'0');
+    q('detail-role').append(number,document.createTextNode(' / '+roles[n.role].name));
+    q('step-title').textContent=n.title; q('step-copy').textContent=n.detail;
+    q('previous-step').disabled=selectedStep===0; q('next-step').disabled=selectedStep===currentNodes.length-1;
+    q('step-detail').classList.remove('reveal');
+    if(animate&&!reducedMotion.matches) { void q('step-detail').offsetWidth; q('step-detail').classList.add('reveal'); }
+    setActivePaths();
+    if(animation) cancelAnimationFrame(animation);
+    packet.setAttribute('visibility','hidden');
+    if(animate&&selectedStep>0&&!reducedMotion.matches) animatePacket(paths[selectedStep-1]);
+  }
+  function animatePacket(path) {
+    const length=path.getTotalLength(); let start=null;
+    function frame(time) {
+      if(start===null) start=time;
+      const t=Math.min(1,(time-start)/650),p=path.getPointAtLength(length*t);
+      packet.setAttribute('cx',p.x); packet.setAttribute('cy',p.y); packet.setAttribute('visibility','visible');
+      if(t<1) animation=requestAnimationFrame(frame);
+      else { packet.setAttribute('visibility','hidden'); animation=null; }
+    }
+    animation=requestAnimationFrame(frame);
+  }
+  function renderExtra(type) {
+    const extra=q('extra'); extra.replaceChildren(); if(!type) return;
+    const details=document.createElement('details'),summary=document.createElement('summary');
+    details.append(summary); extra.append(details);
+    function copy(text) { const p=document.createElement('p'); p.className='extra-copy'; p.textContent=text; details.append(p); }
+    if(type==='cards') {
+      summary.textContent='The seed, rarity and reward-hook contract';
+      const tokens=document.createElement('div'); tokens.className='token-list';
+      for(const text of ['Domain: card','Run StringSeed','AP slot ID','Native player slot index','AP character offset','Received item index']) {
+        const token=document.createElement('span'); token.className='token'; token.textContent=text; tokens.append(token);
+      }
+      details.append(tokens);
+      copy('SHA-256 → shared 32-bit seed → MegaCrit Rng + native factory. NetId identifies the network owner but is not a card seed field. Assigned act and rarity remain generation inputs; matching pools and hook state also matter.');
+      const odds=document.createElement('div'); odds.className='odds';
+      for(const [title,value] of [['Regular · C / U / R','57% / 37% / 6%'],['Scarcity · C / U / R','60% / 37% / 3%'],['Rare reward','100% Rare']]) {
+        const item=document.createElement('div'); item.className='odds-item';
+        const t=document.createElement('div');t.className='odds-title';t.textContent=title;
+        const v=document.createElement('div');v.className='odds-value';v.textContent=value;item.append(t,v);odds.append(item);
+      }
+      details.append(odds);
+      copy('First materialization uses isolated AP rarity rolls instead of native pity. Reopening reuses serialized cards with eligible Egg refresh. Later native rerolls still delegate to the base Populate path. Pael’s Wing is a native sacrifice alternative; Wing Charm remains explicitly excluded from multiplayer pools.');
+    } else if(type==='buffs') {
+      summary.textContent='Three configured characters: how fractions carry';
+      const tokens=document.createElement('div'); tokens.className='token-list';
+      for(const text of ['Buff 1 → +1 each','Buff 2 → +2 each','Buff 3 → +2 each','After 3 buffs → 5 each']) { const t=document.createElement('span');t.className='token';t.textContent=text;tokens.append(t); }
+      details.append(tokens);
+      copy('Whole-gold share increase = floor(5 × new buff count / character count) − floor(5 × previous buff count / character count). Three buffs contribute 15 total raw gold, divided equally across three configured character banks.');
+      copy('Additional Card Reward would normally apply The Hunt, which changes a later combat reward set by adding another CardReward. It is currently converted to gold with the other universal buffs. Re-enabling it safely would require the power and resulting reward shape to exist at the same native construction point on every replica; applying it only where the AP receipt arrived could make later reward indexes mean different things.');
+    } else if(type==='treasure') {
+      summary.textContent='One pre-generation decision, then native parallelism';
+      copy('The host now freezes and broadcasts receipt destinations before it starts native candidate generation. A client waits only for that small keep mask, then host and clients can all run MegaCrit’s native picker concurrently. The former host-native-ID publication and client comparison have been removed from the critical path.');
+      copy('The normal path is one host broadcast, with no client request/response exchange. A client sends a direct request only if the broadcast has not arrived within one second, covering late subscription or reconnect timing. The remaining pre-open latency is host room-entry scheduling plus delivery of one small decision, rather than host generation followed by another network dependency.');
+      copy('Each replica still checks the frozen player order, candidate count and ShouldGenerateTreasure shape before applying the mask. AP now relies on MegaCrit’s multiplayer invariant that identical run RNG and relic-bag state produce the same ordered model list. A native RNG/bag divergence would no longer be caught by an AP relic-ID sentinel, so two-client runtime testing remains required.');
+      copy('The second wait starts after opening: every replica must finish its own OpenChest task, including native per-player extra RewardsSet construction. Until the host has every readiness report, the AP menu is blocked. This barrier does not hold the chest vote open or wait for AP server checks; it protects the sequence of native reward-set IDs.');
+      copy('Current multiplayer deliberately pops every native candidate before filtering. A filtered relic therefore stays removed from that native bag; the player gets a relic coupon and later chooses a newly assigned relic through the AP menu. Avoiding that loss would require a different construction strategy or an exact, replicated bag reinsertion contract.');
+    } else if(type==='deathlink') {
+      summary.textContent='FIFO delivery at safe combat boundaries';
+      copy('A DeathLink received outside combat remains in its AP owner’s run-local FIFO. It does not change HP in a shop, event or map room. The owner waits for a stable player PlayPhase with no native action running or queued, then submits exactly one CombatPlayPhaseOnly managed action under its own native player identity.');
+      copy('Distinct events never overwrite each other: DeathLinks received at T=0 and T=5 become two entries and two ordered damage actions. Duplicate callbacks with the same recipient, AP source and timestamp are still ignored. If the first event kills the player, a later queued entry is consumed as already dead. The in-memory queue is cleared when the run ends and is not persisted through a quit or crash.');
+      copy('The owner authors raw damage equal to the configured percentage of Max HP. MegaCrit sends the client-owned managed-action request to the host, which orders and broadcasts it with ordinary gameplay; the former inbound DeathLink sidecar request is gone. Every replica applies the amount through CreatureCmd.Damage with Unblockable and Unpowered. Ordinary Block cannot absorb it, but Buffer, Intangible, HP-loss hooks and death prevention can mitigate it, and the normal damage number, hit animation and screen feedback can play. Two-client tests should cover queued delivery across rooms, enemy-turn arrival, multiple hits, mitigation and lethal echo suppression.');
+      copy('For an ordinary death, MegaCrit replicates the native death lifecycle and every replica reaches the same post-prevention callback. The dead player’s own process is the sole AP sender, selected by LocalContext.IsMe. This removes the outbound host-to-owner message and relies on the base game to surface any native state desync.');
+    } else if(type==='lobby') {
+      summary.textContent='Exactly what “merged run data” contains';
+      copy('Shared host record: schema version, RunId, the host’s effective settings snapshot, host character offset, configured/current Ascensions, handled Ascension Down receipt indexes, and shared standard-relic receipt destinations/chest decisions.');
+      copy('Per-NetId record: participation kind; AP room/team/slot identity; that owner’s effective SlotSettings; initial relic receipt indexes and progressive Ancient counts; receipt-source readiness; AP progress and revision; replica construction baseline; progressive starter recipe/tier; and wax combat cadence. Native characters, map, decks, relic inventories, RNG and normal run topology remain MegaCrit run data around this sidecar.');
+    } else if(type==='progress') {
+      summary.textContent='Could host validation and rebroadcast be removed?';
+      copy('The current step is narrow: authenticate who authored an AP record, reject stale or skipped deltas, keep the host’s save copy current, and give every replica the AP inputs needed to construct later rest options, replacement checks and receipt-backed rewards. It does not duplicate MegaCrit’s synchronization of the resulting gameplay command.');
+      copy('Removing it today would make non-owner replicas and the host checkpoint stale because AP receipt arrivals and server check state are visible only to the connected owner. MegaCrit cannot infer receipt indexes, used-item state or stable AP assignments from a native gold/relic/card command.');
+      copy('The clean simplification path is per feature: perform an AP-derived transition as one native synchronized or managed action and update the minimal AP state deterministically inside that action on every replica. Owner-to-host publication is still needed for asynchronous server history and reconnect cleanup. Once no later constructor reads a broad field, that field can leave the rebroadcast delta. Trusting base multiplayer is useful at the gameplay boundary; it cannot replace AP ownership and server-history transport.');
+    }
+  }
+  q('previous-step').addEventListener('click',()=>selectStep(selectedStep-1,true));
+  q('next-step').addEventListener('click',()=>selectStep(selectedStep+1,true));
+  new ResizeObserver(layout).observe(diagram);
+  selectFeature(0);
+})();
+</script>
+</body>
+</html>

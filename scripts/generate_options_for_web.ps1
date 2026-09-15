@@ -142,6 +142,7 @@ def load_module_as(name: str, path: Path):
 
 
 # options.py uses relative imports, so load its local dependencies first.
+load_module_as("worlds.spire2.coop", world_dir / "coop.py")
 load_module_as("worlds.spire2.characters", world_dir / "characters.py")
 load_module_as("worlds.spire2.constants", world_dir / "constants.py")
 options_module = load_module_as("worlds.spire2.options", options_path)

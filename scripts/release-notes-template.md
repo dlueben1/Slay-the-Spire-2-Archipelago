@@ -7,23 +7,29 @@
 
 # Mod Information
 
+- Client version: **{{MOD_VERSION}}**
+- APWorld version included in this release: **{{APWORLD_VERSION}}**
+
 ## Pre-Requisites
 
 - **Your Slay the Spire II client must be running on Windows**. The debug terminal we use uses Win32 APIs.
   - This will not be a requirement long-term, but for early Alpha development it's necessary.
 - **Your host MUST use Archipelago Client v0.6.7+**.
-- This version of the mod is intended to be used for **v0.103.2** of Slay the Spire II
-  - **You must be on the "Default Public Version" of the game, _NOT_ the public beta branch**
-  - If your installation of Slay the Spire II is higher or lower than this, the mod _may_ not work.
+- This mod contains exact client variants for Slay the Spire II **public v0.107.1**
+  and **public-beta v0.111.0**.
+  - Later patch releases on either version line use the newest compatible build
+    from that line and produce a warning in the log.
+  - The loader refuses unreadable versions, earlier patches, and new major/minor
+    lines.
   - We will do our best to keep up with game updates as they release, so please be patient.
 
 ## Installing the Mod
 
 1. Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) installed. The easiest way to obtain it is from Steam Workshop.
-2. Download the "sts2-client.zip" from the [Releases](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest) section of the Repo
+2. Download `Archipelago.zip` from the [Releases](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest) section of the repo
 3. Go to your Slay the Spire II directory (In Steam, click "Browse Local Files")
 4. If a folder called `mods` does not exist, create it
-5. Unzip the **contents** of `sts2-client.zip` into `mods`
+5. Put `Archipelago.zip` in `mods`, then extract it into the archive program's default `Archipelago` directory
 
 - If you've done this step correctly, your directory structure should look like this: `/<slay-the-spire-2-local-files>/mods/Archipelago/` and the contents of that folder should be a bunch of `.dll` files and a `.pck` file (there may be more files too, please don't touch anything in this folder)
 

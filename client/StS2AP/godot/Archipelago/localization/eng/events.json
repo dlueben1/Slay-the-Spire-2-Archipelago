@@ -1,4 +1,6 @@
 {
+  "AP_COLORFUL_PHILOSOPHERS_POOL.description": "Choose a Common, Uncommon, and Rare card from the {CardPool} card pool.",
+  "AP_COLORFUL_PHILOSOPHERS_POOL.title": "Study the cards of the {CardPool}.",
   "AP_PROCEED.description": "",
   "AP_PROCEED.title": "Time for some Burger King."
 }

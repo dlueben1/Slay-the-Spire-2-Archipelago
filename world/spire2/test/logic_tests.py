@@ -2,7 +2,6 @@ from typing import NamedTuple, List, Iterable
 
 from BaseClasses import CollectionState
 from worlds.spire2.test import Spire2TestBase
-from worlds.spire2.rules import LogicMixin
 
 
 def _create_floor_check(start: int, end: int) -> List[str]:
