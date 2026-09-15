@@ -141,12 +141,19 @@ jobs:
         if: inputs.build_mode == 'Package'
         shell: bash
         run: |
-          echo "Package contents:"
-          find dist/Archipelago -type f -print | sort
-
-          echo
-          echo "Release artifacts:"
-          ls -lh dist/sts2-client.zip dist/spire2.apworld
+          {
+            echo "### 📦 Package Build"
+            echo ""
+            echo "Successfully built:"
+            echo ""
+            echo "- \`sts2-client.zip\`"
+            echo "- \`spire2.apworld\`"
+            echo ""
+            echo "#### Client contents"
+            echo '```text'
+            find dist/Archipelago -type f -print | sort
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Build Artifact
         if: inputs.build_mode == 'Package' && inputs.upload_artifact

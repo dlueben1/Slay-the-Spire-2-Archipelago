@@ -48,8 +48,14 @@ jobs:
 
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
-          echo "Public StS2 API: $public"
-          echo "Beta StS2 API: $beta"
+          {
+            echo "### 🎮 StS2 Version Targets"
+            echo ""
+            echo "| Branch | API Version |"
+            echo "| --- | --- |"
+            echo "| Public | \`$public\` |"
+            echo "| Beta | \`$beta\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   apworld:
     name: Validate APWorld
