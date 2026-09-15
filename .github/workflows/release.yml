@@ -58,11 +58,14 @@ jobs:
 
   prepare:
     name: Bump Release Versions
+
     needs: labels
     if: needs.labels.outputs.should_release == 'true'
+
     runs-on: ubuntu-latest
+
     permissions:
-      contents: write
+      contents: read
 
     outputs:
       release_sha: ${{ steps.commit.outputs.release_sha }}
@@ -73,11 +76,33 @@ jobs:
       world_changed: ${{ steps.bump.outputs.world_changed }}
 
     steps:
+      - name: Create release bot token
+        id: release-bot
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.RELEASE_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+
+          permission-contents: write
+
+      - name: Get release bot user ID
+        id: release-bot-user
+        env:
+          GH_TOKEN: ${{ steps.release-bot.outputs.token }}
+          APP_SLUG: ${{ steps.release-bot.outputs.app-slug }}
+        shell: bash
+        run: |
+          bot_id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)
+          echo "id=$bot_id" >> "$GITHUB_OUTPUT"
+
       - name: Check out trusted main
         uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
+
+          token: ${{ steps.release-bot.outputs.token }}
+          persist-credentials: true
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -141,10 +166,13 @@ jobs:
         env:
           NEW_CLIENT_VERSION: ${{ steps.bump.outputs.new_client_version }}
           WORLD_CHANGED: ${{ steps.bump.outputs.world_changed }}
+          APP_SLUG: ${{ steps.release-bot.outputs.app-slug }}
+          APP_USER_ID: ${{ steps.release-bot-user.outputs.id }}
         shell: bash
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email \
+            "${APP_USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
 
           git add \
             client/StS2AP/StS2AP.csproj \
@@ -157,7 +185,7 @@ jobs:
           git commit -m "$NEW_CLIENT_VERSION"
 
           if ! git push origin HEAD:main; then
-            echo "::error::Could not push the version-bump commit to main. Check repository branch rules and the GitHub Actions token's permissions; this workflow will not bypass protections or use a PAT."
+            echo "::error::The release bot could not push the version-bump commit to main. Verify that the GitHub App is installed on this repository and is in the main ruleset's bypass list."
             exit 1
           fi
 
