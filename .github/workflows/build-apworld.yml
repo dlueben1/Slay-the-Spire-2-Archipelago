@@ -15,6 +15,15 @@ on:
         type: boolean
         default: false
 
+      source_ref:
+        description: "Repository ref/SHA to build; defaults to the caller's commit"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build APWorld
@@ -24,6 +33,8 @@ jobs:
     steps:
       - name: Check out StS2 AP repository
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
 
       - name: Check out Archipelago
         uses: actions/checkout@v7

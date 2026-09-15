@@ -24,6 +24,12 @@ on:
         type: boolean
         default: false
 
+      source_ref:
+        description: "Repository ref/SHA to build; defaults to the caller's commit"
+        required: false
+        type: string
+        default: ""
+
 permissions:
   contents: read
 
@@ -59,6 +65,8 @@ jobs:
 
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
 
         # Note: C# 14 needs the .NET 10 compiler even though StS2AP targets .NET 9
       - name: Set up .NET

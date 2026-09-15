@@ -1,0 +1,371 @@
+name: Prepare Draft GitHub Release
+
+on:
+  pull_request_target:
+    branches:
+      - main
+    types:
+      - closed
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  labels:
+    name: Validate Release Labels
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    outputs:
+      should_release: ${{ steps.labels.outputs.should_release }}
+      client_bump: ${{ steps.labels.outputs.client_bump }}
+      world_bump: ${{ steps.labels.outputs.world_bump }}
+
+    steps:
+      # pull_request_target runs in the base repository context. Explicitly check
+      # out trusted main rather than the contributor's PR head.
+      - name: Check out trusted main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Parse and validate release labels
+        id: labels
+        env:
+          RELEASE_LABELS_JSON: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          python scripts/parse_release_labels.py \
+            --labels-json "$RELEASE_LABELS_JSON" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Summarize skipped release
+        if: steps.labels.outputs.should_release != 'true'
+        run: |
+          {
+            echo "## GitHub Release Skipped"
+            echo ""
+            echo "PR #${{ github.event.pull_request.number }} did not request a client release."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  prepare:
+    name: Bump Release Versions
+    needs: labels
+    if: needs.labels.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    outputs:
+      release_sha: ${{ steps.commit.outputs.release_sha }}
+      old_client_version: ${{ steps.bump.outputs.old_client_version }}
+      new_client_version: ${{ steps.bump.outputs.new_client_version }}
+      old_world_version: ${{ steps.bump.outputs.old_world_version }}
+      new_world_version: ${{ steps.bump.outputs.new_world_version }}
+      world_changed: ${{ steps.bump.outputs.world_changed }}
+
+    steps:
+      - name: Check out trusted main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Bump release versions
+        id: bump
+        run: |
+          python scripts/prepare_release.py \
+            --client-bump "${{ needs.labels.outputs.client_bump }}" \
+            --world-bump "${{ needs.labels.outputs.world_bump }}" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Verify version-only changes
+        env:
+          WORLD_CHANGED: ${{ steps.bump.outputs.world_changed }}
+        shell: bash
+        run: |
+          expected=$(printf '%s\n' \
+            client/StS2AP/Archipelago.json \
+            client/StS2AP/StS2AP.csproj)
+
+          if [[ "$WORLD_CHANGED" == "true" ]]; then
+            expected=$(printf '%s\n%s\n' \
+              "$expected" \
+              world/spire2/archipelago.json)
+          fi
+
+          actual=$(git diff --name-only | sort)
+          expected=$(printf '%s\n' "$expected" | sort)
+
+          if [[ "$actual" != "$expected" ]]; then
+            echo "::error::Unexpected files changed while preparing the release."
+            echo "Expected:"
+            printf '%s\n' "$expected"
+            echo "Actual:"
+            printf '%s\n' "$actual"
+            exit 1
+          fi
+
+      - name: Verify release version is unused
+        env:
+          CLIENT_VERSION: ${{ steps.bump.outputs.new_client_version }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if git ls-remote --exit-code --tags origin \
+            "refs/tags/$CLIENT_VERSION" > /dev/null 2>&1; then
+            echo "::error::Tag $CLIENT_VERSION already exists; refusing to create a version-bump commit."
+            exit 1
+          fi
+
+          if gh release view "$CLIENT_VERSION" > /dev/null 2>&1; then
+            echo "::error::A GitHub Release for $CLIENT_VERSION already exists; refusing to create a version-bump commit."
+            exit 1
+          fi
+
+      - name: Commit and push version bump
+        id: commit
+        env:
+          NEW_CLIENT_VERSION: ${{ steps.bump.outputs.new_client_version }}
+          WORLD_CHANGED: ${{ steps.bump.outputs.world_changed }}
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            client/StS2AP/StS2AP.csproj \
+            client/StS2AP/Archipelago.json
+
+          if [[ "$WORLD_CHANGED" == "true" ]]; then
+            git add world/spire2/archipelago.json
+          fi
+
+          git commit -m "$NEW_CLIENT_VERSION"
+
+          if ! git push origin HEAD:main; then
+            echo "::error::Could not push the version-bump commit to main. Check repository branch rules and the GitHub Actions token's permissions; this workflow will not bypass protections or use a PAT."
+            exit 1
+          fi
+
+          release_sha=$(git rev-parse HEAD)
+          echo "release_sha=$release_sha" >> "$GITHUB_OUTPUT"
+
+  versions:
+    name: Read Release StS2 Versions
+    needs: prepare
+    uses: ./.github/workflows/get-sts2-versions.yml
+    with:
+      source_ref: ${{ needs.prepare.outputs.release_sha }}
+
+  apworld:
+    name: Build Release APWorld
+    needs: prepare
+    uses: ./.github/workflows/build-apworld.yml
+    with:
+      source_ref: ${{ needs.prepare.outputs.release_sha }}
+      upload_artifact: true
+
+  package:
+    name: Build Release Package
+    needs:
+      - prepare
+      - versions
+      - apworld
+    uses: ./.github/workflows/build-client.yml
+    with:
+      source_ref: ${{ needs.prepare.outputs.release_sha }}
+      build_mode: Package
+      sts2_api_compat: ${{ needs.versions.outputs.public_api }}
+      apworld_artifact: sts2-apworld
+      upload_artifact: true
+
+  release:
+    name: Create Draft GitHub Release
+    needs:
+      - prepare
+      - versions
+      - package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out release commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.release_sha }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Download release package
+        uses: actions/download-artifact@v6
+        with:
+          name: sts2-package-${{ needs.versions.outputs.public_api }}
+          path: release-input
+
+      - name: Stage and verify release assets
+        env:
+          WORLD_VERSION: ${{ needs.prepare.outputs.new_world_version }}
+        shell: bash
+        run: |
+          test -f release-input/Archipelago.zip
+          test -f release-input/spire2.apworld
+
+          mkdir -p release-assets
+          cp release-input/Archipelago.zip release-assets/Archipelago.zip
+          cp release-input/spire2.apworld \
+            "release-assets/spire2-${WORLD_VERSION}.apworld"
+
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          archive = Path("release-assets/Archipelago.zip")
+          standalone = Path("release-input/spire2.apworld")
+          required = {
+              "Archipelago.dll",
+              "Archipelago.pck",
+              "Archipelago.json",
+              "spire2.apworld",
+          }
+
+          with ZipFile(archive) as package:
+              names = set(package.namelist())
+              missing = sorted(required - names)
+              if missing:
+                  raise SystemExit(
+                      "Archipelago.zip is missing required root files: "
+                      + ", ".join(missing)
+                  )
+              if package.read("spire2.apworld") != standalone.read_bytes():
+                  raise SystemExit(
+                      "The APWorld in Archipelago.zip differs from the standalone build."
+                  )
+          PY
+
+      - name: Render release notes
+        run: |
+          python scripts/render_release_notes.py \
+            --template scripts/release-notes-template.md \
+            --output release-assets/release-notes.md \
+            --client-version "${{ needs.prepare.outputs.new_client_version }}" \
+            --world-version "${{ needs.prepare.outputs.new_world_version }}" \
+            --sts2-public-version "${{ needs.versions.outputs.public_api }}" \
+            --sts2-beta-version "${{ needs.versions.outputs.beta_api }}"
+
+      - name: Fail if the release tag or draft already exists
+        env:
+          CLIENT_VERSION: ${{ needs.prepare.outputs.new_client_version }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if git ls-remote --exit-code --tags origin \
+            "refs/tags/$CLIENT_VERSION" > /dev/null 2>&1; then
+            echo "::error::Tag $CLIENT_VERSION already exists; refusing to overwrite it."
+            exit 1
+          fi
+
+          if gh release view "$CLIENT_VERSION" > /dev/null 2>&1; then
+            echo "::error::A GitHub Release for $CLIENT_VERSION already exists; refusing to overwrite it."
+            exit 1
+          fi
+
+      - name: Create draft GitHub Release
+        env:
+          CLIENT_VERSION: ${{ needs.prepare.outputs.new_client_version }}
+          RELEASE_SHA: ${{ needs.prepare.outputs.release_sha }}
+          WORLD_VERSION: ${{ needs.prepare.outputs.new_world_version }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release create "$CLIENT_VERSION" \
+            --draft \
+            --title "$CLIENT_VERSION" \
+            --target "$RELEASE_SHA" \
+            --notes-file release-assets/release-notes.md \
+            release-assets/Archipelago.zip \
+            "release-assets/spire2-${WORLD_VERSION}.apworld"
+
+          release_json=$(gh release view "$CLIENT_VERSION" --json isDraft,assets)
+          if [[ "$(jq -r '.isDraft' <<< "$release_json")" != "true" ]]; then
+            echo "::error::GitHub Release $CLIENT_VERSION was not created as a draft."
+            exit 1
+          fi
+
+          expected_assets=$(printf '%s\n' \
+            Archipelago.zip \
+            "spire2-${WORLD_VERSION}.apworld" | sort)
+          actual_assets=$(jq -r '.assets[].name' <<< "$release_json" | sort)
+          if [[ "$actual_assets" != "$expected_assets" ]]; then
+            echo "::error::Draft release assets do not match the required asset names."
+            echo "Expected:"
+            printf '%s\n' "$expected_assets"
+            echo "Actual:"
+            printf '%s\n' "$actual_assets"
+            exit 1
+          fi
+
+          remote_tag=$(git ls-remote origin "refs/tags/$CLIENT_VERSION" | awk '{print $1}')
+          if [[ "$remote_tag" != "$RELEASE_SHA" ]]; then
+            echo "::error::Release tag $CLIENT_VERSION points to '$remote_tag', not release commit $RELEASE_SHA."
+            exit 1
+          fi
+
+      - name: Write release summary
+        env:
+          OLD_CLIENT_VERSION: ${{ needs.prepare.outputs.old_client_version }}
+          CLIENT_VERSION: ${{ needs.prepare.outputs.new_client_version }}
+          OLD_WORLD_VERSION: ${{ needs.prepare.outputs.old_world_version }}
+          WORLD_VERSION: ${{ needs.prepare.outputs.new_world_version }}
+          WORLD_CHANGED: ${{ needs.prepare.outputs.world_changed }}
+          PUBLIC_VERSION: ${{ needs.versions.outputs.public_api }}
+          BETA_VERSION: ${{ needs.versions.outputs.beta_api }}
+          RELEASE_SHA: ${{ needs.prepare.outputs.release_sha }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          release_url=$(gh release view "$CLIENT_VERSION" --json url --jq .url)
+
+          if [[ "$WORLD_CHANGED" == "true" ]]; then
+            world_summary="$OLD_WORLD_VERSION -> $WORLD_VERSION"
+          else
+            world_summary="$WORLD_VERSION (unchanged)"
+          fi
+
+          {
+            echo "## Release Prepared"
+            echo ""
+            echo "- PR: #${{ github.event.pull_request.number }}"
+            echo "- Source merge: \`${{ github.event.pull_request.merge_commit_sha }}\`"
+            echo "- Release commit: \`$RELEASE_SHA\`"
+            echo "- Client: $OLD_CLIENT_VERSION -> $CLIENT_VERSION"
+            echo "- APWorld: $world_summary"
+            echo "- StS2 Public: $PUBLIC_VERSION"
+            echo "- StS2 Beta: $BETA_VERSION"
+            echo "- Tag: $CLIENT_VERSION"
+            echo "- Release status: Draft"
+            echo "- Draft: $release_url"
+            echo ""
+            echo "### Assets"
+            echo ""
+            echo "- Archipelago.zip"
+            echo "- spire2-${WORLD_VERSION}.apworld"
+          } >> "$GITHUB_STEP_SUMMARY"

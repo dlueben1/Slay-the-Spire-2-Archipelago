@@ -3,6 +3,13 @@ name: Get StS2 Versions
 
 on:
   workflow_call:
+    inputs:
+      source_ref:
+        description: "Repository ref/SHA to read; defaults to the caller's commit"
+        required: false
+        type: string
+        default: ""
+
     outputs:
       public_api:
         description: "Current supported public StS2 API version"
@@ -32,6 +39,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v5

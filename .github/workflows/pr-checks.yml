@@ -14,6 +14,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  release-scripts:
+    name: Test Release Automation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Run release automation tests
+        run: python -m unittest discover -s scripts/tests -p "test_*.py"
+
   # Grab the StS2 Versions we want to validate against
   versions:
     uses: ./.github/workflows/get-sts2-versions.yml
