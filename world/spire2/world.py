@@ -1,8 +1,10 @@
+import json
 import re
 import string
 import typing
 from collections import defaultdict
 from copy import deepcopy
+from importlib.resources import files
 from typing import List, Optional, Any
 
 from BaseClasses import Item, Location, Region, MultiWorld, ItemClassification, CollectionState
@@ -22,6 +24,11 @@ ELITE_GOLD_ITEM_COUNT = 7
 BOSS_GOLD_ITEM_COUNT = 2
 
 
+def _read_world_version() -> str:
+    manifest = files(__package__).joinpath("archipelago.json")
+    return json.loads(manifest.read_text(encoding="utf-8"))["world_version"]
+
+
 class SlayTheSpire2Item(Item):
     game = "Slay the Spire II"
 
@@ -39,7 +46,7 @@ class SlayTheSpire2World(World):
     web = SlayTheSpire2Web()
     options_dataclass = Spire2Options
     options: Spire2Options
-    mod_compat_version = "1.1.0"
+    mod_compat_version = _read_world_version()
     compat_flag = 1
     origin_region_name = "Neow's Room"
 
