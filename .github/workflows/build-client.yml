@@ -130,10 +130,9 @@ jobs:
           import shutil
 
           shutil.make_archive(
-              "dist/sts2-client",
+              "dist/Archipelago",
               "zip",
-              root_dir="dist",
-              base_dir="Archipelago"
+              root_dir="dist/Archipelago"
           )
           PY
 
@@ -146,7 +145,7 @@ jobs:
             echo ""
             echo "Successfully built:"
             echo ""
-            echo "- \`sts2-client.zip\`"
+            echo "- \`Archipelago.zip\`"
             echo "- \`spire2.apworld\`"
             echo ""
             echo "#### Client contents"
@@ -161,7 +160,7 @@ jobs:
         with:
           name: sts2-package-${{ inputs.sts2_api_compat }}
           path: |
-            dist/sts2-client.zip
+            dist/Archipelago.zip
             dist/spire2.apworld
           if-no-files-found: error
           retention-days: 14
