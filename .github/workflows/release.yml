@@ -316,6 +316,23 @@ jobs:
             exit 1
           fi
 
+      - name: Create release tag
+        env:
+          CLIENT_VERSION: ${{ needs.prepare.outputs.new_client_version }}
+          RELEASE_SHA: ${{ needs.prepare.outputs.release_sha }}
+        shell: bash
+        run: |
+          git tag "$CLIENT_VERSION" "$RELEASE_SHA"
+          git push origin "refs/tags/$CLIENT_VERSION"
+
+          remote_tag=$(git ls-remote origin \
+            "refs/tags/$CLIENT_VERSION" | awk '{print $1}')
+
+          if [[ "$remote_tag" != "$RELEASE_SHA" ]]; then
+            echo "::error::Release tag $CLIENT_VERSION points to '$remote_tag', not release commit $RELEASE_SHA."
+            exit 1
+          fi
+
       - name: Create draft GitHub Release
         env:
           CLIENT_VERSION: ${{ needs.prepare.outputs.new_client_version }}
@@ -326,8 +343,8 @@ jobs:
         run: |
           gh release create "$CLIENT_VERSION" \
             --draft \
+            --verify-tag \
             --title "$CLIENT_VERSION" \
-            --target "$RELEASE_SHA" \
             --notes-file release-assets/release-notes.md \
             release-assets/Archipelago.zip \
             "release-assets/spire2-${WORLD_VERSION}.apworld"
