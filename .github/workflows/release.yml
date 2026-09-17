@@ -17,7 +17,9 @@ concurrency:
 jobs:
   labels:
     name: Validate Release Labels
-    if: github.event.pull_request.merged == true
+    if: >-
+      github.repository == 'dlueben1/Slay-the-Spire-2-Archipelago' &&
+      github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     outputs:
@@ -127,9 +129,10 @@ jobs:
             client/StS2AP/StS2AP.csproj)
 
           if [[ "$WORLD_CHANGED" == "true" ]]; then
-            expected=$(printf '%s\n%s\n' \
+            expected=$(printf '%s\n' \
               "$expected" \
-              world/spire2/archipelago.json)
+              world/spire2/archipelago.json \
+              world/spire2/world.py)
           fi
 
           actual=$(git diff --name-only | sort)
@@ -179,7 +182,7 @@ jobs:
             client/StS2AP/Archipelago.json
 
           if [[ "$WORLD_CHANGED" == "true" ]]; then
-            git add world/spire2/archipelago.json
+            git add world/spire2/archipelago.json world/spire2/world.py
           fi
 
           git commit -m "$NEW_CLIENT_VERSION"
@@ -251,6 +254,7 @@ jobs:
 
       - name: Stage and verify release assets
         env:
+          CLIENT_VERSION: ${{ needs.prepare.outputs.new_client_version }}
           WORLD_VERSION: ${{ needs.prepare.outputs.new_world_version }}
         shell: bash
         run: |
@@ -263,26 +267,16 @@ jobs:
             "release-assets/spire2-${WORLD_VERSION}.apworld"
 
           python - <<'PY'
+          import os
           from pathlib import Path
           from zipfile import ZipFile
+          from scripts.client_archive import verify_client_archive
 
           archive = Path("release-assets/Archipelago.zip")
+          verify_client_archive(archive, os.environ["CLIENT_VERSION"])
           standalone = Path("release-input/spire2.apworld")
-          required = {
-              "Archipelago.dll",
-              "Archipelago.pck",
-              "Archipelago.json",
-              "spire2.apworld",
-          }
 
           with ZipFile(archive) as package:
-              names = set(package.namelist())
-              missing = sorted(required - names)
-              if missing:
-                  raise SystemExit(
-                      "Archipelago.zip is missing required root files: "
-                      + ", ".join(missing)
-                  )
               if package.read("spire2.apworld") != standalone.read_bytes():
                   raise SystemExit(
                       "The APWorld in Archipelago.zip differs from the standalone build."
@@ -414,17 +408,3 @@ jobs:
             echo "- Archipelago.zip"
             echo "- spire2-${WORLD_VERSION}.apworld"
           } >> "$GITHUB_STEP_SUMMARY"
-
-  workshop:
-    name: Publish to Steam Workshop
-
-    needs:
-      - release
-      - prepare
-      - versions
-
-    uses: ./.github/workflows/publish-workshop.yml
-
-    with:
-      artifact_name: sts2-package-${{ needs.versions.outputs.public_api }}
-      client_version: ${{ needs.prepare.outputs.new_client_version }}

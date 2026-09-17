@@ -32,6 +32,10 @@ class PrepareReleaseTests(unittest.TestCase):
             json.dumps({"world_version": world}, indent=2) + "\n",
             encoding="utf-8",
         )
+        (world_dir / "world.py").write_text(
+            f'class SlayTheSpire2World:\n    mod_compat_version = "{world}"\n',
+            encoding="utf-8",
+        )
         return temporary, root
 
     def test_semver_bumps(self):
@@ -72,6 +76,7 @@ class PrepareReleaseTests(unittest.TestCase):
         self.assertEqual(outputs["new_client_version"], "1.2.0")
         self.assertEqual(outputs["new_world_version"], "1.1.1")
         self.assertEqual(outputs["world_changed"], "true")
+        self.assertIn(outputs["new_world_version"], (root / "world/spire2/world.py").read_text())
 
     def test_client_major_and_world_minor(self):
         temporary, root = self.make_repo(client="2.7.9", world="4.8.6")
@@ -93,6 +98,18 @@ class PrepareReleaseTests(unittest.TestCase):
         self.assertEqual(
             (root / "client/StS2AP/StS2AP.csproj").read_bytes(), project_before
         )
+
+    def test_mismatched_world_versions_fail_without_writes(self):
+        temporary, root = self.make_repo()
+        self.addCleanup(temporary.cleanup)
+        (root / "world/spire2/world.py").write_text(
+            'class SlayTheSpire2World:\n    mod_compat_version = "0.0.0"\n'
+        )
+        project = root / "client/StS2AP/StS2AP.csproj"
+        before = project.read_bytes()
+        with self.assertRaisesRegex(VersionError, "disagree"):
+            prepare_release(root, "patch", "patch")
+        self.assertEqual(project.read_bytes(), before)
 
     def test_malformed_version_fails(self):
         temporary, root = self.make_repo(client="1.1")

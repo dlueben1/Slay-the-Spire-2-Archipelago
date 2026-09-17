@@ -23,6 +23,7 @@ from enum import Enum, auto
 
 from worlds.spire2.characters import character_list
 from worlds.spire2.constants import CHAR_OFFSET, NUM_CUSTOM
+from .coop import MAX_PLAYERS, expand_player_groups, player_id, player_name
 
 MAX_CARD_REWARDS = 20
 # 17 floors act 1
@@ -100,7 +101,7 @@ def create_location_data() -> typing.List[LocationData]:
 def create_location_tables(vanilla_chars: typing.List[str], extras: int) -> typing.Tuple[dict[str, int], dict[
     typing.Union[str, int],dict[str,LocationData]],dict[int,LocationData]]:
     loc_name_to_id = dict()
-    characters_to_locs: dict[typing.Union[str, int],dict[str, LocationData]] = defaultdict(lambda: dict())
+    characters_to_locs: dict[typing.Union[str, int],dict[str, LocationData]] = defaultdict(dict)
     ids_to_data: dict[int, LocationData] = dict()
     char_num = 0
 
@@ -172,3 +173,11 @@ def create_location_groups(
 
 
 location_groups = create_location_groups(characters_to_locs)
+
+_base_locations = dict(location_table)
+_base_location_data = dict(loc_ids_to_data)
+for number in range(2, MAX_PLAYERS + 1):
+    location_table.update({player_name(name, number): player_id(code, number)
+                           for name, code in _base_locations.items()})
+    loc_ids_to_data.update({player_id(code, number): data for code, data in _base_location_data.items()})
+expand_player_groups(location_groups, character_list + [f"Custom Character {n}" for n in range(1, NUM_CUSTOM + 1)])

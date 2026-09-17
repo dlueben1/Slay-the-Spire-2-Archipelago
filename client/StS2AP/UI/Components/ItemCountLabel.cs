@@ -3,8 +3,6 @@ using MegaCrit.Sts2.addons.mega_text;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Nodes.HoverTips;
-using StS2AP.Utils;
-using System;
 
 namespace StS2AP.UI.Components
 {
@@ -107,7 +105,8 @@ namespace StS2AP.UI.Components
             {
                 try
                 {
-                    var tipSet = NHoverTipSet.CreateAndShow(Root, _hoverTip);
+                    var tipSet = NHoverTipSet.CreateAndShow(Root, _hoverTip)
+                        ?? throw new InvalidOperationException("The game did not create a hover-tip set");
 
                     // Get the viewport size to calculate screen center
                     var viewportSize = Root.GetViewportRect().Size;

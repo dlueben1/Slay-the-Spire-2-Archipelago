@@ -1,10 +1,6 @@
-using System;
-using System.Reflection;
-using System.Threading;
 using Godot;
 using MegaCrit.Sts2.addons.mega_text;
 using MegaCrit.Sts2.Core.Nodes.Debug;
-using StS2AP.Models;
 using StS2AP.Utils;
 using STS2RitsuLib;
 using static StS2AP.Utils.NotificationUtility;
@@ -215,6 +211,13 @@ namespace StS2AP.UI
         /// </summary>
         public static void ShowMessage(ArchipelagoNotification notification)
         {
+            Control? rootPanel = _rootPanel;
+            if (rootPanel == null || !IsInstanceValid(rootPanel))
+            {
+                LogUtility.Warn("Cannot show an Archipelago notification before its UI is available");
+                return;
+            }
+
             // Set the message text
             SetMessage(notification.Message);
 
@@ -225,10 +228,10 @@ namespace StS2AP.UI
             }
 
             // Fade in
-            _rootPanel.Modulate = new Color(1, 1, 1, 0); // Start transparent
-            _rootPanel.Visible = true;
-            _fadeTween = _rootPanel.CreateTween();
-            _fadeTween.TweenProperty(_rootPanel, "modulate", new Color(1, 1, 1, 1), 0.3);
+            rootPanel.Modulate = new Color(1, 1, 1, 0); // Start transparent
+            rootPanel.Visible = true;
+            _fadeTween = rootPanel.CreateTween();
+            _fadeTween.TweenProperty(rootPanel, "modulate", new Color(1, 1, 1, 1), 0.3);
 
             ResetTimer(notification.DisplayDuration);
         }
@@ -301,7 +304,7 @@ namespace StS2AP.UI
         }
 
         /// <summary>
-        /// Obtains the output buffer in the dev console using reflection, if the dev console exists.
+        /// Obtains the output buffer in the dev console, if the dev console exists.
         /// </summary>
         /// <returns></returns>
         private static RichTextLabel? GetDevConsoleBuffer()
@@ -314,14 +317,7 @@ namespace StS2AP.UI
                     return null;
                 }
 
-                var outputBufferInfo = console
-                    .GetType()
-                    .GetField("_outputBuffer", BindingFlags.Instance | BindingFlags.NonPublic);
-                if (outputBufferInfo == null)
-                {
-                    return null;
-                }
-                return (RichTextLabel?)outputBufferInfo.GetValue(console);
+                return console._outputBuffer;
             }
             catch (Exception ex)
             {

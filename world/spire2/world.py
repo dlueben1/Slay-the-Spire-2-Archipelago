@@ -1,32 +1,25 @@
-import json
 import re
 import string
 import typing
-from collections import defaultdict
 from copy import deepcopy
-from importlib.resources import files
 from typing import List, Optional, Any
 
 from BaseClasses import Item, Location, Region, MultiWorld, ItemClassification, CollectionState
 from Options import OptionError
 from worlds.AutoWorld import World
 from .regions import create_regions
-from .rules import set_rules, SpireLogic
+from .rules import set_rules
 from .web_world import SlayTheSpire2Web
 from .characters import CharacterConfig, character_list, character_offset_map
-from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET, ASCENSIONS
+from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET
 from .items import item_table, chars_to_items, universal_items, bonus_item_table, ItemType, base_event_item_pairs, ItemData, item_groups
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType, location_groups
 from .options import Spire2Options
+from .coop import player_name, split_player_name, PLAYER_OFFSET
 
 COMBAT_GOLD_ITEM_COUNT = 13
 ELITE_GOLD_ITEM_COUNT = 7
 BOSS_GOLD_ITEM_COUNT = 2
-
-
-def _read_world_version() -> str:
-    manifest = files(__package__).joinpath("archipelago.json")
-    return json.loads(manifest.read_text(encoding="utf-8"))["world_version"]
 
 
 class SlayTheSpire2Item(Item):
@@ -46,7 +39,7 @@ class SlayTheSpire2World(World):
     web = SlayTheSpire2Web()
     options_dataclass = Spire2Options
     options: Spire2Options
-    mod_compat_version = _read_world_version()
+    mod_compat_version = "2.2.0"
     compat_flag = 1
     origin_region_name = "Neow's Room"
 
@@ -64,6 +57,7 @@ class SlayTheSpire2World(World):
     def __init__(self, mw: MultiWorld, player: int):
         super().__init__(mw, player)
         self.characters: List[CharacterConfig] = []
+        self.player_characters: dict[int, List[CharacterConfig]] = {}
         self.modded_num: int = 0
         self.modded_chars: List[CharacterConfig] = []
         self.total_shop_locations: int = 0
@@ -78,50 +72,65 @@ class SlayTheSpire2World(World):
         else:
             self._handle_advanced_chars()
 
-        if not self.characters:
+        if not self.player_characters or any(not configs for configs in self.player_characters.values()):
             raise OptionError("At least one character must be configured")
         if self.options.include_floor_checks.value == 0:
             # Progressive starter items replace floor-check filler. Without those locations there
             # is no filler budget for them, so normalize both global toggles to disabled.
             self.options.progressive_starter_card.value = 0
             self.options.progressive_starter_relic.value = 0
-        names = set()
-        for config in self.characters:
-            # self.logger.info("StS: Got character configuration" + str(config))
-            names.add(config.official_name)
-        if len(names) != len(self.characters):
-            raise OptionError(f"Found duplicate characters: {[x.official_name for x in self.characters]}")
-        for config in self.characters:
-            if not config.locked:
-                break
-        else:
-            raise OptionError("No character started unlocked!")
+        for number, configs in self.player_characters.items():
+            names = {config.official_name for config in configs}
+            if len(names) != len(configs):
+                raise OptionError(
+                    f"Found duplicate characters for Player {number}: {[x.official_name for x in configs]}"
+                )
+            if not any(not config.locked for config in configs):
+                raise OptionError(f"No character started unlocked for Player {number}!")
+            modded_chars = [config for config in configs if config.mod_num > 0]
+            if len(modded_chars) > NUM_CUSTOM:
+                raise OptionError(
+                    f"StS 2 only supports {NUM_CUSTOM} modded characters per player; "
+                    f"Player {number} got {len(modded_chars)}: {[x.option_name for x in modded_chars]}"
+                )
         self.total_shop_items = (self.options.shop_card_slots.value + self.options.shop_neutral_card_slots.value +
                                  self.options.shop_relic_slots.value + self.options.shop_potion_slots.value)
         self.total_shop_locations = self.total_shop_items + (3 if self.options.shop_remove_slots else 0)
         if self.total_shop_locations <= 0:
             self.options.shop_sanity.value = 0
-        if len(self.modded_chars) > NUM_CUSTOM:
-            raise OptionError(f"StS 2 only supports {NUM_CUSTOM} modded characters; got {len(self.modded_chars)}: {[x.option_name for x in self.modded_chars]}")
         num_chars_goal = self.options.num_chars_goal.value
-        if num_chars_goal != 0:
-            if num_chars_goal > len(self.characters):
-                self.options.num_chars_goal.value = 0
-        for char in self.characters:
-            if not char.locked:
-                self.options.start_inventory.value[f"{char.name} Unlock"] = 1
+        if num_chars_goal != 0 and any(num_chars_goal > len(configs)
+                                       for configs in self.player_characters.values()):
+            self.options.num_chars_goal.value = 0
+        self._setup_players()
         # for weight in self.options.trap_weights.values():
         #     if weight > 0:
         #         break
         # else:
         #     self.options.trap_chance.value = 0
 
-    def _get_unlocked_char(self, characters: List[str]) -> Optional[str]:
+    @property
+    def all_player_characters(self) -> List[CharacterConfig]:
+        return [config for configs in self.player_characters.values() for config in configs]
+
+    def _setup_players(self) -> None:
+        count = self.options.player_count.value
+        # A YAML's unqualified starting items apply independently to every player.
+        original_inventory = dict(self.options.start_inventory.value)
+        for number in range(2, count + 1):
+            for name, amount in original_inventory.items():
+                if split_player_name(name)[0] == 1:
+                    self.options.start_inventory.value[player_name(name, number)] = amount
+        for config in self.all_player_characters:
+            if not config.locked:
+                self.options.start_inventory.value[f"{config.ap_name} Unlock"] = 1
+
+    def _get_unlocked_char(self, characters: List[str], player_number: int) -> Optional[str]:
         if len(characters) <= 0:
             raise OptionError("At least one character must be selected.")
         locked_opt = self.options.lock_characters.value
         unlocked_char = None
-        if locked_opt == 1:
+        if locked_opt == 1 or (locked_opt == 2 and player_number > 1):
             unlocked_char = self.random.choice([x for x in characters])
         elif locked_opt == 2:
             unlocked_char_value = self.options.unlocked_character.value
@@ -137,45 +146,44 @@ class SlayTheSpire2World(World):
                 for char in characters:
                     if char.lower() == unlocked_char_value.lower():
                         return char
-                else:
-                    # We really shouldn't be able to get here anymore...but if we do, let us know, because it means this logic needs more work...
-                    raise OptionError(
-                        f"Configured {unlocked_char_value} as the first unlocked character, but was not one of: {characters}")
+                # We really shouldn't be able to get here anymore...but if we do, let us know, because it means this logic needs more work...
+                raise OptionError(
+                    f"Configured {unlocked_char_value} as the first unlocked character, but was not one of: {characters}")
         return unlocked_char
+
+    def _select_character_names(self, char_options: List[str], unlocked_char: Optional[str]) -> List[str]:
+        num_rand_chars = self.options.pick_num_characters.value
+        if num_rand_chars == 0 or num_rand_chars >= len(char_options):
+            return list(char_options)
+
+        remaining = list(char_options)
+        if unlocked_char is not None:
+            remaining.remove(unlocked_char)
+            selected_chars = [unlocked_char] + self.random.sample(remaining, k=num_rand_chars - 1)
+        else:
+            selected_chars = self.random.sample(remaining, k=num_rand_chars)
+
+        modded_chars = [char for char in selected_chars if char.lower() not in character_offset_map]
+        if len(modded_chars) <= NUM_CUSTOM:
+            return selected_chars
+
+        supported_chars = sorted(
+            char for char in char_options
+            if char.lower() in character_offset_map and char not in selected_chars
+        )
+        replace_num = len(modded_chars) - NUM_CUSTOM
+        if unlocked_char in modded_chars:
+            modded_chars.remove(unlocked_char)
+        for char in self.random.sample(modded_chars, k=replace_num):
+            selected_chars.remove(char)
+        selected_chars.extend(self.random.sample(supported_chars, k=min(replace_num, len(supported_chars))))
+        return selected_chars
 
     def _handle_basic_chars(self) -> None:
         selected_chars = list(self.options.characters.value)
         selected_chars.extend(self.options.modded_characters.value)
         char_options = sorted(selected_chars)
-        num_rand_chars = self.options.pick_num_characters.value
-        unlocked_char = self._get_unlocked_char(char_options)
         include_ascension_down = self.options.include_floor_checks.value != 0
-        if num_rand_chars != 0 and num_rand_chars < len(char_options):
-            selected_chars = list(char_options)
-            if self.options.lock_characters.value != 0:
-                if unlocked_char in selected_chars:
-                    selected_chars.remove(unlocked_char)
-                selected_chars = [unlocked_char] + self.random.sample(selected_chars, k=num_rand_chars - 1)
-            else:
-                selected_chars = self.random.sample(selected_chars, k=num_rand_chars)
-            modded_num = 0
-            modded_chars = []
-            for char in selected_chars:
-                if character_offset_map.get(char.lower(), None) is None:
-                    modded_num += 1
-                    modded_chars.append(char)
-            if modded_num > NUM_CUSTOM:
-                supported_chars = sorted(
-                    {x for x in char_options if x.lower() in character_offset_map and x not in selected_chars})
-                replace_num = modded_num - NUM_CUSTOM
-                if unlocked_char in modded_chars:
-                    modded_chars.remove(unlocked_char)
-                remove_me = self.random.sample(modded_chars, k=replace_num)
-                for remove in remove_me:
-                    selected_chars.remove(remove)
-                selected_chars += self.random.sample(supported_chars, k=min(replace_num, len(supported_chars)))
-        else:
-            selected_chars = char_options
 
         ascension_down: typing.Set[str] = self.options.ascension_down.value
         ascension: typing.Set[str] = self.options.ascension.value
@@ -185,54 +193,61 @@ class SlayTheSpire2World(World):
             ascension_down = set()
         ascension_down = ascension.intersection(ascension_down)
 
-        for option_name in selected_chars:
-            mod_num = 0
-            char_offset = character_offset_map.get(option_name.lower(), None)
-            if char_offset is None:
-                self.modded_num += 1
-                mod_num = self.modded_num
-                char_offset = mod_num + len(character_list)
-                name = f"Custom Character {mod_num}"
-            else:
-                name = character_list[char_offset - 1]
-            if self.options.seeded:
-                seed = "".join(self.random.choice(string.ascii_letters) for i in range(16))
-            else:
-                seed = ""
-            locked = False if unlocked_char is None or unlocked_char.lower() == option_name.lower() else True
+        seeds = {
+            option_name: "".join(self.random.choice(string.ascii_letters) for _ in range(16))
+            for option_name in char_options
+        } if self.options.seeded else {}
 
-            if not include_ascension_down:
-                ascension_down = set()
-            ascension_down = ascension.intersection(ascension_down)
-            config = CharacterConfig(name,
-                                     option_name,
-                                     char_offset,
-                                     mod_num,
-                                     seed,
-                                     locked,
-                                     ascension=ascension,
-                                     ascension_down=ascension_down)
-            self.characters.append(config)
-            if config.mod_num > 0:
-                self.modded_chars.append(config)
+        for number in range(1, self.options.player_count.value + 1):
+            unlocked_char = self._get_unlocked_char(char_options, number)
+            selected_chars = self._select_character_names(char_options, unlocked_char)
+            configs = []
+            modded_num = 0
+            for option_name in selected_chars:
+                mod_num = 0
+                char_offset = character_offset_map.get(option_name.lower(), None)
+                if char_offset is None:
+                    modded_num += 1
+                    mod_num = modded_num
+                    char_offset = mod_num + len(character_list)
+                    name = f"Custom Character {mod_num}"
+                else:
+                    name = character_list[char_offset - 1]
+                locked = unlocked_char is not None and unlocked_char.lower() != option_name.lower()
+                configs.append(CharacterConfig(
+                    name,
+                    option_name,
+                    char_offset,
+                    mod_num,
+                    seeds.get(option_name, ""),
+                    locked,
+                    ascension=ascension,
+                    ascension_down=ascension_down,
+                    player_number=number,
+                ))
+            self.player_characters[number] = configs
+
+        self.characters = self.player_characters[1]
+        self.modded_chars = [config for config in self.characters if config.mod_num > 0]
+        self.modded_num = len(self.modded_chars)
 
 
     def _to_ascensions(self, ascensions: typing.Set[str]) -> typing.Set[str]:
         ret = set()
         if len(ascensions) == 1:
             try:
-                number = int(list(ascensions)[0])
+                number = int(next(iter(ascensions)))
                 for i in range(0, number):
                     ret.add(ASCENSION_LIST[i].lower())
                 return ret
-            except:
+            except (TypeError, ValueError, IndexError):
                 return {asc.lower() for asc in ascensions}
 
         for asc in ascensions:
             try:
                 number = int(asc)
                 ret.add(ASCENSION_LIST[number - 1].lower())
-            except:
+            except (TypeError, ValueError, IndexError):
                 ret.add(asc.lower())
         return ret
 
@@ -240,7 +255,7 @@ class SlayTheSpire2World(World):
         ret = set()
         if len(ascension_downs) == 1:
             try:
-                number = int(list(ascension_downs)[0])
+                number = int(next(iter(ascension_downs)))
                 asc_list = ASCENSION_LIST[::-1]
                 count = 0
                 for i in range(0, len(asc_list)):
@@ -251,14 +266,14 @@ class SlayTheSpire2World(World):
                     if count >= len(ascensions) or count >= number:
                         break
                 return ret
-            except:
+            except (TypeError, ValueError, IndexError):
                 return {asc.lower() for asc in ascension_downs}
 
         for asc in ascension_downs:
             try:
                 number = int(asc)
                 ret.add(ASCENSION_LIST[number - 1].lower())
-            except:
+            except (TypeError, ValueError, IndexError):
                 ret.add(asc.lower())
         return ret
 
@@ -266,77 +281,63 @@ class SlayTheSpire2World(World):
     def _handle_advanced_chars(self) -> None:
         advanced_chars = self.options.advanced_characters.keys()
         char_options = sorted(advanced_chars)
-        num_rand_chars = self.options.pick_num_characters.value
-        unlocked_char = self._get_unlocked_char(char_options)
         include_ascension_down = self.options.include_floor_checks.value != 0
-        if num_rand_chars != 0 and num_rand_chars < len(char_options):
-            selected_chars = list(char_options)
-            if self.options.lock_characters.value != 0:
-                if unlocked_char in selected_chars:
-                    selected_chars.remove(unlocked_char)
-                selected_chars = [unlocked_char] + self.random.sample(selected_chars, k=num_rand_chars - 1)
-            else:
-                selected_chars = self.random.sample(selected_chars, k=num_rand_chars)
+        seeds = {
+            option_name: "".join(self.random.choice(string.ascii_letters) for _ in range(16))
+            for option_name in char_options
+        } if self.options.seeded else {}
+
+        for number in range(1, self.options.player_count.value + 1):
+            unlocked_char = self._get_unlocked_char(char_options, number)
+            selected_chars = self._select_character_names(char_options, unlocked_char)
+            configs = []
             modded_num = 0
-            modded_chars = []
-            for char in selected_chars:
-                if character_offset_map.get(char.lower(), None) is None:
+            for option_name in selected_chars:
+                options = self.options.advanced_characters[option_name]
+                mod_num = 0
+                char_offset = character_offset_map.get(option_name.lower(), None)
+                if char_offset is None:
                     modded_num += 1
-                    modded_chars.append(char)
-            if modded_num > NUM_CUSTOM:
-                supported_chars = sorted(
-                    {x for x in char_options if x.lower() in character_offset_map and x not in selected_chars})
-                replace_num = modded_num - NUM_CUSTOM
-                if unlocked_char in modded_chars:
-                    modded_chars.remove(unlocked_char)
-                remove_me = self.random.sample(modded_chars, k=replace_num)
-                for remove in remove_me:
-                    selected_chars.remove(remove)
-                selected_chars += self.random.sample(supported_chars, k=min(replace_num, len(supported_chars)))
-        else:
-            selected_chars = char_options
+                    mod_num = modded_num
+                    char_offset = mod_num + len(character_list)
+                    name = f"Custom Character {mod_num}"
+                else:
+                    name = character_list[char_offset - 1]
+                locked = unlocked_char is not None and unlocked_char.lower() != option_name.lower()
+                ascension = self._to_ascensions(options['ascension'])
+                ascension_down = self._to_ascension_downs(options['ascension_down'], ascension)
+                if not include_ascension_down:
+                    ascension_down = set()
+                ascension_down = ascension.intersection(ascension_down)
+                configs.append(CharacterConfig(
+                    name,
+                    option_name,
+                    char_offset,
+                    mod_num,
+                    seeds.get(option_name, ""),
+                    locked,
+                    ascension=ascension,
+                    ascension_down=ascension_down,
+                    player_number=number,
+                ))
+            self.player_characters[number] = configs
 
-        # self.logger.info("Generating with characters %s", selected_chars)
-        for option_name in selected_chars:
-            options = self.options.advanced_characters[option_name]
-            mod_num = 0
-            char_offset = character_offset_map.get(option_name.lower(), None)
-            if char_offset is None:
-                self.modded_num += 1
-                mod_num = self.modded_num
-                char_offset = mod_num + len(character_list)
-                name = f"Custom Character {mod_num}"
-            else:
-                name = character_list[char_offset - 1]
-            if self.options.seeded:
-                seed = "".join(self.random.choice(string.ascii_letters) for i in range(16))
-            else:
-                seed = ""
-            locked = False if unlocked_char is None or unlocked_char.lower() == option_name.lower() else True
-
-            ascension = self._to_ascensions(options['ascension'])
-
-            ascension_down = self._to_ascension_downs(options['ascension_down'], ascension)
-
-            if not include_ascension_down:
-                ascension_down = set()
-            ascension_down = ascension.intersection(ascension_down)
-            config = CharacterConfig(name,
-                                     option_name,
-                                     char_offset,
-                                     mod_num,
-                                     seed,
-                                     locked,
-                                     ascension=ascension,
-                                     ascension_down=ascension_down)
-            self.characters.append(config)
-            if config.mod_num > 0:
-                self.modded_chars.append(config)
+        self.characters = self.player_characters[1]
+        self.modded_chars = [config for config in self.characters if config.mod_num > 0]
+        self.modded_num = len(self.modded_chars)
 
     def create_regions(self) -> None:
         create_regions(self, self.player)
 
-    def create_region(self, player: int, prefix: Optional[str], name: str, config: CharacterConfig, locations: List[str] = None, exits: List[str] =None):
+    def create_region(
+            self,
+            player: int,
+            prefix: Optional[str],
+            name: str,
+            config: CharacterConfig,
+            locations: list[str] | None = None,
+            exits: list[str] | None = None,
+    ):
         ret = Region(f"{prefix} {name}" if prefix is not None else name, player, self.multiworld)
         if locations:
             locs: dict[str, Optional[int]] = dict()
@@ -356,7 +357,7 @@ class SlayTheSpire2World(World):
     # Creates individual items based on the item table
     def create_item(self, name: str) -> SlayTheSpire2Item:
         data = item_table[name]
-        item_id = self.item_name_to_id[name]
+        item_id = data.code
         return SlayTheSpire2Item(data, name, data.classification, item_id, self.player)
 
     def build_filler_pools(self) -> None:
@@ -410,7 +411,7 @@ class SlayTheSpire2World(World):
         self.filler_char_medium: dict = {}
         self.filler_char_low: dict = {}
 
-        for config in self.characters:
+        for config in self.all_player_characters:
             # Resolve the lookup key: vanilla characters use their name, modded characters
             # use their mod_num integer. This matches the chars_to_items dictionary structure.
             #
@@ -425,7 +426,7 @@ class SlayTheSpire2World(World):
                     if ItemType.GOLD == val.type and ItemClassification.filler == val.classification
                 ]
 
-                for item_name, item_data in char_gold_items:
+                for item_name, _ in char_gold_items:
                     if "One Gold" in item_name:
                         weight = self.options.one_gold_filler_weight.value
                     elif "Five Gold" in item_name:
@@ -448,8 +449,8 @@ class SlayTheSpire2World(World):
         # Used when the player has disabled every filler type (all weights set to 0).
         # We pick "One Gold" for a random character as a safe, always-valid default.
         self.filler_fallback: str = "Ironclad One Gold"
-        if self.characters:
-            fallback_char = self.random.choice(self.characters)
+        if self.all_player_characters:
+            fallback_char = self.random.choice(self.all_player_characters)
             fallback_lookup = fallback_char.name if fallback_char.mod_num == 0 else fallback_char.mod_num
             if fallback_lookup in chars_to_items:
                 for item_name in chars_to_items[fallback_lookup]:
@@ -496,8 +497,8 @@ class SlayTheSpire2World(World):
         TIER_LOW_WEIGHT = 17
 
         # If no character was specified, pick one at random.
-        if character is None and self.characters:
-            character = self.random.choice(self.characters).name
+        if character is None and self.all_player_characters:
+            character = self.random.choice(self.all_player_characters).name
 
         # Merge the universal pools with the character-specific gold pools.
         # List concatenation is cheap here since the pools are pre-built.
@@ -541,16 +542,18 @@ class SlayTheSpire2World(World):
         # Defensive: ensure pools are built before the AP fill algorithm calls us.
         if not hasattr(self, 'filler_universal_high'):
             self.build_filler_pools()
-        return self.get_filler_item()
+        name = self.get_filler_item()
+        return name if self.options.player_count.value == 1 else player_name(
+            name, self.random.randint(1, self.options.player_count.value))
 
     def create_items(self) -> None:
         # Pre-compute filler item pools once here so `get_filler_item()` is just a simple lookup
         self.build_filler_pools()
 
         pool = []
-        filler_counts: list[tuple[str, int]] = []
+        filler_counts: list[tuple[CharacterConfig, int]] = []
         card_reward_count = MAX_CARD_REWARDS if self.options.shuffle_all_cards.value else MAX_CARD_REWARDS // 2
-        for config in self.characters:
+        for config in self.all_player_characters:
             char_lookup = config.name if config.mod_num == 0 else config.mod_num
             # ascension_downs = min(config.ascension_down, config.ascension)
             for name, data in chars_to_items[char_lookup].items():
@@ -575,7 +578,7 @@ class SlayTheSpire2World(World):
                     if self.options.lock_characters.value != 0 and config.locked:
                         amount = 1
                     else:
-                        self.push_precollected(self.create_item(name))
+                        self.push_precollected(self.create_item(player_name(name, config.player_number)))
                 elif ItemType.GOLD == data.type:
                     if self.options.gold_sanity.value != 0:
                         if 'Combat Gold' in name:
@@ -603,8 +606,10 @@ class SlayTheSpire2World(World):
                         amount = self.options.shop_potion_slots.value
                     elif ItemType.SHOP_REMOVE == data.type and self.options.shop_remove_slots.value != 0:
                         amount = 3
-                for _ in range(amount):
-                    pool.append(self.create_item(name))
+                pool.extend(
+                    self.create_item(player_name(name, config.player_number))
+                    for _ in range(amount)
+                )
 
             if self.options.include_floor_checks.value:
 
@@ -619,11 +624,11 @@ class SlayTheSpire2World(World):
                     (2 if self.options.progressive_starter_relic.value else 0)
                 )
                 filler_num = remaining_checks - progressive_starter_items
-                filler_counts.append((config.name, filler_num))
+                filler_counts.append((config, filler_num))
             # Pair up our event locations with our event items
             for base_event, base_item in base_event_item_pairs.items():
-                event = f"{config.name} {base_event}"
-                item = f"{config.name} {base_item}"
+                event = f"{config.ap_name} {base_event}"
+                item = f"{config.ap_name} {base_item}"
                 item_data = item_table[item]
                 event_item = SlayTheSpire2Item(item_data, item, item_data.classification, item_data.code, self.player)
                 self.multiworld.get_location(event, self.player).place_locked_item(event_item)
@@ -639,23 +644,26 @@ class SlayTheSpire2World(World):
                 )
             bonus_item_names.append(bonus_data.item_name)
 
-        available_filler_slots = sum(filler_count for _, filler_count in filler_counts)
-        if len(bonus_item_names) > available_filler_slots:
-            raise OptionError(
-                f"Configured {len(bonus_item_names)} Bonus Items, but only "
-                f"{available_filler_slots} filler slots are available."
-            )
+        # Each numbered player owns a complete copy of the configured bonus list.
+        # Charge those bonuses only against that player's floor filler budget.
+        for number in self.player_characters:
+            player_filler_counts = [(config, count) for config, count in filler_counts
+                                    if config.player_number == number]
+            available_filler_slots = sum(count for _, count in player_filler_counts)
+            if len(bonus_item_names) > available_filler_slots:
+                raise OptionError(
+                    f"Configured {len(bonus_item_names)} Bonus Items, but only "
+                    f"{available_filler_slots} filler slots are available for Player {number}."
+                )
 
-        # All fixed per-character rewards are already present. Bonus items now consume
-        # the earliest available filler slots before the weighted filler system runs.
-        pool.extend(self.create_item(item_name) for item_name in bonus_item_names)
-        bonus_slots_remaining = len(bonus_item_names)
-        for character, filler_count in filler_counts:
-            consumed_slots = min(bonus_slots_remaining, filler_count)
-            bonus_slots_remaining -= consumed_slots
-            for _ in range(filler_count - consumed_slots):
-                filler_item_name = self.get_filler_item(character=character)
-                pool.append(self.create_item(filler_item_name))
+            pool.extend(self.create_item(player_name(name, number)) for name in bonus_item_names)
+            bonus_slots_remaining = len(bonus_item_names)
+            for config, filler_count in player_filler_counts:
+                consumed_slots = min(bonus_slots_remaining, filler_count)
+                bonus_slots_remaining -= consumed_slots
+                for _ in range(filler_count - consumed_slots):
+                    filler_item_name = self.get_filler_item(character=config.name)
+                    pool.append(self.create_item(player_name(filler_item_name, number)))
 
         self.multiworld.itempool += pool
 
@@ -686,6 +694,14 @@ class SlayTheSpire2World(World):
     def set_rules(self) -> None:
         set_rules(self)
 
+    @classmethod
+    def stage_fill_hook(cls, multiworld: MultiWorld, progitempool: list[Item],
+                        usefulitempool: list[Item], filleritempool: list[Item],
+                        fill_locations: list[Location]) -> None:
+        from .fill import fill_shared_slots
+        fill_shared_slots(multiworld, multiworld.get_game_worlds(cls.game),
+                          progitempool, fill_locations)
+
     def collect(self, state: CollectionState, item: Item) -> bool:
         change = super().collect(state, item)
         item_data = typing.cast(SlayTheSpire2Item, item).item_data
@@ -710,6 +726,9 @@ class SlayTheSpire2World(World):
 
     def fill_slot_data(self) -> dict:
         slot_data = {
+            'player_count': self.options.player_count.value,
+            'players': {str(number): [c.to_dict() for c in configs]
+                        for number, configs in self.player_characters.items()},
             'characters': [
                 c.to_dict() for c in self.characters
             ],
@@ -725,6 +744,8 @@ class SlayTheSpire2World(World):
             "CompatFlag": self.compat_flag,
         }
         slot_data.update(self.options.as_dict(
+            "lock_characters",
+            "seeded",
             "ascension",
             "num_chars_goal",
             "shuffle_all_cards",
@@ -752,6 +773,8 @@ class SlayTheSpire2World(World):
         return slot_data
 
     def _setup_ut(self, slot_data: dict[str, Any]) -> None:
+        self.options.player_count.value = slot_data['player_count']
+        self.options.lock_characters.value = slot_data['lock_characters']
         self.options.shop_card_slots.value = slot_data["shop_sanity_options"]["card_slots"]
         self.options.shop_remove_slots.value = slot_data["shop_sanity_options"]["card_remove"]
         self.options.shop_neutral_card_slots.value = slot_data["shop_sanity_options"]["neutral_slots"]
@@ -766,10 +789,18 @@ class SlayTheSpire2World(World):
                 char_dict['seed'],
                 char_dict['locked'],
                 ascension=char_dict['ascension'],
+                ascension_down=char_dict['ascension_down'],
             )
             self.characters.append(config)
             if char_dict['mod_num'] > 0:
                 self.modded_chars.append(config)
+        self.player_characters = {
+            int(number): [CharacterConfig(
+                c['name'], c['option_name'], c['char_offset'], c['mod_num'], c['seed'], c['locked'],
+                ascension=c['ascension'], ascension_down=c['ascension_down'], player_number=int(number))
+                for c in configs]
+            for number, configs in slot_data['players'].items()
+        }
         self.total_shop_items = (self.options.shop_card_slots.value + self.options.shop_neutral_card_slots.value +
                                  self.options.shop_relic_slots.value + self.options.shop_potion_slots.value)
         self.total_shop_locations = self.total_shop_items + (3 if self.options.shop_remove_slots else 0)
@@ -794,19 +825,22 @@ class SlayTheSpire2World(World):
         self.options.potion_sanity.value = slot_data['potion_sanity']
         self.options.num_chars_goal.value = slot_data['num_chars_goal']
         self.location_id_to_alias: dict[int, str] = dict()
+        modded_chars_by_player = {
+            number: [config for config in configs if config.mod_num > 0]
+            for number, configs in self.player_characters.items()
+        }
         pattern = re.compile("Custom Character [0-9]+ (?P<location_name>.*?)$")
-        # for i in range(1, len(self.modded_chars) + 1):
         for key, value in SlayTheSpire2World.location_id_to_name.items():
-            if key < (len(character_list)) * CHAR_OFFSET:
+            base_key = key % PLAYER_OFFSET
+            if base_key < (len(character_list)) * CHAR_OFFSET:
                 continue
-            modded_index = (key // CHAR_OFFSET) - len(character_list)
-            # self.logger.info(f"Modded index: {modded_index}")
-            # self.logger.info(f"modded_chars index: {self.modded_chars}")
-            if modded_index >= len(self.modded_chars):
+            modded_index = (base_key // CHAR_OFFSET) - len(character_list)
+            number, base_name = split_player_name(value)
+            modded_chars = modded_chars_by_player.get(number, [])
+            if modded_index >= len(modded_chars):
                 continue
-            match = pattern.match(value)
+            match = pattern.match(base_name)
             if match is None:
                 raise Exception("Failed to match " + value)
-            name = self.modded_chars[modded_index].official_name
-            # self.logger.info(name)
-            self.location_id_to_alias[key] = name + " " + match.group("location_name")
+            name = modded_chars[modded_index].official_name
+            self.location_id_to_alias[key] = player_name(name + " " + match.group("location_name"), number)

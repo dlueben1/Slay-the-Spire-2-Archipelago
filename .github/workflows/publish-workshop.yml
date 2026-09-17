@@ -1,30 +1,6 @@
 name: Publish Steam Workshop
 
 on:
-  workflow_call:
-    inputs:
-      artifact_name:
-        description: "GitHub Actions artifact containing Archipelago.zip"
-        required: true
-        type: string
-
-      client_version:
-        description: "Client release version used for the Steam changenote"
-        required: true
-        type: string
-
-    # These names must be declared for the reusable workflow.
-    # Their actual values come from the `workshop` environment below,
-    # after its protection rules have been satisfied.
-    secrets:
-      STEAM_USERNAME:
-        required: false
-
-      STEAM_CONFIG_VDF:
-        required: false
-
-  # Allows retrying ONLY the Steam publication after the GitHub Release
-  # has already been successfully created.
   workflow_dispatch:
     inputs:
       client_version:
@@ -41,15 +17,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-    # This remains the security boundary for BOTH automatic and manual runs.
+    # The Workshop environment protects the manual publication.
     # The job waits for approval before these environment secrets are exposed.
     environment: workshop
 
     steps:
       - name: Validate Workshop configuration
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          ARTIFACT_NAME: ${{ inputs.artifact_name }}
           CLIENT_VERSION: ${{ inputs.client_version }}
           STEAM_USERNAME: ${{ secrets.STEAM_USERNAME }}
           STEAM_CONFIG_VDF: ${{ secrets.STEAM_CONFIG_VDF }}
@@ -70,12 +44,6 @@ jobs:
           [[ -n "$WORKSHOP_ITEM_ID" ]] ||
             missing+=("workshop variable WORKSHOP_ITEM_ID")
 
-          # artifact_name is only needed when called by release.yml.
-          if [[ "$EVENT_NAME" == "workflow_call" ]]; then
-            [[ -n "$ARTIFACT_NAME" ]] ||
-              missing+=("workflow input artifact_name")
-          fi
-
           if (( ${#missing[@]} > 0 )); then
             printf '::error::Missing required Workshop configuration: %s\n' \
               "$(IFS=', '; echo "${missing[*]}")"
@@ -87,19 +55,7 @@ jobs:
             exit 1
           fi
 
-      # Normal release.yml path:
-      # use the artifact produced by this release run.
-      - name: Download release package
-        if: github.event_name == 'workflow_call'
-        uses: actions/download-artifact@v6
-        with:
-          name: ${{ inputs.artifact_name }}
-          path: release-assets
-
-      # Manual retry path:
-      # use Archipelago.zip already attached to the GitHub Release.
       - name: Download package from GitHub Release
-        if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -170,11 +126,7 @@ jobs:
           WORKSHOP_ITEM_ID: ${{ vars.WORKSHOP_ITEM_ID }}
         shell: bash
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            source_description="GitHub Release (manual retry)"
-          else
-            source_description="Release workflow artifact"
-          fi
+          source_description="GitHub Release (manual publication)"
 
           {
             echo "## Steam Workshop Published"

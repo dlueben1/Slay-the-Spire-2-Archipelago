@@ -16,6 +16,7 @@ BUMPS = ("major", "minor", "patch")
 CLIENT_PROJECT = Path("client/StS2AP/StS2AP.csproj")
 CLIENT_MANIFEST = Path("client/StS2AP/Archipelago.json")
 WORLD_MANIFEST = Path("world/spire2/archipelago.json")
+WORLD_SOURCE = Path("world/spire2/world.py")
 
 
 class VersionError(ValueError):
@@ -63,6 +64,8 @@ def prepare_release(repo_root: Path, client_bump: str, world_bump: str) -> dict[
     project_text = read_text(project_path)
     client_manifest_text = read_text(client_manifest_path)
     world_manifest_text = read_text(world_manifest_path)
+    world_source_path = repo_root / WORLD_SOURCE
+    world_source_text = read_text(world_source_path)
 
     project_pattern = re.compile(r"(<Version>)([^<]+)(</Version>)")
     client_pattern = re.compile(r'("version"\s*:\s*")([^"]+)(")')
@@ -97,6 +100,11 @@ def prepare_release(repo_root: Path, client_bump: str, world_bump: str) -> dict[
             f"{CLIENT_MANIFEST} has {manifest_version}."
         )
 
+    source_pattern = re.compile(r"""(mod_compat_version\s*=\s*["'])([^"']+)(["'])""")
+    source_matches = list(source_pattern.finditer(world_source_text))
+    if len(source_matches) != 1 or source_matches[0].group(2) != world_version:
+        raise VersionError("APWorld manifest and mod_compat_version disagree.")
+
     new_client = bump_version(project_version, client_bump)
     if world_bump == "none":
         new_world = world_version
@@ -115,6 +123,10 @@ def prepare_release(repo_root: Path, client_bump: str, world_bump: str) -> dict[
         world_manifest_text, world_pattern, new_world, str(WORLD_MANIFEST)
     )
 
+    new_source_text = replace_exactly_once(
+        world_source_text, source_pattern, new_world, str(WORLD_SOURCE)
+    )
+
     # Validate everything before writing so malformed input cannot cause a partial bump.
     json.loads(new_client_manifest_text)
     json.loads(new_world_manifest_text)
@@ -123,6 +135,7 @@ def prepare_release(repo_root: Path, client_bump: str, world_bump: str) -> dict[
     client_manifest_path.write_bytes(new_client_manifest_text.encode("utf-8"))
     if world_changed:
         world_manifest_path.write_bytes(new_world_manifest_text.encode("utf-8"))
+        world_source_path.write_bytes(new_source_text.encode("utf-8"))
 
     return {
         "old_client_version": project_version,

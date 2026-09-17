@@ -130,18 +130,33 @@ jobs:
             -p:ModsOutputDir="${{ github.workspace }}/dist/Archipelago" \
             -p:GodotExePath="${GODOT_PATH:-godot}"
 
-      - name: Zip the Client for Distribution
+      - name: Compile compatibility loader
+        if: inputs.build_mode == 'CompileOnly'
+        shell: bash
+        run: |
+          public_api=$(dotnet msbuild client/StS2AP/StS2AP.csproj -getProperty:Sts2PublicApiCompat)
+          dotnet build client/StS2AP.Loader/StS2AP.Loader.csproj \
+            --configuration Release \
+            -p:UseSts2RefLib=true \
+            -p:Sts2ApiCompat="$public_api"
+
+      - name: Zip and Validate Client
         if: inputs.build_mode == 'Package'
         shell: bash
         run: |
           python - <<'PY'
+          import json
           import shutil
+          from pathlib import Path
+          from scripts.client_archive import verify_client_archive
 
+          expected_version = json.loads(
+              Path("client/StS2AP/Archipelago.json").read_text(encoding="utf-8")
+          )["version"]
           shutil.make_archive(
-              "dist/Archipelago",
-              "zip",
-              root_dir="dist/Archipelago"
+              "dist/Archipelago", "zip", root_dir="dist/Archipelago"
           )
+          verify_client_archive(Path("dist/Archipelago.zip"), expected_version)
           PY
 
       - name: Review Packaged Files

@@ -1,4 +1,5 @@
 from unittest import TestCase
+from worlds.spire2.coop import MAX_PLAYERS, player_name
 
 from worlds.spire2 import SlayTheSpire2World
 from worlds.spire2.items import chars_to_items, item_groups, item_table, universal_items
@@ -24,7 +25,8 @@ class TestItemGroups(TestCase):
             item_groups["Rare Card Rewards"],
             {name for name in item_table if name.endswith(" Rare Card Reward")},
         )
-        self.assertEqual(item_groups["Buffs"], set(universal_items))
+        self.assertEqual(item_groups["Buffs"], {
+            player_name(name, number) for name in universal_items for number in range(1, MAX_PLAYERS + 1)})
         self.assertEqual(
             {"Ironclad Progressive Rest", "Ironclad Progressive Smith"},
             item_groups["Ironclad Campfire Upgrades"],
@@ -64,7 +66,8 @@ class TestLocationGroups(TestCase):
     def test_act_groups_exclude_option_dependent_card_rewards(self):
         all_act_locations = location_groups["Act 1"] | location_groups["Act 2"] | location_groups["Act 3"]
         numbered_card_rewards = {
-            name for character_locations in characters_to_locs.values()
+            player_name(name, number) for number in range(1, MAX_PLAYERS + 1)
+            for character_locations in characters_to_locs.values()
             for name, data in character_locations.items() if data.type == LocationType.Card_Reward
         }
         unambiguous_locations = {

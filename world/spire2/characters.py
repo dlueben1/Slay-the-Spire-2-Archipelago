@@ -1,4 +1,5 @@
 from typing import List, Any
+from .coop import player_name, power_key
 
 character_list: List[str] = [
     "Ironclad",
@@ -29,6 +30,7 @@ class CharacterConfig:
 
     def __init__(self, name: str, option_name: str, char_offset: int, mod_num: int, seed: str, locked: bool, **kwargs):
         self.name: str = name
+        self.player_number: int = kwargs.get('player_number', 1)
         self.option_name: str = option_name
         self.mod_num = mod_num
         self.char_offset: int = char_offset
@@ -45,9 +47,18 @@ class CharacterConfig:
         else:
             self.ascension_down = []
 
+    @property
+    def ap_name(self) -> str:
+        return player_name(self.name, self.player_number)
+
+    @property
+    def power_key(self) -> int:
+        return power_key(self.char_offset, self.player_number)
+
     def to_dict(self) -> dict[str, Any]:
         return {
             'name': self.name,
+            'player_number': self.player_number,
             'option_name': self.option_name,
             'char_offset': self.char_offset,
             'official_name': self.official_name,
@@ -55,6 +66,7 @@ class CharacterConfig:
             'locked': self.locked,
             'mod_num': self.mod_num,
             'ascension': self.ascension,
+            'ascension_down': self.ascension_down,
         }
 
     def __repr__(self):

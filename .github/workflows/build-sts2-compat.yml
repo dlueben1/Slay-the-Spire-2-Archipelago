@@ -1,0 +1,61 @@
+name: Build STS2 API compatibility
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - experimental-branch
+      - multiplayer-squashed
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sts2-compat-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.game_channel }} (${{ matrix.sts2_api }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - game_channel: main game API
+            sts2_api: 0.107.1
+          - game_channel: beta game API
+            sts2_api: 0.111.0
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build client against ${{ matrix.game_channel }}
+        run: >-
+          dotnet build client/StS2AP/StS2AP.csproj
+          --configuration Release
+          --property:Sts2ApiCompat=${{ matrix.sts2_api }}
+          --property:UseSts2RefLib=true
+          --property:DllOnlyBuild=true
+          --nologo
+
+      - name: Verify manifests after compile-only validation
+        env:
+          STS2AP_TEST_ASSEMBLY: ${{ github.workspace }}/client/StS2AP/obj/${{ matrix.sts2_api }}/Release/net9.0/Archipelago.dll
+        run: |
+          dotnet build client/StS2AP/StS2AP.csproj -c Release -t:Compile --no-restore -p:Sts2ApiCompat=${{ matrix.sts2_api }} -p:UseSts2RefLib=true -p:DllOnlyBuild=true --nologo
+          dotnet test client/StS2AP.RegressionTests/StS2AP.RegressionTests.csproj -c Release --filter Category=Manifest
+      - name: Verify manifests after incremental build
+        env:
+          STS2AP_TEST_ASSEMBLY: ${{ github.workspace }}/client/StS2AP/bin/${{ matrix.sts2_api }}/Release/net9.0/Archipelago.dll
+        run: |
+          dotnet build client/StS2AP/StS2AP.csproj -c Release --no-restore -p:Sts2ApiCompat=${{ matrix.sts2_api }} -p:UseSts2RefLib=true -p:DllOnlyBuild=true --nologo
+          dotnet test client/StS2AP.RegressionTests/StS2AP.RegressionTests.csproj -c Release --no-build --filter Category=Manifest

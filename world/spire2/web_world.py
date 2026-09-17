@@ -2,7 +2,7 @@ from BaseClasses import Tutorial
 from worlds.AutoWorld import WebWorld
 from Options import Accessibility, OptionGroup, ProgressionBalancing
 from .options import (
-    Characters, ModdedCharacters, DeathLink, DeathLinkDamagePercent, EnableDeathFragments, PickNumberCharacters, GoalNumChar,
+    PlayerCount, Characters, ModdedCharacters, DeathLink, DeathLinkDamagePercent, EnableDeathFragments, PickNumberCharacters, GoalNumChar,
     LockCharacters, UnlockedCharacter, Ascension, AscensionDown, AdvancedChar, CharacterOptions,
     IncludeFloorChecks, NeowSanity, CampfireSanity, GoldSanity, PotionSanity,
     ShopSanity, ShopCardSlots, ShopNeutralSlots, ShopRelicSlots, ShopPotionSlots, ShopRemoveSlots, ShopSanityCosts,
@@ -13,7 +13,6 @@ from .options import (
     DexterityFillerWeight, StrengthFillerWeight, PlatingFillerWeight,
     FriendshipFillerWeight, PostCombatCardUpgradeFillerWeight, PostCombatCardRemovalFillerWeight,
     AdditionalCardRewardFillerWeight, BufferFillerWeight, VigorFillerWeight, ThornsFillerWeight, ArtifactFillerWeight,
-    SingleColorlessCardFillerWeight,
 )
 
 # The info needed for the Archipelago Website, not the actual `apworld`
@@ -41,6 +40,7 @@ class SlayTheSpire2Web(WebWorld):
             AscensionDown,
         ]),
         OptionGroup("Game Options", [
+            PlayerCount,
             ProgressionBalancing,
             Accessibility,
             AncientRelicLocation,
@@ -49,7 +49,7 @@ class SlayTheSpire2Web(WebWorld):
             ProgressiveStarterCard,
             ProgressiveStarterRelic,
             CardReward,
-        ]),        
+        ]),
         OptionGroup("Sanities", [
             IncludeFloorChecks,
             NeowSanity,

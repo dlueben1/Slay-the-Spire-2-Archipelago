@@ -4,11 +4,11 @@
   "sources": {
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "2bd08bbaf53b7fa234cc497b54a3201597e3956cda5e5e7fc4916a41d83495dd"
+      "sha256": "219755f34cfa8874018a90e4fb51fc7b623c31ce41e717278c9253642eeb9d96"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "c70b9a2d23b6e11fd67eb4f32a468fa13bdbc84affdbd2aa70b7d017d4bebbd7"
+      "sha256": "3bc4ad644e642a88312fe747a898ab194b41aa4d203be5a6db29127512351198"
     }
   },
   "option_order": [
@@ -23,6 +23,7 @@
     "priority_locations",
     "item_links",
     "plando_items",
+    "player_count",
     "characters",
     "modded_characters",
     "pick_num_characters",
@@ -93,6 +94,9 @@
     {
       "name": "Game Options",
       "option_keys": [
+        "player_count",
+        "progression_balancing",
+        "accessibility",
         "ancient_relic_location",
         "ancient_relic_pool",
         "relic_rewards_available_anytime",
@@ -177,8 +181,6 @@
     {
       "name": "Common Archipelago Options",
       "option_keys": [
-        "progression_balancing",
-        "accessibility",
         "local_items",
         "non_local_items",
         "start_inventory",
@@ -223,7 +225,7 @@
         "extreme": 99
       },
       "supports_weighting": true,
-      "group": "Common Archipelago Options"
+      "group": "Game Options"
     },
     "accessibility": {
       "key": "accessibility",
@@ -276,7 +278,7 @@
         }
       ],
       "supports_weighting": true,
-      "group": "Common Archipelago Options"
+      "group": "Game Options"
     },
     "local_items": {
       "key": "local_items",
@@ -506,6 +508,32 @@
       "supports_weighting": false,
       "group": "Common Archipelago Options"
     },
+    "player_count": {
+      "key": "player_count",
+      "class_name": "PlayerCount",
+      "module": "worlds.spire2.options",
+      "kind": "range",
+      "display_name": "Player Count",
+      "description": "Number of co-op players sharing this AP slot, each with separate items, checks and goals.\nEach player independently rolls their own character roster. Random locks choose one seeded start per player.\nFixed locks give Player 1 the configured start and choose a seeded random start for every other player.\nUnlocked makes every character in each player's roster available immediately.\nEach client must select its own player number before connecting.",
+      "default": 1,
+      "raw_default": 1,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "minimum": 1,
+      "maximum": 4,
+      "supports_weighting": true,
+      "group": "Game Options"
+    },
     "characters": {
       "key": "characters",
       "class_name": "Characters",
@@ -549,7 +577,7 @@
       "module": "worlds.spire2.options",
       "kind": "set",
       "display_name": "Modded Characters",
-      "description": "Enter the list of modded characters to play as.  These must be the internal names of the\ncharacters.  This option is ignored if use_advanced_characters is set to true.  Only 5\nmodded characters are allowed.\n\nIf using a modded character:\nEnter the internal ID of the character to use.\n\nIf you don't know the exact ID to enter with the mod installed go to\n`Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.\n\nIf the chosen character mod is not installed, checks will be sent when another character\nsends them.  If none of the chosen character mods are installed, you will be playing\na very boring Ironclad run.",
+      "description": "Modded characters to include when Advanced Characters is disabled. Enter each character's\ninternal ID. At most 5 modded characters can be present in the generated character set.\n\nIf using a modded character:\nEnter the internal ID of the character to use.\n\nIf you don't know the exact ID to enter with the mod installed go to\n`Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.\n\nEvery configured character must be installed with the matching internal ID. The client\nrejects the AP connection if a configured character cannot be loaded.",
       "default": [],
       "raw_default": [],
       "visibility": {
@@ -575,7 +603,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Pick Number of Characters",
-      "description": "Randomly select from the configured characters this many characters to generate for.\n0 disables.\nFor example, if \"character\" is configured to be:\n    character:\n        - Ironclad\n        - Silent\n        - Defect\nAnd pick_num_characters is set to 2, then one possible outcome is\nto have a run with Ironclad and Defect, but not the Silent.",
+      "description": "Randomly select from the configured characters this many characters for each player to generate for.\nEach player's selection is rolled independently, and selections may overlap.\n0 gives every player all configured characters.\nFor example, if \"character\" is configured to be:\n    characters:\n        - Ironclad\n        - Silent\n        - Defect\nand pick_num_characters is 2, one possible generated set is Ironclad and Defect.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -627,7 +655,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Lock Characters",
-      "description": "Whether in a multi character run \"Unlock [Char]\" items should be shuffled in.\nlocked_fixed means the unlocked_character option is used to determine which character to start with\nlocked_random means which character you start with is randomized\nunlocked means you start with all characters available",
+      "description": "Whether in a multi character run \"Unlock [Char]\" items should be shuffled in.\nlocked_fixed uses unlocked_character for Player 1 and randomizes the starting character for other players.\nlocked_random independently randomizes which character each player starts with.\nunlocked makes every character in each player's roster available.",
       "default": "locked_random",
       "raw_default": 1,
       "visibility": {
@@ -668,7 +696,7 @@
       "module": "worlds.spire2.options",
       "kind": "text_choice",
       "display_name": "Unlocked Character",
-      "description": "Which character to start unlocked, if lock_characters is set to locked_fixed.\nCan also enter a character name for modded characters.",
+      "description": "Which character Player 1 starts with, if lock_characters is set to locked_fixed.\nCan also enter a character name for modded characters.",
       "default": "ironclad",
       "raw_default": 0,
       "visibility": {
@@ -720,7 +748,7 @@
       "module": "worlds.spire2.options",
       "kind": "set",
       "display_name": "Ascension",
-      "description": "What Ascensions do you wish to play with. Note that logic is written assuming ascension 1\nValid values are the numbers for the ascensions, and the names for the ascensions.  When a number is provided\nalone, all ascensions below that number will also be enabled.\n\nThe ascension names are as follows:\n- 'SwarmingElites'\n- 'WearyTraveler'\n- 'Poverty'\n- 'TightBelt'\n- \"AscenderBane\"\n- 'Inflation'\n- 'Scarcity'\n- 'ToughEnemies'\n- 'DeadlyEnemies'\n- 'DoubleBoss'",
+      "description": "Logic assumes Ascension 1 is enabled for relic checks. A single number N enables Ascensions 1 through N.\nWhen multiple values are supplied, each number enables only that numbered Ascension. You can also provide\nnames which are shown below. Names are case-sensitive.\n\n The ascension names are as follows:\n - 'SwarmingElites'\n - 'WearyTraveler'\n - 'Poverty'\n - 'TightBelt'\n - 'AscendersBane'\n - 'Inflation'\n - 'Scarcity'\n - 'ToughEnemies'\n - 'DeadlyEnemies'\n - 'DoubleBoss'",
       "default": [
         "SwarmingElites"
       ],
@@ -772,7 +800,7 @@
       "module": "worlds.spire2.options",
       "kind": "set",
       "display_name": "Ascension Down",
-      "description": "The ascension downs to add to the item pool, per character. Only valid when\n`use_advanced_characters` is false (see `advanced_characters`), and when `include_floor_checks` is true.\nValid values are the numbers for the ascensions, and also the names for the ascensions.  When a number is provided\nalone, ascension downs for all the ones below will also be added to the pool.\n\n- 'SwarmingElites'\n- 'WearyTraveler'\n- 'Poverty'\n- 'TightBelt'\n- \"AscenderBane\"\n- 'Inflation'\n- 'Scarcity'\n- 'ToughEnemies'\n- 'DeadlyEnemies'\n- 'DoubleBoss'\n\nLogic does NOT account for this.",
+      "description": "Ascension Down items to add for each character.\nOnly enabled Ascensions can receive a corresponding Ascension Down.\n\nA single number N selects the highest N enabled Ascensions. When multiple values are supplied, each\nnumber selects only that numbered Ascension. Names are case-sensitive.\nSupports both numbers and names.\n\n- 'SwarmingElites'\n- 'WearyTraveler'\n- 'Poverty'\n- 'TightBelt'\n- 'AscendersBane'\n- 'Inflation'\n- 'Scarcity'\n- 'ToughEnemies'\n- 'DeadlyEnemies'\n- 'DoubleBoss'\n\nLogic does not account for receiving these items.",
       "default": [],
       "raw_default": [],
       "visibility": {
@@ -856,7 +884,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Ancient Relic Pool",
-      "description": "Controls which Ancient relics can appear in each three-choice reward.\n\nBalanced uses the natural Ancient rolled for that act. Chaos can use relics from\nany Ancient in the appropriate act. True Chaos combines the Act 2 and Act 3 pools\nfor both Progressive Ancient rewards.",
+      "description": "Controls which Ancient relics can appear in each three-choice reward.\n\nBalanced uses the natural Ancient rolled for that act. Chaos can use relics from\nany Ancient in the appropriate act. True Chaos combines the Act 2 and Act 3 pools for the\nAct 2 and Act 3 Progressive Ancient rewards. Neow's reward always uses Neow's Act 1 pool.",
       "default": "balanced",
       "raw_default": 0,
       "visibility": {
@@ -897,7 +925,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Relic Rewards Available Anytime",
-      "description": "How many Relic items can be claimed before earning relic rewards in the run.\n\nThe client snapshots this value at run start. Later Relic items need a reward from an\nElite, treasure chest, or Black Star before they appear in the AP reward menu.",
+      "description": "How many Relic items can be claimed before earning relic rewards in the run.\n\nThe client snapshots this value at run start. Later Relic items need a reward from an\nElite, treasure chest, or Black Star before they appear in the AP reward menu. The client's\nlocal AP relic availability can be overridden in client settings for new runs only.",
       "default": 2,
       "raw_default": 2,
       "visibility": {
@@ -923,7 +951,7 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Progressive Starter Card",
-      "description": "Globally enables progressive special starter cards for every configured character.\n\nRequires Include Floor Checks. Each character gets two Progressive Starter Card items, which\nreplace two floor-check filler items. With none received, the character\nstarts without the special starter card that Archaic Tooth would transform (Bash, Neutralize,\nDualcast, Unleash, Falling Star, or a compatible modded equivalent). The first item restores\nthe normal card and the second grants Archaic Tooth so its normal effect performs the\ntransformation. Archaic Tooth is unavailable from Orobas while this option is enabled.\n\nCharacters without an Archaic Tooth transformation are left unchanged, although their two\nProgressive Starter Card items are still present in the multiworld.\n\nWARNING: This can make the early game significantly harder for some characters. Logic does not\naccount for the missing or upgraded starter card.",
+      "description": "Globally enables progressive special starter cards for every configured character.\n\nRequires Include Floor Checks. Each character gets two Progressive Starter Card items, which\nreplace two floor-check filler items. With none received, the character\nstarts without the special starter card that Archaic Tooth would transform (Bash, Neutralize, a compatible modded equivalent etc).\nThe first item restores the normal card.\n\nCharacters without an Archaic Tooth transformation are left unchanged, although their two\nProgressive Starter Card items are still present in the multiworld.\n\nWARNING: This can make the early game significantly harder for some characters. Logic expects you to reach\nLate Act 1 (may need to beat 1 Elite) without your starters.",
       "default": false,
       "raw_default": 0,
       "visibility": {
@@ -959,7 +987,7 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Progressive Starter Relic",
-      "description": "Globally enables progressive starter relics for every configured character.\n\nRequires Include Floor Checks. Each character gets two Progressive Starter Relic items, which\nreplace two floor-check filler items. With none received, the character\nstarts without the starter relic that Touch of Orobas would refine (such as Burning Blood, or a\ncompatible modded equivalent). The first item restores the normal relic and the second grants\nTouch of Orobas so its normal effect performs the refinement. Touch of Orobas is unavailable\nfrom Orobas while this option is enabled.\n\nCharacters without a Touch of Orobas refinement are left unchanged, although their two\nProgressive Starter Relic items are still present in the multiworld.\n\nWARNING: This can make the early game significantly harder for characters whose starting relic\nis central to their early power. Logic does not account for the missing or upgraded starter relic.",
+      "description": "Globally enables progressive starter relics for every configured character.\n\nRequires Include Floor Checks. Each character gets two Progressive Starter Relic items, which\nreplace two floor-check filler items. With none received, the character\nstarts without the starter relic that Touch of Orobas would refine (such as Burning Blood, or a\ncompatible modded equivalent).\n\nCharacters without a Touch of Orobas refinement are left unchanged, although their two\nProgressive Starter Relic items are still present in the multiworld.\n\nWARNING: This can make the early game significantly harder for characters whose starting relic\nis central to their early power. Logic expects you to reach Late Act 1 (may require beating 1 Elite) without\nyour starters.",
       "default": false,
       "raw_default": 0,
       "visibility": {
@@ -1031,7 +1059,7 @@
       "module": "worlds.spire2.options",
       "kind": "list",
       "display_name": "Bonus Items",
-      "description": "Add a number of Bonus Items to the item pool.\nThese items make the game easier to complete, and are not accounted for in logic.\n\nEach ordered entry creates one character-agnostic bonus item and must provide either\na non-empty list of value Pools or one specific Value. For example:\n\n    bonus_items:\n        - WAX_RELIC:\n            Pools: [Common, Uncommon]\n        - WAX_RELIC:\n            Value: Orichalcum\n\n\nGeneration fails if more bonus items are configured than there are filler slots.\n\nIt's recommended to use the YAML Builder on our website to easily generate this value, which you can find at https://sts2ap.net",
+      "description": "Add a number of Bonus Items to the item pool.\nThese items make the game easier to complete, and are not accounted for in logic.\n\nEach ordered entry creates one character-agnostic bonus item and must provide either\na non-empty list of value Pools or one specific Value. For example:\n\n    bonus_items:\n        - WAX_RELIC:\n            Pools: [Common, Uncommon]\n        - WAX_RELIC:\n            Value: Orichalcum\n\n\nGeneration fails if more bonus items are configured than there are filler slots.\n\nIt's HIGHLY recommended to use the YAML Builder on our website to easily generate this option, which you can find at https://sts2ap.net",
       "default": [],
       "raw_default": [],
       "visibility": {
@@ -1053,7 +1081,7 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Include Floor Checks",
-      "description": "Whether to include reaching new floors as a location. Adds various fillers as items.",
+      "description": "Add locations for reaching new floors and fill the corresponding item-pool space with\nconfigurable filler. Ascension Down and Progressive Starter options require these locations.",
       "default": true,
       "raw_default": 1,
       "visibility": {
@@ -1089,7 +1117,7 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Neow Sanity",
-      "description": "Whether to shuffle Neow giving you a start of run bonus or not.",
+      "description": "Adds Neow's start-of-run reward as a location and Progressive Ancient reward.\n\nWith Anytime, Neow's relic choices appear in the Archipelago reward menu.",
       "default": false,
       "raw_default": 0,
       "visibility": {
@@ -1161,7 +1189,7 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Gold Sanity",
-      "description": "Whether to enable shuffling gold rewards into the multiworld. Adds 22 locations per character",
+      "description": "Whether to replace combat, elite, and boss gold rewards with AP locations. Adds 22 locations per character.",
       "default": false,
       "raw_default": 0,
       "visibility": {
@@ -1197,7 +1225,7 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Potion Sanity",
-      "description": "Whether to enable shuffling potion drops into the multiworld; adds 9 locations per character.",
+      "description": "Whether to replace potion rewards with AP locations. Adds 9 locations per character.",
       "default": false,
       "raw_default": 0,
       "visibility": {
@@ -1233,7 +1261,7 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Shop Sanity",
-      "description": "Whether to shuffle shop slots into the pool.  Also adds new locations at the shop per slot shuffled.",
+      "description": "Move the configured shop slots to a separate AP shop page as purchasable location checks and\nshuffle items that progressively restore the corresponding slots on the normal shop page.",
       "default": false,
       "raw_default": 0,
       "visibility": {
@@ -1409,7 +1437,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Shop Sanity Costs",
-      "description": "How expensive the AP shop items should be. Tiered means costs map to typical costs rarity for the slot.\nProgression = Rare, Useful = Uncommon, Filler = Common\nLogic does not take this option into account.\nFixed=15 gold each\nSuper_Discount_Tiered=20% of tiered costs\nDiscount_Tiered=50% of tiered costs\nTiered=Vanilla price for slot",
+      "description": "Controls the price paid for location checks on the AP shop page. Normal shop-item prices are\nunaffected. Tiered modes first calculate a vanilla-style baseline for the AP card, relic, or potion.\n\nFixed: 15 gold per AP check.\nSuper Discount Tiered: 20 percent of the calculated baseline.\nDiscount Tiered: 50 percent of the calculated baseline.\nTiered: the full calculated baseline.\n\nGeneration logic does not account for these prices.",
       "default": "Discount_Tiered",
       "raw_default": 2,
       "visibility": {
@@ -1452,10 +1480,10 @@
     "death_link": {
       "key": "death_link",
       "class_name": "DeathLink",
-      "module": "Options",
+      "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Death Link",
-      "description": "When you die, everyone who enabled death link dies. Of course, the reverse is true too.",
+      "description": "Share deaths with other Death Link players. Dying sends a Death Link. Receiving one while in\na run damages the current character by Death Link Damage Percent of maximum health and can add a\nDeath Fragment if the character survives. Local client settings can override these slot settings.",
       "default": false,
       "raw_default": 0,
       "visibility": {
@@ -1491,7 +1519,7 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Enable Death Fragments",
-      "description": "If Death Link is enabled, turning this setting on gives you a Curse Card whenever\nyou receive a Death Link.",
+      "description": "When Death Link is enabled, add a permanent Death Fragment curse after receiving a Death Link\nwhile in a run, provided the character survives the configured damage. If received during combat,\nanother copy is also added to that combat's draw pile.",
       "default": true,
       "raw_default": 1,
       "visibility": {
@@ -1657,7 +1685,7 @@
       "module": "worlds.spire2.options",
       "kind": "dictionary",
       "display_name": "Advanced Characters",
-      "description": "The configuration for advanced characters.  Each character's options can be configured\nindependently of each other.  No validation is done on the character name, so use carefully.\nFormat is:\n    <char name>:\n        ascension:\n            - <string or number>\n        ascension_down:\n            - <string or number>\n\nIf using a modded character:\nEnter the internal ID of the character to use.\n\nIf you don't know the exact ID to enter with the mod installed go to\n`Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.\n\nIf the chosen character mod is not installed, checks will be sent when another character\nsends them.  If none of the chosen character mods are installed, you will be playing\na very boring Ironclad run.",
+      "description": "The configuration for advanced characters.  Each character's options can be configured\nindependently of each other.  No validation is done on the character name, so use carefully.\nFormat is:\n    <char name>:\n        ascension:\n            - <string or number>\n        ascension_down:\n            - <string or number>\n\nIf using a modded character:\nEnter the internal ID of the character to use.\n\nIf you don't know the exact ID to enter with the mod installed go to\n`Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.\n\nEvery configured character must be installed with the matching internal ID. The client\nrejects the AP connection if a configured character cannot be loaded.",
       "default": {
         "ironclad": {
           "ascension": [
@@ -1692,7 +1720,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "One Gold Filler Weight",
-      "description": "Weight for One Gold filler items. Generates one gold for the character who receives it.\nAvailable across runs, as a pool of all gold rewards.\n\nNote: Even if you disable this item, you may still see it in on rare occasion, \nas it's the fallback for when item generation has issues.",
+      "description": "Weight for One Gold filler items. Grants one gold to its associated character. If every filler weight is None, the generator\nuses that character's One Gold as the required safe fallback.",
       "default": "none",
       "raw_default": 0,
       "visibility": {
@@ -1738,7 +1766,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Five Gold Filler Weight",
-      "description": "Weight for Five Gold filler items. Generates five gold for the character who receives it.\nAvailable across runs, as a pool of all gold rewards.",
+      "description": "Weight for Five Gold filler items. Grants five gold to its associated character.",
       "default": "high",
       "raw_default": 5,
       "visibility": {
@@ -1784,7 +1812,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Free Attack Filler Weight",
-      "description": "Weight for Free Attack filler items. Grants a buff that makes the next attack card you play free.",
+      "description": "Weight for Free Attack filler items. At the start of the next player combat turn, makes the next Attack played cost zero energy.",
       "default": "high",
       "raw_default": 5,
       "visibility": {
@@ -1830,7 +1858,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Free Power Filler Weight",
-      "description": "Weight for Free Power filler items. Grants a buff that makes the next power card you play free.",
+      "description": "Weight for Free Power filler items. At the start of the next player combat turn, makes the next Power played cost zero energy.",
       "default": "high",
       "raw_default": 5,
       "visibility": {
@@ -1876,7 +1904,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Free Skill Filler Weight",
-      "description": "Weight for Free Skill filler items. Grants a buff that makes the next skill card you play free.",
+      "description": "Weight for Free Skill filler items. At the start of the next player combat turn, makes the next Skill played cost zero energy.",
       "default": "high",
       "raw_default": 5,
       "visibility": {
@@ -1922,7 +1950,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Vigor Filler Weight",
-      "description": "Weight for Vigor filler items. Grants a buff that provides Vigor for the next combat.",
+      "description": "Weight for Vigor filler items. Applies Vigor at the start of the next player combat turn.",
       "default": "high",
       "raw_default": 5,
       "visibility": {
@@ -1968,7 +1996,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Artifact Filler Weight",
-      "description": "Weight for Artifact filler items. Grants a buff that protects you from debuffs for the next combat.",
+      "description": "Weight for Artifact filler items. Applies Artifact at the start of the next player combat turn.",
       "default": "high",
       "raw_default": 5,
       "visibility": {
@@ -2014,7 +2042,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Thorns Filler Weight",
-      "description": "Weight for Thorns filler items. Grants a buff that provides Thorns for the next combat.",
+      "description": "Weight for Thorns filler items. Applies Thorns at the start of the next player combat turn.",
       "default": "high",
       "raw_default": 5,
       "visibility": {
@@ -2060,7 +2088,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Buffer Filler Weight",
-      "description": "Weight for Buffer filler items. Grants a buff that provides Buffer for the next combat.",
+      "description": "Weight for Buffer filler items. Applies Buffer at the start of the next player combat turn.",
       "default": "low",
       "raw_default": 1,
       "visibility": {
@@ -2106,7 +2134,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Dexterity Filler Weight",
-      "description": "Weight for Dexterity filler items. Grants a buff that increases Dexterity for the next combat.",
+      "description": "Weight for Dexterity filler items. Applies Dexterity at the start of the next player combat turn.",
       "default": "medium",
       "raw_default": 3,
       "visibility": {
@@ -2152,7 +2180,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Strength Filler Weight",
-      "description": "Weight for Strength filler items. Grants a buff that increases Strength for the next combat.",
+      "description": "Weight for Strength filler items. Applies Strength at the start of the next player combat turn.",
       "default": "medium",
       "raw_default": 3,
       "visibility": {
@@ -2198,7 +2226,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Plating Filler Weight",
-      "description": "Weight for Plating filler items. Grants a buff that provides Plating for the next combat.",
+      "description": "Weight for Plating filler items. Applies Plating at the start of the next player combat turn.",
       "default": "medium",
       "raw_default": 3,
       "visibility": {
@@ -2244,7 +2272,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Friendship Filler Weight",
-      "description": "Weight for Friendship filler items. Raises the Max Energy per turn by 1 for the next combat.",
+      "description": "Weight for Friendship filler items. Applies Friendship at the start of the next player combat turn, raising maximum energy by one.",
       "default": "medium",
       "raw_default": 3,
       "visibility": {
@@ -2290,7 +2318,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Post-Combat Card Upgrade Filler Weight",
-      "description": "Weight for Post-Combat Card Upgrade filler items. Grants a buff that randomly upgrades a card in your deck after combat.",
+      "description": "Weight for Post-Combat Card Upgrade filler items. At the start of the next player combat turn, applies a buff that upgrades a random deck card after combat.",
       "default": "low",
       "raw_default": 1,
       "visibility": {
@@ -2336,7 +2364,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Post-Combat Card Removal Filler Weight",
-      "description": "Weight for Post-Combat Card Removal filler items. Grants a buff that lets you removes a card from your deck after combat.",
+      "description": "Weight for Post-Combat Card Removal filler items. At the start of the next player combat turn, applies a buff that lets you remove a deck card after combat.",
       "default": "low",
       "raw_default": 1,
       "visibility": {
@@ -2382,7 +2410,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Additional Card Reward Filler Weight",
-      "description": "Weight for Additional Card Reward filler items. Grants a buff that provides an additional card reward after combat.",
+      "description": "Weight for Additional Card Reward filler items. At the start of the next player combat turn, applies a buff that adds a card reward after combat.",
       "default": "low",
       "raw_default": 1,
       "visibility": {
