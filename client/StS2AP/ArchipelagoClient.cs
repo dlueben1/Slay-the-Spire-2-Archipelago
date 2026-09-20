@@ -12,7 +12,7 @@ using System.Text.Json;
 using StS2AP.Data;
 using StS2AP.Extensions;
 using StS2AP.Models;
-using StS2AP.Patches;
+using StS2AP.Services;
 using StS2AP.UI;
 using StS2AP.Utils;
 using STS2RitsuLib;
@@ -362,7 +362,7 @@ namespace StS2AP
             // repopulate the queue after this reset, even if it was already in flight.
             lock (_itemLock)
             {
-                Patches_ItemProcessor.ClearQueue();
+                ArchipelagoItemService.ResetQueue();
                 Index = 0;
                 Progress = new ArchipelagoProgress();
             }
@@ -1204,7 +1204,9 @@ namespace StS2AP
                         return;
 
                     // Process on Godot main thread
-                    Patches_ItemProcessor.AddToQueue(new IndexedItemInfo(receivedItem, helper.Index));
+                    ArchipelagoItemService.EnqueueReceivedItem(
+                        new IndexedItemInfo(receivedItem, helper.Index)
+                    );
 
                     // Keep track of how many messages we've had so far
                     Index++;

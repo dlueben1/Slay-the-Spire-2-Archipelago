@@ -18,6 +18,7 @@ using MegaCrit.Sts2.Core.Saves.Managers;
 using StS2AP.Data;
 using StS2AP.Extensions;
 using StS2AP.Models;
+using StS2AP.Services;
 using StS2AP.UI;
 using StS2AP.Utils;
 using System.IO.Compression;
@@ -230,7 +231,7 @@ namespace StS2AP.Patches
             ArchipelagoClient.Progress.ProgressiveAncients.Clear();
             ArchipelagoClient.Progress.ProgressiveRests.Clear();
             ArchipelagoClient.Progress.ProgressiveSmiths.Clear();
-            Patches_ItemProcessor.ReprocessItems();
+            ArchipelagoItemService.ReplayReceivedItems();
             RelicRewardUtility.ReconcileBankedRewards(GameUtility.CurrentPlayer);
             ArchipelagoClient.Progress.InitializeFromServer(GameUtility.CurrentPlayer);
 
