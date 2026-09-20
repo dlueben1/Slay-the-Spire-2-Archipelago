@@ -31,7 +31,7 @@
     <AssemblyName>$(ModName)</AssemblyName>
 
     <!-- Client Release Version -->
-    <Version>1.1.1</Version>
+    <Version>1.1.2</Version>
 
     <!-- Build/deploy paths on the Windows build machine. -->
     <ModsOutputDir Condition="'$(ModsOutputDir)' == ''"
