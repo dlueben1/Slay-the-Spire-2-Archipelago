@@ -220,8 +220,10 @@ namespace StS2AP.Models
 
             string runSeed = player.RunState.Rng.StringSeed;
             return candidates
+                .Where(relic => relic.Pool == player.Character.RelicPool
+                    || !ModelDb.CharacterRelicPools.Contains(relic.Pool))
                 .OrderBy(relic => StableBonusKey(runSeed, key, relic.Id))
-                .First();
+                .FirstOrDefault();
         }
 
         /// <summary>Hashes run seed, bonus key, and relic identity into a stable sort key.</summary>

@@ -16,8 +16,8 @@
 
 ## Pre-Requisites
 
-- **Your Slay the Spire II client must be running on Windows**. The debug terminal we use uses Win32 APIs.
-  - This will not be a requirement long-term, but for early Alpha development it's necessary.
+Supported on Windows (primary), Linux (confirmed), and macOS (expected to work, untested).
+
 - **Your host MUST use Archipelago Client v0.6.7+**.
 - The GitHub Release package is built for the **v{{STS2_PUBLIC_VERSION}} public version** of Slay the Spire II.
 - The current beta compatibility target is **v{{STS2_BETA_VERSION}}**.
@@ -26,24 +26,35 @@
 
 ## Installing the Mod
 
-1. Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) installed. The easiest way to obtain it is from Steam Workshop.
-2. Download `Archipelago.zip` from the [Releases](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest) section of the repo
-3. Go to your Slay the Spire II directory (In Steam, click "Browse Local Files")
-4. If a folder called `mods` does not exist, create it
-5. Unzip the **contents** of `Archipelago.zip` into `mods`
+### Steam Workshop (Recommended)
 
-- If you've done this step correctly, your directory structure should look like this: `/<slay-the-spire-2-local-files>/mods/Archipelago/` and the contents of that folder should be a bunch of `.dll` files and a `.pck` file (there may be more files too, please don't touch anything in this folder)
+1. If you previously installed the mod manually, remove the `Archipelago` folder from your game's `mods` folder, or move it outside `mods`, so only the Workshop copy loads.
+2. Subscribe to [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295).
+3. Subscribe to [Slay the Spire II Archipelago](https://steamcommunity.com/sharedfiles/filedetails/?id=3748826296).
+4. Wait for Steam to finish downloading both mods, then start the game.
 
-6. Start the game
+### Manual Installation
+
+1. If you subscribed to the Archipelago mod on Steam Workshop, unsubscribe first so only the manual copy loads: in Steam, right-click **Slay the Spire 2 → Properties → Workshop**, then untick **Slay the Spire II Archipelago**. Keep RitsuLib subscribed.
+2. Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) installed. The easiest way to obtain it is from Steam Workshop.
+3. Download `Archipelago.zip` from this release's assets.
+4. Open your game directory: in Steam, right-click **Slay the Spire 2 → Browse Local Files**.
+5. If a folder called `mods` does not exist, create it.
+6. Copy `Archipelago.zip` into `mods`, then right-click the ZIP and choose **Extract All**. Keep the default destination, which creates an `Archipelago` folder beside the ZIP.
+7. Check that the files are in `/<slay-the-spire-2-local-files>/mods/Archipelago/`, with the `.dll`, `.pck`, and other packaged files directly inside that folder. If you use a different archive tool, extract into a folder named `Archipelago` inside `mods`.
+8. Start the game.
 
 ### Additional Steps for **Hosts**
 
-7. Download `spire2-{{WORLD_VERSION}}.apworld`
-8. Open your Archipelago Launcher
-9. Click "Install APWorld"
-10. Select `spire2-{{WORLD_VERSION}}.apworld` in the file dialog that pops up
-11. **Restart the Archipelago Launcher**
-12. Now you should be able to properly host/generate an Archipelago Session with StS 2
+These steps apply whether you installed the mod through Steam Workshop or manually.
+
+On Windows, if Archipelago Launcher is installed, you can also install the downloaded `.apworld` by double-clicking it in File Explorer.
+
+1. Download `spire2-{{WORLD_VERSION}}.apworld` from this release's assets.
+2. Open your Archipelago Launcher.
+3. Click "Install APWorld".
+4. Select `spire2-{{WORLD_VERSION}}.apworld` in the file dialog that pops up.
+5. Now you should be able to properly host/generate an Archipelago Session with StS 2.
 
 - If you want to use `archipelago.gg` to host the game, generate it locally first following the steps above, then upload the `.zip` file from the `output` folder in your Archipelago installation
 
