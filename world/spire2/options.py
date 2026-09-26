@@ -484,140 +484,132 @@ class DeathLinkDamagePercent(Range):
 
 # Filler Item Weight Options
 
-# Factory function to create filler weight Choice classes dynamically
-def _create_filler_weight_class(item_name: str, description: str, default_weight: int = 1):
-    """Create a Choice class for filler item weights.
-    
-    Args:
-        item_name: The display name of the item (e.g., "One Gold", "Free Attack")
-        description: Description of what the item does
-    
-    Returns:
-        A Choice class with standard weight options (none=0, low=1, medium=3, high=5)
-    """
-    class_name = item_name.replace(" ", "").replace("-", "") + "FillerWeight"
-    display_name = f"{item_name} Filler Weight"
-    docstring = f"""Weight for {item_name} filler items. {description}"""
-    
-    return type(
-        class_name,
-        (Choice,),
-        {
-            "__module__": __name__,
-            "__doc__": docstring,
-            "display_name": display_name,
-            "option_none": 0,
-            "option_low": 1,
-            "option_medium": 3,
-            "option_high": 5,
-            "default": default_weight,
-        }
-    )
+class FillerWeight(Choice):
+    option_none = 0
+    option_low = 1
+    option_medium = 3
+    option_high = 5
+    default = option_low
 
 # Character-specific filler items
-OneGoldFillerWeight = _create_filler_weight_class(
-    "One Gold",
-    """Grants one gold to its associated character. If every filler weight is None, the generator
-    uses that character's One Gold as the required safe fallback.""",
-    default_weight = 0
-)
+class OneGoldFillerWeight(FillerWeight):
+    """Weight for One Gold filler items. Grants one gold to its associated character. If every filler weight is None, the generator
+    uses that character's One Gold as the required safe fallback."""
 
-FiveGoldFillerWeight = _create_filler_weight_class(
-    "Five Gold",
-    """Grants five gold to its associated character.""",
-    default_weight = 5
-)
+    display_name = "One Gold Filler Weight"
+    default = FillerWeight.option_none
+
+
+class FiveGoldFillerWeight(FillerWeight):
+    """Weight for Five Gold filler items. Grants five gold to its associated character."""
+
+    display_name = "Five Gold Filler Weight"
+    default = FillerWeight.option_high
 
 # Universal filler items
-FreeAttackFillerWeight = _create_filler_weight_class(
-    "Free Attack",
-    "At the start of the next player combat turn, makes the next Attack played cost zero energy.",
-    default_weight = 5
-)
+class FreeAttackFillerWeight(FillerWeight):
+    """Weight for Free Attack filler items. At the start of the next player combat turn, makes the next Attack played cost zero energy."""
 
-FreePowerFillerWeight = _create_filler_weight_class(
-    "Free Power",
-    "At the start of the next player combat turn, makes the next Power played cost zero energy.",
-    default_weight = 5
-)
+    display_name = "Free Attack Filler Weight"
+    default = FillerWeight.option_high
 
-FreeSkillFillerWeight = _create_filler_weight_class(
-    "Free Skill",
-    "At the start of the next player combat turn, makes the next Skill played cost zero energy.",
-    default_weight = 5
-)
 
-VigorFillerWeight = _create_filler_weight_class(
-    "Vigor",
-    "Applies Vigor at the start of the next player combat turn.",
-    default_weight = 5
-)
+class FreePowerFillerWeight(FillerWeight):
+    """Weight for Free Power filler items. At the start of the next player combat turn, makes the next Power played cost zero energy."""
 
-ArtifactFillerWeight = _create_filler_weight_class(
-    "Artifact",
-    "Applies Artifact at the start of the next player combat turn.",
-    default_weight = 5
-)
+    display_name = "Free Power Filler Weight"
+    default = FillerWeight.option_high
 
-ThornsFillerWeight = _create_filler_weight_class(
-    "Thorns",
-    "Applies Thorns at the start of the next player combat turn.",
-    default_weight = 5
-)
 
-DexterityFillerWeight = _create_filler_weight_class(
-    "Dexterity",
-    "Applies Dexterity at the start of the next player combat turn.",
-    default_weight = 3
-)
+class FreeSkillFillerWeight(FillerWeight):
+    """Weight for Free Skill filler items. At the start of the next player combat turn, makes the next Skill played cost zero energy."""
 
-StrengthFillerWeight = _create_filler_weight_class(
-    "Strength",
-    "Applies Strength at the start of the next player combat turn.",
-    default_weight = 3
-)
+    display_name = "Free Skill Filler Weight"
+    default = FillerWeight.option_high
 
-PlatingFillerWeight = _create_filler_weight_class(
-    "Plating",
-    "Applies Plating at the start of the next player combat turn.",
-    default_weight = 3
-)
 
-BufferFillerWeight = _create_filler_weight_class(
-    "Buffer",
-    "Applies Buffer at the start of the next player combat turn.",
-    default_weight = 1
-)
+class VigorFillerWeight(FillerWeight):
+    """Weight for Vigor filler items. Applies Vigor at the start of the next player combat turn."""
 
-FriendshipFillerWeight = _create_filler_weight_class(
-    "Friendship",
-    "Applies Friendship at the start of the next player combat turn, raising maximum energy by one.",
-    default_weight = 3
-)
+    display_name = "Vigor Filler Weight"
+    default = FillerWeight.option_high
 
-PostCombatCardUpgradeFillerWeight = _create_filler_weight_class(
-    "Post-Combat Card Upgrade",
-    "At the start of the next player combat turn, applies a buff that upgrades a random deck card after combat.",
-    default_weight = 1
-)
 
-PostCombatCardRemovalFillerWeight = _create_filler_weight_class(
-    "Post-Combat Card Removal",
-    "At the start of the next player combat turn, applies a buff that lets you remove a deck card after combat.",
-    default_weight = 1
-)
+class ArtifactFillerWeight(FillerWeight):
+    """Weight for Artifact filler items. Applies Artifact at the start of the next player combat turn."""
 
-AdditionalCardRewardFillerWeight = _create_filler_weight_class(
-    "Additional Card Reward",
-    "At the start of the next player combat turn, applies a buff that adds a card reward after combat.",
-    default_weight = 1
-)
+    display_name = "Artifact Filler Weight"
+    default = FillerWeight.option_high
 
-SingleColorlessCardFillerWeight = _create_filler_weight_class(
-    "Single Colorless Card",
-    """Grants a one-time card reward containing one random colorless card.""",
-    default_weight = 3
-)
+
+class ThornsFillerWeight(FillerWeight):
+    """Weight for Thorns filler items. Applies Thorns at the start of the next player combat turn."""
+
+    display_name = "Thorns Filler Weight"
+    default = FillerWeight.option_high
+
+
+class DexterityFillerWeight(FillerWeight):
+    """Weight for Dexterity filler items. Applies Dexterity at the start of the next player combat turn."""
+
+    display_name = "Dexterity Filler Weight"
+    default = FillerWeight.option_medium
+
+
+class StrengthFillerWeight(FillerWeight):
+    """Weight for Strength filler items. Applies Strength at the start of the next player combat turn."""
+
+    display_name = "Strength Filler Weight"
+    default = FillerWeight.option_medium
+
+
+class PlatingFillerWeight(FillerWeight):
+    """Weight for Plating filler items. Applies Plating at the start of the next player combat turn."""
+
+    display_name = "Plating Filler Weight"
+    default = FillerWeight.option_medium
+
+
+class BufferFillerWeight(FillerWeight):
+    """Weight for Buffer filler items. Applies Buffer at the start of the next player combat turn."""
+
+    display_name = "Buffer Filler Weight"
+    default = FillerWeight.option_low
+
+
+class FriendshipFillerWeight(FillerWeight):
+    """Weight for Friendship filler items. Applies Friendship at the start of the next player combat turn, raising maximum energy by one."""
+
+    display_name = "Friendship Filler Weight"
+    default = FillerWeight.option_medium
+
+
+class PostCombatCardUpgradeFillerWeight(FillerWeight):
+    """Weight for Post-Combat Card Upgrade filler items. At the start of the next player combat turn, applies a buff that upgrades a random deck card after combat."""
+
+    display_name = "Post-Combat Card Upgrade Filler Weight"
+    default = FillerWeight.option_low
+
+
+class PostCombatCardRemovalFillerWeight(FillerWeight):
+    """Weight for Post-Combat Card Removal filler items. At the start of the next player combat turn, applies a buff that lets you remove a deck card after combat."""
+
+    display_name = "Post-Combat Card Removal Filler Weight"
+    default = FillerWeight.option_low
+
+
+class AdditionalCardRewardFillerWeight(FillerWeight):
+    """Weight for Additional Card Reward filler items. At the start of the next player combat turn, applies a buff that adds a card reward after combat."""
+
+    display_name = "Additional Card Reward Filler Weight"
+    default = FillerWeight.option_low
+
+
+class SingleColorlessCardFillerWeight(FillerWeight):
+    """Weight for Single Colorless Card filler items. Grants a one-time card reward containing one random colorless card."""
+
+    display_name = "Single Colorless Card Filler Weight"
+    default = FillerWeight.option_medium
 
 # Filler Items Option Group
 filler_item_options = OptionGroup(

@@ -128,8 +128,8 @@ logic_map: dict[PowerLevel, List[str]] = {
     ],
 }
 
-def setup_power_map(map: dict[PowerLevel, List[str]], prefix: str) -> dict[PowerLevel, List[str]]:
-    return {key: [f"{prefix} {x}" for x in val] for key, val in map.items()}
+def setup_power_map(power_map: dict[PowerLevel, List[str]], prefix: str) -> dict[PowerLevel, List[str]]:
+    return {key: [f"{prefix} {x}" for x in val] for key, val in power_map.items()}
 
 class LogicTestBase(Spire2TestBase):
 
@@ -186,7 +186,7 @@ class LogicTestBase(Spire2TestBase):
 
         return state
 
-    def _setup_state_inaccessible(self, power: PowerLevel, type: str):
+    def _setup_state_inaccessible(self, power: PowerLevel, missing_item: str):
 
         state = CollectionState(self.multiworld)
 
@@ -218,29 +218,26 @@ class LogicTestBase(Spire2TestBase):
         golds = [gold for _ in range(power.gold)]
 
 
-        if type == "Card Reward":
+        if missing_item == "Card Reward":
             draws.pop()
-        elif type == "Relic":
+        elif missing_item == "Relic":
             relics.pop()
-        elif type == "Progressive Ancient":
+        elif missing_item == "Progressive Ancient":
             ancients.pop()
-        # elif type == "Boss Relic":
-        #     boss_relics.pop()
-        elif type == "Progressive Rest":
+        elif missing_item == "Progressive Rest":
             rests.pop()
-        elif type == "Progressive Smith":
+        elif missing_item == "Progressive Smith":
             smiths.pop()
-        elif type == "Shop Card Slot":
+        elif missing_item == "Shop Card Slot":
             shops.pop()
-        elif type == "Progressive Shop Remove":
+        elif missing_item == "Progressive Shop Remove":
             removes.pop()
-        elif type == "Elite Gold":
+        elif missing_item == "Elite Gold":
             golds.pop()
 
 
-        for list in [draws, relics, ancients, rests, smiths, shops, removes, golds]:
-        # for list in [draws, relics, boss_relics, rests, smiths, shops, removes, golds, keys]:
-            for item in list:
+        for items in [draws, relics, ancients, rests, smiths, shops, removes, golds]:
+            for item in items:
                 state.collect(item)
 
         return state
@@ -257,16 +254,16 @@ class LogicTestBase(Spire2TestBase):
             ("Progressive Shop Remove", power.shop_remove),
             ("Elite Gold", power.gold),
         ]
-        for type, count in requirements:
+        for missing_item, count in requirements:
             if count == 0:
                 continue
-            state = self._setup_state_inaccessible(power, type)
+            state = self._setup_state_inaccessible(power, missing_item)
 
             for location in locations:
-                with self.subTest(f"Cannot access {location} while missing one {type}", reqs=power):
+                with self.subTest(f"Cannot access {location} while missing one {missing_item}", reqs=power):
                     loc = self.world.get_location(location)
                     self.assertFalse(loc.can_reach(state),
-                                     f"Location {location} can be reached with power level {power}, but missing one {type}; state {state.prog_items}")
+                                     f"Location {location} can be reached with power level {power}, but missing one {missing_item}; state {state.prog_items}")
 
     def _test_accessible(self, power: PowerLevel, locations: Iterable[str]):
         state = self._setup_state_accessible(power)

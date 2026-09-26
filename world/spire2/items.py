@@ -79,8 +79,11 @@ base_item_table: Dict[str, ItemData] = {
     'Victory': ItemData(None, ItemType.EVENT, ItemClassification.progression, True, True),
     'Beat Act 1 Boss': ItemData(None, ItemType.EVENT, ItemClassification.progression, True),
     'Beat Act 2 Boss': ItemData(None, ItemType.EVENT, ItemClassification.progression, True),
-    **{asc: ItemData(i + 19, ItemType.ASCENSION_DOWN, ItemClassification.useful) for i, asc in enumerate(ASCENSIONS.values()) }
 }
+base_item_table.update({
+    asc: ItemData(i + 19, ItemType.ASCENSION_DOWN, ItemClassification.useful)
+    for i, asc in enumerate(ASCENSIONS.values())
+})
 
 # Items in this table are character-agnostic, and can be claimed by any of them
 universal_items: Dict[str, ItemData] = {
@@ -124,19 +127,16 @@ base_event_item_pairs: Dict[str, str] = {
 
 def create_item_tables(vanilla_chars: typing.List[str], extras: int) -> typing.Tuple[dict[str, ItemData], dict[
     typing.Union[str, int],dict[str,ItemData]], dict[str,str]]:
-    item_name_to_data = {
-        **universal_items,
-        **universal_bonus_items,
-    }
+    item_name_to_data = universal_items | universal_bonus_items
 
     characters_to_items: dict[typing.Union[str, int],dict[str, ItemData]] = defaultdict(dict)
     event_item_pairs: dict[str, str] = dict()
     char_num = 1
 
     for char in vanilla_chars:
-        for key, data in base_item_table.items():
+        for key, base_data in base_item_table.items():
             newkey = f"{char} {key}"
-            newval = ItemData.increment(data, char_num*CHAR_OFFSET)
+            newval = ItemData.increment(base_data, char_num*CHAR_OFFSET)
             item_name_to_data[newkey] = newval
             characters_to_items[char][newkey] = newval
         for key, val in base_event_item_pairs.items():
@@ -144,9 +144,9 @@ def create_item_tables(vanilla_chars: typing.List[str], extras: int) -> typing.T
         char_num += 1
 
     for i in range(extras):
-        for key, data in base_item_table.items():
+        for key, base_data in base_item_table.items():
             newkey = f"Custom Character {i+1} {key}"
-            newval = ItemData.increment(data, char_num * CHAR_OFFSET)
+            newval = ItemData.increment(base_data, char_num * CHAR_OFFSET)
             item_name_to_data[newkey] = newval
             characters_to_items[i+1][newkey] = newval
         for key, val in base_event_item_pairs.items():

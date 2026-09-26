@@ -8,7 +8,7 @@ from BaseClasses import Item, Location, Region, MultiWorld, ItemClassification, 
 from Options import OptionError
 from worlds.AutoWorld import World
 from .regions import create_regions
-from .rules import set_rules
+from .rules import set_rules, spire_logic
 from .web_world import SlayTheSpire2Web
 from .characters import CharacterConfig, character_list, character_offset_map
 from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET
@@ -53,6 +53,14 @@ class SlayTheSpire2World(World):
 
     location_name_to_id = location_table
     location_name_groups = location_groups
+
+    filler_universal_high: list[str]
+    filler_universal_medium: list[str]
+    filler_universal_low: list[str]
+    filler_char_high: dict[str, list[str]]
+    filler_char_medium: dict[str, list[str]]
+    filler_char_low: dict[str, list[str]]
+    filler_fallback: str
 
     def __init__(self, mw: MultiWorld, player: int):
         super().__init__(mw, player)
@@ -183,8 +191,6 @@ class SlayTheSpire2World(World):
         selected_chars = list(self.options.characters.value)
         selected_chars.extend(self.options.modded_characters.value)
         char_options = sorted(selected_chars)
-        include_ascension_down = self.options.include_floor_checks.value != 0
-
         ascension_down: typing.Set[str] = self.options.ascension_down.value
         ascension: typing.Set[str] = self.options.ascension.value
         ascension = self._to_ascensions(ascension)
@@ -232,7 +238,8 @@ class SlayTheSpire2World(World):
         self.modded_num = len(self.modded_chars)
 
 
-    def _to_ascensions(self, ascensions: typing.Set[str]) -> typing.Set[str]:
+    @staticmethod
+    def _to_ascensions(ascensions: typing.Set[str]) -> typing.Set[str]:
         ret = set()
         if len(ascensions) == 1:
             try:
@@ -251,7 +258,8 @@ class SlayTheSpire2World(World):
                 ret.add(asc.lower())
         return ret
 
-    def _to_ascension_downs(self, ascension_downs: typing.Set[str], ascensions: typing.Set[str]) -> typing.Set[str]:
+    @staticmethod
+    def _to_ascension_downs(ascension_downs: typing.Set[str], ascensions: typing.Set[str]) -> typing.Set[str]:
         ret = set()
         if len(ascension_downs) == 1:
             try:
@@ -339,19 +347,18 @@ class SlayTheSpire2World(World):
             exits: list[str] | None = None,
     ):
         ret = Region(f"{prefix} {name}" if prefix is not None else name, player, self.multiworld)
+        locs: dict[str, Optional[int]] = dict()
+        for location in locations or ():
+            loc_name = f"{prefix} {location}" if prefix is not None else location
+            loc_id = location_table.get(loc_name, 0)
+            loc_data = loc_ids_to_data.get(loc_id, None)
+            if self._should_include_location(loc_data, config):
+                locs[loc_name] = loc_id
         if locations:
-            locs: dict[str, Optional[int]] = dict()
-            for location in locations:
-                loc_name = f"{prefix} {location}" if prefix is not None else location
-                loc_id = location_table.get(loc_name, 0)
-                loc_data = loc_ids_to_data.get(loc_id, None)
-                if self._should_include_location(loc_data, config):
-                    locs[loc_name] = loc_id
             ret.add_locations(locs, SlayTheSpire2Location)
-        if exits:
-            for exit in exits:
-                exit_name = f"{prefix} {exit}" if prefix is not None else exit
-                ret.create_exit(exit_name)
+        for destination in exits or ():
+            exit_name = f"{prefix} {destination}" if prefix is not None else destination
+            ret.create_exit(exit_name)
         return ret
 
     # Creates individual items based on the item table
@@ -391,9 +398,9 @@ class SlayTheSpire2World(World):
             "Artifact": self.options.artifact_filler_weight.value,
         }
 
-        self.filler_universal_high: list = []
-        self.filler_universal_medium: list = []
-        self.filler_universal_low: list = []
+        self.filler_universal_high = []
+        self.filler_universal_medium = []
+        self.filler_universal_low = []
 
         for item_name in universal_items.keys():
             weight = universal_item_option_map.get(item_name, 0)
@@ -407,9 +414,9 @@ class SlayTheSpire2World(World):
         # --- Per-character (gold) item pools ---
         # Gold items are character-specific ("Ironclad One Gold", etc.), so we build
         # a separate set of tier buckets for each character in the run.
-        self.filler_char_high: dict = {}
-        self.filler_char_medium: dict = {}
-        self.filler_char_low: dict = {}
+        self.filler_char_high = {}
+        self.filler_char_medium = {}
+        self.filler_char_low = {}
 
         for config in self.all_player_characters:
             # Resolve the lookup key: vanilla characters use their name, modded characters
@@ -448,7 +455,7 @@ class SlayTheSpire2World(World):
         # --- Fallback item ---
         # Used when the player has disabled every filler type (all weights set to 0).
         # We pick "One Gold" for a random character as a safe, always-valid default.
-        self.filler_fallback: str = "Ironclad One Gold"
+        self.filler_fallback = "Ironclad One Gold"
         if self.all_player_characters:
             fallback_char = self.random.choice(self.all_player_characters)
             fallback_lookup = fallback_char.name if fallback_char.mod_num == 0 else fallback_char.mod_num
@@ -492,9 +499,9 @@ class SlayTheSpire2World(World):
         if not hasattr(self, 'filler_universal_high'):
             self.build_filler_pools()
 
-        TIER_HIGH_WEIGHT = 50
-        TIER_MEDIUM_WEIGHT = 33
-        TIER_LOW_WEIGHT = 17
+        high_weight = 50
+        medium_weight = 33
+        low_weight = 17
 
         # If no character was specified, pick one at random.
         if character is None and self.all_player_characters:
@@ -514,7 +521,7 @@ class SlayTheSpire2World(World):
         # --- Stage 1: Select a rarity tier ---
         tier_selection = self.random.choices(
             ['high', 'medium', 'low'],
-            weights=[TIER_HIGH_WEIGHT, TIER_MEDIUM_WEIGHT, TIER_LOW_WEIGHT],
+            weights=[high_weight, medium_weight, low_weight],
             k=1
         )[0]
 
@@ -705,22 +712,20 @@ class SlayTheSpire2World(World):
     def collect(self, state: CollectionState, item: Item) -> bool:
         change = super().collect(state, item)
         item_data = typing.cast(SlayTheSpire2Item, item).item_data
-        if change and item_data.type in state.item_levels[self.player]:
-            level = state.item_levels[self.player].get(item_data.type, 0.0)
-            # char_level = state.power_level.setdefault(item.player, defaultdict(int))
-            char_level = state.power_level[item.player]
+        spire_state = spire_logic(state)
+        if change and item_data.type in spire_state.item_levels[self.player]:
+            level = spire_state.item_levels[self.player].get(item_data.type, 0.0)
+            char_level = spire_state.power_level[item.player]
             char_level[item_data.char_offset] = char_level[item_data.char_offset] + level
         return change
 
     def remove(self, state: CollectionState, item: Item) -> bool:
         change = super().remove(state, item)
         item_data = typing.cast(SlayTheSpire2Item, item).item_data
-        if change and item_data.type in state.item_levels[self.player]:
-            level = state.item_levels[self.player].get(item_data.type, 0.0)
-            # state.power_level[item.player][item_data.char_offset] -= level
-            # state.power_level.get(item.player, defaultdict(int))[item_data.char_offset] -= level
-            char_level = state.power_level[item.player]
-            # char_level = state.power_level[item.player]
+        spire_state = spire_logic(state)
+        if change and item_data.type in spire_state.item_levels[self.player]:
+            level = spire_state.item_levels[self.player].get(item_data.type, 0.0)
+            char_level = spire_state.power_level[item.player]
             char_level[item_data.char_offset] = char_level[item_data.char_offset] - level
         return change
 
@@ -836,7 +841,9 @@ class SlayTheSpire2World(World):
                 continue
             modded_index = (base_key // CHAR_OFFSET) - len(character_list)
             number, base_name = split_player_name(value)
-            modded_chars = modded_chars_by_player.get(number, [])
+            if number not in modded_chars_by_player:
+                continue
+            modded_chars = modded_chars_by_player[number]
             if modded_index >= len(modded_chars):
                 continue
             match = pattern.match(base_name)

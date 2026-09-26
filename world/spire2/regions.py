@@ -12,7 +12,7 @@ def create_regions(world: 'SlayTheSpire2World', player: int):
 
     multiworld = world.multiworld
 
-    neow = world.create_region(player, None, "Neow's Room", None)
+    neow = Region("Neow's Room", player, multiworld)
     multiworld.regions.append(neow)
 
     for config in world.all_player_characters:

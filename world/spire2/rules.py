@@ -13,7 +13,7 @@ from .coop import player_name
 from .items import ItemType
 from .options import CampfireSanity, ShopSanity, GoldSanity, ShopRemoveSlots, ProgressiveStarterCard, \
     ProgressiveStarterRelic
-from worlds.AutoWorld import LogicMixin
+from worlds.AutoWorld import LogicMixin, World
 
 if TYPE_CHECKING:
     from .world import SlayTheSpire2World
@@ -37,15 +37,21 @@ class SpireLogic(LogicMixin):
         }
 
     def copy_mixin(self, new_state: CollectionState) -> CollectionState:
+        copied_state = spire_logic(new_state)
         for k,v in self.power_level.items():
             new_char_pl = defaultdict(float)
-            new_state.power_level[k] = new_char_pl
+            copied_state.power_level[k] = new_char_pl
             for ik, iv in v.items():
                 new_char_pl[ik] = iv
-        new_state.item_levels = {
+        copied_state.item_levels = {
             k: {inner: inner_v for inner, inner_v in v.items() } for k,v in self.item_levels.items()
         }
         return new_state
+
+
+def spire_logic(state: CollectionState) -> SpireLogic:
+    # Archipelago installs LogicMixin attributes on CollectionState at runtime.
+    return typing.cast(SpireLogic, typing.cast(object, state))
 
 
 @dataclasses.dataclass()
@@ -73,7 +79,7 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
 
         @typing.override
         def _evaluate(self, state: CollectionState) -> bool:
-            return state.power_level[self.player][self.char_offset] >= self.power_level
+            return spire_logic(state).power_level[self.player][self.char_offset] >= self.power_level
 
         @typing.override
         def explain_json(self, state: CollectionState | None = None) -> List[JSONMessagePart]:
@@ -147,8 +153,9 @@ class SpireHasShop(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
 class NumberOfProgressiveAncients(FieldResolver, game="Slay the Spire II"):
     default_amount: int
     @typing.override
-    def resolve(self, world: 'SlayTheSpire2World') -> typing.Any:
-        return self.default_amount + (0 if world.options.neow_sanity.value == 0 else 1)
+    def resolve(self, world: World) -> int:
+        spire_world = typing.cast('SlayTheSpire2World', world)
+        return self.default_amount + (0 if spire_world.options.neow_sanity.value == 0 else 1)
 
 
 
