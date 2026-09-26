@@ -13,7 +13,7 @@ from .coop import player_name
 from .items import ItemType
 from .options import CampfireSanity, ShopSanity, GoldSanity, ShopRemoveSlots, ProgressiveStarterCard, \
     ProgressiveStarterRelic
-from ..AutoWorld import LogicMixin
+from worlds.AutoWorld import LogicMixin
 
 if TYPE_CHECKING:
     from .world import SlayTheSpire2World

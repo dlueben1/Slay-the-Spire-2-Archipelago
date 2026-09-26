@@ -1,23 +1,24 @@
 # Building the Projects
 
+Developing from WSL? See [WSL development setup](docs/contributing/wsl-setup.md) for the tested Archipelago, Python, Godot, and dual-API client workflow.
+
 ## Prerequisites
 
 You need the following installed:
 
 - Slay the Spire 2
 - Godot v4.5.1 (the .NET version, _NOT_ the standalone version and _NOT_ the Megadot version)
-- Visual Studio 2022 (for the Game Client / C# part)
-- Visual Studio Code (for the AP World)
+- A code editor of your choice; C#/.NET and Python support are useful for navigating both projects
 - .NET 10 SDK (the client still targets `net9.0`)
 
 You also need to:
 
-- Create a clone of Archipelago's repo should live in `../Archipelago` or Python will complain about the APWorld's `.py` files
+- Clone Archipelago 0.6.7 in `../Archipelago` and make `world/spire2` available in its `worlds/spire2` directory by copying or linking it; see the [WSL setup](docs/contributing/wsl-setup.md)
 - Copy `client/StS2AP/local.props.template` to `client/StS2AP/local.props` and update its paths to match your local installations
   - `<STS2GamePath>` should point to the directory for the game in Steam
   - Keep `<UseSts2RefLib>true</UseSts2RefLib>` for portable, permissioned compile-time references from NuGet
   - Optionally set `<UseSts2RefLib>false</UseSts2RefLib>` and configure `<Sts2ApiSignatureRoot>` to compile against DLLs extracted from your own game installations
-  - `<GodotExePath>` should point to the Godot Directory that has `Godot_v4.5.1-stable_mono_win64.exe`
+  - `<GodotExePath>` should point to the Godot 4.5.1 .NET executable for the OS that runs the build
   - See [Selecting an STS2 API for development](docs/contributing/sts2-api-compat.md) for configuring your editor and compatibility builds
 
 > [!CAUTION]
@@ -25,20 +26,28 @@ You also need to:
 
 ## Building the APWorld
 
-Copy the folder inside `world` into your local Archipelago Installation's `world` folder, then open the launcher and select "Build APWorlds", and you'll find it in the `build` folder
+Choose whichever build method fits your setup:
+
+- Copy `world/spire2` into `../Archipelago/worlds/spire2`, then select **Build APWorlds** in the Archipelago launcher. The file appears at `../Archipelago/build/apworlds/spire2.apworld`.
+- On Windows, run `.\scripts\build_world.ps1` in PowerShell. It replaces the copied world in the sibling Archipelago checkout, runs the launcher build, and copies the result to `dist/spire2.apworld`. Use this with a copied world, not a linked one.
+- With `world/spire2` linked into `../Archipelago/worlds/spire2`, run `.venv/bin/python scripts/build_apworld_local.py` from WSL. The result is `dist/spire2.apworld`.
 
 > [!WARNING]
 > If you need to update `ItemTable.cs` because you've changed the items in the APWorld, run `./scripts/generate_item_enums.ps1`. This will cause many errors but can be helpful if a large change was made.
 
 ## Building the Game Client
 
-Use `Ctrl+Shift+B` or `Build > Build Solution`. This will automatically place the mod in the `mods` folder of Slay the Spire
+Build `client/StS2AP/StS2AP.csproj` with `dotnet build` or your editor's build command. `BuildMode=CompileOnly` checks compilation without deploying. `BuildMode=Package` writes a package to `dist/Archipelago` when `ModsOutputDir` is configured as in the WSL setup.
 
 > [!CAUTION]
-> Note that while this is a Godot game, and Godot is needed for _building_ the mod, I don't know how to use the Godot Engine itself to modify/view any game files. All of this is handled entirely in code in Visual Studio.
+> Godot is needed to export the mod package. The client source is C# and can be edited with any suitable editor.
 
 > [!TIP]
-> While developing the mod, use `Ctrl+Alt+J` to view the "Object Browser", this will let you view the `sts2` namespace and all of the source code for the game
+> For API navigation and completion in an editor, use the matching game assemblies or NuGet reference assemblies described in the [WSL setup](docs/contributing/wsl-setup.md). Reload the project after changing `Sts2ApiCompat`.
+
+## Testing Multiplayer Locally
+
+Run `scripts/test_multiplayer_local.ps1` from Windows PowerShell, or `./scripts/test_multiplayer_local.sh` from WSL to launch the Windows game. See the [script instructions](scripts/README.md#local-multiplayer-test-from-wsl) for setup and options.
 
 # Submitting a Change
 

@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <!-- Keep F# reference assemblies separate when building the shared WSL checkout from Windows. -->
+    <BaseIntermediateOutputPath>obj/$(OS)/</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin/$(OS)/</BaseOutputPath>
+  </PropertyGroup>
+</Project>

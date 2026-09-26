@@ -40,7 +40,7 @@
     <GameDataDir>$(STS2GamePath)/data_sts2_windows_x86_64</GameDataDir>
     <STS2ReferenceDataDir Condition="'$(STS2ReferenceDataDir)' == ''"
       >$(GameDataDir)</STS2ReferenceDataDir>
-    <GodotProject>$(ProjectDir)godot</GodotProject>
+    <GodotProject>$(MSBuildProjectDirectory)/godot</GodotProject>
     <GodotPackPreset>Windows Desktop</GodotPackPreset>
 
     <!-- The Versions of StS2 we support (the public branch version and the beta version) -->

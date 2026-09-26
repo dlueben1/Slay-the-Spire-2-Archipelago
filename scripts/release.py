@@ -298,10 +298,15 @@ def build_apworld(paths: BuildPaths) -> None:
             "Pass --archipelago-root with a checkout containing Launcher.py and worlds/."
         )
 
-    log(f"Syncing {source} to {destination} (existing contents will be deleted)")
-    if destination.exists():
-        shutil.rmtree(destination)
-    shutil.copytree(source, destination)
+    if destination.is_symlink():
+        if destination.resolve() != source.resolve():
+            raise ReleaseError(f"{destination} links to another world source")
+        log(f"Using linked world source at {destination}")
+    else:
+        log(f"Syncing {source} to {destination} (existing contents will be deleted)")
+        if destination.exists():
+            shutil.rmtree(destination)
+        shutil.copytree(source, destination)
 
     run(
         (sys.executable, launcher, "Build APWorlds", EXPECTED_WORLD_GAME),

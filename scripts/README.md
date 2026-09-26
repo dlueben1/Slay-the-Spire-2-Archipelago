@@ -1,3 +1,14 @@
+# Local multiplayer test from WSL
+
+The game runs on Windows. From WSL, use the shell wrapper to launch the existing Windows PowerShell test script:
+
+```bash
+./scripts/test_multiplayer_local.sh -SettingsOnly
+./scripts/test_multiplayer_local.sh -ApServer localhost:38281 -HostSlot Alice -ClientSlot Bob
+```
+
+Run `-SettingsOnly` once if both isolated game accounts need Experimental Multiplayer enabled. The wrapper forwards the remaining PowerShell options unchanged. The Windows script checks `STS2GamePath` in `local.props` and the standard Windows Steam path. If neither points to the game, pass `-ExePath` with either a WSL absolute path or a Windows path; the wrapper converts WSL paths before calling PowerShell. The launcher writes separate logs under `logs/multiplayer/`.
+
 # Multiplayer divergence analyzer
 
 Use `analyze_multiplayer_divergence.ps1` before manually comparing Slay the

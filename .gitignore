@@ -432,6 +432,11 @@ web/public/docs/
 
 # Slay the Spire / Godot Local Props
 local.props
+
+# Local Python tooling for Archipelago world development
+/.venv/
+/.local-tools/
+/.codex/config.toml
 client/StS2AP/.sts2-references/
 client/StS2AP/godot/.godot/global_script_class_cache.cfg
 /client/StS2AP/godot/.godot/exported
