@@ -8,6 +8,10 @@ public sealed class SerializableAP
 {
     [JsonPropertyName("player_number")]
     public int PlayerNumber { get; set; } = 1;
+    // Custom checkpoints bypass RitsuLib's native save writer, so keep the run identity explicitly.
+    [JsonPropertyName("run_id")]
+    public Guid RunId { get; set; }
+
     [JsonPropertyName("progress")]
     public ApRunProgressState Progress { get; set; } = new();
 

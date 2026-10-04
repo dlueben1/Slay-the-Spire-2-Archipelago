@@ -11,20 +11,21 @@ public sealed class SingleplayerCheckpointBankTests : IDisposable
     private string BankDirectory => Directory.GetDirectories(_root).Single();
 
     [Fact]
-    public void FreshAttemptUsesSameSixPositionsAndOnlyOverwritesReachedBoundary()
+    public void FreshAttemptUsesSameNinePositionsAndOnlyOverwritesReachedBoundary()
     {
         foreach (string key in SingleplayerCheckpointBank.Milestones)
             Store.Save(_key, key, "old " + key, 1, true);
         // A new attempt/restart reconstructs the key; there is no playthrough identity.
         var nextAttempt = new SingleplayerCheckpointBank.BankKey(new("seed", 0, 1), "IRONCLAD");
         var restarted = new SingleplayerCheckpointBank(_root);
-        Assert.Equal(6, restarted.Read(nextAttempt).Checkpoints.Count);
+        Assert.Equal(9, restarted.Read(nextAttempt).Checkpoints.Count);
         restarted.Save(nextAttempt, "1-ancient", "new start", 0, false);
         Assert.Equal("new start", Store.Load(_key, "1-ancient").Payload);
         Assert.Equal("old 1-boss", Store.Load(_key, "1-boss").Payload);
         Assert.Equal("old 3-treasure", Store.Load(_key, "3-treasure").Payload);
+        Assert.Equal("old 3-campfire", Store.Load(_key, "3-campfire").Payload);
         Assert.Single(Directory.GetDirectories(_root));
-        Assert.Equal(6, Directory.GetFiles(BankDirectory, "run-*.save").Length);
+        Assert.Equal(9, Directory.GetFiles(BankDirectory, "run-*.save").Length);
     }
 
     [Fact]
@@ -138,6 +139,12 @@ public sealed class SingleplayerCheckpointBankTests : IDisposable
 
     [Theory]
     [InlineData("1-ancient", true, 0, true)]
+    [InlineData("1-campfire", true, 0, true)]
+    [InlineData("2-campfire", true, 1, false)]
+    [InlineData("2-campfire", true, 2, true)]
+    [InlineData("3-campfire", true, 2, false)]
+    [InlineData("3-campfire", true, 3, true)]
+    [InlineData("3-campfire", false, 0, true)]
     [InlineData("1-boss", true, 1, true)]
     [InlineData("2-treasure", true, 1, false)]
     [InlineData("2-boss", true, 1, false)]

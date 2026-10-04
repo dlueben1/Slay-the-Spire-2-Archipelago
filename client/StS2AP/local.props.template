@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <!-- MSBuild-based IDEs and editors resolve this API version. -->
-    <Sts2ApiCompat>0.111.0</Sts2ApiCompat>
+    <Sts2ApiCompat>$(Sts2BetaApiCompat)</Sts2ApiCompat>
 
     <!-- Use MegaCrit-permissioned, stripped reference assemblies from NuGet. -->
     <UseSts2RefLib>true</UseSts2RefLib>
@@ -15,12 +15,9 @@
       Sts2ApiSignatureRoot. Keep only the three assemblies in each numeric
       version directory:
 
-      ???\sts2-reference\0.107.1\sts2.dll
-      ???\sts2-reference\0.107.1\0Harmony.dll
-      ???\sts2-reference\0.107.1\GodotSharp.dll
-      ???\sts2-reference\0.111.0\sts2.dll
-      ???\sts2-reference\0.111.0\0Harmony.dll
-      ???\sts2-reference\0.111.0\GodotSharp.dll
+      ???\sts2-reference\<game version>\sts2.dll
+      ???\sts2-reference\<game version>\0Harmony.dll
+      ???\sts2-reference\<game version>\GodotSharp.dll
 
       The selected Sts2ApiCompat chooses the matching directory below this root.
     -->

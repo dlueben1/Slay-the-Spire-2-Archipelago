@@ -39,6 +39,8 @@ namespace StS2AP
                 ApRunData.Initialize();
             }
             ModSettingsRegistration.Register();
+            ApTelemetry.Initialize();
+            ApGameplayTelemetry.Initialize();
 
             // Initialize Utilities
             ApMirroredRewardDispatcher.Initialize();
@@ -56,11 +58,13 @@ namespace StS2AP
                 /// VERY IMPORTANT: For `PatchAll()` to work, we need to use nested classes like we're using in the `Patches` directory.
                 /// The syntax is somewhat ugly, but it's easier to maintain this way since we don't have to patch by category/individually.
                 harmony.PatchAll(assembly);
+                ApTelemetry.RecordPatchResult();
                 LogUtility.Success("Harmony patches applied successfully.");
                 LogUtility.Info("Archipelago mod initialized.");
             }
             catch (Exception ex)
             {
+                ApTelemetry.RecordPatchResult(ex);
                 LogUtility.Error($"Failed to apply Harmony patches: {ex.Message}");
             }
         }

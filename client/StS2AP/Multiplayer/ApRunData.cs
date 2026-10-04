@@ -135,6 +135,7 @@ public static class ApRunData
             ProgressRevision = existing?.ProgressRevision ?? 0,
             ProgressiveStarters = existing?.ProgressiveStarters
                 ?? new ApProgressiveStarterPlayerState(),
+            LastConsumedBuffIndex = existing?.LastConsumedBuffIndex ?? -1,
         };
         // SyncLobbyOnChange makes this a contribution to the authoritative host staging
         // session. On a client RitsuLib pushes the local PlayerRunSavedData payload with a
@@ -170,6 +171,13 @@ public static class ApRunData
 
     public static ApRunSharedState GetSharedState(RunState runState) => _sharedRun.Get(runState);
 
+    internal static void RestoreSingleplayerRunId(RunState runState, Guid runId)
+    {
+        // Older experimental checkpoints have no identity; do not invent one on every reload.
+        if (_initialized && runId != Guid.Empty)
+            _sharedRun.Modify(runState, state => state.RunId = runId);
+    }
+
     public static void ModifyRelicReceipts(RunState runState, Action<ApRelicReceiptState> update) =>
         _sharedRun.Modify(runState, state => update(state.RelicReceipts));
 
@@ -198,6 +206,16 @@ public static class ApRunData
             return;
         state.CombatsSinceLastWaxMelt = count;
         _players.Set(runState, netId, state);
+    }
+
+    /// <summary>Records successful buff actions identically on every replica, including guests.</summary>
+    internal static bool RecordConsumedBuff(RunState runState, ulong netId, int itemIndex)
+    {
+        if (!_initialized || !_players.TryGet(runState, netId, out ApPlayerRunState state))
+            return false;
+        state.LastConsumedBuffIndex = Math.Max(state.LastConsumedBuffIndex, itemIndex);
+        _players.Set(runState, netId, state);
+        return true;
     }
 
     /// <summary>

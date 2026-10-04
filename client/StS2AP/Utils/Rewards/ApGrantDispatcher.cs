@@ -28,7 +28,7 @@ public static class ApGrantDispatcher
                 continue;
             if (ArchipelagoIdCodec.IsUniversalItemId(item.ItemId))
             {
-                if (ItemTable.IsUniversalCombatBuff(item.ItemId) || BonusRewardUtility.ConvertToGold(item.ItemId))
+                if (ItemTable.IsMultiplayerBuffGoldFallback(item.ItemId) || BonusRewardUtility.ConvertToGold(item.ItemId))
                     buffCount++;
                 continue;
             }

@@ -15,7 +15,7 @@ def create_regions(world: 'SlayTheSpire2World', player: int):
     neow = Region("Neow's Room", player, multiworld)
     multiworld.regions.append(neow)
 
-    for config in world.all_player_characters:
+    for config in world.characters:
         _create_regions(world, player, config, neow)
 
     for region in multiworld.get_regions(player):
@@ -26,7 +26,7 @@ def create_regions(world: 'SlayTheSpire2World', player: int):
 
 
 def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'CharacterConfig', neow: Region) -> None:
-    prefix = config.ap_name
+    prefix = config.name
     multiworld = world.multiworld
     every_other = not world.options.shuffle_all_cards
     ascension_mod = 1 if 'DoubleBoss'.lower() in config.ascension and 'DoubleBoss'.lower() not in config.ascension_down else 0

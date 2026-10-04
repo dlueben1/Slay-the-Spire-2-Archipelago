@@ -22,10 +22,13 @@ namespace StS2AP
         }
 
         /// <summary>
-        /// Extracts the one-based AP character number from a character-specific item ID.
+        /// Extracts the one-based AP character number, or zero for a universal item.
         /// </summary>
         public static long GetAPCharacterNumber(this ItemInfo item)
         {
+            // Mixed receipt catalogs include universal items, which have no character.
+            if (item is not null && ArchipelagoIdCodec.IsUniversalItemId(item.ItemId))
+                return 0L;
             if (item is null || !ArchipelagoIdCodec.IsCharacterItemId(item.ItemId))
             {
                 LogUtility.Error(

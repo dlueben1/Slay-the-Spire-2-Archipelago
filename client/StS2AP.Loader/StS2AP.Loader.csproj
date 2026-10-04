@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\StS2AP\SupportedGameVersions.props" />
   <Import Project="..\StS2AP\local.props" Condition="Exists('..\StS2AP\local.props')" />
 
   <PropertyGroup>
@@ -10,10 +11,9 @@
     <RootNamespace>StS2AP.Loader</RootNamespace>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <IsPackable>false</IsPackable>
-    <Sts2ApiCompat>0.107.1</Sts2ApiCompat>
+    <Sts2ApiCompat>$(Sts2PublicApiCompat)</Sts2ApiCompat>
     <UseSts2RefLib Condition="'$(UseSts2RefLib)' == ''">false</UseSts2RefLib>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
-    <Sts2ApiSignatureDir Condition="'$(STS2ReferenceDataDir01071)' != ''">$(STS2ReferenceDataDir01071)</Sts2ApiSignatureDir>
     <Sts2ApiSignatureDir Condition="'$(Sts2ApiSignatureDir)' == '' and '$(Sts2ApiSignatureRoot)' != ''">$(Sts2ApiSignatureRoot)\$(Sts2ApiCompat)</Sts2ApiSignatureDir>
     <STS2ReferenceDataDir Condition="'$(Sts2ApiSignatureDir)' != ''">$(Sts2ApiSignatureDir)</STS2ReferenceDataDir>
     <STS2GamePath Condition="'$(STS2GamePath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2</STS2GamePath>

@@ -22,4 +22,6 @@ public sealed class ApPlayerRunState
     public ApReplicaConstructionState Construction { get; set; } = new();
     public long ProgressRevision { get; set; }
     public ApProgressiveStarterPlayerState ProgressiveStarters { get; set; } = new();
+    // Advanced by buff actions on every replica; retained in the host's save for rejoin.
+    public int LastConsumedBuffIndex { get; set; } = -1;
 }

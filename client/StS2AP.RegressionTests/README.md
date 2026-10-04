@@ -105,6 +105,9 @@ variant. Unit tests establish the behavior of our policies, not native callbacks
 | DeathLink with same-slot peers, lethal damage, and death prevention | Intended recipients are affected once; no echo loop; later legitimate deaths still send |
 | Open rewards while starting travel, then return or start a new run | Stale pending menu work cannot open in the next room/run |
 | Save at a checkpoint, advance, then continue/recover | Correct checkpoint/recovery selected and native run data restored |
+| Receive Additional Card Reward in a normal fight, including on a non-host AP player; win and pick it | Only the receiving player gets one extra native three-card offer; picking adds the selected card on every replica. No additional AP check or gold fallback |
+| Receive two Additional Card Rewards in one fight, then reconnect after claiming them | Two separate extra offers; consumed receipts do not replay on reconnect |
+| Apply Additional Card Reward during either Act 3 boss | Native final-act boss suppression still produces no card rewards |
 
 Useful existing logs include `Applied AP rest-site options for player`,
 `Leaving native rest-site options unchanged`, and `Published ... campfire check(s) from an AP

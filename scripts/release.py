@@ -679,7 +679,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--sts2-api-signature-root",
         type=Path,
         required=True,
-        help="directory containing 0.107.1/ and 0.111.0/ compile-time game assemblies",
+        help="directory containing a subdirectory for each supported game API's compile-time assemblies",
     )
 
     publish = subparsers.add_parser(

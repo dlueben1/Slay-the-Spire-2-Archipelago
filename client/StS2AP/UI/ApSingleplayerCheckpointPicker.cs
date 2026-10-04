@@ -7,7 +7,7 @@ using static StS2AP.UI.ApCampaignUi;
 
 namespace StS2AP.UI;
 
-/// <summary>Character selection opens its six shared checkpoint positions directly.</summary>
+/// <summary>Character selection opens its nine shared checkpoint positions directly.</summary>
 public sealed partial class ApSingleplayerCheckpointPicker : Control, IScreenContext
 {
     private NCharacterSelectScreen _screen = null!;
@@ -42,7 +42,8 @@ public sealed partial class ApSingleplayerCheckpointPicker : Control, IScreenCon
         var panel = new PanelContainer();
         panel.SetAnchorsPreset(LayoutPreset.Center);
         panel.OffsetLeft = -530; panel.OffsetRight = 530;
-        panel.OffsetTop = -350; panel.OffsetBottom = 350;
+        float halfHeight = ApRemoteSingleplayerSave.IsEnabled ? 400 : 370;
+        panel.OffsetTop = -halfHeight; panel.OffsetBottom = halfHeight;
         panel.AddThemeStyleboxOverride("panel", CreatePanelStyle());
         overlay.AddChild(panel);
         var root = new VBoxContainer();
@@ -53,7 +54,7 @@ public sealed partial class ApSingleplayerCheckpointPicker : Control, IScreenCon
         var scroll = new ScrollContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
         root.AddChild(scroll);
         _list = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        _list.AddThemeConstantOverride("separation", 8);
+        _list.AddThemeConstantOverride("separation", 6);
         scroll.AddChild(_list);
         var cancel = CreateButton("Cancel");
         cancel.Pressed += () => { if (!_loading) NModalContainer.Instance?.Clear(); };
@@ -94,6 +95,7 @@ public sealed partial class ApSingleplayerCheckpointPicker : Control, IScreenCon
                     "1-ancient" => "Act 1 — Initial Ancient",
                     "1-boss" => "Act 1 — Boss defeated",
                     "2-boss" => "Act 2 — Boss defeated",
+                    "1-campfire" or "2-campfire" or "3-campfire" => $"Act {key[0]} — Pre-boss Campfire",
                     _ => $"Act {key[0]} — Treasure",
                 };
                 bool exists = bank.Checkpoints.TryGetValue(key, out var snapshot);

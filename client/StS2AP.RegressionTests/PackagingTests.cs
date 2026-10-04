@@ -14,7 +14,11 @@ public sealed class PackagingTests
         string root = Path.GetFullPath(Environment.GetEnvironmentVariable("STS2AP_TEST_BUNDLE")!);
         foreach (string dependency in new[] { "StS2AP.Domain.dll", "FSharp.Core.dll" })
             Assert.True(File.Exists(Path.Combine(root, dependency)), $"Missing bundle dependency: {dependency}");
-        foreach (string compat in new[] { "0.107.1", "0.111.0" })
+        using JsonDocument manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "archipelago-variants.manifest")));
+        string[] variants = manifest.RootElement.GetProperty("variants").EnumerateObject()
+            .Select(variant => variant.Name).ToArray();
+        Assert.Equal(2, variants.Length);
+        foreach (string compat in variants)
         {
             var context = new BundleContext(compat);
             try

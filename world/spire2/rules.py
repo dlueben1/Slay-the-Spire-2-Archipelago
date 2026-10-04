@@ -9,7 +9,6 @@ from rule_builder.field_resolvers import FieldResolver
 from rule_builder.options import OptionFilter
 from rule_builder.rules import Rule, True_, Has, HasFromListUnique
 from .characters import CharacterConfig, character_list
-from .coop import player_name
 from .items import ItemType
 from .options import CampfireSanity, ShopSanity, GoldSanity, ShopRemoveSlots, ProgressiveStarterCard, \
     ProgressiveStarterRelic
@@ -83,12 +82,12 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
 
         @typing.override
         def explain_json(self, state: CollectionState | None = None) -> List[JSONMessagePart]:
-            player_index, character = divmod(self.char_offset, 100)
+            character = self.char_offset
             name = (character_list[character - 1] if 1 <= character <= len(character_list)
                     else f"Custom Character {character - len(character_list)}")
             return [
                 {
-                    "type": "text", "text": f"{player_name(name, player_index + 1)} requires power level {self.power_level}"
+                    "type": "text", "text": f"{name} requires power level {self.power_level}"
                 }
             ]
 
@@ -160,20 +159,17 @@ class NumberOfProgressiveAncients(FieldResolver, game="Slay the Spire II"):
 
 
 def set_rules(world: 'SlayTheSpire2World') -> None:
-    for config in world.all_player_characters:
+    for config in world.characters:
         _set_rules(world, config)
 
-    completion = True_()
-    for configs in world.player_characters.values():
-        num_goals = len(configs) if world.options.num_chars_goal.value == 0 else world.options.num_chars_goal.value
-        assert num_goals > 0
-        completion = completion & HasFromListUnique(*[f"{config.ap_name} Victory" for config in configs],
-                                                    count=num_goals)
-    world.set_completion_rule(completion)
+    num_goals = world.options.num_chars_goal.value or len(world.characters)
+    assert num_goals > 0
+    world.set_completion_rule(HasFromListUnique(
+        *[f"{config.name} Victory" for config in world.characters], count=num_goals))
 
 def _set_rules(world: 'SlayTheSpire2World', config: CharacterConfig) -> None:
-    prefix = config.ap_name
-    offset = config.power_key
+    prefix = config.name
+    offset = config.char_offset
     world.set_rule(world.get_entrance(f"{prefix} Early Act 1"), Has(f"{prefix} Unlock"))
     world.set_rule(world.get_entrance(f"{prefix} Mid Act 1"), SpireHasPower(offset,3) &
                    Has(f"{prefix} Progressive Rest", options=[OptionFilter(CampfireSanity, 1)], filtered_resolution=True) &
@@ -235,5 +231,5 @@ def _set_rules(world: 'SlayTheSpire2World', config: CharacterConfig) -> None:
         world.set_rule(world.get_entrance(f"{prefix} Act 2 Shop"),
                        SpireHasGold(prefix, 150, options=[OptionFilter(GoldSanity,1)], filtered_resolution=True))
 
-        world.set_rule(world.get_entrance(f"{prefix} Act 2 Shop"),
+        world.set_rule(world.get_entrance(f"{prefix} Act 3 Shop"),
                        SpireHasGold(prefix, 270, options=[OptionFilter(GoldSanity,1)], filtered_resolution=True))

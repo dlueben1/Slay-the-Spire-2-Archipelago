@@ -556,10 +556,11 @@ public static class ApMirroredRewardDispatcher
 
     private static Reward BuildAncientReward(RewardOrigin origin, IReadOnlyList<string> models, Player player)
     {
-        var children = models
-            .Select(serialized =>
+        var relics = models.Select(DeserializeRelic).ToArray();
+        string[] offered = relics.Select(relic => relic.Id.Entry).ToArray();
+        var children = relics
+            .Select(relic =>
             {
-                RelicModel relic = DeserializeRelic(serialized);
                 // These are fresh, unclaimed choices. Some Ancient saved-property setters (for
                 // example Pumpkin Candle at zero kindle and Pael's Tooth with no stored cards)
                 // mark a deserialized model Disabled even though the native Ancient presents the
@@ -569,7 +570,8 @@ public static class ApMirroredRewardDispatcher
                     relic,
                     player,
                     origin,
-                    ApMirroredRewardKind.Ancient
+                    ApMirroredRewardKind.Ancient,
+                    offered
                 );
             })
             .ToList();
@@ -973,6 +975,7 @@ public static class ApMirroredRewardDispatcher
         private readonly int _itemIndex;
         private readonly ApMirroredRewardKind _kind;
         private readonly LocString _description;
+        private readonly IReadOnlyList<string>? _ancientChoices;
 
         public override LocString Description => _description;
 
@@ -980,11 +983,13 @@ public static class ApMirroredRewardDispatcher
             RelicModel relic,
             Player player,
             RewardOrigin spec,
-            ApMirroredRewardKind kind)
+            ApMirroredRewardKind kind,
+            IReadOnlyList<string>? ancientChoices = null)
             : base(relic, player)
         {
             _itemIndex = spec.ReceivedItemIndex;
             _kind = kind;
+            _ancientChoices = ancientChoices;
             _description = CreateApDescription(relic.Title, spec);
         }
 
@@ -1001,7 +1006,11 @@ public static class ApMirroredRewardDispatcher
             if (applied && _kind == ApMirroredRewardKind.Relic)
                 RelicReceiptMultiplayer.ConsumeMenu(Player, _itemIndex);
             if (applied && LocalContext.IsMe(Player))
-                CommitDiscreteReward(_itemIndex, _kind);
+            {
+                bool committed = CommitDiscreteReward(_itemIndex, _kind);
+                if (committed && _ancientChoices != null && Relic != null)
+                    ApGameplayTelemetry.AncientSelected(Player, _itemIndex, Relic.Id.Entry, _ancientChoices);
+            }
             return applied;
         }
 

@@ -10,20 +10,6 @@ from .characters import character_list
 from .constants import NUM_CUSTOM, ASCENSIONS
 
 
-class PlayerCount(Range):
-    """Number of co-op players sharing ONE AP slot, each sharing the same settings but separately tracked progress
-    Each player independently rolls their own character roster. 
-    Each client must select its own player number before connecting.
-    NOTE: You may also play multiplayer via player_count: 1 but everyone has their own yaml and thus each
-    person can have different sanities turned on. 
-    May also be used for asyncs to play the same character multiple times
-    """
-    display_name = "Player Count"
-    range_start = 1
-    range_end = 4
-    default = 1
-
-
 class Characters(OptionSet):
     """Enter the list of characters to play as.  Valid characters are:
         'Ironclad'
@@ -640,7 +626,6 @@ filler_item_options = OptionGroup(
 
 @dataclass
 class Spire2Options(PerGameCommonOptions):
-    player_count: PlayerCount
     # Character options
     characters: Characters
     modded_characters: ModdedCharacters

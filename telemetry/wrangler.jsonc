@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sts2-ap-telemetry",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-09-29",
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": { "enabled": false },
+  "ratelimits": [{
+    "name": "TELEMETRY_RATE_LIMITER",
+    "namespace_id": "29092601",
+    "simple": { "limit": 300, "period": 60 }
+  }]
+}

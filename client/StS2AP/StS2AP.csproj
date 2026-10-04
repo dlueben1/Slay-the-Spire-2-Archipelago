@@ -1,4 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="SupportedGameVersions.props" />
   <!-- Import user-specific development/deployment paths. -->
   <Import Project="local.props" Condition="Exists('local.props')" />
 
@@ -43,9 +44,7 @@
     <GodotProject>$(MSBuildProjectDirectory)/godot</GodotProject>
     <GodotPackPreset>Windows Desktop</GodotPackPreset>
 
-    <!-- The Versions of StS2 we support (the public branch version and the beta version) -->
-    <Sts2PublicApiCompat>0.107.1</Sts2PublicApiCompat>
-    <Sts2BetaApiCompat>0.111.0</Sts2BetaApiCompat>
+    <!-- Supported versions come from SupportedGameVersions.props. -->
     <SupportedSts2ApiCompats>
       $(Sts2PublicApiCompat);$(Sts2BetaApiCompat)
     </SupportedSts2ApiCompats>
@@ -56,8 +55,6 @@
     <!-- The Version of StS2 we are currently targeting (defaults to the specified version above) -->
     <Sts2ApiCompat Condition="'$(Sts2ApiCompat)' == ''">$(DefaultSts2ApiCompat)</Sts2ApiCompat>
     <Sts2ApiSignatureDir Condition="'$(Sts2ApiSignatureRoot)' != ''">$(Sts2ApiSignatureRoot)/$(Sts2ApiCompat)</Sts2ApiSignatureDir>
-    <Sts2ApiSignatureDir Condition="'$(Sts2ApiCompat)' == '$(Sts2PublicApiCompat)' and '$(STS2ReferenceDataDir01071)' != ''">$(STS2ReferenceDataDir01071)</Sts2ApiSignatureDir>
-    <Sts2ApiSignatureDir Condition="'$(Sts2ApiCompat)' == '$(Sts2BetaApiCompat)' and '$(STS2ReferenceDataDir01110)' != ''">$(STS2ReferenceDataDir01110)</Sts2ApiSignatureDir>
     <STS2ReferenceDataDir Condition="'$(Sts2ApiSignatureDir)' != ''">$(Sts2ApiSignatureDir)</STS2ReferenceDataDir>
 
     <!-- Resolves the proper version string for the Reference Library based on the targeted game version -->
@@ -100,7 +97,7 @@
       Condition="'$(UseSts2RefLib)' == 'true' and '$(Sts2RefLibPackageVersion)' != ''"
     />
     <PackageReference Include="STS2.RitsuLib.Compat.0.107.1" Version="0.6.0" />
-    <PackageReference Include="Krafs.Publicizer" Version="2.3.0" PrivateAssets="all" Condition="'$(UseSts2RefLib)' != 'true'" />
+    <PackageReference Include="Krafs.Publicizer" Version="2.3.2" PrivateAssets="all" Condition="'$(UseSts2RefLib)' != 'true'" />
   </ItemGroup>
   <ItemGroup>
     <Publicize Include="sts2" IncludeCompilerGeneratedMembers="false" IncludeVirtualMembers="false" Condition="'$(UseSts2RefLib)' != 'true'" />

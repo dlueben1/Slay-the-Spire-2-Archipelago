@@ -48,7 +48,7 @@ namespace StS2AP.Patches
                         ApRunData.CaptureLocalHostProgressBeforeSave();
                         // Every native floor save updates recovery. Only an eligible AP boundary
                         // also advances the separate checkpoint; carry that decision across await.
-                        bool isApCheckpoint = TryGetCheckpointEligibility(preFinishedRoom, out _, out _, out _);
+                        bool isApCheckpoint = TryGetCheckpointEligibility(preFinishedRoom, out _, out _);
                         SerializableRun snapshot = RunManager.Instance.ToSave(preFinishedRoom);
                         __result = ApMultiplayerCampaignStore.SaveHostSnapshot(__instance, snapshot, isApCheckpoint);
                         return false;
@@ -65,11 +65,10 @@ namespace StS2AP.Patches
                 LogUtility.Info($"Current Map node type {RunManager.Instance.DebugOnlyGetState()?.CurrentMapPoint?.PointType}");
                 LogUtility.Info($"Game thinks we should save: {RunManager.Instance.ShouldSave}");
 
-                // Save after boss kills, in treasure rooms, and after ancient selections.
+                // Save at room-entry checkpoints, after boss kills, and after ancient selections.
                 bool isEligibleCheckpoint = TryGetCheckpointEligibility(
                     preFinishedRoom,
-                    out bool isBossAutosave,
-                    out bool isTreasureAutosave,
+                    out string checkpointKind,
                     out string checkpointReason
                 );
                 if ((RunManager.Instance.NetService.Type != MegaCrit.Sts2.Core.Multiplayer.Game.NetGameType.Singleplayer && RunManager.Instance.NetService.Type != MegaCrit.Sts2.Core.Multiplayer.Game.NetGameType.Host)
@@ -84,22 +83,20 @@ namespace StS2AP.Patches
 
                 LogUtility.Info("Preparing AP checkpoint save");
                 SerializableRun saveMe = RunManager.Instance.ToSave(preFinishedRoom);
-                ApSingleplayerSaves.Save(saveMe, isBossAutosave ? "boss" : isTreasureAutosave ? "treasure" : "ancient");
+                ApSingleplayerSaves.Save(saveMe, checkpointKind);
                 __result = Task.CompletedTask;
                 return false;
             }
 
             private static bool TryGetCheckpointEligibility(
                 AbstractRoom? preFinishedRoom,
-                out bool isBossAutosave,
-                out bool isTreasureAutosave,
+                out string kind,
                 out string reason)
             {
                 ArchipelagoSettings? settings = ArchipelagoClient.Settings;
                 if (settings == null)
                 {
-                    isBossAutosave = false;
-                    isTreasureAutosave = false;
+                    kind = string.Empty;
                     reason = "the Archipelago slot settings are unavailable";
                     return false;
                 }
@@ -107,23 +104,24 @@ namespace StS2AP.Patches
                     GameUtility.CurrentConfig?.CharOffset ?? -1
                 );
                 int currentAct = (GameUtility.CurrentPlayer?.RunState.CurrentActIndex ?? 0) + 1;
-                MapPointType? currentMapPointType = RunManager
+                MapPoint? currentMapPoint = RunManager
                     .Instance.DebugOnlyGetState()
-                    ?.CurrentMapPoint?.PointType;
-                // Act 3 has no later supported checkpoint. Preserve its treasure-room save
-                // instead of replacing it after either Act 3 boss.
-                isBossAutosave = preFinishedRoom?.RoomType == RoomType.Boss && currentAct < 3;
-                isTreasureAutosave = currentMapPointType == MapPointType.Treasure;
-                bool isEligibleSaveLocation =
-                    isBossAutosave
-                    || isTreasureAutosave
-                    || (
-                        // Keep multiplayer Ancient checkpoints unchanged. Singleplayer saves only
-                        // the initial Ancient; Acts 2 and 3 use the preceding boss checkpoints.
-                        (MultiplayerSupport.IsRealMultiplayerRun || currentAct == 1)
-                        && preFinishedRoom?.RoomType == RoomType.Event
-                        && currentMapPointType == MapPointType.Ancient
-                    );
+                    ?.CurrentMapPoint;
+                // Neither Act 3 boss creates a post-boss checkpoint.
+                bool isBossAutosave = preFinishedRoom?.RoomType == RoomType.Boss && currentAct < 3;
+                bool isTreasureAutosave = currentMapPoint?.PointType == MapPointType.Treasure;
+                // Native entry saves already point at the destination, before resting/smithing.
+                // Use the map connection because act length differs between play modes.
+                bool isCampfireAutosave = preFinishedRoom == null
+                    && currentMapPoint?.PointType == MapPointType.RestSite
+                    && currentMapPoint.Children.Any(point => point.PointType == MapPointType.Boss);
+                // Keep multiplayer Ancient checkpoints unchanged. Singleplayer saves only
+                // the initial Ancient; Acts 2 and 3 use the preceding boss checkpoints.
+                bool isAncientAutosave = (MultiplayerSupport.IsRealMultiplayerRun || currentAct == 1)
+                    && preFinishedRoom?.RoomType == RoomType.Event
+                    && currentMapPoint?.PointType == MapPointType.Ancient;
+                kind = isBossAutosave ? "boss" : isTreasureAutosave ? "treasure"
+                    : isCampfireAutosave ? "campfire" : isAncientAutosave ? "ancient" : string.Empty;
                 AncientRelicLocation ancientRelicLocation = AncientSettingsUtility.Current.Location;
                 bool usesProgressiveAncients =
                     settings.APWorldVersion > Constants.VERSION_0_5_3;
@@ -140,7 +138,7 @@ namespace StS2AP.Patches
 
                 if (!RunManager.Instance.ShouldSave)
                     reason = "the run is not currently saveable";
-                else if (!isEligibleSaveLocation)
+                else if (kind.Length == 0)
                     reason = "this room is not an AP checkpoint";
                 else if (ancientIsLocked)
                     reason = "the progressive Ancient checkpoint is locked";
@@ -156,6 +154,9 @@ namespace StS2AP.Patches
             public static string SerializeAndCompress(SerializableRun vanillaSave)
             {
                 var save = ArchipelagoClient.Progress.ToSerializable(vanillaSave);
+                if (RunManager.Instance.DebugOnlyGetState() is { } run
+                    && ApRunData.TryGetSharedState(run, out var shared))
+                    save.RunId = shared.RunId;
                 var json = JsonSerializer.Serialize(
                     save,
                     SerializationUtility.CombinedOptions.GetTypeInfo(typeof(SerializableAP))
@@ -238,6 +239,7 @@ namespace StS2AP.Patches
                 || serializableRun.Players[0].CharacterId?.Entry != expectedCharacter)
                 throw new InvalidDataException("The checkpoint character does not match the selected AP run.");
             RunState runState = RunState.FromSerializable(serializableRun);
+            ApRunData.RestoreSingleplayerRunId(runState, apSave.RunId);
             NAudioManager.Instance?.StopMusic();
             await RunManager.Instance.SetUpSavedSingleplayer(runState, serializableRun);
             Log.Info(

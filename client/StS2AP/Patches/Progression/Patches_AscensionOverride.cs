@@ -188,7 +188,7 @@ namespace StS2AP.Patches
         #region Update Ascension-Related UI
 
         /// <summary>
-        /// Shows the configured AP ascension count for the selected character without
+        /// Shows the active AP ascension count and ranges for the selected character without
         /// changing the base game's ascension or lobby state.
         /// </summary>
         public static void UpdateCharacterSelectAscension(
@@ -202,8 +202,7 @@ namespace StS2AP.Patches
                 || !MultiplayerSupport.IsFeatureEnabled(MultiplayerFeature.AscensionEffects))
                 return;
 
-            var panel = AccessTools.Field(typeof(NCharacterSelectScreen), "_ascensionPanel")
-                ?.GetValue(screen) as NAscensionPanel;
+            var panel = screen._ascensionPanel;
             if (panel == null)
             {
                 return;
@@ -219,24 +218,29 @@ namespace StS2AP.Patches
                 return;
             }
 
-            var levelLabel = AccessTools.Field(typeof(NAscensionPanel), "_ascensionLevel")
-                ?.GetValue(panel) as MegaLabel;
-            if (levelLabel == null)
+            var levelLabel = panel._ascensionLevel;
+            var description = panel._info;
+            if (levelLabel == null || description == null)
             {
                 return;
             }
 
-            levelLabel.SetTextAutoSize(CountEffectiveAscensions(config).ToString());
+            var effectiveAscensions = GetEffectiveAscensions(config);
+            levelLabel.SetTextAutoSize(effectiveAscensions.Count.ToString());
+            // The native description names just one level and cannot describe gaps from Ascension Downs.
+            description.Text = "[b][gold]"
+                + AscensionBanner.FormatLevels(effectiveAscensions.Select(level => (int)level))
+                + "[/gold][/b]";
             panel.Visible = true;
         }
 
-        private static int CountEffectiveAscensions(CharacterConfig config)
+        private static HashSet<AscensionLevel> GetEffectiveAscensions(CharacterConfig config)
         {
             var effectiveAscensions = new HashSet<AscensionLevel>();
             foreach (var configuredAscension in config.Ascension)
             {
                 var level = Utils.AscensionManager.GetLevel(configuredAscension);
-                if (level.HasValue)
+                if (level is > AscensionLevel.None)
                 {
                     effectiveAscensions.Add(level.Value);
                 }
@@ -260,7 +264,7 @@ namespace StS2AP.Patches
                 effectiveAscensions.Remove(Utils.AscensionManager.ToAscensionLevel(itemId));
             }
 
-            return effectiveAscensions.Count;
+            return effectiveAscensions;
         }
 
         /// <summary>

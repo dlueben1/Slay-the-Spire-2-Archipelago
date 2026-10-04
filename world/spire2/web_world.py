@@ -2,7 +2,7 @@ from BaseClasses import Tutorial
 from worlds.AutoWorld import WebWorld
 from Options import Accessibility, OptionGroup, ProgressionBalancing
 from .options import (
-    PlayerCount, Characters, ModdedCharacters, DeathLink, DeathLinkDamagePercent, EnableDeathFragments, PickNumberCharacters, GoalNumChar,
+    Characters, ModdedCharacters, DeathLink, DeathLinkDamagePercent, EnableDeathFragments, PickNumberCharacters, GoalNumChar,
     LockCharacters, UnlockedCharacter, Ascension, AscensionDown, AdvancedChar, CharacterOptions,
     IncludeFloorChecks, NeowSanity, CampfireSanity, GoldSanity, PotionSanity,
     ShopSanity, ShopCardSlots, ShopNeutralSlots, ShopRelicSlots, ShopPotionSlots, ShopRemoveSlots, ShopSanityCosts,
@@ -40,7 +40,6 @@ class SlayTheSpire2Web(WebWorld):
             AscensionDown,
         ]),
         OptionGroup("Game Options", [
-            PlayerCount,
             ProgressionBalancing,
             Accessibility,
             AncientRelicLocation,

@@ -286,7 +286,7 @@ public static class DeathLinkMultiplayer
         );
     }
 
-    private static bool CanAdmitCombatAction(out string blockedReason)
+    internal static bool CanAdmitCombatAction(out string blockedReason)
     {
         blockedReason = string.Empty;
         CombatManager combat = CombatManager.Instance;
@@ -328,7 +328,7 @@ public static class DeathLinkMultiplayer
             return true;
         }
 
-        blockedReason = "DeathLinks wait for the combat play phase "
+        blockedReason = "External combat actions wait for the combat play phase "
             + $"(combatInProgress={combat.IsInProgress}, synchronizer={synchronizerState})";
         return false;
     }

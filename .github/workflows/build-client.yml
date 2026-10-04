@@ -140,6 +140,18 @@ jobs:
             -p:UseSts2RefLib=true \
             -p:Sts2ApiCompat="$public_api"
 
+      - name: Test compiled client manifests
+        if: inputs.build_mode == 'CompileOnly'
+        env:
+          STS2AP_TEST_ASSEMBLY: ${{ github.workspace }}/client/StS2AP/bin/${{ inputs.sts2_api_compat }}/Release/net9.0/Archipelago.dll
+        run: dotnet test client/StS2AP.RegressionTests/StS2AP.RegressionTests.csproj -c Release --filter Category=Manifest
+
+      - name: Test packaged client variants
+        if: inputs.build_mode == 'Package'
+        env:
+          STS2AP_TEST_BUNDLE: ${{ github.workspace }}/dist/Archipelago
+        run: dotnet test client/StS2AP.RegressionTests/StS2AP.RegressionTests.csproj -c Release --filter Category=Bundle
+
       - name: Zip and Validate Client
         if: inputs.build_mode == 'Package'
         shell: bash

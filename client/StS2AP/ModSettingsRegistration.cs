@@ -124,13 +124,13 @@ public static class ModSettingsRegistration
                     .AddSection("charnames", ConfigureModdedCharactersSection)
                     .AddSection("keybinds", ConfigureKeybindsSection)
                     .AddSection("notifications", ConfigureNotificationsSection)
-                    .AddSection("multiplayer", ConfigureMultiplayerSection)
                     .AddSection("cloud_saves", ConfigureCloudSavesSection)
                     .AddSection("local_saves", ConfigureLocalSavesSection)
                     .AddSection("relic_rewards", ConfigureRelicRewardsSection)
                     .AddSection("ancient_rewards", ConfigureAncientRewardsSection)
                     .AddSection("deathlink", ConfigureDeathLinkSection)
                     .AddSection("bug_reports", ConfigureBugReportsSection)
+                    .AddSection("custom_apworld", ConfigureCustomApWorldSection)
         );
         RegisterHotkeys();
     }
@@ -381,15 +381,15 @@ public static class ModSettingsRegistration
                     "Balanced uses the run's Ancient; Chaos uses the act's pool; True Chaos combines Acts 2 and 3. Neow remains Neow-only."));
     }
 
-    private static void ConfigureMultiplayerSection(ModSettingsSectionBuilder section)
+    private static void ConfigureCustomApWorldSection(ModSettingsSectionBuilder section)
     {
         const string key = "multiplayer_player_number";
-        section.WithTitle(ModSettingsText.Literal("Multiplayer Settings"))
+        section.WithTitle(ModSettingsText.Literal("Custom APWorld"))
             .WithDescription(ModSettingsText.Literal(
-                "Select the player whose items and checks you own in a shared AP slot. "
-                + "Choose a number within the YAML's player_count. People choosing the same number share its AP items and checks. "
-                + "Set this before connecting to Archipelago."))
-            .AddIntSlider(key, ModSettingsText.Literal("Player Number"),
+                "Each player normally connects to their own YAML/AP slot; no player number is needed. "
+                + "This setting only applies to custom APWorlds with numbered players sharing one slot. "
+                + "For those worlds, select your player number before connecting."))
+            .AddIntSlider(key, ModSettingsText.Literal("Shared-slot player number"),
                 CreateBinding(static settings => settings.MultiplayerPlayerNumber,
                     static (settings, value) =>
                     {
@@ -402,7 +402,7 @@ public static class ModSettingsRegistration
                 minValue: 1, maxValue: 4, step: 1,
                 valueFormatter: static value => $"Player {value}",
                 description: ModSettingsText.Dynamic(() => GetPlayerNumberLockReason()
-                    ?? "Choose your player number, then connect to Archipelago."))
+                    ?? "Only used by custom shared-slot APWorlds. Ordinary slots always use Player 1."))
             .ConfigureEntryMenu(key, ModSettingsMenuCapabilities.None)
             .WithEntryEnabledWhen(key, CanChangePlayerNumber);
     }

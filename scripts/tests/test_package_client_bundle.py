@@ -10,6 +10,10 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from package_client_bundle import assemble
+from client_archive import SUPPORTED_STS2_API_COMPATS
+
+
+PUBLIC_API, BETA_API = SUPPORTED_STS2_API_COMPATS
 
 
 class PackageClientBundleTests(unittest.TestCase):
@@ -25,11 +29,11 @@ class PackageClientBundleTests(unittest.TestCase):
                 if not local:
                     with self.assertRaisesRegex(ValueError, "spire2.apworld"), \
                             patch("package_client_bundle.subprocess.run") as run:
-                        assemble(repo, output, "Debug", "0.107.1", "0.111.0")
+                        assemble(repo, output, "Debug", PUBLIC_API, BETA_API)
                     run.assert_not_called()
                     (output / "spire2.apworld").write_bytes(b"world")
 
-                for version in ("0.107.1", "0.111.0"):
+                for version in SUPPORTED_STS2_API_COMPATS:
                     source = repo / "client/StS2AP/bin" / version / "Debug/net9.0"
                     (source / "data").mkdir(parents=True)
                     (source / "Archipelago.dll").write_bytes(version.encode())
@@ -42,7 +46,7 @@ class PackageClientBundleTests(unittest.TestCase):
                 loader.write_bytes(b"loader")
 
                 with patch("package_client_bundle.subprocess.run") as run:
-                    assemble(repo, output, "Debug", "0.107.1", "0.111.0", local=local)
+                    assemble(repo, output, "Debug", PUBLIC_API, BETA_API, local=local)
                 self.assertEqual(run.call_count, 3)
                 for index, call in enumerate(run.call_args_list):
                     command = call.args[0]
@@ -51,7 +55,7 @@ class PackageClientBundleTests(unittest.TestCase):
                     if index < 2:
                         self.assertIn("-p:BuildMode=CompileOnly", command)
                 manifest = json.loads((output / "archipelago-variants.manifest").read_text())
-                self.assertEqual(set(manifest["variants"]), {"0.107.1", "0.111.0"})
+                self.assertEqual(set(manifest["variants"]), set(SUPPORTED_STS2_API_COMPATS))
                 for version, entry in manifest["variants"].items():
                     assembly = (output / entry["assembly"]).read_bytes()
                     self.assertEqual(assembly, version.encode())

@@ -1,608 +1,461 @@
-using System.Collections.Concurrent;
+﻿using System.Text.Json;
 using Archipelago.MultiClient.Net.Enums;
+using Godot;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Context;
+using MegaCrit.Sts2.Core.Entities.Multiplayer;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models.Powers;
+using MegaCrit.Sts2.Core.Rewards;
+using MegaCrit.Sts2.Core.Rooms;
+using MegaCrit.Sts2.Core.Runs;
+using StS2AP.DomainAdapters;
 using STS2RitsuLib;
+using STS2RitsuLib.Networking.ManagedActions;
 using static StS2AP.Data.ItemTable;
 
-namespace StS2AP.Utils
+namespace StS2AP.Utils;
+
+/// <summary>
+/// Manages one-time combat buffs received from Archipelago. Consumption is recorded against
+/// the AP slot so reconnects can skip previously applied receipts; unapplied buffs can carry
+/// into later combats and runs.
+/// Singleplayer applies buffs at player turn start. In multiplayer, the receiving player
+/// requests a native action at DeathLink's safe play-phase boundary, and every peer applies
+/// the effect to that player's creature in its own combat state.
+/// </summary>
+public static class BuffUtility
 {
+    private sealed record BuffActionMessage(Guid RunId, int ItemIndex, APItem BuffType);
+
+    private static readonly RitsuLibManagedNetActionDescriptor<BuffActionMessage> ActionDescriptor = new(
+        ModuleId: ModEntry.ModId,
+        ActionKey: "universal_combat_buff",
+        Serialize: static message => JsonSerializer.SerializeToUtf8Bytes(message),
+        Deserialize: DeserializeMessage,
+        Execute: ExecuteAction,
+        ActionType: GameActionType.CombatPlayPhaseOnly
+    );
+
     /// <summary>
-    /// Manages ephemeral one-time-use buff items received from the Archipelago Multiworld.
-    ///
-    /// Buff items are a "third category" of AP item alongside run-replenishing rewards
-    /// (cards, gold, relics) and permanent unlocks (characters, ascension). Unlike those
-    /// categories, each buff is applied exactly once — at the start of the player's next
-    /// combat turn — and is never applied again, even across reconnects, game restarts, or
-    /// different clients.
-    ///
-    /// ─── Lifecycle ──────────────────────────────────────────────────────────────────
-    ///  1. On connect:   <see cref="LoadFromStorageAsync"/> reads the index of the last
-    ///                   consumed buff from the server's DataStorage and populates
-    ///                   <see cref="_lastConsumedBuffIndex"/>. This must be called early
-    ///                   so that reconnect replays skip already-applied buffs.
-    ///                   <see cref="ProcessQueuedBuffsAsync"/> awaits the storage load
-    ///                   task as an additional safety net for race conditions.
-    ///
-    ///  2. On item recv: <see cref="EnqueueBuff"/> is called from
-    ///                   <see cref="Patches_ItemProcessor.ProcessItem"/> when a buff item
-    ///                   arrives. The buff is added to <see cref="_buffQueue"/> unless
-    ///                   we already know it was consumed (fast path). If storage hasn't
-    ///                   loaded yet, it is enqueued anyway and re-checked at apply time.
-    ///
-    ///  3. On turn start: <see cref="ProcessQueuedBuffsAsync"/> is triggered by a
-    ///                    <see cref="SideTurnStartingEvent"/> subscription (set up in
-    ///                    <see cref="Initialize"/>). It drains the queue, applies each
-    ///                    buff via <see cref="ApplyBuff"/>, then writes the consumed
-    ///                    index to DataStorage.
-    ///
-    ///  4. On disconnect: <see cref="ClearQueue"/> empties <see cref="_buffQueue"/> so
-    ///                    stale entries don't carry over. The consumed-index set is
-    ///                    preserved because it represents permanent history.
+    /// Pending receipts in ascending AP item index order. LastConsumedIndex is a monotonic
+    /// cutoff for replayed receipts, with -1 meaning none consumed. Each entry also tracks
+    /// whether its received-item notification has already been shown.
     /// </summary>
-    public static class BuffUtility
+    // Keep AP library types out of static generic fields: their eager assembly resolution can
+    // run before the game's mod loader has configured the Archipelago assembly context.
+    private static BuffReceiptQueue _buffQueue = new();
+    private static Task? _storageLoadTask;
+    private static bool _storageReady;
+    private static bool _consumptionWritePending;
+    private static bool _storageWriteFailed;
+    private static BuffReceiptQueue? _processingSingleplayer;
+    private static bool _initialized;
+    private static BuffActionMessage? _pendingAction;
+    private static string? _lastRequestError;
+    // Consumption belongs to the AP slot, including its numbered co-op identity, across runs.
+    private static string StorageKey => CoopSlot.StorageKey("StS2AP_LastConsumedBuffIdx");
+
+    /// <summary>
+    /// Registers the multiplayer action and singleplayer player-turn hook once at mod startup.
+    /// </summary>
+    public static void Initialize()
     {
-        #region State
-
-        /// <summary>
-        /// Queue of buff items that have been received from AP but not yet applied in combat.
-        /// Items stay here until the player's next combat turn starts.
-        ///
-        /// The <c>NotificationShown</c> flag tracks whether the received-item notification
-        /// has already been displayed for this buff:
-        /// <list type="bullet">
-        ///   <item><c>true</c> — Notification was shown immediately in <see cref="EnqueueBuff"/>
-        ///     because storage was already loaded, confirming the item was new.</item>
-        ///   <item><c>false</c> — Storage was not yet loaded at enqueue time (reconnect replay).
-        ///     <see cref="ProcessQueuedBuffsAsync"/> will show the notification after the deferred
-        ///     consumed check passes, ensuring only genuinely new items trigger the notification.</item>
-        /// </list>
-        /// <para>
-        /// Using a <c>bool</c> flag (rather than storing <c>ItemInfo</c>) keeps all static field
-        /// generic-type arguments as plain value types. This is important because having an AP
-        /// library type (e.g., <c>ItemInfo</c>) in a static generic field can cause the .NET runtime
-        /// to eagerly resolve the <c>Archipelago.MultiClient.Net</c> assembly before the game's
-        /// mod-loader assembly context is fully configured, resulting in a load failure.
-        /// The <c>ItemInfo</c> is looked up from <c>Session.Items.AllItemsReceived</c> in method
-        /// bodies instead, where JIT resolution is lazy.
-        /// </para>
-        /// </summary>
-        private static readonly ConcurrentQueue<(
-            APItem BuffType,
-            int ItemIndex,
-            bool NotificationShown
-        )> _buffQueue = new();
-
-        /// <summary>
-        /// The Archipelago item index of the most recently applied (consumed) buff.
-        /// Any buff item with a global item index less than or equal to this value is
-        /// considered already consumed and will be skipped.
-        ///
-        /// <para>
-        /// This single integer is sufficient to deduplicate ALL previously consumed buffs
-        /// because the Archipelago protocol guarantees items are always replayed in the
-        /// same sequential order on every reconnect. Since buffs are always enqueued and
-        /// applied in ascending index order (items are received in order, and the queue
-        /// is FIFO), <see cref="_lastConsumedBuffIndex"/> increases monotonically. Once
-        /// buff N is consumed, every buff with a lower index than N has already been
-        /// consumed too, so a single "high-water mark" is all that is needed.
-        /// </para>
-        ///
-        /// -1 means no buffs have been consumed yet in this slot - easier than a nullable int.
-        /// </summary>
-        private static int _lastConsumedBuffIndex = -1;
-
-        /// <summary>
-        /// Tracks the async task that loads <see cref="_lastConsumedBuffIndex"/> from DataStorage.
-        /// <see cref="ProcessQueuedBuffsAsync"/> awaits this before applying any buffs, handling
-        /// the race condition where buff items arrive before the DataStorage read finishes.
-        /// Reset to null by <see cref="ClearQueue"/> so each reconnect starts a fresh load.
-        /// </summary>
-        private static Task? _storageLoadTask;
-
-        /// <summary>
-        /// DataStorage key used to persist the last consumed buff item index on the AP server.
-        /// Stores a single <c>int</c> (the high-water mark). Scoped to the player's slot
-        /// so it is shared across clients and sessions but not across multiworld slots.
-        /// </summary>
-        private static string StorageKey => CoopSlot.StorageKey("StS2AP_LastConsumedBuffIdx");
-
-        #endregion
-
-        #region Initialization
-
-        /// <summary>
-        /// Registers the <see cref="SideTurnStartingEvent"/> lifecycle subscription so that
-        /// <see cref="ProcessQueuedBuffsAsync"/> is called automatically at the start of
-        /// every player combat turn.
-        ///
-        /// Call this once from <see cref="ModEntry.Initialize"/> at mod startup.
-        /// </summary>
-        public static void Initialize()
+        if (_initialized)
+            return;
+        RitsuLibManagedNetActions.Register(ActionDescriptor);
+        RitsuLibFramework.SubscribeLifecycle<SideTurnStartingEvent>(evt =>
         {
-            /// Subscribe to RitsuLib's SideTurnStartingEvent, which fires at the beginning of
-            /// every combat side's turn (player and enemies). We filter to the player's side only.
-            RitsuLibFramework.SubscribeLifecycle<SideTurnStartingEvent>(evt =>
+            if (!MultiplayerSupport.IsMultiplayerScope
+                && evt.Side == CombatSide.Player
+                && GameUtility.CurrentPlayer is Player player)
             {
-                // Only process queued buffs when we're in a run, and when it is the player starting their turn
-                if (GameUtility.CurrentPlayer == null || evt.Side != CombatSide.Player)
+                _ = ProcessQueuedBuffsAsync(player);
+            }
+        });
+        _initialized = true;
+    }
+
+    /// <summary>
+    /// Loads the slot's consumed index before either mode can apply queued buffs.
+    /// Item history can arrive before this read finishes, so processing waits for storage
+    /// readiness. A failed read leaves receipts pending instead of treating history as empty.
+    /// </summary>
+    public static async Task LoadFromStorageAsync()
+    {
+        if (!ArchipelagoClient.IsConnected || ArchipelagoClient.Session is not { } session)
+            return;
+        _storageReady = false;
+        _storageLoadTask = LoadFromStorageInternalAsync(session, _buffQueue, StorageKey);
+        await _storageLoadTask;
+    }
+
+    private static async Task LoadFromStorageInternalAsync(
+        Archipelago.MultiClient.Net.ArchipelagoSession session,
+        BuffReceiptQueue queue,
+        string storageKey)
+    {
+        try
+        {
+            session.DataStorage[Scope.Slot, storageKey].Initialize(-1);
+            int stored = await session.DataStorage[Scope.Slot, storageKey].GetAsync<int>();
+            if (stored < -1)
+                throw new InvalidDataException($"Invalid consumed buff index {stored}.");
+
+            // Publish on the game thread before the load task completes. A stale read must
+            // neither unlock a replacement queue nor rewind already completed actions.
+            var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            Callable.From(() =>
+            {
+                if (ReferenceEquals(ArchipelagoClient.Session, session)
+                    && ReferenceEquals(_buffQueue, queue))
+                {
+                    queue.RestoreConsumedIndex(stored);
+                    _storageReady = true;
+                    if (queue.LastConsumedIndex > stored)
+                        ConsumeLocal(queue.LastConsumedIndex);
+                }
+                completion.SetResult();
+            }).CallDeferred();
+            await completion.Task;
+        }
+        catch (Exception ex)
+        {
+            LogUtility.Warn($"Buff consumption history could not be loaded; buffs remain pending: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Queues an incoming buff unless its receipt is already consumed or queued.
+    /// If storage is not ready, the received-item notification is deferred until the receipt
+    /// passes the consumed check, avoiding notifications for old buffs replayed on reconnect.
+    /// </summary>
+    /// <param name="buffType">The AP combat buff to apply.</param>
+    /// <param name="itemIndex">One-based position in AP received-item history, stable across replays.</param>
+    public static void EnqueueBuff(APItem buffType, int itemIndex)
+    {
+        if (_buffQueue.Enqueue(buffType, itemIndex, notificationShown: _storageReady)
+            && _storageReady)
+        {
+            ShowReceived(itemIndex);
+        }
+    }
+
+    /// <summary>
+    /// Processes singleplayer buffs at player turn start, after consumption history is loaded.
+    /// Each receipt is consumed only after its power command completes. An unavailable target
+    /// or failed command leaves the oldest receipt pending for a later turn.
+    /// </summary>
+    public static async Task ProcessQueuedBuffsAsync(Player player)
+    {
+        if (MultiplayerSupport.IsMultiplayerScope
+            || ReferenceEquals(_processingSingleplayer, _buffQueue))
+            return;
+        // Reconnect replaces the queue; this task must never consume its replacement's receipts.
+        var queue = _buffQueue;
+        _processingSingleplayer = queue;
+        try
+        {
+            if (_storageLoadTask != null)
+                await _storageLoadTask;
+            if (!_storageReady || !ReferenceEquals(queue, _buffQueue))
+                return;
+
+            while (queue.TryPeek(out var entry))
+            {
+                if (MultiplayerSupport.IsMultiplayerScope
+                    || !ReferenceEquals(player, GameUtility.CurrentPlayer)
+                    || !await ApplyBuff(entry.BuffType, player, new BlockingPlayerChoiceContext()))
+                {
                     return;
-
-                // A buff can have been queued before this AP session switched from the
-                // singleplayer flow. Preserve it for later instead of mutating multiplayer combat.
-                // AP_MP: Preserve queued buffs until a host-ordered managed action exists.
-                if (!MultiplayerSupport.IsFeatureEnabled(MultiplayerFeature.CombatEffects))
+                }
+                if (!ReferenceEquals(queue, _buffQueue))
                     return;
+                if (!entry.NotificationShown)
+                    ShowReceived(entry.ItemIndex);
+                ConsumeLocal(entry.ItemIndex);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Keep the failed receipt at the head; advancing past it would lose it permanently.
+            LogUtility.Error($"Buff application failed; the receipt remains pending: {ex.Message}");
+        }
+        finally
+        {
+            if (ReferenceEquals(_processingSingleplayer, queue))
+                _processingSingleplayer = null;
+        }
+    }
 
-                LogUtility.Info(
-                    "[BuffUtility] Player combat turn started — checking for queued buff(s) to apply."
-                );
-
-                /// Fire-and-forget is intentional here: the processing is async (DataStorage
-                /// reads/writes), but we don't want to block the game's main thread.
-                _ = ProcessQueuedBuffsAsync(GameUtility.CurrentPlayer);
-            });
-
-            LogUtility.Info("[BuffUtility] Initialized — subscribed to SideTurnStartingEvent.");
+    /// <summary>
+    /// Called by the existing NRun item-processing tick to submit the receiving player's next
+    /// buff through the native action queue. Checking each tick allows admission later in the
+    /// current play phase. Receipts remain pending in the lobby, between combats, while dead,
+    /// and across runs until a native action applies them.
+    /// </summary>
+    internal static void ProcessMultiplayerBuffs()
+    {
+        PersistConsumedIndex();
+        if (!MultiplayerSupport.IsRealMultiplayerRun
+            || !MultiplayerSupport.IsFeatureEnabled(MultiplayerFeature.CombatEffects)
+            || MultiplayerSupport.ClaimsInvalidated
+            || !_storageReady
+            || GameUtility.CurrentPlayer is not Player player
+            || !MultiplayerLocationChecks.IsLocalProgressOwner(player)
+            || player.RunState is not RunState run
+            || !ApRunData.TryGetSharedState(run, out ApRunSharedState shared)
+            || shared.RunId == Guid.Empty
+            || !ApRunData.TryGetPlayerState(run, player.NetId, out ApPlayerRunState owner)
+            || owner.Participation != ApParticipationKind.OwnApSlot
+            || !IsCurrentOwner(owner))
+        {
+            return;
         }
 
-        #endregion
+        if (_pendingAction?.RunId != shared.RunId)
+            _pendingAction = null;
+        // Saved run data can be ahead of AP storage after a rejoin. Reconcile before replaying.
+        if (owner.LastConsumedBuffIndex > _buffQueue.LastConsumedIndex)
+            ConsumeLocal(owner.LastConsumedBuffIndex);
 
-        #region Storage
-
-        /// <summary>
-        /// Reads the index of the last consumed buff from the AP server's DataStorage
-        /// and populates <see cref="_lastConsumedBuffIndex"/>.
-        ///
-        /// This must be called early in the connect flow (in <see cref="ArchipelagoClient.OnConnected"/>)
-        /// so that reconnect replays do not re-queue already-applied buffs. The load task is
-        /// stored in <see cref="_storageLoadTask"/> so that <see cref="ProcessQueuedBuffsAsync"/>
-        /// can await it as a safety net if the combat turn fires before the load completes.
-        /// </summary>
-        public static async Task LoadFromStorageAsync()
+        while (_buffQueue.TryPeek(out var entry))
         {
-            if (!ArchipelagoClient.IsConnected)
+            // A pending singleplayer buff can survive a switch into multiplayer. Its gold
+            // has already been included by the multiplayer history rebuild.
+            if (IsMultiplayerBuffGoldFallback((long)entry.BuffType))
             {
-                LogUtility.Warn(
-                    "[BuffUtility] LoadFromStorageAsync called while not connected — skipping."
-                );
+                _buffQueue.Discard(entry.ItemIndex);
+                continue;
+            }
+            if (_pendingAction != null || player.Creature.IsDead
+                || !player.Creature.CanReceivePowers
+                || !DeathLinkMultiplayer.CanAdmitCombatAction(out _))
+            {
                 return;
             }
 
-            Archipelago.MultiClient.Net.ArchipelagoSession? session = ArchipelagoClient.Session;
-            if (session == null)
-            {
-                LogUtility.Warn(
-                    "[BuffUtility] LoadFromStorageAsync found no active session — skipping."
-                );
-                return;
-            }
-
-            // Store the task so ProcessQueuedBuffsAsync can await it if needed.
-            _storageLoadTask = LoadFromStorageInternalAsync(session);
-            await _storageLoadTask;
-        }
-
-        /// <summary>
-        /// Internal implementation of the DataStorage read. Separated from
-        /// <see cref="LoadFromStorageAsync"/> so the task can be awaited by
-        /// <see cref="ProcessQueuedBuffsAsync"/> independently.
-        /// </summary>
-        private static async Task LoadFromStorageInternalAsync(Archipelago.MultiClient.Net.ArchipelagoSession session)
-        {
+            // Request acceptance only means submission. Keep the receipt until execution
+            // completes, with one request in flight to preserve receipt order.
+            var message = new BuffActionMessage(shared.RunId, entry.ItemIndex, entry.BuffType);
+            _pendingAction = message;
             try
             {
-                /// Initialize to -1 ("nothing consumed yet") if this key has never been written.
-                /// This is a no-op if the key already holds a value.
-                session.DataStorage[Scope.Slot, StorageKey].Initialize(-1);
-
-                /// Read the stored high-water mark — the index of the most recently applied buff.
-                /// Any buff at an index <= this value is guaranteed to be already consumed.
-                var stored = await session.DataStorage[Scope.Slot, StorageKey]
-                    .GetAsync<int>();
-
-                await ApplyLoadedIndex(stored);
-
-                LogUtility.Info(
-                    $"[BuffUtility] Loaded last consumed buff index: {_lastConsumedBuffIndex} (-1 means no buffs consumed yet)."
-                );
+                if (RitsuLibManagedNetActions.Request(
+                        RunManager.Instance, ActionDescriptor, message, player.NetId))
+                {
+                    _lastRequestError = null;
+                    return;
+                }
+                LogRequestError("Buff action transport is not ready; the receipt remains pending.");
             }
             catch (Exception ex)
             {
-                /// If we can't read from DataStorage, default to -1 (nothing consumed).
-                /// The worst outcome is a previously-applied buff being re-applied once.
-                /// We log a warning so the issue is visible in the logs.
-                LogUtility.Warn(
-                    $"[BuffUtility] Failed to load last consumed buff index from DataStorage: {ex.Message}. Defaulting to -1."
-                );
-                await ApplyLoadedIndex(-1);
+                LogRequestError($"Buff action request failed; the receipt remains pending: {ex.Message}");
             }
-
-            // Complete the load only after its main-thread publication, so combat's await
-            // cannot observe a completed task with an unpublished consumption watermark.
-            Task ApplyLoadedIndex(int index)
-            {
-                var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                Godot.Callable.From(() =>
-                {
-                    if (ReferenceEquals(ArchipelagoClient.Session, session))
-                        _lastConsumedBuffIndex = index;
-                    completion.SetResult();
-                }).CallDeferred();
-                return completion.Task;
-            }
+            if (_pendingAction == message)
+                _pendingAction = null;
+            return;
         }
+    }
 
-        #endregion
+    private static bool IsCurrentOwner(ApPlayerRunState owner) =>
+        MultiplayerSupport.IsLocalOwnApSlot
+        && ParticipantAdapter.MatchReturning(
+            owner, ApParticipationKind.OwnApSlot, MultiplayerSupport.PreparedSlotIdentity).IsOk;
 
-        #region Queuing
-
-        /// <summary>
-        /// Enqueues a buff item to be applied on the player's next combat turn.
-        ///
-        /// <para>
-        /// Called from <see cref="Patches_itemProcessor.ProcessItem"/> when a buff-type AP item
-        /// is received. If the storage load has already completed and we know this index was
-        /// previously consumed, the buff is skipped immediately. Otherwise it is enqueued and
-        /// the consumed check is deferred to <see cref="ProcessQueuedBuffsAsync"/>, which always
-        /// awaits the storage load before applying anything.
-        /// </para>
-        /// </summary>
-        /// <param name="buffType">The AP item type identifying which buff to apply.</param>
-        /// <param name="itemIndex">
-        ///   The Archipelago item index. This is the server-assigned sequential index that
-        ///   uniquely identifies this item receive event across all sessions and clients.
-        ///   It is stable across reconnects, making it safe to use as a permanent consumed key.
-        /// </param>
-        public static void EnqueueBuff(APItem buffType, int itemIndex)
+    private static BuffActionMessage DeserializeMessage(ReadOnlySpan<byte> bytes)
+    {
+        try
         {
-            // Determine whether the storage load has already completed.
-            // If it has, we know the exact watermark and can make a definitive decision right now.
-            // If not, we must enqueue and defer both the consumed check and the notification.
-            bool storageReady = _storageLoadTask != null && _storageLoadTask.IsCompleted;
+            return JsonSerializer.Deserialize<BuffActionMessage>(bytes)
+                ?? new BuffActionMessage(Guid.Empty, 0, default);
+        }
+        catch (JsonException)
+        {
+            return new BuffActionMessage(Guid.Empty, 0, default);
+        }
+    }
 
-            /// Fast-path consumed check: if storage is already loaded, any buff at or below
-            /// the last consumed index is guaranteed to be already applied and can be skipped
-            /// immediately without touching the queue.
-            if (storageReady && itemIndex <= _lastConsumedBuffIndex)
+    /// <summary>
+    /// Runs on every peer against the native action's receiving player. Every replica records
+    /// consumption in run data; only that player's client updates its AP storage and notification.
+    /// </summary>
+    private static async Task ExecuteAction(RitsuLibManagedNetActionContext<BuffActionMessage> context)
+    {
+        var message = context.Message;
+        Player player = context.Player; // The native action owner is the only buff target.
+        try
+        {
+            // Revalidate against synchronized run data at execution time. A peer's local AP
+            // connection must not decide whether it executes another player's buff.
+            if (message.RunId == Guid.Empty || message.ItemIndex <= 0
+                || !IsUniversalCombatBuff((long)message.BuffType)
+                || IsMultiplayerBuffGoldFallback((long)message.BuffType)
+                || player.RunState is not RunState run
+                || !ReferenceEquals(run, RunManager.Instance.DebugOnlyGetState())
+                || !ReferenceEquals(player, run.GetPlayer(player.NetId))
+                || !ApRunData.TryGetSharedState(run, out ApRunSharedState shared)
+                || shared.RunId != message.RunId
+                || !ApRunData.TryGetPlayerState(run, player.NetId, out ApPlayerRunState owner)
+                || owner.Participation != ApParticipationKind.OwnApSlot
+                || owner.SlotSettings == null
+                || message.ItemIndex <= owner.LastConsumedBuffIndex)
             {
-                LogUtility.Info(
-                    $"[BuffUtility] Buff '{buffType}' (index {itemIndex}) is at or below last consumed index ({_lastConsumedBuffIndex}) — skipping (fast path)."
-                );
                 return;
             }
 
-            // Decide whether to show the notification now or defer it to ProcessQueuedBuffsAsync.
-            //
-            // If storage is ready, this item is confirmed new (it passed the watermark check above),
-            // so we notify immediately — this is the real-time receive path.
-            //
-            // If storage is NOT ready yet (e.g. mid-reconnect replay), we can't confirm whether
-            // the item is new without the watermark. We set NotificationShown = false so that
-            // ProcessQueuedBuffsAsync will show it after the deferred consumed check passes.
-            // This prevents false notifications for already-consumed items replayed on reconnect.
-            bool notificationShown = false;
-            if (storageReady)
-            {
-                // Storage confirms this is a new item — notify immediately.
-                // Look up the ItemInfo by index from the session's received-items list.
-                // We do this in the method body (not in a static field type) so that the
-                // Archipelago.MultiClient.Net assembly is resolved lazily by the JIT rather
-                // than eagerly at type-load time.
-                var itemInfo = ArchipelagoClient.Session?.Items.AllItemsReceived.ElementAtOrDefault(
-                    itemIndex - 1
-                );
-                NotificationUtility.ShowBuffReceived(itemInfo);
-                notificationShown = true;
-            }
-
-            _buffQueue.Enqueue((buffType, itemIndex, notificationShown));
-            LogUtility.Info(
-                $"[BuffUtility] Buff '{buffType}' (index {itemIndex}) enqueued. Queue size: {_buffQueue.Count}."
-            );
-        }
-
-        #endregion
-
-        #region Apply
-
-        /// <summary>
-        /// Drains the buff queue and applies each pending buff to the player.
-        ///
-        /// Awaits <see cref="_storageLoadTask"/> before processing, ensuring that the
-        /// consumed-index set is populated from DataStorage even if the combat turn fires
-        /// before the initial storage load completes (a rare but possible race condition on
-        /// fast reconnects).
-        ///
-        /// Buffs are applied first, then marked as consumed and persisted to DataStorage.
-        /// This is intentional: we prefer a buff being applied twice over being silently
-        /// lost. The only way a double-apply can occur is if the game disconnects between
-        /// the application and the DataStorage write, which is extremely unlikely.
-        /// </summary>
-        /// <param name="player">The active Player instance for the current run.</param>
-        public static async Task ProcessQueuedBuffsAsync(Player player)
-        {
-            var progress = ArchipelagoClient.Progress;
-            // AP_MP: Combat buffs require the per-owner FIFO managed-action pipeline.
-            if (!MultiplayerSupport.IsFeatureEnabled(MultiplayerFeature.CombatEffects))
+            if (!await ApplyBuff(message.BuffType, player, context.PlayerChoiceContext))
                 return;
+            if (!ApRunData.RecordConsumedBuff(run, player.NetId, message.ItemIndex))
+                throw new InvalidOperationException("Applied buff could not be recorded in run data.");
 
-            /// Safety net: if storage hasn't finished loading yet, wait for it now.
-            /// This handles the edge case where the player was already in combat when they
-            /// reconnected, and a SideTurnStartingEvent fired before LoadFromStorageAsync
-            /// completed.
-            if (_storageLoadTask != null && !_storageLoadTask.IsCompleted)
+            if (LocalContext.IsMe(player) && IsCurrentOwner(owner))
             {
-                LogUtility.Info(
-                    "[BuffUtility] Waiting for DataStorage load to complete before applying buffs..."
-                );
-                await _storageLoadTask;
-            }
-
-            if (!ReferenceEquals(progress, ArchipelagoClient.Progress))
-                return;
-
-            if (_buffQueue.Count == 0)
-                return;
-
-            LogUtility.Info(
-                $"[BuffUtility] Applying {_buffQueue.Count} queued buff(s) to the player."
-            );
-
-            // Drain the queue and apply each buff
-            while (_buffQueue.TryDequeue(out var entry))
-            {
-                var (buffType, itemIndex, notificationShown) = entry;
-
-                /// Final consumed check now that storage is guaranteed to be loaded.
-                /// This catches buffs that were enqueued before the storage load finished
-                /// (i.e., they were received during the reconnect replay before
-                /// LoadFromStorageAsync completed and were not caught by the fast-path check).
-                if (itemIndex <= _lastConsumedBuffIndex)
+                if (_buffQueue.TryPeek(out var entry)
+                    && entry.ItemIndex == message.ItemIndex && !entry.NotificationShown)
                 {
-                    LogUtility.Info(
-                        $"[BuffUtility] Buff '{buffType}' (index {itemIndex}) is at or below last consumed index ({_lastConsumedBuffIndex}) — skipping (deferred check)."
-                    );
-                    // Do NOT notify — this item was already consumed in a prior session.
-                    continue;
+                    ShowReceived(message.ItemIndex);
                 }
-
-                // If the notification was deferred (storage wasn't ready at enqueue time), show it
-                // now that we've confirmed the item is genuinely new via the consumed check above.
-                // This handles buffs received during a reconnect replay that hadn't been applied yet.
-                if (!notificationShown)
-                {
-                    var itemInfo =
-                        ArchipelagoClient.Session?.Items.AllItemsReceived.ElementAtOrDefault(
-                            itemIndex - 1
-                        );
-                    NotificationUtility.ShowBuffReceived(itemInfo);
-                }
-
-                // Update the in-memory high-water mark. The last time this is updated is what will be sync'd to the server.
-                _lastConsumedBuffIndex = itemIndex;
-
-                try
-                {
-                    /// Apply the buff effect to the player first.
-                    /// We apply BEFORE marking as consumed so that if the game crashes or
-                    /// disconnects mid-apply, the buff can be reapplied on the next session
-                    /// rather than being silently lost.
-                    LogUtility.Info(
-                        $"[BuffUtility] Applying buff '{buffType}' (index {itemIndex}) to player."
-                    );
-                    await ApplyBuff(buffType, player);
-                }
-                catch (Exception ex)
-                {
-                    LogUtility.Error(
-                        $"[BuffUtility] Failed to apply buff '{buffType}' (index {itemIndex}): {ex.Message}"
-                    );
-                }
-                if (!ReferenceEquals(progress, ArchipelagoClient.Progress))
-                    return;
+                ConsumeLocal(message.ItemIndex);
             }
-
-            // Sync the last applied buff index to DataStorage so it is persisted across sessions.
-            if (ArchipelagoClient.IsConnected)
-            {
-                ArchipelagoClient.Session!.DataStorage[Scope.Slot, StorageKey] =
-                    _lastConsumedBuffIndex;
-                LogUtility.Info(
-                    $"[BuffUtility] Last consumed buff index is now {_lastConsumedBuffIndex}."
-                );
-            }
-            else
-            {
-                LogUtility.Warn(
-                    $"[BuffUtility] Buff(s) could NOT be persisted. They may re-apply next session."
-                );
-            }
+            LogUtility.Info($"Applied buff {message.BuffType} receipt {message.ItemIndex} to player {player.NetId}.");
         }
-
-        /// <summary>
-        /// Applies the specified buff to the player. This method is intentionally stubbed
-        /// and should be implemented with the actual game logic for each buff type.
-        /// </summary>
-        /// <param name="buffType">The type of buff to apply.</param>
-        /// <param name="player">The active Player instance for the current run.</param>
-        private static async Task ApplyBuff(APItem buffType, Player player)
+        catch (Exception ex)
         {
-            // Load the correct power to apply
-            switch (buffType)
-            {
-                case APItem.FreeAttack:
-                    await PowerCmd.Apply<FreeAttackPower>(
-                        new BlockingPlayerChoiceContext(),
-                        player.Creature,
-                        1,
-                        player.Creature,
-                        null
-                    );
-                    break;
-                case APItem.FreePower:
-                    await PowerCmd.Apply<FreePowerPower>(
-                        new BlockingPlayerChoiceContext(),
-                        player.Creature,
-                        1,
-                        player.Creature,
-                        null
-                    );
-                    break;
-                case APItem.FreeSkill:
-                    await PowerCmd.Apply<FreeSkillPower>(
-                        new BlockingPlayerChoiceContext(),
-                        player.Creature,
-                        1,
-                        player.Creature,
-                        null
-                    );
-                    break;
-                case APItem.Artifact:
-                    await PowerCmd.Apply<ArtifactPower>(
-                        new BlockingPlayerChoiceContext(),
-                        player.Creature,
-                        2,
-                        player.Creature,
-                        null
-                    );
-                    break;
-                case APItem.Dexterity:
-                    await PowerCmd.Apply<DexterityPower>(
-                        new BlockingPlayerChoiceContext(),
-                        player.Creature,
-                        2,
-                        player.Creature,
-                        null
-                    );
-                    break;
-                case APItem.Strength:
-                    await PowerCmd.Apply<StrengthPower>(
-                        new BlockingPlayerChoiceContext(),
-                        player.Creature,
-                        2,
-                        player.Creature,
-                        null
-                    );
-                    break;
-                case APItem.Plating:
-                    await PowerCmd.Apply<PlatingPower>(
-                        new BlockingPlayerChoiceContext(),
-                        player.Creature,
-                        5,
-                        player.Creature,
-                        null
-                    );
-                    break;
-                case APItem.Thorns:
-                    await PowerCmd.Apply<ThornsPower>(
-                        new BlockingPlayerChoiceContext(),
-                        player.Creature,
-                        3,
-                        player.Creature,
-                        null
-                    );
-                    break;
-                case APItem.Vigor:
-                    await PowerCmd.Apply<VigorPower>(
-                        new BlockingPlayerChoiceContext(),
-                        player.Creature,
-                        8,
-                        player.Creature,
-                        null
-                    );
-                    break;
-                case APItem.Buffer:
-                    await PowerCmd.Apply<BufferPower>(
-                        new BlockingPlayerChoiceContext(),
-                        player.Creature,
-                        1,
-                        player.Creature,
-                        null
-                    );
-                    break;
-                case APItem.Friendship:
-                    await PowerCmd.Apply<FriendshipPower>(
-                        new BlockingPlayerChoiceContext(),
-                        player.Creature,
-                        1,
-                        player.Creature,
-                        null
-                    );
-                    break;
-                case APItem.PostCombatCardUpgrade:
-                    await PowerCmd.Apply<ImprovementPower>(
-                        new BlockingPlayerChoiceContext(),
-                        player.Creature,
-                        1,
-                        player.Creature,
-                        null
-                    );
-                    break;
-                case APItem.PostCombatCardRemoval:
-                    await PowerCmd.Apply<ForbiddenGrimoirePower>(
-                        new BlockingPlayerChoiceContext(),
-                        player.Creature,
-                        1,
-                        player.Creature,
-                        null
-                    );
-                    break;
-                case APItem.AdditionalCardReward:
-                    await PowerCmd.Apply<TheHuntPower>(
-                        new BlockingPlayerChoiceContext(),
-                        player.Creature,
-                        1,
-                        player.Creature,
-                        null
-                    );
-                    break;
-                default:
-                    LogUtility.Warn(
-                        $"[BuffUtility] ApplyBuff: unrecognized buff type '{buffType}'."
-                    );
-                    break;
-            }
+            // A command may have partially changed combat; blindly retrying could repeat effects.
+            MultiplayerSupport.InvalidateRunClaims($"a synchronized buff action failed: {ex.Message}");
+            throw;
         }
-
-        #endregion
-
-        #region Cleanup
-
-        /// <summary>
-        /// Clears the pending buff queue on disconnect or when resetting state.
-        ///
-        /// Only the application queue is cleared; <see cref="_lastConsumedBuffIndex"/> is
-        /// intentionally preserved in memory, and a fresh value will be loaded from DataStorage
-        /// on the next connect. Any buffs that were queued but not yet applied will be
-        /// re-enqueued from the server's item replay, and those at or below the reloaded
-        /// high-water mark will be filtered out at that time.
-        /// </summary>
-        public static void ClearQueue()
+        finally
         {
-            int pendingCount = _buffQueue.Count;
-            _buffQueue.Clear();
-
-            /// Reset the storage load task so that LoadFromStorageAsync runs fresh on the
-            /// next connect. Without this, a stale completed task from the previous session
-            /// would cause ProcessQueuedBuffsAsync to skip the load-await guard, potentially
-            /// processing buffs before the DataStorage read for the new session completes.
-            _storageLoadTask = null;
-
-            LogUtility.Info(
-                $"[BuffUtility] Queue cleared ({pendingCount} pending buff(s) discarded). Last consumed buff index ({_lastConsumedBuffIndex}) will be reloaded from DataStorage on next connect."
-            );
+            if (LocalContext.IsMe(player) && _pendingAction == message)
+                _pendingAction = null;
         }
+    }
 
-        internal static void ResetSlotState()
+    /// <summary>
+    /// Applies the buff's combat effect. Multiplayer supplies the managed action's choice
+    /// context so power hooks and any choices stay within the synchronized action.
+    /// </summary>
+    /// <returns>False when the target cannot receive the buff, leaving its receipt pending.</returns>
+    private static async Task<bool> ApplyBuff(APItem buffType, Player player, PlayerChoiceContext context)
+    {
+        if (player.Creature.IsDead || !player.Creature.CanReceivePowers
+            || player.Creature.CombatState == null || CombatManager.Instance.IsEnding)
         {
-            ClearQueue();
-            _lastConsumedBuffIndex = -1;
+            return false;
         }
 
-        #endregion
+        if (buffType == APItem.AdditionalCardReward)
+        {
+            if (player.RunState.CurrentRoom is not CombatRoom room)
+                return false;
+            // The Hunt power is only an indicator; its card stores the reward on the room.
+            await PowerCmd.Apply<TheHuntPower>(context, player.Creature, 1, player.Creature, null);
+            room.AddExtraReward(player,
+                new CardReward(CardCreationOptions.ForRoom(player, room.RoomType), 3, player));
+            return true;
+        }
+
+        Task effect = buffType switch
+        {
+            APItem.FreeAttack => PowerCmd.Apply<FreeAttackPower>(context, player.Creature, 1, player.Creature, null),
+            APItem.FreePower => PowerCmd.Apply<FreePowerPower>(context, player.Creature, 1, player.Creature, null),
+            APItem.FreeSkill => PowerCmd.Apply<FreeSkillPower>(context, player.Creature, 1, player.Creature, null),
+            APItem.Artifact => PowerCmd.Apply<ArtifactPower>(context, player.Creature, 2, player.Creature, null),
+            APItem.Dexterity => PowerCmd.Apply<DexterityPower>(context, player.Creature, 2, player.Creature, null),
+            APItem.Strength => PowerCmd.Apply<StrengthPower>(context, player.Creature, 2, player.Creature, null),
+            APItem.Plating => PowerCmd.Apply<PlatingPower>(context, player.Creature, 5, player.Creature, null),
+            APItem.Thorns => PowerCmd.Apply<ThornsPower>(context, player.Creature, 3, player.Creature, null),
+            APItem.Vigor => PowerCmd.Apply<VigorPower>(context, player.Creature, 8, player.Creature, null),
+            APItem.Buffer => PowerCmd.Apply<BufferPower>(context, player.Creature, 1, player.Creature, null),
+            APItem.Friendship => PowerCmd.Apply<FriendshipPower>(context, player.Creature, 1, player.Creature, null),
+            // These effects remain available in singleplayer. Multiplayer exclusions live in
+            // ItemTable's gold fallback list; removing an entry enables its effect for trials.
+            APItem.PostCombatCardUpgrade => PowerCmd.Apply<ImprovementPower>(context, player.Creature, 1, player.Creature, null),
+            APItem.PostCombatCardRemoval => PowerCmd.Apply<ForbiddenGrimoirePower>(context, player.Creature, 1, player.Creature, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(buffType)),
+        };
+        await effect;
+        return true;
+    }
+
+    /// <summary>
+    /// Advances local consumption and schedules persistence after a completed power command
+    /// or reconciliation with the receiving player's saved run history.
+    /// </summary>
+    private static void ConsumeLocal(int itemIndex)
+    {
+        _buffQueue.RestoreConsumedIndex(itemIndex);
+        _consumptionWritePending = true;
+        PersistConsumedIndex();
+    }
+
+    private static void PersistConsumedIndex()
+    {
+        if (!_consumptionWritePending || !ArchipelagoClient.IsConnected
+            || !_storageReady || ArchipelagoClient.Session is not { } session)
+            return;
+        try
+        {
+            session.DataStorage[Scope.Slot, StorageKey] = _buffQueue.LastConsumedIndex;
+            _consumptionWritePending = false;
+            _storageWriteFailed = false;
+        }
+        catch (Exception ex)
+        {
+            // Keep the pending write so the item-processing tick can retry without reapplying.
+            if (!_storageWriteFailed)
+                LogUtility.Warn($"Consumed buff index could not be persisted to AP; retrying: {ex.Message}");
+            _storageWriteFailed = true;
+        }
+    }
+
+    private static void ShowReceived(int itemIndex)
+    {
+        try
+        {
+            var item = ArchipelagoClient.Session?.Items.AllItemsReceived.ElementAtOrDefault(itemIndex - 1);
+            NotificationUtility.ShowBuffReceived(item);
+        }
+        catch (Exception ex)
+        {
+            LogUtility.Warn($"Buff notification could not be displayed: {ex.Message}");
+        }
+    }
+
+    private static void LogRequestError(string reason)
+    {
+        if (_lastRequestError != reason)
+            LogUtility.Warn(reason);
+        _lastRequestError = reason;
+    }
+
+    /// <summary>
+    /// Clears transient state on disconnect while preserving consumed history. AP item replay
+    /// restores outstanding receipts on reconnect. Replacing the queue also invalidates older
+    /// asynchronous loads and processing tasks.
+    /// </summary>
+    public static void ClearQueue()
+    {
+        _buffQueue = new BuffReceiptQueue(_buffQueue.LastConsumedIndex);
+        _storageLoadTask = null;
+        _storageReady = false;
+        _storageWriteFailed = false;
+        _pendingAction = null;
+        _lastRequestError = null;
+    }
+
+    /// <summary>
+    /// Starts fresh consumption history when changing AP slots, whose receipt indices are independent.
+    /// </summary>
+    internal static void ResetSlotState()
+    {
+        ClearQueue();
+        _buffQueue = new BuffReceiptQueue();
+        _consumptionWritePending = false;
     }
 }

@@ -51,8 +51,7 @@
   Do not copy world/spire2 into the sibling checkout.
 
 .PARAMETER MetaPath
-  Optional fuzzer meta YAML to constrain randomized options, for example
-  scripts/fuzz/player_count.yaml for valid shared-slot multiplayer rosters.
+  Optional fuzzer meta YAML to constrain randomized options.
 
 .PARAMETER SkipVersionCheck
   Do not require the expected Archipelago branch and ref.
@@ -238,8 +237,7 @@ function Test-ArchipelagoVersion {
 
 function Invoke-CoreTests {
     $testModules = @(
-        "worlds.spire2.test.coop_tests",
-        "worlds.spire2.test.fill_tests",
+        "worlds.spire2.test.slot_tests",
         "worlds.spire2.test.group_tests",
         "worlds.spire2.test.option_tests",
         "worlds.spire2.test.logic_tests",

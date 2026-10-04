@@ -94,6 +94,8 @@ internal sealed partial class CampfireStatusBadge : Control
 
     private bool _enabled;
 
+    public CampfireStatusBadge() => Draw += DrawBadge;
+
     public void SetEnabled(bool enabled)
     {
         if (_enabled == enabled)
@@ -103,7 +105,7 @@ internal sealed partial class CampfireStatusBadge : Control
         QueueRedraw();
     }
 
-    public override void _Draw()
+    private void DrawBadge()
     {
         var center = Size / 2f;
         DrawCircle(center, 12f, OutlineColor);

@@ -154,7 +154,7 @@ class ClientArchiveTests(unittest.TestCase):
 
             archive_path = Path(shutil.make_archive(str(root / "Archipelago"), "zip", root_dir=staging))
             with zipfile.ZipFile(archive_path) as archive:
-                self.assertIn("lib/0.107.1/", archive.namelist())
+                self.assertIn(f"lib/{release.SUPPORTED_STS2_API_COMPATS[0]}/", archive.namelist())
             release.verify_client_archive(archive_path, "1.0.0")
 
     def test_rejects_client_version_different_from_source(self) -> None:

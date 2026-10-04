@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <Sts2PublicApiCompat>0.107.1</Sts2PublicApiCompat>
+    <Sts2BetaApiCompat>0.111.0</Sts2BetaApiCompat>
+  </PropertyGroup>
+</Project>

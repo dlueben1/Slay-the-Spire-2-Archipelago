@@ -26,6 +26,9 @@ namespace StS2AP.Patches
         [HarmonyPatch(typeof(NGame), nameof(NGame.StartNewSingleplayerRun))]
         public static class OnRunPreStart
         {
+            [HarmonyPostfix]
+            public static void Postfix(ref Task<RunState> __result) => __result = RecordStartedRun(__result);
+
             [HarmonyPrefix]
             public static void Prefix(CharacterModel character, ref int ascensionLevel, ref string seed)
             {
@@ -65,6 +68,9 @@ namespace StS2AP.Patches
         [HarmonyPatch(typeof(NGame), nameof(NGame.StartNewMultiplayerRun))]
         public static class OnMultiplayerRunPreStart
         {
+            [HarmonyPostfix]
+            public static void Postfix(ref Task<RunState> __result) => __result = RecordStartedRun(__result);
+
             [HarmonyPrefix]
             public static void Prefix(StartRunLobby lobby)
             {
@@ -90,6 +96,13 @@ namespace StS2AP.Patches
                     );
                 }
             }
+        }
+
+        private static async Task<RunState> RecordStartedRun(Task<RunState> start)
+        {
+            RunState run = await start;
+            ApGameplayTelemetry.RunStarted(run);
+            return run;
         }
 
         /// <summary>

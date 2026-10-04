@@ -20,7 +20,7 @@ internal sealed class SingleplayerCheckpointBank(string root)
     }
 
     internal static readonly string[] Milestones =
-        ["1-ancient", "1-treasure", "1-boss", "2-treasure", "2-boss", "3-treasure"];
+        ["1-ancient", "1-treasure", "1-campfire", "1-boss", "2-treasure", "2-campfire", "2-boss", "3-treasure", "3-campfire"];
 
     internal static bool IsAllowed(string key, bool startOfAct, int unlockedAct) =>
         Milestones.Contains(key) && (!startOfAct || key[0] - '0' <= Math.Max(1, unlockedAct));

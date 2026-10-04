@@ -87,6 +87,7 @@ namespace StS2AP.Patches
             public static void Prefix()
             {
                 ProcessItemInQueue();
+                BuffUtility.ProcessMultiplayerBuffs();
             }
         }
 
@@ -373,7 +374,7 @@ namespace StS2AP.Patches
         /// Handles universal items that do not have a character offset baked in.
         ///
         /// Universal items have no character offset, so their ItemId is cast directly to APItem
-        /// without any modulo operation. In multiplayer, combat buffs contribute five raw AP
+        /// without any modulo operation. In multiplayer, unsupported combat buffs contribute five raw AP
         /// gold to a cumulative total divided equally across the configured characters.
         /// </summary>
         private static void HandleUniversalItem(IndexedItemInfo receipt)
@@ -381,7 +382,7 @@ namespace StS2AP.Patches
             ItemInfo item = receipt.Item;
             int index = receipt.Index;
             if (MultiplayerSupport.IsMultiplayerScope
-                && (ItemTable.IsUniversalCombatBuff(item.ItemId) || BonusRewardUtility.ConvertToGold(item.ItemId)))
+                && (ItemTable.IsMultiplayerBuffGoldFallback(item.ItemId) || BonusRewardUtility.ConvertToGold(item.ItemId)))
             {
                 int addedGold = ApGrantDispatcher.AddUniversalBuffGold();
                 LogUtility.Success(

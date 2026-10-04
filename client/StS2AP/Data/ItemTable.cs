@@ -140,6 +140,21 @@
             };
         }
 
+        // Remove a row to enable that buff during multiplayer trials. This single list
+        // controls live delivery, gold history reconstruction, and action validation.
+        private static readonly HashSet<APItem> MultiplayerBuffGoldFallbacks = new()
+        {
+            // APItem.PostCombatCardUpgrade,
+            // APItem.PostCombatCardRemoval,
+
+            // Temporarily enabled for multiplayer trials; uncomment to restore gold fallback.
+            // APItem.AdditionalCardReward,
+
+        };
+
+        public static bool IsMultiplayerBuffGoldFallback(long itemId) =>
+            MultiplayerBuffGoldFallbacks.Contains((APItem)ArchipelagoIdCodec.WithoutPlayer(itemId));
+
         public static bool CanBePickedUp(this APItem item)
         {
             switch(item)
