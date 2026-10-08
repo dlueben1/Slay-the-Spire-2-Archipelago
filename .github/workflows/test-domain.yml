@@ -21,6 +21,7 @@ concurrency:
 
 jobs:
   event:
+    name: Regression checks
     uses: ./.github/workflows/ci-event.yml
 
   test:

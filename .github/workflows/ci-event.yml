@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   event:
+    name: Select CI event
     runs-on: ubuntu-latest
     outputs:
       should_run: ${{ steps.choose.outputs.should_run }}

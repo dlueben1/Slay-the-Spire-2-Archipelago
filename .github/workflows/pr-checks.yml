@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   release-scripts:
-    name: Run Release Tests
+    name: Test automation scripts
     runs-on: ubuntu-latest
 
     steps:
@@ -29,7 +29,7 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Run release automation tests
+      - name: Test automation scripts
         run: python -m unittest discover -s scripts/tests -p "test_*.py"
 
   apworld:

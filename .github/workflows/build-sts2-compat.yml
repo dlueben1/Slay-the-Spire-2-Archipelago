@@ -20,6 +20,7 @@ concurrency:
 
 jobs:
   event:
+    name: Compatibility checks
     uses: ./.github/workflows/ci-event.yml
 
   versions:
