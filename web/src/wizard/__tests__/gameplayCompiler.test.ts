@@ -96,6 +96,7 @@ function compilesConfiguredGameplaySections(): void {
     shuffleAllCards: true,
   };
   answers.progression = {
+    useNewLogic: true,
     progressionBalancing: 99,
     accessibility: "minimal",
   };
@@ -306,6 +307,7 @@ function revealsDependentGameplayQuestions(): void {
     "check-types",
     "bonus-items",
     "filler-weights",
+    "trap-chance",
   ]);
   expect(getVisibleQuestionIds(deathLinkSetupStep, answers)).toEqual([
     "death-link-enabled",
@@ -324,6 +326,7 @@ function revealsDependentGameplayQuestions(): void {
     "shop-costs",
     "bonus-items",
     "filler-weights",
+    "trap-chance",
   ]);
   expect(getVisibleQuestionIds(deathLinkSetupStep, answers)).toEqual([
     "death-link-enabled",

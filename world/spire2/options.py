@@ -457,30 +457,75 @@ class DeathLinkDamagePercent(Range):
     range_end = 100
     default = 0
 
-# class TrapChance(Range):
-#     """Chance that a filler item is replaced with a trap.  Requires `include_floor_checks`
-#     for any traps to be added.
-#     """
-#     display_name = "Trap Chance"
-#     range_start = 0
-#     range_end = 100
-#     default = 0
+class TrapChance(Range):
+    """Chance for filler item to be replaced by a trap."""
+    display_name = "Trap Chance"
+    range_start = 0
+    range_end = 100
+    default = 0
 
-# class TrapWeights(OptionCounter):
-#     """
-#     The list of traps and corresponding weights that will be added to the item pool.
-#     Debuff Trap - Start next combat with a weaker debuff
-#     Strong debuff Trap - Start next combat with a strong debuff
-#     Killer debuff Trap - Start next combat with a debuff has a good chance of killing you
-#     Buff Trap - Next combat, enemies start buffed
-#     Strong Buff Trap - Next combat, enemies start with a strong buff
-#     Status Card Trap - Start next combat with status cards in your draw pile
-#     Gremlin Trap - Next combat, a random gremlin is added to the enemies
-#     """
-#     display_name = "Trap Weights"
-#     min = 0
-#     default = {trap: 1 for trap in trap_item_table.keys()}
-#     valid_keys = sorted(trap_item_table.keys())
+
+class TrapWeight(Choice):
+    option_none = 0
+    option_low = 1
+    option_medium = 3
+    option_high = 5
+    default = option_low
+
+
+class WeakTrapWeight(TrapWeight):
+    """Applies 1 Weak, reducing damage dealt by the player for 1 turn."""
+    display_name = "Weak Trap Weight"
+    default = TrapWeight.option_high
+
+
+class FrailTrapWeight(TrapWeight):
+    """Applies 1 Frail, reducing Block gained for one turn."""
+    display_name = "Frail Trap Weight"
+    default = TrapWeight.option_high
+
+
+class VulnerableTrapWeight(TrapWeight):
+    """Applies 1 Vulnerable, increasing attack damage taken for one turn."""
+    display_name = "Vulnerable Trap Weight"
+    default = TrapWeight.option_high
+
+
+class NoDrawTrapWeight(TrapWeight):
+    """Blocks extra card draws for the turn"""
+    display_name = "No Draw Trap Weight"
+    default = TrapWeight.option_medium
+
+
+class TangledTrapWeight(TrapWeight):
+    """Attack cards cost 1 more energy for the turn."""
+    display_name = "Tangled Trap Weight"
+    default = TrapWeight.option_medium
+
+
+class VakuuTrapWeight(TrapWeight):
+    """Vakuu plays your hand on one additional turn, no earlier than turn two."""
+    display_name = "Vakuu Trap Weight"
+    default = TrapWeight.option_medium
+
+
+class ConfusedTrapWeight(TrapWeight):
+    """Randomizes card energy costs when drawn for the rest of combat."""
+    display_name = "Confused Trap Weight"
+    default = TrapWeight.option_low
+
+
+class SlothTrapWeight(TrapWeight):
+    """Applies a six-card limit per turn for the rest of combat."""
+    display_name = "Sloth Trap Weight"
+    default = TrapWeight.option_low
+
+
+class DazedTrapWeight(TrapWeight):
+    """Shuffles two Dazed into your combat draw pile."""
+    display_name = "Dazed Trap Weight"
+    default = TrapWeight.option_medium
+
 
 # Filler Item Weight Options
 
@@ -706,5 +751,14 @@ class Spire2Options(PerGameCommonOptions):
     post_combat_card_removal_filler_weight: PostCombatCardRemovalFillerWeight
     additional_card_reward_filler_weight: AdditionalCardRewardFillerWeight
     #single_colorless_card_filler_weight: SingleColorlessCardFillerWeight
-    # trap_chance: TrapChance
-    # trap_weights: TrapWeights
+    # Traps
+    trap_chance: TrapChance
+    weak_trap_weight: WeakTrapWeight
+    frail_trap_weight: FrailTrapWeight
+    vulnerable_trap_weight: VulnerableTrapWeight
+    no_draw_trap_weight: NoDrawTrapWeight
+    tangled_trap_weight: TangledTrapWeight
+    vakuu_trap_weight: VakuuTrapWeight
+    confused_trap_weight: ConfusedTrapWeight
+    sloth_trap_weight: SlothTrapWeight
+    dazed_trap_weight: DazedTrapWeight

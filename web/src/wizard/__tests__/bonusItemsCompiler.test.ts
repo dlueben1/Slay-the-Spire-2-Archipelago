@@ -333,7 +333,6 @@ function placesBonusItemsBeforeFiller(): void {
   expect(bonusIndex).toBeGreaterThan(-1);
   expect(fillerIndex).toBeGreaterThan(-1);
   expect(bonusIndex).toBeLessThan(fillerIndex);
-  expect(questionIds.at(-1)).toBe("filler-weights");
 }
 
 /**

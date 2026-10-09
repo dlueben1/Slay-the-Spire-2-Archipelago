@@ -27,7 +27,7 @@ class ItemType(Enum):
     PROGRESSIVE_STARTER_CARD = auto()
     PROGRESSIVE_STARTER_RELIC = auto()
     BONUS_WAX_RELIC = auto()
-    # TRAP = auto()
+    TRAP = auto()
     CAW_CAW = auto()
     BUFF = auto()
     FILLER_CARD_REWARD = auto()
@@ -104,6 +104,19 @@ universal_items: Dict[str, ItemData] = {
     #'Single Colorless Card': ItemData(508, ItemType.FILLER_CARD_REWARD, ItemClassification.filler),
 }
 
+# Universal trap IDs are shared with the client and never receive character offsets.
+trap_item_table: Dict[str, ItemData] = {
+    "Weak Trap": ItemData(700, ItemType.TRAP, ItemClassification.trap),
+    "Frail Trap": ItemData(701, ItemType.TRAP, ItemClassification.trap),
+    "Vulnerable Trap": ItemData(702, ItemType.TRAP, ItemClassification.trap),
+    "No Draw Trap": ItemData(703, ItemType.TRAP, ItemClassification.trap),
+    "Tangled Trap": ItemData(704, ItemType.TRAP, ItemClassification.trap),
+    "Vakuu Trap": ItemData(705, ItemType.TRAP, ItemClassification.trap),
+    "Confused Trap": ItemData(706, ItemType.TRAP, ItemClassification.trap),
+    "Sloth Trap": ItemData(707, ItemType.TRAP, ItemClassification.trap),
+    "Dazed Trap": ItemData(708, ItemType.TRAP, ItemClassification.trap),
+}
+
 # `bonus_item_table` is keyed by the configuration selector: "WAX_RELIC". This is what the YAML option uses.
 bonus_item_table: Dict[str, BonusItemData] = {
     'WAX_RELIC': BonusItemData(
@@ -126,7 +139,7 @@ base_event_item_pairs: Dict[str, str] = {
 
 def create_item_tables(vanilla_chars: typing.List[str], extras: int) -> typing.Tuple[dict[str, ItemData], dict[
     typing.Union[str, int],dict[str,ItemData]], dict[str,str]]:
-    item_name_to_data = universal_items | universal_bonus_items
+    item_name_to_data = universal_items | universal_bonus_items | trap_item_table
 
     characters_to_items: dict[typing.Union[str, int],dict[str, ItemData]] = defaultdict(dict)
     character_event_pairs: dict[str, str] = dict()
@@ -175,6 +188,7 @@ def create_item_groups(
         "Ascension Downs": set(),
         "Starter Upgrades": set(),
         "Buffs": set(),
+        "Traps": set(),
         "Bonus Items": set(),
     }
 
@@ -210,6 +224,8 @@ def create_item_groups(
             groups["Ascension Downs"].add(item_name)
         elif item_data.type in {ItemType.PROGRESSIVE_STARTER_CARD, ItemType.PROGRESSIVE_STARTER_RELIC}:
             groups["Starter Upgrades"].add(item_name)
+        elif item_data.type == ItemType.TRAP:
+            groups["Traps"].add(item_name)
         elif item_data.type == ItemType.BUFF:
             groups["Buffs"].add(item_name)
         elif item_name in universal_bonus_items:

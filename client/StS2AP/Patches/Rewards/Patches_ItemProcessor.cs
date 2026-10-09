@@ -400,6 +400,17 @@ namespace StS2AP.Patches
                 case APItem.BonusWaxRelic:
                     ArchipelagoClient.Progress.Items.RegisterReceived(receipt);
                     break;
+                case APItem.WeakTrap:
+                case APItem.FrailTrap:
+                case APItem.VulnerableTrap:
+                case APItem.NoDrawTrap:
+                case APItem.TangledTrap:
+                case APItem.VakuuTrap:
+                case APItem.ConfusedTrap:
+                case APItem.SlothTrap:
+                case APItem.DazedTrap:
+                    BuffUtility.EnqueueTrap(universalId, index);
+                    break;
                 case APItem.FreeAttack:
                 case APItem.FreePower:
                 case APItem.FreeSkill:

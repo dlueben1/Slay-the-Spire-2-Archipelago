@@ -11,6 +11,7 @@
 import { optionCatalog } from "../generated/optionCatalog";
 import type { WizardControlRange } from "./QuestionControl";
 import {
+  TRAP_CHANCE_OPTION_KEY,
   DEATH_LINK_OPTION_KEYS,
   getGeneratedNumberRange,
   PROGRESSION_OPTION_KEYS,
@@ -20,6 +21,7 @@ import {
 
 /** Semantic name to generated option key for every range-backed guided control. */
 const WIZARD_RANGE_SOURCES = {
+  trapChance: TRAP_CHANCE_OPTION_KEY,
   relicRewardsAvailableAnytime: RUN_OPTION_KEYS.relicRewardsAvailableAnytime,
   progressionBalancing: PROGRESSION_OPTION_KEYS.progressionBalancing,
   deathLinkDamagePercent: DEATH_LINK_OPTION_KEYS.damagePercent,

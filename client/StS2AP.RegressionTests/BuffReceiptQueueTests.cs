@@ -6,12 +6,12 @@ using static StS2AP.Data.ItemTable;
 namespace StS2AP.RegressionTests
 {
 
-public sealed class BuffReceiptQueueTests
+public sealed class CombatEffectReceiptQueueTests
 {
     [Fact]
     public void ReplaysAreOrderedAndSuccessfulConsumptionNeverRewinds()
     {
-        var queue = new BuffReceiptQueue();
+        var queue = new CombatEffectReceiptQueue();
         Assert.True(queue.Enqueue(APItem.Strength, 12, notificationShown: true));
         Assert.True(queue.Enqueue(APItem.Dexterity, 4, notificationShown: false));
         Assert.False(queue.Enqueue(APItem.Strength, 12, notificationShown: false));
@@ -35,15 +35,15 @@ public sealed class BuffReceiptQueueTests
     [Fact]
     public void PendingBuffSurvivesNewRunAndReplayButConsumptionIsOwnerSpecific()
     {
-        var firstOwner = new BuffReceiptQueue();
-        var secondOwner = new BuffReceiptQueue();
+        var firstOwner = new CombatEffectReceiptQueue();
+        var secondOwner = new CombatEffectReceiptQueue();
         firstOwner.Enqueue(APItem.Buffer, 9, notificationShown: false);
         secondOwner.Enqueue(APItem.Vigor, 9, notificationShown: false);
         // Starting another run does not reset this slot's pending queue.
         Assert.True(firstOwner.TryPeek(out var next));
         Assert.Equal(9, next.ItemIndex);
         firstOwner.RestoreConsumedIndex(9);
-        var reconnect = new BuffReceiptQueue(firstOwner.LastConsumedIndex);
+        var reconnect = new CombatEffectReceiptQueue(firstOwner.LastConsumedIndex);
         Assert.False(reconnect.Enqueue(APItem.Buffer, 9, notificationShown: false));
         Assert.True(secondOwner.TryPeek(out _));
     }
@@ -51,7 +51,7 @@ public sealed class BuffReceiptQueueTests
     [Fact]
     public void InvalidOrConflictingReceiptsCannotChangeConsumption()
     {
-        var queue = new BuffReceiptQueue();
+        var queue = new CombatEffectReceiptQueue();
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             queue.Enqueue(APItem.Strength, 0, notificationShown: false));
         Assert.Throws<ArgumentOutOfRangeException>(() =>
@@ -62,7 +62,7 @@ public sealed class BuffReceiptQueueTests
         Assert.Throws<ArgumentOutOfRangeException>(() => queue.RestoreConsumedIndex(-2));
         Assert.Equal(-1, queue.LastConsumedIndex);
         Assert.True(queue.TryPeek(out var next));
-        Assert.Equal(APItem.Strength, next.BuffType);
+        Assert.Equal(APItem.Strength, next.EffectType);
     }
 
     [Fact]

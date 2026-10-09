@@ -8,6 +8,7 @@
  * module. Vue components should update this model only, never a YAML options object.
  */
 
+import { createDefaultTrapAnswers, type TrapAnswers } from "./TrapItem";
 import type { OptionCatalog } from "../generated/optionCatalog";
 import {
   getDefaultAscensionLevels,
@@ -124,6 +125,7 @@ export interface AncientAnswers {
 }
 
 export interface ProgressionAnswers {
+  useNewLogic: boolean;
   progressionBalancing: number;
   accessibility: AccessibilityMode;
 }
@@ -154,6 +156,7 @@ export interface ChecksAndRewardsAnswers {
   shop: ShopAnswers;
   bonusItems: BonusItemAnswer[];
   filler: FillerAnswers;
+  traps: TrapAnswers;
 }
 
 export interface DeathLinkAnswers {
@@ -399,8 +402,13 @@ export function createDefaultWizardAnswers(
       // Bonus Items start empty; each one is added deliberately through the table UI.
       bonusItems: [],
       filler,
+      traps: createDefaultTrapAnswers(catalog),
     },
     progression: {
+      useNewLogic: getBooleanDefault(
+        catalog,
+        PROGRESSION_OPTION_KEYS.useNewLogic,
+      ),
       progressionBalancing: getNumberDefault(
         catalog,
         PROGRESSION_OPTION_KEYS.progressionBalancing,

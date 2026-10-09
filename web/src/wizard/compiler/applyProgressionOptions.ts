@@ -17,6 +17,7 @@ export function applyProgressionOptions(
     }
   }
 
+  target[PROGRESSION_OPTION_KEYS.useNewLogic] = answers.useNewLogic;
   target[PROGRESSION_OPTION_KEYS.progressionBalancing] =
     answers.progressionBalancing;
   target[PROGRESSION_OPTION_KEYS.accessibility] = answers.accessibility;

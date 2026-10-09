@@ -62,6 +62,17 @@
             /// unlocks the Nth entry configured in the YAML's bonus_items list.
             /// IDs match universal_bonus_items in items.py.
             BonusWaxRelic = 600,
+
+            // Universal traps; IDs match trap_item_table in the APWorld.
+            WeakTrap = 700,
+            FrailTrap = 701,
+            VulnerableTrap = 702,
+            NoDrawTrap = 703,
+            TangledTrap = 704,
+            VakuuTrap = 705,
+            ConfusedTrap = 706,
+            SlothTrap = 707,
+            DazedTrap = 708,
         }
 
         public static Dictionary<int, string> Items = new Dictionary<int, string>
@@ -112,6 +123,15 @@
             { 512, "Thorns" },
             { 513, "Artifact" },
             { 600, "Bonus Wax Relic" },
+            { 700, "Weak Trap" },
+            { 701, "Frail Trap" },
+            { 702, "Vulnerable Trap" },
+            { 703, "No Draw Trap" },
+            { 704, "Tangled Trap" },
+            { 705, "Vakuu Trap" },
+            { 706, "Confused Trap" },
+            { 707, "Sloth Trap" },
+            { 708, "Dazed Trap" },
         };
 
         /// <summary>
@@ -125,6 +145,12 @@
             { APItem.EliteGold, 40 },
             { APItem.BossGold, 100 },
         };
+
+        public static bool IsUniversalTrap(long itemId) =>
+            (APItem)ArchipelagoIdCodec.WithoutPlayer(itemId) is
+                APItem.WeakTrap or APItem.FrailTrap or APItem.VulnerableTrap or APItem.NoDrawTrap
+                or APItem.TangledTrap or APItem.VakuuTrap or APItem.ConfusedTrap or APItem.SlothTrap
+                or APItem.DazedTrap;
 
         /// <summary>Whether an item ID is one of the universal ephemeral combat buffs.</summary>
         public static bool IsUniversalCombatBuff(long itemId)

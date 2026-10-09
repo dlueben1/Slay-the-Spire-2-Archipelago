@@ -8,13 +8,13 @@ namespace StS2AP.RegressionTests;
 
 public sealed class CombatBuffLimitTests
 {
-    private static readonly BuffCombatKey FirstCombat = new(0, 1, 0);
+    private static readonly CombatEffectKey FirstCombat = new(0, 1, 0);
 
     [Fact]
     public void BacklogConsumesOneReceiptPerCombatAndKeepsItsOrder()
     {
-        var limit = new CombatBuffLimit();
-        var queue = new BuffReceiptQueue();
+        var limit = new CombatEffectLimit();
+        var queue = new CombatEffectReceiptQueue();
         queue.Enqueue(APItem.Strength, 1, false);
         queue.Enqueue(APItem.Buffer, 2, false);
         queue.Enqueue(APItem.Dexterity, 3, false);
@@ -28,7 +28,7 @@ public sealed class CombatBuffLimitTests
         Assert.True(queue.TryPeek(out entry));
         Assert.Equal(2, entry.ItemIndex);
 
-        var nextCombat = new BuffCombatKey(0, 2, 0);
+        var nextCombat = new CombatEffectKey(0, 2, 0);
         Assert.True(limit.TryBegin(nextCombat));
         limit.Complete(nextCombat);
         queue.RestoreConsumedIndex(entry.ItemIndex);
@@ -39,10 +39,10 @@ public sealed class CombatBuffLimitTests
     [Fact]
     public void UnavailableTargetCanRetryButOverlappingApplicationsCannot()
     {
-        var limit = new CombatBuffLimit();
+        var limit = new CombatEffectLimit();
         Assert.True(limit.TryBegin(FirstCombat));
         Assert.False(limit.TryBegin(FirstCombat));
-        Assert.False(limit.TryBegin(new BuffCombatKey(0, 2, 0)));
+        Assert.False(limit.TryBegin(new CombatEffectKey(0, 2, 0)));
         limit.Cancel();
         Assert.True(limit.TryBegin(FirstCombat));
         limit.Complete(FirstCombat);
@@ -53,19 +53,19 @@ public sealed class CombatBuffLimitTests
     [Fact]
     public void SavedPlayerStateRetainsAllowanceAcrossRejoin()
     {
-        var limit = new CombatBuffLimit();
+        var limit = new CombatEffectLimit();
         Assert.True(limit.TryBegin(FirstCombat));
         limit.Complete(FirstCombat);
-        var restored = JsonSerializer.Deserialize<CombatBuffLimit>(JsonSerializer.Serialize(limit))!;
+        var restored = JsonSerializer.Deserialize<CombatEffectLimit>(JsonSerializer.Serialize(limit))!;
         Assert.False(restored.TryBegin(FirstCombat));
-        Assert.True(restored.TryBegin(new BuffCombatKey(0, 2, 0)));
+        Assert.True(restored.TryBegin(new CombatEffectKey(0, 2, 0)));
     }
 
     [Fact]
     public void EveryPeerAgreesAndEachPlayerHasAnIndependentAllowance()
     {
-        var host = new[] { new CombatBuffLimit(), new CombatBuffLimit() };
-        var guest = new[] { new CombatBuffLimit(), new CombatBuffLimit() };
+        var host = new[] { new CombatEffectLimit(), new CombatEffectLimit() };
+        var guest = new[] { new CombatEffectLimit(), new CombatEffectLimit() };
         foreach (var replica in new[] { host, guest })
         {
             Assert.True(replica[0].TryBegin(FirstCombat));
@@ -83,10 +83,10 @@ public sealed class CombatBuffLimitTests
     [InlineData(1, 1, 0)] // A new act cannot reuse the previous act's allowance.
     public void DistinctCombatsHaveNewAllowances(int act, int floor, int room)
     {
-        var limit = new CombatBuffLimit();
+        var limit = new CombatEffectLimit();
         Assert.True(limit.TryBegin(FirstCombat));
         limit.Complete(FirstCombat);
-        Assert.True(limit.TryBegin(new BuffCombatKey(act, floor, room)));
-        Assert.True(new CombatBuffLimit().TryBegin(FirstCombat)); // A fresh run.
+        Assert.True(limit.TryBegin(new CombatEffectKey(act, floor, room)));
+        Assert.True(new CombatEffectLimit().TryBegin(FirstCombat)); // A fresh run.
     }
 }

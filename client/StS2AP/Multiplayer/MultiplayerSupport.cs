@@ -256,7 +256,7 @@ public static class MultiplayerSupport
             return item.GetUniversalItemId() == APItem.BonusWaxRelic
                 ? (ShouldRunReplicatedConstruction(MultiplayerFeature.BonusItems)
                     ? MultiplayerFeature.BonusItems : MultiplayerFeature.GoldRewards)
-                : IsUniversalCombatBuff(item.ItemId)
+                : (IsUniversalCombatBuff(item.ItemId) || IsUniversalTrap(item.ItemId))
                 ? (IsMultiplayerBuffGoldFallback(item.ItemId)
                     ? MultiplayerFeature.GoldRewards : MultiplayerFeature.CombatEffects)
                 : MultiplayerFeature.UnknownReceivedItems;
@@ -409,6 +409,15 @@ public static class MultiplayerSupport
             else if (!IsFeatureEnabled(feature))
             {
                 DeferItem(indexedItem);
+            }
+            else if (feature == MultiplayerFeature.CombatEffects)
+            {
+                // These receipts will not replay through live callbacks, so queue their effects here.
+                APItem effect = item.GetUniversalItemId();
+                if (IsUniversalTrap(item.ItemId))
+                    BuffUtility.EnqueueTrap(effect, indexedItem.Index);
+                else
+                    BuffUtility.EnqueueBuff(effect, indexedItem.Index);
             }
             else if (ArchipelagoIdCodec.IsCharacterItemId(item.ItemId)
                 && item.GetCharacterItemType() == APItem.ProgressiveAncient)

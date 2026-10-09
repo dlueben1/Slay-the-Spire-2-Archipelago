@@ -4,11 +4,11 @@
   "sources": {
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "219755f34cfa8874018a90e4fb51fc7b623c31ce41e717278c9253642eeb9d96"
+      "sha256": "279990018b7bcdfe6fdcffe4adc670998061b856434dea96d0dec79eda4fe60a"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "3bc4ad644e642a88312fe747a898ab194b41aa4d203be5a6db29127512351198"
+      "sha256": "f6b75f70365b4eb322c1fabe1d8486f4ce9b179ea4669b786a5d6b5fc65608b3"
     }
   },
   "option_order": [
@@ -23,7 +23,6 @@
     "priority_locations",
     "item_links",
     "plando_items",
-    "player_count",
     "characters",
     "modded_characters",
     "pick_num_characters",
@@ -32,6 +31,7 @@
     "unlocked_character",
     "ascension",
     "ascension_down",
+    "use_new_logic",
     "ancient_relic_location",
     "ancient_relic_pool",
     "relic_rewards_available_anytime",
@@ -73,7 +73,17 @@
     "friendship_filler_weight",
     "post_combat_card_upgrade_filler_weight",
     "post_combat_card_removal_filler_weight",
-    "additional_card_reward_filler_weight"
+    "additional_card_reward_filler_weight",
+    "trap_chance",
+    "weak_trap_weight",
+    "frail_trap_weight",
+    "vulnerable_trap_weight",
+    "no_draw_trap_weight",
+    "tangled_trap_weight",
+    "vakuu_trap_weight",
+    "confused_trap_weight",
+    "sloth_trap_weight",
+    "dazed_trap_weight"
   ],
   "groups": [
     {
@@ -94,7 +104,7 @@
     {
       "name": "Game Options",
       "option_keys": [
-        "player_count",
+        "use_new_logic",
         "progression_balancing",
         "accessibility",
         "ancient_relic_location",
@@ -151,6 +161,23 @@
       "name": "Bonus Items",
       "option_keys": [
         "bonus_items"
+      ],
+      "start_collapsed": false,
+      "source": "web_world"
+    },
+    {
+      "name": "Traps",
+      "option_keys": [
+        "trap_chance",
+        "weak_trap_weight",
+        "frail_trap_weight",
+        "vulnerable_trap_weight",
+        "no_draw_trap_weight",
+        "tangled_trap_weight",
+        "vakuu_trap_weight",
+        "confused_trap_weight",
+        "sloth_trap_weight",
+        "dazed_trap_weight"
       ],
       "start_collapsed": false,
       "source": "web_world"
@@ -338,7 +365,7 @@
       "module": "Options",
       "kind": "counter",
       "display_name": "Start Inventory",
-      "description": "Start with the specified amount of these items. Example: \"Bomb: 1\" ",
+      "description": "Start with the specified amount of these items. Example: {Bomb: 1, Arrow: 3} ",
       "default": {},
       "raw_default": {},
       "visibility": {
@@ -355,7 +382,7 @@
       "source": "archipelago_common",
       "valid_keys_casefold": false,
       "allow_custom_values": true,
-      "minimum_value": 0,
+      "minimum_value": null,
       "supports_weighting": false,
       "group": "Common Archipelago Options"
     },
@@ -507,32 +534,6 @@
       "source": "archipelago_common",
       "supports_weighting": false,
       "group": "Common Archipelago Options"
-    },
-    "player_count": {
-      "key": "player_count",
-      "class_name": "PlayerCount",
-      "module": "worlds.spire2.options",
-      "kind": "range",
-      "display_name": "Player Count",
-      "description": "Number of co-op players sharing this AP slot, each with separate items, checks and goals.\nEach player independently rolls their own character roster. Random locks choose one seeded start per player.\nFixed locks give Player 1 the configured start and choose a seeded random start for every other player.\nUnlocked makes every character in each player's roster available immediately.\nEach client must select its own player number before connecting.",
-      "default": 1,
-      "raw_default": 1,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "minimum": 1,
-      "maximum": 4,
-      "supports_weighting": true,
-      "group": "Game Options"
     },
     "characters": {
       "key": "characters",
@@ -842,6 +843,42 @@
       "supports_weighting": false,
       "group": "Character Options"
     },
+    "use_new_logic": {
+      "key": "use_new_logic",
+      "class_name": "UseNewLogic",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Use New Logic",
+      "description": "Use the new logic. Disable to use the previous 1.1.X and below logic.\nNew logic allows more random item order—for example, Extra relics and cards can help supplement missing ancients or rests.\nOne example is that old logic required your progressive starter card+relic to beat your 1st elite but new logic\nno longer requires this as 'Power' can be made up with extra cards/relics. Similar cases for ancients/smiths/rests.\n\nOld logic is used automatically (regardless of this option) when floor, gold, and potion checks\n are all disabled to reduce failed generations.",
+      "default": true,
+      "raw_default": 1,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Game Options"
+    },
     "ancient_relic_location": {
       "key": "ancient_relic_location",
       "class_name": "AncientRelicLocation",
@@ -925,7 +962,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Relic Rewards Available Anytime",
-      "description": "How many Relic items can be claimed before earning relic rewards in the run.\n\nThe client snapshots this value at run start. Later Relic items need a reward from an\nElite, treasure chest, or Black Star before they appear in the AP reward menu. The client's\nlocal AP relic availability can be overridden in client settings for new runs only.",
+      "description": "How many AP Relic items can be claimed via the AP Menu without fighting elites or visiting chests.\nLater AP Relic Items can only be 'claimed' by beating Elites or opening treasure chests.\ni.e. A value of 2 here and receiving 3 relics from AP means you get 2 relics in your AP menu and the 3rd \nrequires beating one elite or visiting one chest. \ntldr; fight elites and go to chests to get more relics. Lower value = elites matter more so don't skip them",
       "default": 2,
       "raw_default": 2,
       "visibility": {
@@ -951,7 +988,7 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Progressive Starter Card",
-      "description": "Globally enables progressive special starter cards for every configured character.\n\nRequires Include Floor Checks. Each character gets two Progressive Starter Card items, which\nreplace two floor-check filler items. With none received, the character\nstarts without the special starter card that Archaic Tooth would transform (Bash, Neutralize, a compatible modded equivalent etc).\nThe first item restores the normal card.\n\nCharacters without an Archaic Tooth transformation are left unchanged, although their two\nProgressive Starter Card items are still present in the multiworld.\n\nWARNING: This can make the early game significantly harder for some characters. Logic expects you to reach\nLate Act 1 (may need to beat 1 Elite) without your starters.",
+      "description": "Globally enables progressive special starter cards for every configured character.\n\nRequires Include Floor Checks. Each character gets two Progressive Starter Card items, which\nreplace two floor-check filler items. With none received, the character\nstarts without the special starter card that Archaic Tooth would transform (Bash, Neutralize, a compatible modded equivalent etc).\nThe first item restores the normal card; the second applies its Archaic Tooth transformation.\n\nCharacters without an Archaic Tooth transformation are left unchanged, although their two\nProgressive Starter Card items are still present in the multiworld.\n\nWARNING: This can make the early game significantly harder for some characters.",
       "default": false,
       "raw_default": 0,
       "visibility": {
@@ -987,7 +1024,7 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Progressive Starter Relic",
-      "description": "Globally enables progressive starter relics for every configured character.\n\nRequires Include Floor Checks. Each character gets two Progressive Starter Relic items, which\nreplace two floor-check filler items. With none received, the character\nstarts without the starter relic that Touch of Orobas would refine (such as Burning Blood, or a\ncompatible modded equivalent).\n\nCharacters without a Touch of Orobas refinement are left unchanged, although their two\nProgressive Starter Relic items are still present in the multiworld.\n\nWARNING: This can make the early game significantly harder for characters whose starting relic\nis central to their early power. Logic expects you to reach Late Act 1 (may require beating 1 Elite) without\nyour starters.",
+      "description": "Globally enables progressive starter relics for every configured character.\n\nRequires Include Floor Checks. Each character gets two Progressive Starter Relic items, which\nreplace two floor-check filler items. With none received, the character\nstarts without the starter relic that Touch of Orobas would refine (such as Burning Blood, or a\ncompatible modded equivalent).\n\nThe first item restores the normal relic; the second applies its Touch of Orobas refinement.\n\nCharacters without a Touch of Orobas refinement are left unchanged, although their two\nProgressive Starter Relic items are still present in the multiworld.\n\nWARNING: This can make the early game significantly harder for characters whose starting relic\nis central to their early power.",
       "default": false,
       "raw_default": 0,
       "visibility": {
@@ -1117,7 +1154,7 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Neow Sanity",
-      "description": "Adds Neow's start-of-run reward as a location and Progressive Ancient reward.\n\nWith Anytime, Neow's relic choices appear in the Archipelago reward menu.",
+      "description": "Adds Neow's starting Ancient Relic as a Progressive Ancient reward.\n\nWith Anytime mode, Neow's relic choices appear in the Archipelago reward menu.",
       "default": false,
       "raw_default": 0,
       "visibility": {
@@ -2449,6 +2486,446 @@
       ],
       "supports_weighting": true,
       "group": "Filler Items"
+    },
+    "trap_chance": {
+      "key": "trap_chance",
+      "class_name": "TrapChance",
+      "module": "worlds.spire2.options",
+      "kind": "range",
+      "display_name": "Trap Chance",
+      "description": "Chance for filler item to be replaced by a trap.",
+      "default": 0,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "minimum": 0,
+      "maximum": 100,
+      "supports_weighting": true,
+      "group": "Traps"
+    },
+    "weak_trap_weight": {
+      "key": "weak_trap_weight",
+      "class_name": "WeakTrapWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Weak Trap Weight",
+      "description": "Applies 1 Weak, reducing damage dealt by the player for 1 turn.",
+      "default": "high",
+      "raw_default": 5,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Traps"
+    },
+    "frail_trap_weight": {
+      "key": "frail_trap_weight",
+      "class_name": "FrailTrapWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Frail Trap Weight",
+      "description": "Applies 1 Frail, reducing Block gained for one turn.",
+      "default": "high",
+      "raw_default": 5,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Traps"
+    },
+    "vulnerable_trap_weight": {
+      "key": "vulnerable_trap_weight",
+      "class_name": "VulnerableTrapWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Vulnerable Trap Weight",
+      "description": "Applies 1 Vulnerable, increasing attack damage taken for one turn.",
+      "default": "high",
+      "raw_default": 5,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Traps"
+    },
+    "no_draw_trap_weight": {
+      "key": "no_draw_trap_weight",
+      "class_name": "NoDrawTrapWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "No Draw Trap Weight",
+      "description": "Blocks extra card draws for the turn",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Traps"
+    },
+    "tangled_trap_weight": {
+      "key": "tangled_trap_weight",
+      "class_name": "TangledTrapWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Tangled Trap Weight",
+      "description": "Attack cards cost 1 more energy for the turn.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Traps"
+    },
+    "vakuu_trap_weight": {
+      "key": "vakuu_trap_weight",
+      "class_name": "VakuuTrapWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Vakuu Trap Weight",
+      "description": "Vakuu plays your hand on one additional turn, no earlier than turn two.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Traps"
+    },
+    "confused_trap_weight": {
+      "key": "confused_trap_weight",
+      "class_name": "ConfusedTrapWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Confused Trap Weight",
+      "description": "Randomizes card energy costs when drawn for the rest of combat.",
+      "default": "low",
+      "raw_default": 1,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Traps"
+    },
+    "sloth_trap_weight": {
+      "key": "sloth_trap_weight",
+      "class_name": "SlothTrapWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Sloth Trap Weight",
+      "description": "Applies a six-card limit per turn for the rest of combat.",
+      "default": "low",
+      "raw_default": 1,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Traps"
+    },
+    "dazed_trap_weight": {
+      "key": "dazed_trap_weight",
+      "class_name": "DazedTrapWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Dazed Trap Weight",
+      "description": "Shuffles two Dazed into your combat draw pile.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Traps"
     }
   }
 }

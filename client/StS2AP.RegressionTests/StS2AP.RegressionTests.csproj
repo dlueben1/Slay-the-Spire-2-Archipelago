@@ -58,8 +58,9 @@
     <Compile Include="..\StS2AP\Utils\DeathLink\DeathLinkEventLedger.cs" Link="Utils\DeathLink\DeathLinkEventLedger.cs" />
     <Compile Include="..\StS2AP\Utils\Rewards\UniversalBuffGold.cs" Link="Utils\Rewards\UniversalBuffGold.cs" />
     <Compile Include="..\StS2AP\Data\ItemTable.cs" Link="Data\ItemTable.cs" />
-    <Compile Include="..\StS2AP\Utils\Rewards\BuffReceiptQueue.cs" Link="Utils\Rewards\BuffReceiptQueue.cs" />
-    <Compile Include="..\StS2AP\Persistence\CombatBuffLimit.cs" Link="Persistence\CombatBuffLimit.cs" />
+    <Compile Include="..\StS2AP\Utils\Rewards\CombatEffectActionMessage.cs" Link="Utils\Rewards\CombatEffectActionMessage.cs" />
+    <Compile Include="..\StS2AP\Utils\Rewards\CombatEffectReceiptQueue.cs" Link="Utils\Rewards\CombatEffectReceiptQueue.cs" />
+    <Compile Include="..\StS2AP\Persistence\CombatEffectLimit.cs" Link="Persistence\CombatEffectLimit.cs" />
     <Compile Include="..\StS2AP\Utils\Rewards\BonusRewardSelectionKey.cs" Link="Utils\Rewards\BonusRewardSelectionKey.cs" />
     <Compile Include="..\StS2AP\Utils\Rewards\ApRewardSelectionQueue.cs" Link="Utils\Rewards\ApRewardSelectionQueue.cs" />
     <Compile Include="..\StS2AP\Utils\Rewards\ApRewardTravelGuard.cs" Link="Utils\Rewards\ApRewardTravelGuard.cs" />

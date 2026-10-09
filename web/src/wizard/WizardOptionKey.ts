@@ -45,6 +45,7 @@ export const ANCIENT_OPTION_KEYS = {
 
 /** Generated option keys owned by the Progression compiler. */
 export const PROGRESSION_OPTION_KEYS = {
+  useNewLogic: "use_new_logic",
   progressionBalancing: "progression_balancing",
   accessibility: "accessibility",
 } as const;
@@ -79,6 +80,8 @@ export const DEATH_LINK_OPTION_KEYS = {
   enableFragments: "enable_death_fragments",
   damagePercent: "death_link_damage_percent",
 } as const;
+
+export const TRAP_CHANCE_OPTION_KEY = "trap_chance" as const;
 
 export interface GeneratedNumberRange {
   minimum: number;

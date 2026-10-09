@@ -24,5 +24,8 @@ public sealed class ApPlayerRunState
     public ApProgressiveStarterPlayerState ProgressiveStarters { get; set; } = new();
     // Advanced by buff actions on every replica; retained in the host's save for rejoin.
     public int LastConsumedBuffIndex { get; set; } = -1;
-    public CombatBuffLimit CombatBuffLimit { get; set; } = new();
+    public CombatEffectLimit CombatBuffLimit { get; set; } = new();
+    // Trap receipts have their own cutoff: consuming one must never skip an earlier buff.
+    public int LastConsumedTrapIndex { get; set; } = -1;
+    public CombatEffectLimit CombatTrapLimit { get; set; } = new();
 }

@@ -552,6 +552,23 @@ export const checkSetupStep: WizardStep = {
       id: "filler-weights",
       title: "How often should each filler item appear?",
     },
+    {
+      id: "trap-chance",
+      title: "How often should filler items become traps?",
+      help: "0% disables traps. Received traps apply at most once per player per turn; extras stay queued.",
+      control: {
+        kind: "slider",
+        field: "traps.chance",
+        range: generatedRange("trapChance"),
+        unit: "%",
+        ariaLabel: "Trap chance",
+      },
+    },
+    {
+      id: "trap-weights",
+      title: "Which traps should appear?",
+      isVisible: (answers) => answers.checksAndRewards.traps.chance > 0,
+    },
   ],
 };
 
@@ -634,9 +651,26 @@ export const progressionSetupStep: WizardStep = {
   id: "progression",
   title: "Progression",
   description:
-    "Configure Archipelago's progression-balancing and accessibility settings.",
+    "Choose generation logic, progression balancing, and accessibility.",
   sectionKey: "progression",
   questions: [
+    {
+      id: "use-new-logic",
+      control: {
+        kind: "checkbox",
+        field: "useNewLogic",
+        label: "Use New Logic",
+        description:
+          "Allow extra cards and relics to make up for missing progression items. Disable to use the previous logic.",
+      },
+      help: (answers) =>
+        answers.progression.useNewLogic &&
+        !answers.checksAndRewards.checks.includeFloorChecks &&
+        !answers.checksAndRewards.checks.goldSanity &&
+        !answers.checksAndRewards.checks.potionSanity
+          ? "Previous logic will still be used because Floor Checks, Gold Rewards, and Potion Drops are all disabled."
+          : "Previous logic is used automatically when Floor Checks, Gold Rewards, and Potion Drops are all disabled.",
+    },
     {
       id: "progression-balancing",
       title: "How strongly should Archipelago balance progression items?",

@@ -381,6 +381,22 @@ class SlayTheSpire2World(World):
 
         Also called lazily when AP requests replacement filler before create_items.
         """
+        trap_weights = {
+            "Weak Trap": self.options.weak_trap_weight.value,
+            "Frail Trap": self.options.frail_trap_weight.value,
+            "Vulnerable Trap": self.options.vulnerable_trap_weight.value,
+            "No Draw Trap": self.options.no_draw_trap_weight.value,
+            "Tangled Trap": self.options.tangled_trap_weight.value,
+            "Vakuu Trap": self.options.vakuu_trap_weight.value,
+            "Confused Trap": self.options.confused_trap_weight.value,
+            "Sloth Trap": self.options.sloth_trap_weight.value,
+            "Dazed Trap": self.options.dazed_trap_weight.value,
+        }
+        self.trap_weights = {name: weight for name, weight in trap_weights.items() if weight > 0}
+        if self.options.trap_chance.value > 0 and not self.trap_weights:
+            raise ValueError("Trap Chance is greater than 0, but all trap weights are None. "
+                             "Enable a trap weight or set Trap Chance to 0.")
+
         # --- Universal (buff) item pools ---
         # Map each universal item name to its configured option weight value.
         # These items are character-agnostic: they can apply to any character's run.
@@ -424,13 +440,17 @@ class SlayTheSpire2World(World):
             self.filler_characters[config.name] = gold_weights
 
     def get_filler_item(self, character: Optional[str] = None) -> str:
-        """Draw directly by item weight, including only the selected character's gold.
+        """Roll for a trap, then draw by item weight within the selected category.
+
+        Ordinary filler includes only the selected character's gold.
 
         A high item has five times the probability of a low item regardless of how
         many other items share either weight. Zero-weight items are excluded.
         """
         if not hasattr(self, 'filler_universal'):
             self.build_filler_pools()
+        if self.options.trap_chance.value > 0 and self.random.randrange(100) < self.options.trap_chance.value:
+            return self.random.choices(list(self.trap_weights), weights=list(self.trap_weights.values()), k=1)[0]
         if character is None and self.characters:
             character = self.random.choice(self.characters).name
 

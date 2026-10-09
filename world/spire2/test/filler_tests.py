@@ -7,7 +7,7 @@ from worlds.spire2.test import Spire2TestBase
 
 
 class TestFillerWeights(Spire2TestBase):
-    options = {"characters": ["ironclad", "silent"]}
+    options = {"trap_chance": 0, "characters": ["ironclad", "silent"]}
 
     def disable_filler(self):
         for name in self.world.options_dataclass.type_hints:
@@ -73,7 +73,7 @@ class TestFillerWeights(Spire2TestBase):
 
 
 class TestModdedFillerWeights(Spire2TestBase):
-    options = {"characters": ["silent"], "modded_characters": ["WATCHER-WATCHER"]}
+    options = {"trap_chance": 0, "characters": ["silent"], "modded_characters": ["WATCHER-WATCHER"]}
 
     def test_custom_character_gold_and_fallback_use_its_numbered_item_table(self):
         character = next(config for config in self.world.characters if config.mod_num)

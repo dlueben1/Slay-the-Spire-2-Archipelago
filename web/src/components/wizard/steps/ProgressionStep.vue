@@ -47,8 +47,10 @@ function forwardUpdate(value: object): void {
 <template>
   <section class="wizard-subsection pt-0! border-t-0!">
     <div class="wizard-subsection__header">
-      <h3>Archipelago Settings</h3>
-      <p>General generation settings shared with other Archipelago games.</p>
+      <h3>Generation Settings</h3>
+      <p>
+        Choose item placement logic, progression balancing, and accessibility.
+      </p>
     </div>
 
     <div class="space-y-8">

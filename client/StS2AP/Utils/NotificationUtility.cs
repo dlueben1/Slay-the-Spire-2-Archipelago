@@ -358,8 +358,17 @@ namespace StS2AP.Utils
         }
 
         /// <summary>
-        /// Displays a notification when the player receives a buff from another player in the multiworld
+        /// Displays a notification when a trap is queued from another player in the multiworld
         /// </summary>
+        public static void ShowTrapReceived(ItemInfo? info)
+        {
+            if (info == null || info.Player.Name == ArchipelagoClient.PlayerName)
+                return;
+            EnqueueNotification(
+                $"[color=magenta]{info.Player}[/color] sent [color=red]{info.ItemDisplayName}[/color]. Trap queued!",
+                NotificationType.ItemReceived);
+        }
+
         public static void ShowBuffReceived(ItemInfo? info)
         {
             // Ignore if null

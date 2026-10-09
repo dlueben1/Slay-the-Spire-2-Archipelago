@@ -327,7 +327,10 @@ export function summarizeProgressionAnswers(
       ? "All locations must remain reachable."
       : "Only goal-required locations must remain reachable.";
 
-  return `${progression} ${accessibility}`;
+  const logic = answers.useNewLogic
+    ? "New logic is enabled (falls back to previous logic if floor, gold, and potion checks are all disabled)."
+    : "Previous logic is enabled.";
+  return `${logic} ${progression} ${accessibility}`;
 }
 
 /**
@@ -457,9 +460,13 @@ export function summarizeChecksAndRewardsAnswers(
   const shop = summarizeShopAnswers(answers.shop);
   const bonusItems = summarizeBonusItemAnswers(answers.bonusItems);
   const filler = summarizeFillerAnswers(answers.filler);
+  const traps =
+    answers.traps.chance === 0
+      ? "Traps are disabled."
+      : `${answers.traps.chance}% of filler slots become traps, with ${Object.values(answers.traps.weights).filter((weight) => weight !== "none").length} trap types enabled. At most one queued trap applies per player per turn.`;
 
   // Preserve the visible subsection order in the final combined review paragraph.
-  return `${startingEquipment} ${ancients} ${checks} ${shop} ${bonusItems} ${filler}`;
+  return `${startingEquipment} ${ancients} ${checks} ${shop} ${bonusItems} ${filler} ${traps}`;
 }
 
 /**
