@@ -1,13 +1,13 @@
 # WSL development
 
-Keep this repository and an Archipelago 0.6.7 checkout beside each other. Build in WSL or Windows; run Slay the Spire 2 on Windows. The APWorld source lives at `world/spire2` and is linked into Archipelago so edits are available immediately.
+Keep this repository and an Archipelago 0.6.8 checkout beside each other. Build in WSL or Windows; run Slay the Spire 2 on Windows. The APWorld source lives at `world/spire2` and is linked into Archipelago so edits are available immediately.
 
 ## Python and the APWorld
 
 Install `uv`, then run these commands from the repository root:
 
 ```bash
-git clone --depth 1 --branch 0.6.7 https://github.com/ArchipelagoMW/Archipelago.git ../Archipelago
+git clone --depth 1 --branch 0.6.8 https://github.com/ArchipelagoMW/Archipelago.git ../Archipelago
 uv python install 3.13
 uv venv --python 3.13 --seed .venv
 .venv/bin/python ../Archipelago/ModuleUpdate.py -y
@@ -16,7 +16,7 @@ site_packages=$(.venv/bin/python -c 'import sysconfig; print(sysconfig.get_paths
 realpath ../Archipelago > "$site_packages/archipelago.pth"
 ```
 
-If you already have the Archipelago checkout or world link, keep those and skip the corresponding commands. Select `<repo>/.venv/bin/python` as the WSL interpreter in your Python IDE. The `.pth` file makes `worlds.*` imports available even when you open `world/` directly. If the IDE still cannot resolve them after reindexing, add the Archipelago checkout as a source or interpreter path.
+If you already have the Archipelago checkout or world link, keep those and skip the corresponding commands. `scripts/build_apworld_local.py` needs 0.6.8; move an older shallow checkout with `git -C ../Archipelago fetch --depth 1 origin tag 0.6.8 && git -C ../Archipelago checkout 0.6.8`, then rerun `ModuleUpdate.py -y`. Select `<repo>/.venv/bin/python` as the WSL interpreter in your Python IDE. The `.pth` file makes `worlds.*` imports available even when you open `world/` directly. If the IDE still cannot resolve them after reindexing, add the Archipelago checkout as a source or interpreter path.
 
 Build the world with `.venv/bin/python scripts/build_apworld_local.py`. The output is `dist/spire2.apworld`.
 

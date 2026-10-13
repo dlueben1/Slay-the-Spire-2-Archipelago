@@ -13,7 +13,7 @@ You need the following installed:
 
 You also need to:
 
-- Clone Archipelago 0.6.7 in `../Archipelago` and make `world/spire2` available in its `worlds/spire2` directory by copying or linking it; see the [WSL setup](docs/contributing/wsl-setup.md)
+- Clone Archipelago 0.6.8 in `../Archipelago` and make `world/spire2` available in its `worlds/spire2` directory by copying or linking it; see the [WSL setup](docs/contributing/wsl-setup.md)
 - Copy `client/StS2AP/local.props.template` to `client/StS2AP/local.props` and update its paths to match your local installations
   - `<STS2GamePath>` should point to the directory for the game in Steam
   - Keep `<UseSts2RefLib>true</UseSts2RefLib>` for portable, permissioned compile-time references from NuGet
