@@ -33,7 +33,7 @@
     <AssemblyName>$(ModName)</AssemblyName>
 
     <!-- Client Release Version -->
-    <Version>2.4.0</Version>
+    <Version>1.1.2</Version>
 
     <!-- Build/deploy paths for the active game installation. -->
     <ModsOutputDir Condition="'$(ModsOutputDir)' == ''"
