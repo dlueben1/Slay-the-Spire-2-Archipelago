@@ -1,3 +1,8 @@
+# The easiest way to make a Slay the Spire II YAML is the YAML Builder:
+#   https://sts2ap.net/#/builder
+# It explains every option and downloads a finished file. Use this template
+# only if you prefer to edit the YAML by hand.
+
 # Change this to your Archipelago slot name.
 name: Spire2Player
 description: "Example settings; customise them before generating."
@@ -56,6 +61,17 @@ Slay the Spire II:
   post_combat_card_upgrade_filler_weight: "low"
   post_combat_card_removal_filler_weight: "low"
   additional_card_reward_filler_weight: "low"
+  # Percent chance for each filler item to be replaced by a trap; 0 disables traps.
+  trap_chance: 0
+  weak_trap_weight: "high"
+  frail_trap_weight: "high"
+  vulnerable_trap_weight: "high"
+  no_draw_trap_weight: "medium"
+  tangled_trap_weight: "medium"
+  vakuu_trap_weight: "medium"
+  confused_trap_weight: "low"
+  sloth_trap_weight: "low"
+  dazed_trap_weight: "medium"
   death_link: false
   enable_death_fragments: true
   death_link_damage_percent: 0

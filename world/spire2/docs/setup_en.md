@@ -44,11 +44,18 @@ that release's notes rather than assuming a newer game update is supported.
 
 ## Prepare your player YAML
 
-Download `Spire2-template.yaml` from the same release, or use **Create Player YAML**
-on the mod's main menu. Set `name` to the Archipelago slot name you want to use
-and review the options before generation. Each participant supplies one YAML.
-For custom characters, everyone who needs those characters must install the
-corresponding character mods; test their compatibility before a full multiworld.
+The easiest and recommended way to make your YAML is the
+[YAML Builder](https://sts2ap.net/#/builder) on the Slay the Spire II Archipelago
+website. It walks through every option and downloads a finished YAML. The mod's
+**Mod Website & YAML Builder** main-menu button opens the same website.
+
+Alternatively, download `Spire2-template.yaml` from the same release and edit it
+by hand, or use the Archipelago Launcher's **Options Creator**. Set `name` to the
+Archipelago slot name you want to use and review the options before generation.
+
+Each participant supplies one YAML. For custom characters, everyone who needs
+those characters must install the corresponding character mods; test their
+compatibility before a full multiworld.
 
 ## Generate a multiworld
 
@@ -77,7 +84,7 @@ server address, port and any password for connecting.
 ## Connect and play
 
 1. Start Slay the Spire II with the Archipelago mod and RitsuLib enabled.
-2. Select **Connect** on the main menu.
+2. Select **Connect to Archipelago** on the main menu.
 3. Enter the session's server address/port, your YAML's slot name and any password.
 4. Connect, then follow the mod's character/run selection.
 

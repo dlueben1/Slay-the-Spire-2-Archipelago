@@ -26,7 +26,7 @@ Finally, you'll need the Archipelago mod for Slay the Spire II, which can be fou
 
 A YAML file tells Archipelago what settings you'd like to use. This allows you to configure your experience by controlling what is randomized, what's shuffled into the Multiworld pool, and how certain features and items should behave.
 
-**The easiest and recommended way to do this is to use the YAML Builder**, which can be accessed on our [official website](/#/builder), or by selecting "Create Player YAML" on the in-game main menu.
+**The easiest and recommended way to do this is to use the YAML Builder**, which can be accessed on our [official website](/#/builder), or by selecting "Mod Website & YAML Builder" on the in-game main menu.
 
 Otherwise, you can create the YAML file manually or using the Archipelago Launcher's "Options Creator".
 
