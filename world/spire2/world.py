@@ -1,32 +1,28 @@
-import json
+import logging
 import re
 import string
 import typing
-from collections import defaultdict
 from copy import deepcopy
-from importlib.resources import files
+from math import ceil
 from typing import List, Optional, Any
 
-from BaseClasses import Item, Location, Region, MultiWorld, ItemClassification, CollectionState
+from BaseClasses import CollectionState, Item, Location, Region, MultiWorld, ItemClassification
 from Options import OptionError
 from worlds.AutoWorld import World
 from .regions import create_regions
-from .rules import set_rules, SpireLogic
+from .rules import FALLBACK_REASON, MID_ACT_1_POWER, select_logic, set_rules
+from . import rules_old
 from .web_world import SlayTheSpire2Web
-from .characters import CharacterConfig, character_list, character_offset_map
-from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET, ASCENSIONS
-from .items import item_table, chars_to_items, universal_items, bonus_item_table, ItemType, base_event_item_pairs, ItemData, item_groups
+from .characters import (CharacterConfig, character_list, vanilla_character_ids, character_registry,
+                         registered_character_blocks, unique_character_ids, character_identity)
+from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET, GENERIC_CHARACTER_BLOCKS
+from .items import item_table, chars_to_items, bonus_item_table, ItemType, base_event_item_pairs, ItemData, item_groups
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType, location_groups
 from .options import Spire2Options
 
 COMBAT_GOLD_ITEM_COUNT = 13
 ELITE_GOLD_ITEM_COUNT = 7
 BOSS_GOLD_ITEM_COUNT = 2
-
-
-def _read_world_version() -> str:
-    manifest = files(__package__).joinpath("archipelago.json")
-    return json.loads(manifest.read_text(encoding="utf-8"))["world_version"]
 
 
 class SlayTheSpire2Item(Item):
@@ -46,8 +42,8 @@ class SlayTheSpire2World(World):
     web = SlayTheSpire2Web()
     options_dataclass = Spire2Options
     options: Spire2Options
-    mod_compat_version = _read_world_version()
-    compat_flag = 1
+    # Named modded characters use independent ID blocks and APWorld-supplied names.
+    compat_flag = 2
     origin_region_name = "Neow's Room"
 
     # Build the final Item Table
@@ -61,6 +57,10 @@ class SlayTheSpire2World(World):
     location_name_to_id = location_table
     location_name_groups = location_groups
 
+    filler_universal: dict[str, int]
+    filler_characters: dict[str, dict[str, int]]
+    filler_fallbacks: dict[str, str]
+
     def __init__(self, mw: MultiWorld, player: int):
         super().__init__(mw, player)
         self.characters: List[CharacterConfig] = []
@@ -68,6 +68,8 @@ class SlayTheSpire2World(World):
         self.modded_chars: List[CharacterConfig] = []
         self.total_shop_locations: int = 0
         self.total_shop_items: int = 0
+        self.effective_logic = "new"
+        self.logic_fallback_reason = None
 
     def generate_early(self) -> None:
         if hasattr(self.multiworld, 're_gen_passthrough'):
@@ -82,34 +84,55 @@ class SlayTheSpire2World(World):
             raise OptionError("At least one character must be configured")
         if self.options.include_floor_checks.value == 0:
             # Progressive starter items replace floor-check filler. Without those locations there
-            # is no filler budget for them, so normalize both global toggles to disabled.
+            # is no filler budget for them, so disable global and per-character settings.
             self.options.progressive_starter_card.value = 0
             self.options.progressive_starter_relic.value = 0
-        names = set()
-        for config in self.characters:
-            # self.logger.info("StS: Got character configuration" + str(config))
-            names.add(config.official_name)
+            for config in self.characters:
+                config.progressive_starter_card = False
+                config.progressive_starter_relic = False
+        names = {config.official_name for config in self.characters}
         if len(names) != len(self.characters):
-            raise OptionError(f"Found duplicate characters: {[x.official_name for x in self.characters]}")
-        for config in self.characters:
-            if not config.locked:
-                break
-        else:
+            raise OptionError(f"Found duplicate characters: {[c.official_name for c in self.characters]}")
+        if not any(not config.locked for config in self.characters):
             raise OptionError("No character started unlocked!")
+        if len(self.modded_chars) > NUM_CUSTOM:
+            raise OptionError(
+                f"StS 2 only supports {NUM_CUSTOM} modded characters; "
+                f"got {len(self.modded_chars)}: {[c.option_name for c in self.modded_chars]}"
+            )
         self.total_shop_items = (self.options.shop_card_slots.value + self.options.shop_neutral_card_slots.value +
                                  self.options.shop_relic_slots.value + self.options.shop_potion_slots.value)
         self.total_shop_locations = self.total_shop_items + (3 if self.options.shop_remove_slots else 0)
         if self.total_shop_locations <= 0:
             self.options.shop_sanity.value = 0
-        if len(self.modded_chars) > NUM_CUSTOM:
-            raise OptionError(f"StS 2 only supports {NUM_CUSTOM} modded characters; got {len(self.modded_chars)}: {[x.option_name for x in self.modded_chars]}")
+        select_logic(self)
+        if self.logic_fallback_reason:
+            logging.info("Slay the Spire II player %s: %s", self.player, self.logic_fallback_reason)
         num_chars_goal = self.options.num_chars_goal.value
-        if num_chars_goal != 0:
-            if num_chars_goal > len(self.characters):
-                self.options.num_chars_goal.value = 0
-        for char in self.characters:
-            if not char.locked:
-                self.options.start_inventory.value[f"{char.name} Unlock"] = 1
+        if num_chars_goal > len(self.characters):
+            self.options.num_chars_goal.value = 0
+        if not self.options.include_floor_checks:
+            # Give sparse starts enough support to open Mid Act 1.
+            # Mixing cards and relics meets the power/card floor within the available checks;
+            # ordinary cards alone can fill every opening slot and still fall short.
+            early_items = self.multiworld.early_items[self.player]
+            cards = 1 if self.options.shuffle_all_cards else 0
+            vanilla_cards = 0 if self.options.shuffle_all_cards else 1.5
+            relics = ceil((MID_ACT_1_POWER - cards - vanilla_cards) / 1.5)
+            if self.effective_logic == "old" and not self.options.shuffle_all_cards:
+                # Old logic values a half-shuffled Card Reward at 2 power. Pair it with
+                # one Relic for 3.5 power using the same two early slots as two Relics.
+                cards, relics = 1, 1
+            for config in self.characters:
+                if config.locked:
+                    continue
+                if cards:
+                    early_items[f"{config.name} Card Reward"] = cards
+                early_items[f"{config.name} Relic"] = relics
+                if self.options.campfire_sanity:
+                    early_items[f"{config.name} Progressive Rest"] = 1
+                if self.options.neow_sanity:
+                    early_items[f"{config.name} Progressive Ancient"] = 1
         # for weight in self.options.trap_weights.values():
         #     if weight > 0:
         #         break
@@ -135,48 +158,63 @@ class SlayTheSpire2World(World):
             else:
                 # Validate that the selected character is in the configured characters list
                 for char in characters:
-                    if char.lower() == unlocked_char_value.lower():
+                    if character_identity(char) == character_identity(unlocked_char_value):
                         return char
-                else:
-                    # We really shouldn't be able to get here anymore...but if we do, let us know, because it means this logic needs more work...
-                    raise OptionError(
-                        f"Configured {unlocked_char_value} as the first unlocked character, but was not one of: {characters}")
+                # We really shouldn't be able to get here anymore...but if we do, let us know, because it means this logic needs more work...
+                raise OptionError(
+                    f"Configured {unlocked_char_value} as the first unlocked character, but was not one of: {characters}")
         return unlocked_char
 
-    def _handle_basic_chars(self) -> None:
-        selected_chars = list(self.options.characters.value)
-        selected_chars.extend(self.options.modded_characters.value)
-        char_options = sorted(selected_chars)
+    def _select_character_names(self, char_options: List[str], unlocked_char: Optional[str]) -> List[str]:
         num_rand_chars = self.options.pick_num_characters.value
-        unlocked_char = self._get_unlocked_char(char_options)
-        include_ascension_down = self.options.include_floor_checks.value != 0
-        if num_rand_chars != 0 and num_rand_chars < len(char_options):
+        if num_rand_chars == 0 or num_rand_chars >= len(char_options):
             selected_chars = list(char_options)
-            if self.options.lock_characters.value != 0:
-                if unlocked_char in selected_chars:
-                    selected_chars.remove(unlocked_char)
-                selected_chars = [unlocked_char] + self.random.sample(selected_chars, k=num_rand_chars - 1)
-            else:
-                selected_chars = self.random.sample(selected_chars, k=num_rand_chars)
-            modded_num = 0
-            modded_chars = []
-            for char in selected_chars:
-                if character_offset_map.get(char.lower(), None) is None:
-                    modded_num += 1
-                    modded_chars.append(char)
-            if modded_num > NUM_CUSTOM:
-                supported_chars = sorted(
-                    {x for x in char_options if x.lower() in character_offset_map and x not in selected_chars})
-                replace_num = modded_num - NUM_CUSTOM
-                if unlocked_char in modded_chars:
-                    modded_chars.remove(unlocked_char)
-                remove_me = self.random.sample(modded_chars, k=replace_num)
-                for remove in remove_me:
-                    selected_chars.remove(remove)
-                selected_chars += self.random.sample(supported_chars, k=min(replace_num, len(supported_chars)))
         else:
-            selected_chars = char_options
+            remaining = list(char_options)
+            if unlocked_char is not None:
+                remaining.remove(unlocked_char)
+                selected_chars = [unlocked_char] + self.random.sample(remaining, k=num_rand_chars - 1)
+            else:
+                selected_chars = self.random.sample(remaining, k=num_rand_chars)
 
+        modded_chars = [char for char in selected_chars if char.casefold() not in vanilla_character_ids]
+        excess = len(modded_chars) - NUM_CUSTOM
+        if excess > 0:
+            supported_chars = [char for char in char_options
+                               if char.casefold() in vanilla_character_ids and char not in selected_chars]
+            # A random subset may substitute unselected vanilla characters to meet the cap.
+            # Never silently reduce the requested roster or remove its fixed unlocked character.
+            if num_rand_chars == 0 or len(supported_chars) < excess:
+                raise OptionError(f"StS 2 supports at most {NUM_CUSTOM} selected modded characters; "
+                                  "reduce the roster or Pick Number of Characters")
+            candidates = [char for char in modded_chars if char != unlocked_char]
+            for char in self.random.sample(candidates, k=excess):
+                selected_chars.remove(char)
+            selected_chars.extend(self.random.sample(supported_chars, k=excess))
+
+        # Sampling chooses membership, not numbering. Keep the candidates' relative YAML order.
+        selected = set(selected_chars)
+        return [char for char in char_options if char in selected]
+
+    @staticmethod
+    def _character_assignments(selected_chars: List[str]):
+        modded_num = 0
+        generic_num = 0
+        for option_name in selected_chars:
+            character_id = option_name.casefold()
+            mod_num = 0
+            if character_id not in vanilla_character_ids:
+                modded_num += 1
+                mod_num = modded_num
+            block = registered_character_blocks.get(character_id)
+            if block is None:
+                generic_num += 1
+                block = GENERIC_CHARACTER_BLOCKS[generic_num - 1]
+            yield option_name, character_registry[block].name, block, mod_num
+
+    def _handle_basic_chars(self) -> None:
+        char_options = unique_character_ids(
+            sorted(self.options.characters.value) + self.options.modded_characters.value)
         ascension_down: typing.Set[str] = self.options.ascension_down.value
         ascension: typing.Set[str] = self.options.ascension.value
         ascension = self._to_ascensions(ascension)
@@ -185,62 +223,59 @@ class SlayTheSpire2World(World):
             ascension_down = set()
         ascension_down = ascension.intersection(ascension_down)
 
-        for option_name in selected_chars:
-            mod_num = 0
-            char_offset = character_offset_map.get(option_name.lower(), None)
-            if char_offset is None:
-                self.modded_num += 1
-                mod_num = self.modded_num
-                char_offset = mod_num + len(character_list)
-                name = f"Custom Character {mod_num}"
-            else:
-                name = character_list[char_offset - 1]
-            if self.options.seeded:
-                seed = "".join(self.random.choice(string.ascii_letters) for i in range(16))
-            else:
-                seed = ""
-            locked = False if unlocked_char is None or unlocked_char.lower() == option_name.lower() else True
+        seeds = {
+            option_name: "".join(self.random.choice(string.ascii_letters) for _ in range(16))
+            for option_name in char_options
+        } if self.options.seeded else {}
 
-            if not include_ascension_down:
-                ascension_down = set()
-            ascension_down = ascension.intersection(ascension_down)
-            config = CharacterConfig(name,
-                                     option_name,
-                                     char_offset,
-                                     mod_num,
-                                     seed,
-                                     locked,
-                                     ascension=ascension,
-                                     ascension_down=ascension_down)
-            self.characters.append(config)
-            if config.mod_num > 0:
-                self.modded_chars.append(config)
+        unlocked_char = self._get_unlocked_char(char_options)
+        selected_chars = self._select_character_names(char_options, unlocked_char)
+        configs = []
+        for option_name, name, char_offset, mod_num in self._character_assignments(selected_chars):
+            locked = unlocked_char is not None and unlocked_char.lower() != option_name.lower()
+            configs.append(CharacterConfig(
+                name,
+                option_name,
+                char_offset,
+                mod_num,
+                seeds.get(option_name, ""),
+                locked,
+                ascension=ascension,
+                ascension_down=ascension_down,
+                progressive_starter_card=self.options.progressive_starter_card.value,
+                progressive_starter_relic=self.options.progressive_starter_relic.value,
+            ))
+        self.characters = configs
+        self.modded_chars = [config for config in self.characters if config.mod_num > 0]
+        self.modded_num = len(self.modded_chars)
 
 
-    def _to_ascensions(self, ascensions: typing.Set[str]) -> typing.Set[str]:
+    @staticmethod
+    def _to_ascensions(ascensions: typing.Set[str]) -> typing.Set[str]:
         ret = set()
         if len(ascensions) == 1:
             try:
-                number = int(list(ascensions)[0])
+                number = int(next(iter(ascensions)))
                 for i in range(0, number):
                     ret.add(ASCENSION_LIST[i].lower())
                 return ret
-            except:
+            except (TypeError, ValueError, IndexError):
                 return {asc.lower() for asc in ascensions}
 
         for asc in ascensions:
             try:
                 number = int(asc)
                 ret.add(ASCENSION_LIST[number - 1].lower())
-            except:
+            except (TypeError, ValueError, IndexError):
                 ret.add(asc.lower())
         return ret
 
-    def _to_ascension_downs(self, ascension_downs: typing.Set[str], ascensions: typing.Set[str]) -> typing.Set[str]:
+    @staticmethod
+    def _to_ascension_downs(ascension_downs: typing.Set[str], ascensions: typing.Set[str]) -> typing.Set[str]:
         ret = set()
         if len(ascension_downs) == 1:
             try:
-                number = int(list(ascension_downs)[0])
+                number = int(next(iter(ascension_downs)))
                 asc_list = ASCENSION_LIST[::-1]
                 count = 0
                 for i in range(0, len(asc_list)):
@@ -251,125 +286,130 @@ class SlayTheSpire2World(World):
                     if count >= len(ascensions) or count >= number:
                         break
                 return ret
-            except:
+            except (TypeError, ValueError, IndexError):
                 return {asc.lower() for asc in ascension_downs}
 
         for asc in ascension_downs:
             try:
                 number = int(asc)
                 ret.add(ASCENSION_LIST[number - 1].lower())
-            except:
+            except (TypeError, ValueError, IndexError):
                 ret.add(asc.lower())
         return ret
 
 
     def _handle_advanced_chars(self) -> None:
-        advanced_chars = self.options.advanced_characters.keys()
-        char_options = sorted(advanced_chars)
-        num_rand_chars = self.options.pick_num_characters.value
-        unlocked_char = self._get_unlocked_char(char_options)
+        advanced_chars = list(self.options.advanced_characters.keys())
+        char_options = unique_character_ids(advanced_chars)
+        if len(char_options) != len(advanced_chars):
+            raise OptionError("Advanced Characters contains duplicate character IDs or aliases (case-insensitive)")
+        if char_options != advanced_chars:
+            raise OptionError("Advanced character IDs must not have leading or trailing whitespace")
         include_ascension_down = self.options.include_floor_checks.value != 0
-        if num_rand_chars != 0 and num_rand_chars < len(char_options):
-            selected_chars = list(char_options)
-            if self.options.lock_characters.value != 0:
-                if unlocked_char in selected_chars:
-                    selected_chars.remove(unlocked_char)
-                selected_chars = [unlocked_char] + self.random.sample(selected_chars, k=num_rand_chars - 1)
-            else:
-                selected_chars = self.random.sample(selected_chars, k=num_rand_chars)
-            modded_num = 0
-            modded_chars = []
-            for char in selected_chars:
-                if character_offset_map.get(char.lower(), None) is None:
-                    modded_num += 1
-                    modded_chars.append(char)
-            if modded_num > NUM_CUSTOM:
-                supported_chars = sorted(
-                    {x for x in char_options if x.lower() in character_offset_map and x not in selected_chars})
-                replace_num = modded_num - NUM_CUSTOM
-                if unlocked_char in modded_chars:
-                    modded_chars.remove(unlocked_char)
-                remove_me = self.random.sample(modded_chars, k=replace_num)
-                for remove in remove_me:
-                    selected_chars.remove(remove)
-                selected_chars += self.random.sample(supported_chars, k=min(replace_num, len(supported_chars)))
-        else:
-            selected_chars = char_options
+        seeds = {
+            option_name: "".join(self.random.choice(string.ascii_letters) for _ in range(16))
+            for option_name in char_options
+        } if self.options.seeded else {}
 
-        # self.logger.info("Generating with characters %s", selected_chars)
-        for option_name in selected_chars:
+        unlocked_char = self._get_unlocked_char(char_options)
+        selected_chars = self._select_character_names(char_options, unlocked_char)
+        configs = []
+        for option_name, name, char_offset, mod_num in self._character_assignments(selected_chars):
             options = self.options.advanced_characters[option_name]
-            mod_num = 0
-            char_offset = character_offset_map.get(option_name.lower(), None)
-            if char_offset is None:
-                self.modded_num += 1
-                mod_num = self.modded_num
-                char_offset = mod_num + len(character_list)
-                name = f"Custom Character {mod_num}"
-            else:
-                name = character_list[char_offset - 1]
-            if self.options.seeded:
-                seed = "".join(self.random.choice(string.ascii_letters) for i in range(16))
-            else:
-                seed = ""
-            locked = False if unlocked_char is None or unlocked_char.lower() == option_name.lower() else True
-
+            locked = unlocked_char is not None and unlocked_char.lower() != option_name.lower()
             ascension = self._to_ascensions(options['ascension'])
-
             ascension_down = self._to_ascension_downs(options['ascension_down'], ascension)
-
             if not include_ascension_down:
                 ascension_down = set()
             ascension_down = ascension.intersection(ascension_down)
-            config = CharacterConfig(name,
-                                     option_name,
-                                     char_offset,
-                                     mod_num,
-                                     seed,
-                                     locked,
-                                     ascension=ascension,
-                                     ascension_down=ascension_down)
-            self.characters.append(config)
-            if config.mod_num > 0:
-                self.modded_chars.append(config)
+            configs.append(CharacterConfig(
+                name,
+                option_name,
+                char_offset,
+                mod_num,
+                seeds.get(option_name, ""),
+                locked,
+                ascension=ascension,
+                ascension_down=ascension_down,
+                progressive_starter_card=options.get(
+                    'progressive_starter_card', self.options.progressive_starter_card.value),
+                progressive_starter_relic=options.get(
+                    'progressive_starter_relic', self.options.progressive_starter_relic.value),
+            ))
+        self.characters = configs
+        self.modded_chars = [config for config in self.characters if config.mod_num > 0]
+        self.modded_num = len(self.modded_chars)
 
     def create_regions(self) -> None:
         create_regions(self, self.player)
+        # Region creation already follows character/act/stage order, including shop branches.
+        self._ut_region_order = {region.name: index for index, region in enumerate(self.get_regions())}
 
-    def create_region(self, player: int, prefix: Optional[str], name: str, config: CharacterConfig, locations: List[str] = None, exits: List[str] =None):
+    def custom_ut_sort(self, region_label: str, location_label: str) -> str:
+        region_order = self._ut_region_order.get(region_label, len(self._ut_region_order))
+        def pad_number(match: re.Match[str]) -> str:
+            return match.group().zfill(10)
+
+        # UT may append a modded-character alias; retain it while sorting check numbers naturally.
+        location_key = re.sub(r"\d+", pad_number, location_label.casefold())
+        return f"{region_order:04d}:{location_key}"
+
+    def create_region(
+            self,
+            player: int,
+            prefix: Optional[str],
+            name: str,
+            config: CharacterConfig,
+            locations: list[str] | None = None,
+            exits: list[str] | None = None,
+    ):
         ret = Region(f"{prefix} {name}" if prefix is not None else name, player, self.multiworld)
+        locs: dict[str, Optional[int]] = dict()
+        for location in locations or ():
+            loc_name = f"{prefix} {location}" if prefix is not None else location
+            loc_id = location_table.get(loc_name, 0)
+            loc_data = loc_ids_to_data.get(loc_id, None)
+            if self._should_include_location(loc_data, config):
+                locs[loc_name] = loc_id
         if locations:
-            locs: dict[str, Optional[int]] = dict()
-            for location in locations:
-                loc_name = f"{prefix} {location}" if prefix is not None else location
-                loc_id = location_table.get(loc_name, 0)
-                loc_data = loc_ids_to_data.get(loc_id, None)
-                if self._should_include_location(loc_data, config):
-                    locs[loc_name] = loc_id
             ret.add_locations(locs, SlayTheSpire2Location)
-        if exits:
-            for exit in exits:
-                exit_name = f"{prefix} {exit}" if prefix is not None else exit
-                ret.create_exit(exit_name)
+        for destination in exits or ():
+            exit_name = f"{prefix} {destination}" if prefix is not None else destination
+            ret.create_exit(exit_name)
         return ret
 
     # Creates individual items based on the item table
     def create_item(self, name: str) -> SlayTheSpire2Item:
         data = item_table[name]
-        item_id = self.item_name_to_id[name]
-        return SlayTheSpire2Item(data, name, data.classification, item_id, self.player)
+        item_id = data.code
+        classification = data.classification
+        if (self.effective_logic == 'new' and not self.options.shop_sanity
+                and name.endswith((' Elite Gold', ' Boss Gold'))):
+            # Only shops require gold in new logic; legacy boss gates still need it.
+            classification = ItemClassification.useful
+        return SlayTheSpire2Item(data, name, classification, item_id, self.player)
 
     def build_filler_pools(self) -> None:
-        """Pre-compute filler item tier buckets for efficient repeated use.
+        """Cache positive per-item weights and character-specific gold fallbacks.
 
-        Builds universal (buff) and per-character (gold) tier pools once so that
-        get_filler_item() and get_filler_item_name() can select from them without
-        rebuilding weight maps on every call.
-
-        Called at the top of create_items(), and defensively by get_filler_item()
-        and get_filler_item_name() in case they are invoked before create_items()
-        runs (e.g. by the AP fill algorithm for item link replacements).
+        Also called lazily when AP requests replacement filler before create_items.
         """
+        trap_weights = {
+            "Weak Trap": self.options.weak_trap_weight.value,
+            "Frail Trap": self.options.frail_trap_weight.value,
+            "Vulnerable Trap": self.options.vulnerable_trap_weight.value,
+            "No Draw Trap": self.options.no_draw_trap_weight.value,
+            "Tangled Trap": self.options.tangled_trap_weight.value,
+            "Vakuu Trap": self.options.vakuu_trap_weight.value,
+            "Confused Trap": self.options.confused_trap_weight.value,
+            "Sloth Trap": self.options.sloth_trap_weight.value,
+            "Dazed Trap": self.options.dazed_trap_weight.value,
+        }
+        self.trap_weights = {name: weight for name, weight in trap_weights.items() if weight > 0}
+        if self.options.trap_chance.value > 0 and not self.trap_weights:
+            raise ValueError("Trap Chance is greater than 0, but all trap weights are None. "
+                             "Enable a trap weight or set Trap Chance to 0.")
+
         # --- Universal (buff) item pools ---
         # Map each universal item name to its configured option weight value.
         # These items are character-agnostic: they can apply to any character's run.
@@ -390,157 +430,49 @@ class SlayTheSpire2World(World):
             "Artifact": self.options.artifact_filler_weight.value,
         }
 
-        self.filler_universal_high: list = []
-        self.filler_universal_medium: list = []
-        self.filler_universal_low: list = []
-
-        for item_name in universal_items.keys():
-            weight = universal_item_option_map.get(item_name, 0)
-            if weight == 5:
-                self.filler_universal_high.append(item_name)
-            elif weight == 3:
-                self.filler_universal_medium.append(item_name)
-            elif weight == 1:
-                self.filler_universal_low.append(item_name)
-
-        # --- Per-character (gold) item pools ---
-        # Gold items are character-specific ("Ironclad One Gold", etc.), so we build
-        # a separate set of tier buckets for each character in the run.
-        self.filler_char_high: dict = {}
-        self.filler_char_medium: dict = {}
-        self.filler_char_low: dict = {}
-
+        self.filler_universal = {
+            name: weight for name, weight in universal_item_option_map.items() if weight > 0
+        }
+        self.filler_characters = {}
+        self.filler_fallbacks = {}
         for config in self.characters:
-            # Resolve the lookup key: vanilla characters use their name, modded characters
-            # use their mod_num integer. This matches the chars_to_items dictionary structure.
-            #
-            # @Platano this is my understanding that will hopefully help while you're working on
-            # modded characters, let me know if this is wrong.
-            char_lookup = config.name if config.mod_num == 0 else config.mod_num
-            high, medium, low = [], [], []
+            gold_weights = {}
+            for name, data in chars_to_items[config.name].items():
+                if data.type != ItemType.GOLD or data.classification != ItemClassification.filler:
+                    continue
+                if "One Gold" in name:
+                    self.filler_fallbacks[config.name] = name
+                    weight = self.options.one_gold_filler_weight.value
+                elif "Five Gold" in name:
+                    weight = self.options.five_gold_filler_weight.value
+                else:
+                    continue
+                if weight > 0:
+                    gold_weights[name] = weight
+            self.filler_characters[config.name] = gold_weights
 
-            if char_lookup in chars_to_items:
-                char_gold_items = [
-                    (key, val) for key, val in chars_to_items[char_lookup].items()
-                    if ItemType.GOLD == val.type and ItemClassification.filler == val.classification
-                ]
-
-                for item_name, item_data in char_gold_items:
-                    if "One Gold" in item_name:
-                        weight = self.options.one_gold_filler_weight.value
-                    elif "Five Gold" in item_name:
-                        weight = self.options.five_gold_filler_weight.value
-                    else:
-                        weight = 0
-
-                    if weight == 5:
-                        high.append(item_name)
-                    elif weight == 3:
-                        medium.append(item_name)
-                    elif weight == 1:
-                        low.append(item_name)
-
-            self.filler_char_high[config.name] = high
-            self.filler_char_medium[config.name] = medium
-            self.filler_char_low[config.name] = low
-
-        # --- Fallback item ---
-        # Used when the player has disabled every filler type (all weights set to 0).
-        # We pick "One Gold" for a random character as a safe, always-valid default.
-        self.filler_fallback: str = "Ironclad One Gold"
-        if self.characters:
-            fallback_char = self.random.choice(self.characters)
-            fallback_lookup = fallback_char.name if fallback_char.mod_num == 0 else fallback_char.mod_num
-            if fallback_lookup in chars_to_items:
-                for item_name in chars_to_items[fallback_lookup]:
-                    if "One Gold" in item_name:
-                        self.filler_fallback = item_name
-                        break
-
-    # Returns a filler item selected using a two-stage rarity tier system.
-    #
-    # A rarity tier (HIGH / MEDIUM / LOW) is chosen first at a fixed probability,
-    # then one item is selected uniformly from all items in that tier. 
-    # 
-    # This means the number of items in a tier does not affect the probability of
-    # other tiers being selected. (I learned this the hard way while testing).
     def get_filler_item(self, character: Optional[str] = None) -> str:
-        """Select a filler item from pre-built tier pools.
+        """Roll for a trap, then draw by item weight within the selected category.
 
-        Combines the universal (buff) tier pools with the given character's gold
-        tier pools, then picks an item using two-stage rarity tier selection.
+        Ordinary filler includes only the selected character's gold.
 
-        Tier probability weights:
-            HIGH   ~50% — tier chosen most often
-            MEDIUM ~33%
-            LOW    ~17% — tier chosen least often
-
-        Within a selected tier, one item is chosen uniformly (equal probability
-        regardless of how many items are in the tier).
-
-        Args:
-            character: Optional character name. If provided, that character's gold
-                       items are added to the pool. If not provided, a random
-                       character from the pool is chosen.
-
-        Returns:
-            The name of a filler item (e.g., "Ironclad Five Gold", "Free Attack").
+        A high item has five times the probability of a low item regardless of how
+        many other items share either weight. Zero-weight items are excluded.
         """
-        # Defensive: pools should be built at the top of create_items(), but
-        # build them now if called before that (e.g. by the AP fill algorithm).
-        if not hasattr(self, 'filler_universal_high'):
+        if not hasattr(self, 'filler_universal'):
             self.build_filler_pools()
-
-        TIER_HIGH_WEIGHT = 50
-        TIER_MEDIUM_WEIGHT = 33
-        TIER_LOW_WEIGHT = 17
-
-        # If no character was specified, pick one at random.
+        if self.options.trap_chance.value > 0 and self.random.randrange(100) < self.options.trap_chance.value:
+            return self.random.choices(list(self.trap_weights), weights=list(self.trap_weights.values()), k=1)[0]
         if character is None and self.characters:
             character = self.random.choice(self.characters).name
 
-        # Merge the universal pools with the character-specific gold pools.
-        # List concatenation is cheap here since the pools are pre-built.
-        high_items = self.filler_universal_high + self.filler_char_high.get(character, [])
-        medium_items = self.filler_universal_medium + self.filler_char_medium.get(character, [])
-        low_items = self.filler_universal_low + self.filler_char_low.get(character, [])
+        weights = self.filler_universal | self.filler_characters.get(character, {})
+        if not weights:
+            return self.filler_fallbacks.get(character, "Ironclad One Gold")
+        return self.random.choices(list(weights), weights=list(weights.values()), k=1)[0]
 
-        # If the player has disabled every filler item (all weights set to 0),
-        # return the pre-computed safe fallback.
-        if not high_items and not medium_items and not low_items:
-            return self.filler_fallback
-
-        # --- Stage 1: Select a rarity tier ---
-        tier_selection = self.random.choices(
-            ['high', 'medium', 'low'],
-            weights=[TIER_HIGH_WEIGHT, TIER_MEDIUM_WEIGHT, TIER_LOW_WEIGHT],
-            k=1
-        )[0]
-
-        # --- Stage 2: Pick an item from the selected tier, with fallback ---
-        # If the chosen tier is empty, try the next available tier:
-        #   LOW  chosen but empty: try MEDIUM, then HIGH
-        #   MEDIUM chosen but empty: try HIGH, then LOW
-        #   HIGH  chosen but empty: try MEDIUM, then LOW
-        if tier_selection == 'low':
-            tier_candidates = [low_items, medium_items, high_items]
-        elif tier_selection == 'medium':
-            tier_candidates = [medium_items, high_items, low_items]
-        else:  # 'high'
-            tier_candidates = [high_items, medium_items, low_items]
-
-        for tier in tier_candidates:
-            if tier:
-                return self.random.choice(tier)
-
-        # This should never be reached given the early fallback check above.
-        return self.filler_fallback
-
-    # Randomly selects a filler item name; called by the AP framework for fill and item links.
     def get_filler_item_name(self) -> str:
-        # Defensive: ensure pools are built before the AP fill algorithm calls us.
-        if not hasattr(self, 'filler_universal_high'):
-            self.build_filler_pools()
+        """AP framework entry point for fill and item-link replacements."""
         return self.get_filler_item()
 
     def create_items(self) -> None:
@@ -548,12 +480,11 @@ class SlayTheSpire2World(World):
         self.build_filler_pools()
 
         pool = []
-        filler_counts: list[tuple[str, int]] = []
+        filler_counts: list[tuple[CharacterConfig, int]] = []
         card_reward_count = MAX_CARD_REWARDS if self.options.shuffle_all_cards.value else MAX_CARD_REWARDS // 2
         for config in self.characters:
-            char_lookup = config.name if config.mod_num == 0 else config.mod_num
             # ascension_downs = min(config.ascension_down, config.ascension)
-            for name, data in chars_to_items[char_lookup].items():
+            for name, data in chars_to_items[config.name].items():
                 amount = 0
                 if ItemType.CARD_REWARD == data.type:
                     amount = card_reward_count
@@ -565,9 +496,9 @@ class SlayTheSpire2World(World):
                 elif ItemType.RELIC == data.type:
                     amount = 10
                 elif ItemType.PROGRESSIVE_STARTER_CARD == data.type:
-                    amount = 2 if self.options.progressive_starter_card.value else 0
+                    amount = 2 if config.progressive_starter_card else 0
                 elif ItemType.PROGRESSIVE_STARTER_RELIC == data.type:
-                    amount = 2 if self.options.progressive_starter_relic.value else 0
+                    amount = 2 if config.progressive_starter_relic else 0
                 elif ItemType.CAMPFIRE == data.type:
                     if self.options.campfire_sanity.value != 0:
                         amount = 3
@@ -603,8 +534,10 @@ class SlayTheSpire2World(World):
                         amount = self.options.shop_potion_slots.value
                     elif ItemType.SHOP_REMOVE == data.type and self.options.shop_remove_slots.value != 0:
                         amount = 3
-                for _ in range(amount):
-                    pool.append(self.create_item(name))
+                pool.extend(
+                    self.create_item(name)
+                    for _ in range(amount)
+                )
 
             if self.options.include_floor_checks.value:
 
@@ -615,11 +548,11 @@ class SlayTheSpire2World(World):
 
                 # Generate filler items for floor checks using the weighted filler system
                 progressive_starter_items = (
-                    (2 if self.options.progressive_starter_card.value else 0) +
-                    (2 if self.options.progressive_starter_relic.value else 0)
+                    (2 if config.progressive_starter_card else 0) +
+                    (2 if config.progressive_starter_relic else 0)
                 )
                 filler_num = remaining_checks - progressive_starter_items
-                filler_counts.append((config.name, filler_num))
+                filler_counts.append((config, filler_num))
             # Pair up our event locations with our event items
             for base_event, base_item in base_event_item_pairs.items():
                 event = f"{config.name} {base_event}"
@@ -639,27 +572,24 @@ class SlayTheSpire2World(World):
                 )
             bonus_item_names.append(bonus_data.item_name)
 
-        available_filler_slots = sum(filler_count for _, filler_count in filler_counts)
+        available_filler_slots = sum(count for _, count in filler_counts)
         if len(bonus_item_names) > available_filler_slots:
             raise OptionError(
                 f"Configured {len(bonus_item_names)} Bonus Items, but only "
                 f"{available_filler_slots} filler slots are available."
             )
 
-        # All fixed per-character rewards are already present. Bonus items now consume
-        # the earliest available filler slots before the weighted filler system runs.
-        pool.extend(self.create_item(item_name) for item_name in bonus_item_names)
+        pool.extend(self.create_item(name) for name in bonus_item_names)
         bonus_slots_remaining = len(bonus_item_names)
-        for character, filler_count in filler_counts:
+        for config, filler_count in filler_counts:
             consumed_slots = min(bonus_slots_remaining, filler_count)
             bonus_slots_remaining -= consumed_slots
             for _ in range(filler_count - consumed_slots):
-                filler_item_name = self.get_filler_item(character=character)
-                pool.append(self.create_item(filler_item_name))
+                pool.append(self.create_item(self.get_filler_item(character=config.name)))
 
         self.multiworld.itempool += pool
 
-    def _should_include_location(self, data: LocationData, config: CharacterConfig) -> bool:
+    def _should_include_location(self, data: Optional[LocationData], config: CharacterConfig) -> bool:
         if data is None:
             return True
         if data.type == LocationType.Floor and self.options.include_floor_checks == 0:
@@ -683,33 +613,27 @@ class SlayTheSpire2World(World):
             return False
         return True
 
+    def collect(self, state: CollectionState, item: Item) -> bool:
+        if self.effective_logic == "old":
+            return rules_old.collect(self, state, item)
+        return super().collect(state, item)
+
+    def remove(self, state: CollectionState, item: Item) -> bool:
+        if self.effective_logic == "old":
+            return rules_old.remove(self, state, item)
+        return super().remove(state, item)
+
+    def write_spoiler_header(self, spoiler_handle) -> None:
+        spoiler_handle.write(f"Effective logic: {self.effective_logic}\n")
+        if self.logic_fallback_reason:
+            spoiler_handle.write(f"Logic fallback: {self.logic_fallback_reason}\n")
+
     def set_rules(self) -> None:
         set_rules(self)
 
-    def collect(self, state: CollectionState, item: Item) -> bool:
-        change = super().collect(state, item)
-        item_data = typing.cast(SlayTheSpire2Item, item).item_data
-        if change and item_data.type in state.item_levels[self.player]:
-            level = state.item_levels[self.player].get(item_data.type, 0.0)
-            # char_level = state.power_level.setdefault(item.player, defaultdict(int))
-            char_level = state.power_level[item.player]
-            char_level[item_data.char_offset] = char_level[item_data.char_offset] + level
-        return change
-
-    def remove(self, state: CollectionState, item: Item) -> bool:
-        change = super().remove(state, item)
-        item_data = typing.cast(SlayTheSpire2Item, item).item_data
-        if change and item_data.type in state.item_levels[self.player]:
-            level = state.item_levels[self.player].get(item_data.type, 0.0)
-            # state.power_level[item.player][item_data.char_offset] -= level
-            # state.power_level.get(item.player, defaultdict(int))[item_data.char_offset] -= level
-            char_level = state.power_level[item.player]
-            # char_level = state.power_level[item.player]
-            char_level[item_data.char_offset] = char_level[item_data.char_offset] - level
-        return change
-
     def fill_slot_data(self) -> dict:
         slot_data = {
+            "effective_logic": self.effective_logic,
             'characters': [
                 c.to_dict() for c in self.characters
             ],
@@ -721,10 +645,14 @@ class SlayTheSpire2World(World):
                 "card_remove": self.options.shop_remove_slots != 0,
                 "costs": self.options.shop_sanity_costs.value,
             },
-            "mod_compat_version": self.mod_compat_version,
+            # Keep the wire key for clients; Archipelago loads world_version from archipelago.json.
+            "mod_compat_version": self.world_version.as_simple_string(),
             "CompatFlag": self.compat_flag,
         }
         slot_data.update(self.options.as_dict(
+            "use_new_logic",
+            "lock_characters",
+            "seeded",
             "ascension",
             "num_chars_goal",
             "shuffle_all_cards",
@@ -752,11 +680,19 @@ class SlayTheSpire2World(World):
         return slot_data
 
     def _setup_ut(self, slot_data: dict[str, Any]) -> None:
+        self.options.use_new_logic.value = self.options.use_new_logic.from_any(slot_data.get("use_new_logic", True)).value
+        # Reconstruct the generated mode; do not rerun fallback selection on tracker input.
+        self.effective_logic = slot_data.get("effective_logic", "new")
+        self.logic_fallback_reason = (
+            FALLBACK_REASON if self.options.use_new_logic and self.effective_logic == "old" else None
+        )
+        self.options.lock_characters.value = slot_data['lock_characters']
         self.options.shop_card_slots.value = slot_data["shop_sanity_options"]["card_slots"]
         self.options.shop_remove_slots.value = slot_data["shop_sanity_options"]["card_remove"]
         self.options.shop_neutral_card_slots.value = slot_data["shop_sanity_options"]["neutral_slots"]
         self.options.shop_relic_slots.value = slot_data["shop_sanity_options"]["relic_slots"]
         self.options.shop_potion_slots.value = slot_data["shop_sanity_options"]["potion_slots"]
+        self.options.shop_sanity_costs.value = slot_data["shop_sanity_options"]["costs"]
         for char_dict in slot_data['characters']:
             config = CharacterConfig(
                 char_dict['name'],
@@ -766,6 +702,11 @@ class SlayTheSpire2World(World):
                 char_dict['seed'],
                 char_dict['locked'],
                 ascension=char_dict['ascension'],
+                ascension_down=char_dict['ascension_down'],
+                progressive_starter_card=bool(slot_data['include_floor_checks']) and char_dict.get(
+                    'progressive_starter_card', slot_data['progressive_starter_card']),
+                progressive_starter_relic=bool(slot_data['include_floor_checks']) and char_dict.get(
+                    'progressive_starter_relic', slot_data['progressive_starter_relic']),
             )
             self.characters.append(config)
             if char_dict['mod_num'] > 0:
@@ -793,20 +734,15 @@ class SlayTheSpire2World(World):
         self.options.gold_sanity.value = slot_data['gold_sanity']
         self.options.potion_sanity.value = slot_data['potion_sanity']
         self.options.num_chars_goal.value = slot_data['num_chars_goal']
-        self.location_id_to_alias: dict[int, str] = dict()
-        pattern = re.compile("Custom Character [0-9]+ (?P<location_name>.*?)$")
-        # for i in range(1, len(self.modded_chars) + 1):
-        for key, value in SlayTheSpire2World.location_id_to_name.items():
-            if key < (len(character_list)) * CHAR_OFFSET:
-                continue
-            modded_index = (key // CHAR_OFFSET) - len(character_list)
-            # self.logger.info(f"Modded index: {modded_index}")
-            # self.logger.info(f"modded_chars index: {self.modded_chars}")
-            if modded_index >= len(self.modded_chars):
-                continue
-            match = pattern.match(value)
-            if match is None:
-                raise Exception("Failed to match " + value)
-            name = self.modded_chars[modded_index].official_name
-            # self.logger.info(name)
-            self.location_id_to_alias[key] = name + " " + match.group("location_name")
+        if self.effective_logic == 'old':
+            rules_old.restore_tracker_scoring(self)
+        self.modded_num = len(self.modded_chars)
+        self.location_id_to_alias: dict[int, str] = {}
+        configs_by_block = {config.char_offset: config for config in self.characters}
+        for location_id, data in loc_ids_to_data.items():
+            block = location_id // CHAR_OFFSET + 1
+            config = configs_by_block.get(block)
+            # Named characters already have useful AP names. Generic slots retain the saved
+            # internal-ID alias, including old seeds that assigned known mods generic blocks.
+            if config is not None and character_registry[block].internal_id is None:
+                self.location_id_to_alias[location_id] = f"{config.official_name} {data.name}"

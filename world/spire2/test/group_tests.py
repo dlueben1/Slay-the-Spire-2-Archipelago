@@ -41,7 +41,7 @@ class TestItemGroups(TestCase):
         )
 
     def test_custom_character_group_names_match_item_names(self):
-        custom_items = set(chars_to_items[1])
+        custom_items = set(chars_to_items["Custom Character 1"])
         for suffix in ("Gold", "Campfire Upgrades", "Shop Slots"):
             group_name = f"Custom Character 1 {suffix}"
             self.assertTrue(item_groups[group_name])
@@ -97,7 +97,7 @@ class TestLocationGroups(TestCase):
 
     def test_custom_character_group_names_match_location_names(self):
         custom_locations = {
-            name for name, data in characters_to_locs[1].items() if data.id is not None
+            name for name, data in characters_to_locs["Custom Character 1"].items() if data.id is not None
         }
         for suffix in ("Act 1", "Act 2", "Act 3", "Act 1 Boss", "Act 2 Boss"):
             group_name = f"Custom Character 1 {suffix}"

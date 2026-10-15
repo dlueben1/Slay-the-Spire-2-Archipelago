@@ -15,9 +15,9 @@ const items = reactive([
     icon: "i-glyphs-arrow-solid-bracket-end-bold",
   },
   {
-    title: "Does it work on the Beta Branch?",
+    title: "Does it work on the beta branch?",
     description:
-      "The Archipelago mod has experimental/tempermental support for the beta branch of Slay the Spire 2 (generously maintained by Terairk). However, the beta branch updates frequently, so updates may break the mod before we can patch it.\n\nWith that said, our official recommendation to the average player is to use the public branch (the version that comes installed by default) to play with others.",
+      "Yes—we recommend the beta branch of Slay the Spire 2. Terairk mainly develops and tests the mod on the beta branch. The main branch remains supported, but receives little, if any, gameplay testing; compatibility is assessed primarily through compile-time checks and player bug reports.\n\nThe beta branch receives more frequent game updates than the main branch, and these can temporarily break the mod until we release a compatibility update. Check the mod's release notes for the supported game versions before updating.",
     icon: "i-glyphs-note-pad-bold",
   },
 ]);

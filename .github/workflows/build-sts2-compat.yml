@@ -1,0 +1,78 @@
+name: Build STS2 API compatibility
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - experimental-branch
+      - multiplayer-squashed
+      - v2
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: sts2-compat-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  event:
+    name: Compatibility checks
+    uses: ./.github/workflows/ci-event.yml
+
+  versions:
+    needs: event
+    if: needs.event.outputs.should_run == 'true'
+    uses: ./.github/workflows/get-sts2-versions.yml
+
+  build:
+    name: StS2 API ${{ matrix.sts2_api }}
+    needs: versions
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sts2_api: ${{ fromJSON(needs.versions.outputs.matrix) }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build client against StS2 ${{ matrix.sts2_api }}
+        run: >-
+          dotnet build client/StS2AP/StS2AP.csproj
+          --configuration Release
+          --property:Sts2ApiCompat=${{ matrix.sts2_api }}
+          --property:UseSts2RefLib=true
+          --property:BuildMode=CompileOnly
+          --nologo
+
+      - name: Compile compatibility loader once against the public API
+        if: matrix.sts2_api == needs.versions.outputs.public_api
+        run: >-
+          dotnet build client/StS2AP.Loader/StS2AP.Loader.csproj
+          --configuration Release
+          --property:Sts2ApiCompat=${{ needs.versions.outputs.public_api }}
+          --property:UseSts2RefLib=true
+          --nologo
+
+      - name: Verify manifests after compile-only validation
+        run: |
+          dotnet build client/StS2AP/StS2AP.csproj -c Release -t:Compile --no-restore -p:Sts2ApiCompat=${{ matrix.sts2_api }} -p:UseSts2RefLib=true -p:BuildMode=CompileOnly --nologo
+          properties=$(dotnet msbuild client/StS2AP/StS2AP.csproj -p:Configuration=Release -p:Sts2ApiCompat=${{ matrix.sts2_api }} -getProperty:IntermediateOutputPath,TargetFileName)
+          assembly=$(jq -r '.Properties.IntermediateOutputPath + .Properties.TargetFileName' <<< "$properties")
+          STS2AP_TEST_ASSEMBLY="$PWD/client/StS2AP/$assembly" dotnet test client/StS2AP.RegressionTests/StS2AP.RegressionTests.csproj -c Release --filter Category=Manifest
+      - name: Verify manifests after incremental build
+        env:
+          STS2AP_TEST_ASSEMBLY: ${{ github.workspace }}/client/StS2AP/bin/${{ matrix.sts2_api }}/Release/net9.0/Archipelago.dll
+        run: |
+          dotnet build client/StS2AP/StS2AP.csproj -c Release --no-restore -p:Sts2ApiCompat=${{ matrix.sts2_api }} -p:UseSts2RefLib=true -p:BuildMode=CompileOnly --nologo
+          dotnet test client/StS2AP.RegressionTests/StS2AP.RegressionTests.csproj -c Release --no-build --filter Category=Manifest

@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using StS2AP.Models;
-
-namespace StS2AP.Data
+﻿namespace StS2AP.Data
 {
     public static class ItemTable
     {
@@ -69,6 +62,17 @@ namespace StS2AP.Data
             /// unlocks the Nth entry configured in the YAML's bonus_items list.
             /// IDs match universal_bonus_items in items.py.
             BonusWaxRelic = 600,
+
+            // Universal traps; IDs match trap_item_table in the APWorld.
+            WeakTrap = 700,
+            FrailTrap = 701,
+            VulnerableTrap = 702,
+            NoDrawTrap = 703,
+            TangledTrap = 704,
+            VakuuTrap = 705,
+            ConfusedTrap = 706,
+            SlothTrap = 707,
+            DazedTrap = 708,
         }
 
         public static Dictionary<int, string> Items = new Dictionary<int, string>
@@ -119,6 +123,15 @@ namespace StS2AP.Data
             { 512, "Thorns" },
             { 513, "Artifact" },
             { 600, "Bonus Wax Relic" },
+            { 700, "Weak Trap" },
+            { 701, "Frail Trap" },
+            { 702, "Vulnerable Trap" },
+            { 703, "No Draw Trap" },
+            { 704, "Tangled Trap" },
+            { 705, "Vakuu Trap" },
+            { 706, "Confused Trap" },
+            { 707, "Sloth Trap" },
+            { 708, "Dazed Trap" },
         };
 
         /// <summary>
@@ -133,6 +146,41 @@ namespace StS2AP.Data
             { APItem.BossGold, 100 },
         };
 
+        public static bool IsUniversalTrap(long itemId) =>
+            (APItem)ArchipelagoIdCodec.WithoutPlayer(itemId) is
+                APItem.WeakTrap or APItem.FrailTrap or APItem.VulnerableTrap or APItem.NoDrawTrap
+                or APItem.TangledTrap or APItem.VakuuTrap or APItem.ConfusedTrap or APItem.SlothTrap
+                or APItem.DazedTrap;
+
+        /// <summary>Whether an item ID is one of the universal ephemeral combat buffs.</summary>
+        public static bool IsUniversalCombatBuff(long itemId)
+        {
+            return (APItem)ArchipelagoIdCodec.WithoutPlayer(itemId) switch
+            {
+                APItem.FreeAttack or APItem.FreePower or APItem.FreeSkill
+                    or APItem.Dexterity or APItem.Strength or APItem.Plating
+                    or APItem.Friendship or APItem.PostCombatCardUpgrade
+                    or APItem.PostCombatCardRemoval or APItem.AdditionalCardReward
+                    or APItem.Buffer or APItem.Vigor or APItem.Thorns or APItem.Artifact => true,
+                _ => false,
+            };
+        }
+
+        // Remove a row to enable that buff during multiplayer trials. This single list
+        // controls live delivery, gold history reconstruction, and action validation.
+        private static readonly HashSet<APItem> MultiplayerBuffGoldFallbacks = new()
+        {
+            // APItem.PostCombatCardUpgrade,
+            // APItem.PostCombatCardRemoval,
+
+            // Temporarily enabled for multiplayer trials; uncomment to restore gold fallback.
+            // APItem.AdditionalCardReward,
+
+        };
+
+        public static bool IsMultiplayerBuffGoldFallback(long itemId) =>
+            MultiplayerBuffGoldFallbacks.Contains((APItem)ArchipelagoIdCodec.WithoutPlayer(itemId));
+
         public static bool CanBePickedUp(this APItem item)
         {
             switch(item)
@@ -145,7 +193,7 @@ namespace StS2AP.Data
                     return true;
               case APItem.ProgressiveAncient:
                     // pickup is true if Anytime since Relics are in AP reward menu, false otherwise
-                    return (ArchipelagoClient.Settings?.AncientRelicLocation ?? AncientRelicLocation.Anytime) == AncientRelicLocation.Anytime;
+                    return StS2AP.Utils.AncientSettingsUtility.Current.Location == AncientRelicLocation.Anytime;
               case APItem.ProgressiveRest:
               case APItem.ProgressiveSmith:
               case APItem.ShopCardSlot:

@@ -142,8 +142,8 @@ def load_module_as(name: str, path: Path):
 
 
 # options.py uses relative imports, so load its local dependencies first.
-load_module_as("worlds.spire2.characters", world_dir / "characters.py")
 load_module_as("worlds.spire2.constants", world_dir / "constants.py")
+load_module_as("worlds.spire2.characters", world_dir / "characters.py")
 options_module = load_module_as("worlds.spire2.options", options_path)
 web_world_module = load_module_as("worlds.spire2.web_world", web_world_path)
 
@@ -517,6 +517,14 @@ compiled = {
     "schema_version": 1,
     "game": "Slay the Spire 2",
     "sources": {
+        "characters": {
+            "path": "world/spire2/characters.py",
+            "sha256": file_sha256(world_dir / "characters.py"),
+        },
+        "constants": {
+            "path": "world/spire2/constants.py",
+            "sha256": file_sha256(world_dir / "constants.py"),
+        },
         "options": {
             "path": "world/spire2/options.py",
             "sha256": file_sha256(options_path),

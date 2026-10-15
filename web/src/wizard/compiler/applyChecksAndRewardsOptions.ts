@@ -11,6 +11,7 @@
 import type { OptionCatalog } from "../../generated/optionCatalog";
 import type { ChecksAndRewardsAnswers } from "../WizardAnswers";
 import type { CompiledOptions } from "./applyCharacterOptions";
+import { applyTrapOptions } from "./applyTrapOptions";
 import { applyAncientOptions } from "./applyAncientOptions";
 import { applyBonusItemOptions } from "./applyBonusItemOptions";
 import { applyCheckOptions } from "./applyCheckOptions";
@@ -54,6 +55,7 @@ export function applyChecksAndRewardsOptions(
   // Compile guaranteed Bonus Items between Shop and filler, mirroring the UI order.
   applyBonusItemOptions(target, answers.bonusItems, catalog);
 
-  // Compile the existing filler table last because it closes the visible section.
+  // Filler rewards and trap replacements share the remaining item slots.
   applyFillerOptions(target, answers.filler, catalog);
+  applyTrapOptions(target, answers.traps);
 }

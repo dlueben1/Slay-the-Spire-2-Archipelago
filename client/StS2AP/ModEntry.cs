@@ -1,17 +1,8 @@
-﻿using System;
-using System.IO;
-using System.Reflection;
-using System.Runtime;
-using System.Runtime.Loader;
-using HarmonyLib;
+﻿using HarmonyLib;
 using MegaCrit.Sts2.Core.Modding;
-using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.Characters;
-using StS2AP.Models;
 using StS2AP.Utils;
 using STS2RitsuLib;
 using STS2RitsuLib.Interop;
-using STS2RitsuLib.Settings;
 using STS2RitsuLib.Utils.Persistence;
 
 namespace StS2AP
@@ -20,13 +11,11 @@ namespace StS2AP
     public class ModEntry
     {
         public const string ModId = "Archipelago";
-        private static string? _modDirectory;
 
         public static void Initialize()
         {
-            /// Register assembly resolver FIRST, before any other code runs
-            /// This ensures dependencies like Archipelago.MultiClient.Net can be found
-            RegisterAssemblyResolver();
+            // Bootstrap runs before this method and already tells .NET where to find
+            // our dependency DLLs. It loads them alongside the game and this mod.
 
             // Register unhandled exception handler to log crashes before app closes
             AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
@@ -34,7 +23,7 @@ namespace StS2AP
             LogUtility.Info("Archipelago mod initializing...");
 
             // Register with RitsuLib
-            var assembly = Assembly.GetExecutingAssembly();
+            var assembly = typeof(ModEntry).Assembly;
             ModTypeDiscoveryHub.RegisterModAssembly(ModId, assembly);
             using (RitsuLibFramework.BeginModDataRegistration(ModId))
             {
@@ -46,10 +35,16 @@ namespace StS2AP
                     defaultFactory: () => new ClientSettings(),
                     autoCreateIfMissing: true
                 );
+                ArchipelagoReward.Initialize();
+                ApRunData.Initialize();
             }
             ModSettingsRegistration.Register();
 
             // Initialize Utilities
+            ApMirroredRewardDispatcher.Initialize();
+            RelicReceiptMultiplayer.Initialize();
+            ProgressiveStarterMultiplayer.Initialize();
+            AscensionMultiplayer.Initialize();
             DeathLinkUtility.Initialize();
             BuffUtility.Initialize();
 
@@ -60,7 +55,7 @@ namespace StS2AP
 
                 /// VERY IMPORTANT: For `PatchAll()` to work, we need to use nested classes like we're using in the `Patches` directory.
                 /// The syntax is somewhat ugly, but it's easier to maintain this way since we don't have to patch by category/individually.
-                harmony.PatchAll();
+                harmony.PatchAll(assembly);
                 LogUtility.Success("Harmony patches applied successfully.");
                 LogUtility.Info("Archipelago mod initialized.");
             }
@@ -68,50 +63,6 @@ namespace StS2AP
             {
                 LogUtility.Error($"Failed to apply Harmony patches: {ex.Message}");
             }
-        }
-
-        /// <summary>
-        /// Registers a custom assembly resolver to find DLLs in the mod's directory.
-        /// This is necessary because Godot's runtime doesn't automatically search the mod folder.
-        /// </summary>
-        private static void RegisterAssemblyResolver()
-        {
-            // Get the directory where this mod's DLL is located
-            var assembly = Assembly.GetExecutingAssembly();
-            _modDirectory = Path.GetDirectoryName(assembly.Location);
-
-            // Register the resolver for the default AssemblyLoadContext
-            AssemblyLoadContext.Default.Resolving += OnAssemblyResolve;
-        }
-
-        /// <summary>
-        /// Called when the runtime can't find an assembly. We check the mod directory.
-        /// </summary>
-        private static Assembly? OnAssemblyResolve(
-            AssemblyLoadContext context,
-            AssemblyName assemblyName
-        )
-        {
-            if (string.IsNullOrEmpty(_modDirectory) || string.IsNullOrEmpty(assemblyName.Name))
-                return null;
-
-            // Try to find the assembly in the mod directory
-            var assemblyPath = Path.Combine(_modDirectory, $"{assemblyName.Name}.dll");
-
-            if (File.Exists(assemblyPath))
-            {
-                try
-                {
-                    return context.LoadFromAssemblyPath(assemblyPath);
-                }
-                catch
-                {
-                    // If loading fails, return null to let other resolvers try
-                    return null;
-                }
-            }
-
-            return null;
         }
 
         /// <summary>

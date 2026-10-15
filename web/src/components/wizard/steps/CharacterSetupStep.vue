@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { AccordionItem, SelectItem } from "@nuxt/ui";
-import { computed, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { reconcileRosterDependents } from "../../../wizard/characterReconciliation";
 import {
   canDeselectBuiltInCharacter,
@@ -11,6 +11,7 @@ import type {
   AscensionConfigurationAnswers,
   CharacterAnswers,
   CharacterGoal,
+  CharacterStarterOverrides as StarterOverrides,
   ModdedCharacterAnswers,
 } from "../../../wizard/WizardAnswers";
 import {
@@ -20,6 +21,7 @@ import {
   type WizardQuestion as WizardQuestionDefinition,
 } from "../../../wizard/WizardStep";
 import AscensionChecklist from "../bespoke/AscensionChecklist.vue";
+import CharacterStarterOverrides from "../bespoke/CharacterStarterOverrides.vue";
 import ModdedCharacterTable from "../bespoke/ModdedCharacterTable.vue";
 import WizardControl from "../core/WizardControl.vue";
 import WizardQuestion from "../core/WizardQuestion.vue";
@@ -38,6 +40,7 @@ interface CharacterAscensionAccordionItem extends AccordionItem {
   characterName: string;
   moddedIndex?: number;
   configuration: AscensionConfigurationAnswers;
+  starterOverrides: StarterOverrides;
 }
 
 const props = defineProps<{
@@ -51,6 +54,7 @@ const emit = defineEmits<{
 
 // Flow predicates for nested and conditional questions read the complete model.
 const answers = useWizardAnswers();
+const showStarterOverrides = ref(false);
 
 /** Keeps wizard dropdowns open without temporarily locking and hiding page scrolling. */
 const nonBlockingSelectContent = { bodyLock: false };
@@ -194,6 +198,8 @@ function getIndividualAscensionItems(): CharacterAscensionAccordionItem[] {
       kind: "built-in",
       characterName: character,
       configuration,
+      starterOverrides:
+        props.modelValue.individualStarterOverrides?.[character] ?? {},
     });
   }
 
@@ -213,6 +219,7 @@ function getIndividualAscensionItems(): CharacterAscensionAccordionItem[] {
       characterName,
       moddedIndex: index,
       configuration: moddedCharacter.ascensions,
+      starterOverrides: moddedCharacter.starterOverrides ?? {},
     });
   }
 
@@ -220,6 +227,29 @@ function getIndividualAscensionItems(): CharacterAscensionAccordionItem[] {
 }
 
 const individualAscensionItems = computed(getIndividualAscensionItems);
+
+function setStarterOverrides(
+  item: CharacterAscensionAccordionItem,
+  value: StarterOverrides,
+): void {
+  if (item.kind === "built-in") {
+    updateAnswers({
+      individualStarterOverrides: {
+        ...props.modelValue.individualStarterOverrides,
+        [item.characterName]: value,
+      },
+    });
+  } else {
+    updateAnswers({
+      moddedCharacters: props.modelValue.moddedCharacters.map(
+        (character, index) =>
+          index === item.moddedIndex
+            ? { ...character, starterOverrides: value }
+            : character,
+      ),
+    });
+  }
+}
 
 /**
  * Emits a new Character Setup answer object with selected fields replaced.
@@ -542,7 +572,7 @@ watch(getRosterForReconciliation, applyRosterReconciliation, { deep: true });
       />
     </WizardQuestion>
 
-    <!-- Ascension Per Character (Toggles `advanced_characters`) -->
+    <!-- Ascension layout is independent of starter overrides. -->
     <WizardQuestion :question="question('ascension-mode')">
       <WizardControl
         :question="question('ascension-mode')"
@@ -562,9 +592,26 @@ watch(getRosterForReconciliation, applyRosterReconciliation, { deep: true });
       />
     </WizardQuestion>
 
-    <!-- Ascensions for each Character -->
-    <WizardQuestion v-else :question="question('individual-ascensions')">
+    <!-- Reuse the character editors for starter overrides in either Ascension mode. -->
+    <WizardQuestion :question="question('individual-ascensions')">
+      <UButton
+        v-if="modelValue.ascensionMode === 'shared'"
+        type="button"
+        variant="soft"
+        class="mb-3 cursor-pointer"
+        :aria-expanded="showStarterOverrides"
+        aria-controls="individual-character-settings"
+        @click="showStarterOverrides = !showStarterOverrides"
+      >
+        {{
+          showStarterOverrides
+            ? "Hide starter overrides"
+            : "Customize starter cards and relics"
+        }}
+      </UButton>
       <UAccordion
+        v-if="modelValue.ascensionMode === 'individual' || showStarterOverrides"
+        id="individual-character-settings"
         type="multiple"
         :items="individualAscensionItems"
         :unmount-on-hide="false"
@@ -581,14 +628,22 @@ watch(getRosterForReconciliation, applyRosterReconciliation, { deep: true });
       >
         <template #body="{ item }">
           <AscensionChecklist
+            v-if="modelValue.ascensionMode === 'individual'"
             :model-value="item.configuration"
             @update:model-value="setIndividualAscensions(item, $event)"
+          />
+          <CharacterStarterOverrides
+            :model-value="item.starterOverrides"
+            :global-settings="answers.checksAndRewards.startingEquipment"
+            :disabled="!answers.checksAndRewards.checks.includeFloorChecks"
+            @update:model-value="setStarterOverrides(item, $event)"
           />
         </template>
       </UAccordion>
 
       <p v-if="!individualAscensionItems.length" class="wizard-error">
-        Select or name at least one character before configuring Ascensions.
+        Select or name at least one character before configuring individual
+        settings.
       </p>
     </WizardQuestion>
 

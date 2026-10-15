@@ -355,7 +355,7 @@ function rejectsInvalidModdedAndAscensionAnswers(): void {
 
   expect(compileOrphanedAscensionDown).toThrow("requires Ascension A1");
 
-  // The current Python world reserves no more than five custom character slots.
+  // A generated roster supports at most twenty modded characters.
   answers.characters.sharedAscensions = {
     enabled: [1],
     ascensionDownsEnabled: false,
@@ -363,7 +363,7 @@ function rejectsInvalidModdedAndAscensionAnswers(): void {
   };
   answers.characters.moddedCharacters = [];
 
-  for (let index = 1; index <= 6; index += 1) {
+  for (let index = 1; index <= 21; index += 1) {
     answers.characters.moddedCharacters.push({
       name: `Modded${index}`,
       ascensions: {
@@ -376,11 +376,11 @@ function rejectsInvalidModdedAndAscensionAnswers(): void {
 
   /** Compiles the deliberately oversized modded-character roster. */
   function compileTooManyModdedCharacters(): void {
-    // Exercise the same hard limit enforced by the portrait card's plus button.
+    // Exercise the generated-roster limit independently of candidate row count.
     compileWizardAnswers(answers, optionCatalog);
   }
 
-  expect(compileTooManyModdedCharacters).toThrow("no more than 5");
+  expect(compileTooManyModdedCharacters).toThrow("no more than 20");
 }
 
 /**
@@ -441,7 +441,7 @@ function revealsConditionalCharacterQuestions(): void {
   expect(getVisibleQuestionIds(characterSetupStep, answers)).toContain(
     "shared-ascensions",
   );
-  expect(getVisibleQuestionIds(characterSetupStep, answers)).not.toContain(
+  expect(getVisibleQuestionIds(characterSetupStep, answers)).toContain(
     "individual-ascensions",
   );
   expect(getVisibleQuestionIds(characterSetupStep, answers)).not.toContain(
@@ -495,3 +495,230 @@ function registerConditionalQuestionTests(): void {
 // Register both behavioral areas using named, documented test callbacks.
 describe("character wizard compiler", registerCharacterCompilerTests);
 describe("conditional character questions", registerConditionalQuestionTests);
+
+describe("per-character progressive starters", () => {
+  it("preserves old output when overrides are missing or inherited", () => {
+    const answers = createTestAnswers(["Ironclad"]);
+    const baseline = compileWizardAnswers(answers, optionCatalog);
+    answers.characters.individualStarterOverrides = {
+      Ironclad: {
+        progressiveStarterCard: "inherit",
+        progressiveStarterRelic: "inherit",
+      },
+    };
+    expect(compileWizardAnswers(answers, optionCatalog)).toEqual(baseline);
+    delete answers.characters.individualStarterOverrides;
+    expect(compileWizardAnswers(answers, optionCatalog)).toEqual(baseline);
+    answers.characters.ascensionMode = "individual";
+    expect(
+      compileWizardAnswers(answers, optionCatalog).advanced_characters,
+    ).toEqual({
+      Ironclad: { ascension: [1], ascension_down: [] },
+    });
+  });
+
+  it("uses shared Ascensions with explicit vanilla and modded starter overrides", () => {
+    const answers = createTestAnswers(["Ironclad", "Silent"]);
+    answers.characters.selectedCharacters = ["Ironclad", "Silent"];
+    answers.characters.sharedAscensions = {
+      enabled: [1, 2],
+      ascensionDownsEnabled: true,
+      downs: [1],
+    };
+    answers.characters.moddedCharacters = [
+      {
+        name: "INTOTHESPIREVERSE-SHADOW_IRONCLAD",
+        ascensions: { enabled: [9], ascensionDownsEnabled: false, downs: [] },
+        starterOverrides: {
+          progressiveStarterCard: "enabled",
+          progressiveStarterRelic: "disabled",
+        },
+      },
+    ];
+    answers.characters.individualStarterOverrides = {
+      Ironclad: { progressiveStarterCard: "disabled" },
+    };
+    answers.checksAndRewards.startingEquipment = {
+      progressiveStarterCard: true,
+      progressiveStarterRelic: true,
+    };
+    const result = compileWizardAnswers(answers, optionCatalog);
+    expect(result.use_advanced_characters).toBe(true);
+    expect(result.advanced_characters).toEqual({
+      Ironclad: {
+        ascension: [2],
+        ascension_down: ["SwarmingElites"],
+        progressive_starter_card: false,
+      },
+      Silent: { ascension: [2], ascension_down: ["SwarmingElites"] },
+      "INTOTHESPIREVERSE-SHADOW_IRONCLAD": {
+        ascension: [2],
+        ascension_down: ["SwarmingElites"],
+        progressive_starter_card: true,
+        progressive_starter_relic: false,
+      },
+    });
+    const guided = selectGuidedOptions(result);
+    expect(guided).not.toHaveProperty("ascension");
+    expect(guided).not.toHaveProperty("modded_characters");
+    expect(optionsToYaml(guided)).toContain(
+      '"progressive_starter_card": false',
+    );
+    expect(optionsToYaml(guided)).not.toContain("null");
+    expect(summarizeCharacterAnswers(answers.characters)).toContain(
+      "Ironclad: progressive starter card disabled",
+    );
+  });
+
+  it("preserves individual Ascensions and keeps an enabled override when globals are off", () => {
+    const answers = createTestAnswers(["Ironclad"]);
+    answers.characters.ascensionMode = "individual";
+    answers.characters.individualAscensions.Ironclad = {
+      enabled: [3],
+      ascensionDownsEnabled: false,
+      downs: [],
+    };
+    answers.characters.individualStarterOverrides = {
+      Ironclad: { progressiveStarterRelic: "enabled" },
+    };
+    const result = compileWizardAnswers(answers, optionCatalog);
+    expect(result.progressive_starter_relic).toBe(false);
+    expect(result.advanced_characters).toEqual({
+      Ironclad: {
+        ascension: ["Poverty"],
+        ascension_down: [],
+        progressive_starter_relic: true,
+      },
+    });
+  });
+
+  it("disables overrides without Floor Checks and restores them when reenabled", () => {
+    const answers = createTestAnswers(["Ironclad"]);
+    answers.characters.individualStarterOverrides = {
+      Ironclad: { progressiveStarterCard: "enabled" },
+    };
+    answers.checksAndRewards.checks.includeFloorChecks = false;
+    expect(
+      compileWizardAnswers(answers, optionCatalog).use_advanced_characters,
+    ).toBe(false);
+    answers.characters.ascensionMode = "individual";
+    expect(
+      compileWizardAnswers(answers, optionCatalog).advanced_characters,
+    ).toEqual({
+      Ironclad: { ascension: [1], ascension_down: [] },
+    });
+    expect(summarizeCharacterAnswers(answers.characters, false)).toContain(
+      "inactive because Floor Checks are off",
+    );
+    answers.checksAndRewards.checks.includeFloorChecks = true;
+    expect(
+      compileWizardAnswers(answers, optionCatalog).advanced_characters,
+    ).toMatchObject({
+      Ironclad: { progressive_starter_card: true },
+    });
+  });
+
+  it("ignores deselected characters and removes advanced mode when overrides return to inherit", () => {
+    const answers = createTestAnswers(["Ironclad", "Silent"]);
+    answers.characters.individualStarterOverrides = {
+      Silent: { progressiveStarterCard: "enabled" },
+    };
+    expect(
+      compileWizardAnswers(answers, optionCatalog).use_advanced_characters,
+    ).toBe(false);
+    answers.characters.individualStarterOverrides.Ironclad = {
+      progressiveStarterRelic: "disabled",
+    };
+    expect(
+      compileWizardAnswers(answers, optionCatalog).use_advanced_characters,
+    ).toBe(true);
+    answers.characters.individualStarterOverrides.Ironclad.progressiveStarterRelic =
+      "inherit";
+    expect(
+      compileWizardAnswers(answers, optionCatalog).use_advanced_characters,
+    ).toBe(false);
+  });
+
+  it("keeps modded row overrides attached when its ID changes", () => {
+    const answers = createTestAnswers(["Ironclad"]);
+    const character = {
+      name: "OLD_ID",
+      ascensions: answers.characters.sharedAscensions,
+      starterOverrides: { progressiveStarterCard: "enabled" as const },
+    };
+    answers.characters.moddedCharacters = [character];
+    character.name = "NEW_ID";
+    const result = compileWizardAnswers(answers, optionCatalog);
+    expect(result.advanced_characters).toHaveProperty(
+      "NEW_ID.progressive_starter_card",
+      true,
+    );
+    expect(result.advanced_characters).not.toHaveProperty("OLD_ID");
+  });
+});
+
+describe("expanded modded rosters", () => {
+  it("preserves twenty candidate IDs in both basic and advanced YAML order", () => {
+    const names = [
+      "WATCHER-WATCHER",
+      "GUARDIAN-GUARDIAN",
+      ...Array.from(
+        { length: 18 },
+        (_, i) => `Unknown-${String(18 - i).padStart(2, "0")}`,
+      ),
+    ];
+    for (const mode of ["shared", "individual"] as const) {
+      const answers = createTestAnswers(["Ironclad"]);
+      answers.characters.selectedCharacters = [];
+      answers.characters.startingCharacter = null;
+      answers.characters.availability = "all";
+      answers.characters.ascensionMode = mode;
+      answers.characters.selectionMode = "all";
+      answers.characters.goal = "all";
+      answers.characters.moddedCharacters = names.map((name) => ({
+        name,
+        ascensions: { enabled: [1], ascensionDownsEnabled: false, downs: [] },
+      }));
+      const result = compileWizardAnswers(answers, optionCatalog);
+      if (mode === "shared") {
+        expect(result.modded_characters).toEqual(names);
+      } else {
+        expect(Object.keys(result.advanced_characters as object)).toEqual(
+          names,
+        );
+      }
+      const yaml = optionsToYaml(result);
+      const positions = names.map((name) => yaml.indexOf(name));
+      expect(positions).toEqual([...positions].sort((a, b) => a - b));
+      expect(positions.every((position) => position >= 0)).toBe(true);
+    }
+  });
+
+  it("accepts a larger candidate list only when the selected roster can fit", () => {
+    const answers = createTestAnswers(["Ironclad"]);
+    answers.characters.selectedCharacters = [];
+    answers.characters.startingCharacter = null;
+    answers.characters.availability = "all";
+    answers.characters.selectionMode = "random";
+    answers.characters.randomCharacterCount = 20;
+    answers.characters.goal = "all";
+    answers.characters.moddedCharacters = Array.from(
+      { length: 25 },
+      (_, i) => ({
+        name: `Mod-${i}`,
+        ascensions: { enabled: [1], ascensionDownsEnabled: false, downs: [] },
+      }),
+    );
+    const result = compileWizardAnswers(answers, optionCatalog);
+    expect(result.pick_num_characters).toBe(20);
+    expect(result.modded_characters).toHaveLength(25);
+    answers.characters.randomCharacterCount = 21;
+    expect(() => compileWizardAnswers(answers, optionCatalog)).toThrow(
+      "no more than 20",
+    );
+    answers.characters.selectedCharacters = ["Ironclad"];
+    expect(
+      compileWizardAnswers(answers, optionCatalog).pick_num_characters,
+    ).toBe(21);
+  });
+});

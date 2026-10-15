@@ -1,0 +1,50 @@
+name: Choose CI event
+
+on:
+  workflow_call:
+    outputs:
+      should_run:
+        description: "Run checks unless a mergeable same-repository PR covers this commit"
+        value: ${{ jobs.event.outputs.should_run }}
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  event:
+    name: Select CI event
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.choose.outputs.should_run }}
+    steps:
+      - name: Prefer PR checks over duplicate push checks
+        id: choose
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          SOURCE_BRANCH: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          should_run=true
+          if [[ "$EVENT_NAME" == "push" ]]; then
+            # Both callers check every PR target. Query this repository only;
+            # an upstream PR must not suppress independent checks in a fork.
+            pr_numbers=$(gh api --method GET "repos/$GITHUB_REPOSITORY/pulls" \
+              -f state=open \
+              -f head="$GITHUB_REPOSITORY_OWNER:$SOURCE_BRANCH" \
+              --jq '.[].number')
+            for pr_number in $pr_numbers; do
+              pr=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$pr_number")
+              # Conflicting PRs cannot run pull_request workflows. Unknown
+              # mergeability or an older PR head must also keep push coverage.
+              if jq -e --arg sha "$SOURCE_SHA" \
+                '.mergeable == true and .head.sha == $sha' <<< "$pr" > /dev/null; then
+                should_run=false
+                echo "Skipping push checks: PR #$pr_number covers this commit."
+                break
+              fi
+            done
+          fi
+          echo "should_run=$should_run" >> "$GITHUB_OUTPUT"

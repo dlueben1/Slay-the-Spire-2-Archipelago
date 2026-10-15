@@ -1,0 +1,241 @@
+# The easiest way to make a Slay the Spire II YAML is the YAML Builder:
+#   https://sts2ap.net/#/builder
+# It explains every option and downloads a finished file. Use this template
+# only if you prefer to edit the YAML by hand. Some options are considerably easier to use the site
+#
+# Any option can be randomised by giving weights instead of a single value, e.g.
+#   ancient_relic_pool: {balanced: 1, chaos: 2}
+# picks chaos twice as often as balanced.
+
+# Change this to your Archipelago slot name.
+name: Spire2Player
+description: "Example settings; customise them before generating."
+game: "Slay the Spire II"
+requires:
+  version: 0.6.7 # Minimum Archipelago version for this YAML.
+  game:
+    Slay the Spire II: 1.2.0 # Minimum APWorld version for this YAML.
+Slay the Spire II:
+  #####################
+  # Character Options #
+  #####################
+
+  # Characters to play: Ironclad, Silent, Defect, Regent, Necrobinder (case-sensitive).
+  characters:
+    - "Ironclad"
+    - "Silent"
+    - "Necrobinder"
+
+  # Up to 20 extra modded characters, by predefined display name (e.g. Watcher) or full internal ID.
+  # The mod must be installed; installed IDs are listed in-game under Archipelago Settings.
+  # Some example modded characters and their mods will probably have a list somewhere pinned on discord
+  modded_characters: []
+
+  # Randomly pick this many characters from the lists above. 0-25; 0 uses all of them.
+  pick_num_characters: 0
+
+  # Number of characters you must win with to goal. 0-25; 0 means every character.
+  num_chars_goal: 0
+
+  # Whether characters must be unlocked by "Unlock <Character>" items.
+  #   unlocked       - every character is available from the start
+  #   locked_random  - start with one random character; the rest are unlock items
+  #   locked_fixed   - start with unlocked_character; the rest are unlock items
+  lock_characters: "locked_random"
+
+  # Starting character for locked_fixed. Must be one of your characters, or "" to pick at random.
+  unlocked_character: ""
+
+  # A single number N enables Ascensions 1 to N; a longer list enables only those listed.
+  # Use [] for none. Logic assumes Ascension 1 (SwarmingElites) is enabled. Names (case-sensitive):
+  #   1 SwarmingElites, 2 WearyTraveler, 3 Poverty, 4 TightBelt, 5 AscendersBane,
+  #   6 Inflation, 7 Scarcity, 8 ToughEnemies, 9 DeadlyEnemies, 10 DoubleBoss
+  ascension:
+    - 1
+
+  # Ascension Down items that each remove one enabled Ascension; requires include_floor_checks.
+  # A single number N removes your highest N Ascensions; otherwise list numbers or names as above.
+  ascension_down: []
+
+  ################
+  # Game Options #
+  ################
+
+  # true uses the current "power"-based logic; false uses the 1.1.x logic.
+  use_new_logic: true
+
+  # How hard the generator tries to move your progression items earlier. 0-99; 50 is normal.
+  progression_balancing: 50
+
+  #   full     - every location is guaranteed reachable
+  #   minimal  - only what's needed to goal is guaranteed
+  accessibility: "full"
+
+  # When Progressive Ancient relic choices are offered.
+  #   start_of_act  - through the normal Ancient encounter
+  #   anytime       - from the Archipelago reward menu as soon as they are received
+  ancient_relic_location: "anytime"
+
+  # Which relics each Progressive Ancient can offer.
+  #   balanced    - the Ancient naturally rolled for that act
+  #   chaos       - any Ancient from that act
+  #   true_chaos  - Act 2 and Act 3 Ancients share one combined pool
+  ancient_relic_pool: "chaos"
+
+  # Relic items you can claim from the Archipelago menu at any time. 0-10.
+  # Any further relics are claimed by beating elites or opening chests. tldr; fight elites
+  relic_rewards_available_anytime: 2
+
+  # Start without your special starter card (Bash, Neutralize, ...); two items restore and then
+  # upgrade it. Requires include_floor_checks. Can make the early game much harder but late game easier
+  progressive_starter_card: false
+
+  # Start without your starter relic (Burning Blood, ...); two items restore and then refine it.
+  # Requires include_floor_checks. Can make the early game much harder but late game easier
+  # May have some problems with modded characters as some characters do not function without this
+  progressive_starter_relic: false
+
+  # true shuffles every card reward; false shuffles every other one.
+  shuffle_all_cards: true
+
+  ############
+  # Sanities #
+  ############
+
+  # Adds a location for each new floor reached, filled with filler. Helps generation success rates
+  include_floor_checks: true
+
+  # Neow's starting relic becomes a Progressive Ancient item.
+  neow_sanity: false
+
+  # Shuffles the ability to rest and smith in each act, and adds campfire locations.
+  campfire_sanity: true
+
+  # Replaces combat, elite and boss gold rewards with locations (22 per character).
+  gold_sanity: true
+
+  # Replaces potion rewards with locations (9 per character).
+  potion_sanity: true
+
+  # Moves the shop slots below to an Archipelago shop page as purchasable checks,
+  # and shuffles items that restore them on the normal shop page.
+  shop_sanity: true
+  shop_card_slots: 2          # 0-5 coloured card slots
+  shop_neutral_card_slots: 1  # 0-2 colourless card slots
+  shop_relic_slots: 2         # 0-3 relic slots
+  shop_potion_slots: 2        # 0-3 potion slots
+  shop_remove_slots: false    # card removal, unlocked progressively per act
+
+  # Price of checks on the Archipelago shop page (normal shop prices are unaffected).
+  #   fixed                  - 15 gold each
+  #   super_discount_tiered  - 20% of a vanilla-style price
+  #   discount_tiered        - 50% of a vanilla-style price
+  #   tiered                 - the full vanilla-style price
+  shop_sanity_costs: "discount_tiered"
+
+  ##############
+  # Death Link #
+  ##############
+
+  # Share deaths with other Death Link players.
+  death_link: false
+
+  # Surviving a received Death Link adds a permanent Death Fragment curse to your deck.
+  enable_death_fragments: true
+
+  # Damage taken from a received Death Link, as a percentage of max HP. 0-100; 100 is lethal.
+  death_link_damage_percent: 0
+
+  ####################
+  # Advanced Options #
+  ####################
+
+  # Release a character's remaining checks when they win.
+  release_on_victory: true
+
+  # Give each character a fixed seed for their runs.
+  seeded: false
+
+  ###############
+  # Bonus Items #
+  ###############
+
+  # Extra items that make the game easier and aren't counted in logic. Each entry needs
+  # either Pools or a single Value; the YAML Builder aka the website is the easiest way to set these up, e.g.
+  # website is linked at the top of this yaml or in discord
+  #   bonus_items:
+  #     - WAX_RELIC:
+  #         Pools: [Common, Uncommon]
+  bonus_items: []
+
+  #########
+  # Traps #
+  #########
+
+  # Percent chance for each filler item to be replaced by a trap. 0-100; 0 disables traps.
+  trap_chance: 0
+
+  # How often each trap is picked: none, low, medium or high
+  weak_trap_weight: "high"        # 1 Weak for one turn
+  frail_trap_weight: "high"       # 1 Frail for one turn
+  vulnerable_trap_weight: "high"  # 1 Vulnerable for one turn
+  no_draw_trap_weight: "medium"   # No extra card draw for the turn
+  tangled_trap_weight: "medium"   # Attacks cost 1 more energy for the turn
+  vakuu_trap_weight: "medium"     # Vakuu plays your hand on one turn (turn 2 or later)
+  confused_trap_weight: "low"     # Random card costs for the rest of combat
+  sloth_trap_weight: "low"        # Only play 6 cards per turn for the rest of combat
+  dazed_trap_weight: "medium"     # Two Dazed shuffled into your draw pile
+
+  ################
+  # Filler Items #
+  ################
+
+  # How often each filler item is picked: none, low, medium or high
+  # Buffs below apply at the start of your next combat turn.
+  one_gold_filler_weight: "none"                    # 1 gold; used as a fallback if every weight is none
+  five_gold_filler_weight: "high"                   # 5 gold
+  free_attack_filler_weight: "high"                 # Next Attack costs 0
+  free_power_filler_weight: "high"                  # Next Power costs 0
+  free_skill_filler_weight: "high"                  # Next Skill costs 0
+  dexterity_filler_weight: "medium"                 # Dexterity
+  strength_filler_weight: "medium"                  # Strength
+  plating_filler_weight: "medium"                   # Plating
+  friendship_filler_weight: "medium"                # Friendship (+1 max energy)
+  post_combat_card_upgrade_filler_weight: "low"     # Upgrade a random card after combat
+  post_combat_card_removal_filler_weight: "low"     # Remove a card after combat
+  additional_card_reward_filler_weight: "low"       # Extra card reward after combat
+  buffer_filler_weight: "low"                       # Buffer
+  vigor_filler_weight: "high"                       # Vigor
+  thorns_filler_weight: "high"                      # Thorns
+  artifact_filler_weight: "medium"                    # Artifact
+
+  ###########################
+  # Item & Location Options #
+  ###########################
+
+  # Forces these items to be in your own world.
+  local_items: []
+
+  # Forces these items to be in other players' worlds.
+  non_local_items: []
+
+  # Start with the given amount of these items, e.g. {"Ironclad Relic": 1}
+  start_inventory: {}
+
+  # Start with these items' locations already hinted (as if you'd used !hint).
+  start_hints: []
+
+  # Start with these locations and their items already hinted.
+  start_location_hints: []
+
+  # Prevent these locations from having an important item.
+  exclude_locations: []
+
+  # Prevent these locations from having an unimportant item.
+  priority_locations: []
+
+  # Share part of your item pool with other players.
+  item_links: []
+
+  # Generic item plando.
+  plando_items: []

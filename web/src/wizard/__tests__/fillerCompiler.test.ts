@@ -143,8 +143,11 @@ function preservesCombinedFillerPlacement(): void {
     "review",
   ]);
 
-  // Keep the existing Filler UI appended after conditional Shop questions.
-  expect(checkSetupStep.questions.at(-1)?.id).toBe("filler-weights");
+  expect(
+    checkSetupStep.questions.some(
+      (question) => question.id === "filler-weights",
+    ),
+  ).toBe(true);
 }
 
 /**

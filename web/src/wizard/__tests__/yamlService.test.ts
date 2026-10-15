@@ -8,6 +8,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import worldManifest from "../../../../world/spire2/archipelago.json";
 import {
   buildWizardYaml,
   optionsToYaml,
@@ -33,6 +34,10 @@ function serializesCompleteWizardYaml(): void {
       "name: Spire Climber",
       `description: ${JSON.stringify(WIZARD_YAML_DESCRIPTION)}`,
       `game: ${JSON.stringify(WIZARD_GAME_NAME)}`,
+      "requires:",
+      `  version: ${JSON.stringify(worldManifest.minimum_ap_version)}`,
+      "  game:",
+      `    ${JSON.stringify(WIZARD_GAME_NAME)}: "${worldManifest.world_version.split(".").slice(0, 2).join(".")}.0"`,
       `${WIZARD_GAME_NAME}:`,
       "  characters:",
       '    - "Ironclad"',
@@ -142,6 +147,17 @@ function serializesEmptyBonusItems(): void {
 function registerYamlServiceTests(): void {
   // Cover the successful document shape and both metadata failure modes.
   it("serializes complete Archipelago YAML", serializesCompleteWizardYaml);
+  it("does not raise the APWorld minimum for patch releases", () => {
+    const originalVersion = worldManifest.world_version;
+    try {
+      worldManifest.world_version = "1.2.9";
+      expect(buildWizardYaml("Spire2Player", {})).toContain(
+        '    "Slay the Spire II": "1.2.0"',
+      );
+    } finally {
+      worldManifest.world_version = originalVersion;
+    }
+  });
   it("rejects invalid player names", rejectsInvalidPlayerNames);
   it("serializes nested Bonus Item blocks", serializesNestedBonusItems);
   it(

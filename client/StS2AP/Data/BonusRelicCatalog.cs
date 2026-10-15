@@ -95,6 +95,9 @@ namespace StS2AP.Data
                 }
 
                 string path = Path.Combine(modDirectory, "data", fileName);
+                // The compatibility loader places the client assembly under lib/<version>.
+                if (!File.Exists(path) && Path.GetFileName(Path.GetDirectoryName(modDirectory)) == "lib")
+                    path = Path.GetFullPath(Path.Combine(modDirectory, "..", "..", "data", fileName));
                 if (!File.Exists(path))
                 {
                     LogUtility.Warn($"Bonus relic catalog file not found in the mod data directory: {path}");

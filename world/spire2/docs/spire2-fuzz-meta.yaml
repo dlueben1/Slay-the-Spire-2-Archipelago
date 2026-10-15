@@ -1,0 +1,6 @@
+# Fuzzer 0.6.2 meta file: add one random character only if the roster is empty.
+# Existing nonempty rosters and other options remain randomized.
+Slay the Spire II:
+  fuzz_constraints:
+    - option: characters
+      ensure_any: [Ironclad, Silent, Defect, Regent, Necrobinder]

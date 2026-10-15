@@ -1,319 +1,322 @@
-from typing import NamedTuple, List, Iterable
+import unittest
 
 from BaseClasses import CollectionState
-from worlds.spire2.test import Spire2TestBase
-from worlds.spire2.rules import LogicMixin
+from test.general import setup_multiworld
+from worlds.spire2 import SlayTheSpire2World
+from worlds.spire2.characters import character_list
+from worlds.spire2.rules import SpireHasPower
 
 
-def _create_floor_check(start: int, end: int) -> List[str]:
-    return [f"Reached Floor {i}" for i in range(start, end + 1)]
-
-def _create_shop_check(start: int, end: int) -> List[str]:
-    return [f"Shop Slot {i}" for i in range(start, end + 1)]
-
-def _create_combat_check(start: int, end: int) -> List[str]:
-    return [f"Combat Gold {i}" for i in range(start, end + 1)]
-
-class PowerLevel(NamedTuple):
-    draw: int = 0
-    relic: int = 0
-    ancient: int = 0
-    rest: int = 0
-    smith: int = 0
-    shop: int = 0
-    shop_remove: int = 0
-    gold: int = 0
-
-logic_map: dict[PowerLevel, List[str]] = {
-    PowerLevel(): [
-        "Card Reward 1",
-        "Card Reward 2",
-        "Potion Drop 1",
-        "Act 1 Campfire 1",
-        *_create_combat_check(1, 4),
-        *_create_floor_check(1,6),
-    ],
-    PowerLevel(gold=2): [
-        *_create_shop_check(1, 5),
-    ],
-    PowerLevel(draw=2,relic=0, rest=1): [
-        "Relic 1",
-        "Relic 2",
-        "Card Reward 3",
-        "Potion Drop 2",
-        "Act 1 Campfire 2",
-        *_create_combat_check(5, 6),
-        *_create_floor_check(7, 11)
-    ],
-    PowerLevel(draw=2,relic=2,rest=1, shop=2): [
-        "Relic 3",
-        "Card Reward 4",
-        "Potion Drop 3",
-        *_create_combat_check(7, 8),
-        # *_create_floor_check(11, 15)
-        *_create_floor_check(12, 16)
-    ],
-    PowerLevel(draw=3,relic=2, rest=1, smith=1, shop=3, shop_remove=1, gold=2): [
-        "Act 1 Boss",
-        "Rare Card Reward 1",
-        # "Boss Relic 1",
-        "Boss Gold 1",
-        # "Card Reward 5",
-        # "Card Reward 6",
-        # "Potion Drop 4",
-        *_create_floor_check(17, 17),
-        # *_create_combat_check(9, 11),
-    ],
-    PowerLevel(draw=4,relic=2, ancient=1, rest=1, smith=1, shop=3, shop_remove=1, gold=2): [
-        "Card Reward 5",
-        "Potion Drop 4",
-        "Act 2 Campfire 1",
-        *_create_floor_check(18, 22),
-        *_create_combat_check(9, 10),
-    ],
-    PowerLevel(draw=5,relic=2, ancient=1, rest=2, smith=1, shop=4, shop_remove=1, gold=2): [
-        "Relic 4",
-        "Relic 5",
-        "Card Reward 6",
-        "Potion Drop 5",
-        "Act 2 Campfire 2",
-        *_create_floor_check(23, 27),
-        *_create_combat_check(11, 12),
-    ],
-    PowerLevel(draw=6,relic=2, ancient=1, rest=2, smith=1, shop=5, shop_remove=1, gold=2): [
-        "Relic 6",
-        "Card Reward 7",
-        "Potion Drop 6",
-        *_create_floor_check(28, 32),
-        *_create_combat_check(13, 14),
-    ],
-    PowerLevel(draw=6, relic=4, ancient=1, rest=2, smith=2, shop=6, shop_remove=2, gold=5): [
-    # PowerLevel(draw=7, relic=4, boss_relic=1, rest=2, smith=2, shop=6, shop_remove=2, gold=5): [
-        "Act 2 Boss",
-        "Rare Card Reward 2",
-        # "Boss Relic 2",
-        "Boss Gold 2",
-        *_create_floor_check(33, 33),
-    ],
-    PowerLevel(draw=7, relic=4, ancient=2, rest=2, smith=2, shop=6, shop_remove=2, gold=5): [
-    # PowerLevel(draw=7, relic=4, boss_relic=1, rest=2, smith=2, shop=6, shop_remove=2, gold=5): [
-        "Card Reward 8",
-        "Potion Drop 7",
-        "Act 3 Campfire 1",
-        *_create_floor_check(34, 38),
-        *_create_combat_check(15, 16),
-    ],
-    PowerLevel(draw=8,relic=4, ancient=2, rest=3,smith=2, shop=8, shop_remove=2, gold=5): [
-    # PowerLevel(draw=8,relic=4,boss_relic=1, rest=3,smith=2, shop=8, shop_remove=2, gold=5): [
-        "Relic 7",
-        "Relic 8",
-        "Card Reward 9",
-        "Potion Drop 8",
-        "Act 3 Campfire 2",
-        *_create_floor_check(39, 43),
-        *_create_combat_check(17, 18),
-    ],
-    PowerLevel(draw=8,relic=6, ancient=2, rest=3,smith=2, shop=10, shop_remove=2, gold=5): [
-    # PowerLevel(draw=8,relic=6,boss_relic=1, rest=3,smith=2, shop=10, shop_remove=2, gold=5): [
-        "Card Reward 10",
-        "Relic 9",
-        "Relic 10",
-        "Potion Drop 9",
-        *_create_floor_check(44, 47),
-        *_create_combat_check(19, 20),
-    ],
-    PowerLevel(draw=8,relic=8, ancient=2, rest=3,smith=3, shop=10,shop_remove=3, gold=9): [
-    # PowerLevel(draw=8,relic=8,boss_relic=2,rest=3,smith=3, shop=10,shop_remove=3, gold=9): [
-        "Act 3 Boss",
-        *_create_floor_check(48, 48),
-    ],
-}
-
-def setup_power_map(map: dict[PowerLevel, List[str]], prefix: str) -> dict[PowerLevel, List[str]]:
-    return {key: [f"{prefix} {x}" for x in val] for key, val in map.items()}
-
-class LogicTestBase(Spire2TestBase):
-
+class LogicTests(unittest.TestCase):
+    # Test behaviour, not carefully balanced inventories that change whenever weights do.
     options = {
-        'characters': ["silent"],
-        'campfire_sanity':1,
-        'shop_sanity': 1,
-        'shop_card_slots': 5,
-        'shop_neutral_card_slots': 2,
-        'shop_relic_slots': 3,
-        'shop_potion_slots': 3,
-        'shop_remove_slots': 1,
-        'gold_sanity': 1,
-        'potion_sanity': 1,
+        "characters": ["Silent"],
+        "shuffle_all_cards": True,
+        "campfire_sanity": True,
+        "neow_sanity": True,
+        "shop_sanity": True,
+        "shop_card_slots": 5,
+        "shop_neutral_card_slots": 2,
+        "shop_relic_slots": 3,
+        "shop_potion_slots": 3,
+        "shop_remove_slots": True,
     }
+    shop_slots = (
+        ("shop_card_slots", "Shop Card Slot", 5),
+        ("shop_neutral_card_slots", "Neutral Shop Card Slot", 2),
+        ("shop_relic_slots", "Shop Relic Slot", 3),
+        ("shop_potion_slots", "Shop Potion Slot", 3),
+    )
 
-    def _setup_state_accessible(self, power: PowerLevel) -> CollectionState:
+    def make_world(self, **options) -> SlayTheSpire2World:
+        world = setup_multiworld(SlayTheSpire2World, seed=42,
+                                 options={**self.options, **options}).worlds[1]
+        assert isinstance(world, SlayTheSpire2World)
+        return world
 
-        state = CollectionState(self.multiworld)
+    @staticmethod
+    def power_rule(world, act=1) -> SpireHasPower.Resolved:
+        rule = SpireHasPower(world.characters[0].char_offset, 9, act=act,
+                             rest=True, smith=True, remove=True, shop=True).resolve(world)
+        assert isinstance(rule, SpireHasPower.Resolved)
+        return rule
 
-        state.collect(self.world.create_item("Silent Unlock"))
-        draw = self.get_item_by_name(f"{self.prefix} Card Reward")
-        for _ in range(power.draw):
-            state.collect(draw)
+    def test_first_smith_is_required_only_with_campfire_sanity(self):
+        for enabled in (False, True):
+            with self.subTest(campfire_sanity=enabled):
+                world = self.make_world(campfire_sanity=enabled)
+                state = CollectionState(world.multiworld)
+                for item in world.multiworld.get_items():
+                    if item.name != "Silent Progressive Smith":
+                        state.collect(item, prevent_sweep=True)
+                boss_rule = world.get_entrance("Silent Act 1 Boss Arena").access_rule
+                self.assertEqual(not enabled, boss_rule(state))
+                if enabled:
+                    state.collect(world.create_item("Silent Progressive Smith"), prevent_sweep=True)
+                    self.assertTrue(boss_rule(state))
 
-        relic = self.get_item_by_name(f"{self.prefix} Relic")
-        for _ in range(power.relic):
-            state.collect(relic)
+    def test_sparse_opening_guarantees_meet_first_power_check(self):
+        for full_shuffle in (False, True):
+            with self.subTest(shuffle_all_cards=full_shuffle):
+                world = self.make_world(include_floor_checks=False, shuffle_all_cards=full_shuffle)
+                state = CollectionState(world.multiworld)
+                for item, count in world.multiworld.early_items[1].items():
+                    for _ in range(count):
+                        state.collect(world.create_item(item), prevent_sweep=True)
+                self.assertTrue(world.get_entrance('Silent Mid Act 1').access_rule(state))
 
-        ancient_unlock = self.get_item_by_name(f"{self.prefix} Progressive Ancient")
-        for _ in range(power.ancient):
-            state.collect(ancient_unlock)
+    def test_gold_and_potion_sanity_do_not_change_power_requirements(self):
+        for floors in (False, True):
+            reference = self.make_world(include_floor_checks=floors,
+                                        gold_sanity=True, potion_sanity=True)
+            for gold in (False, True):
+                for potions in (False, True):
+                    world = self.make_world(include_floor_checks=floors,
+                                            gold_sanity=gold, potion_sanity=potions)
+                    if not floors and not gold and not potions:
+                        self.assertEqual('old', world.effective_logic)
+                        continue
+                    self.assertEqual('new', world.effective_logic)
+                    for act in (1, 2, 3):
+                        for stocked in (False, True):
+                            with self.subTest(floors=floors, gold=gold, potions=potions,
+                                              act=act, stocked=stocked):
+                                states = [CollectionState(w.multiworld) for w in (reference, world)]
+                                if stocked:
+                                    for w, state in zip((reference, world), states):
+                                        for _, item, count in self.shop_slots:
+                                            for _ in range(count):
+                                                state.collect(w.create_item(f'Silent {item}'), prevent_sweep=True)
+                                expected = self.power_rule(reference, act).strength(states[0])
+                                self.assertEqual(expected, self.power_rule(world, act).strength(states[1]))
 
-        rest = self.get_item_by_name(f"{self.prefix} Progressive Rest")
-        for _ in range(power.rest):
-            state.collect(rest)
+    def test_extra_power_can_replace_optional_support(self):
+        world = self.make_world()
+        state = CollectionState(world.multiworld)
+        state.collect(world.create_item("Silent Progressive Smith"), prevent_sweep=True)
+        bosses = [world.get_entrance(f"Silent Act {act} Boss Arena") for act in (1, 2, 3)]
+        for boss in bosses:
+            self.assertFalse(boss.access_rule(state))
+        # Deliberately ample power, including diminishing returns and every missing-support
+        # penalty: this checks for hidden hard gates, not a particular balance threshold.
+        for _ in range(200):
+            state.collect(world.create_item("Silent Card Reward"), prevent_sweep=True)
+        for boss in bosses:
+            with self.subTest(boss=boss.name):
+                self.assertTrue(boss.access_rule(state))
 
-        smith = self.get_item_by_name(f"{self.prefix} Progressive Smith")
-        for _ in range(power.smith):
-            state.collect(smith)
+    def test_start_of_act_ancients_unlock_checkpoints_after_their_checks(self):
+        for mode in ("start_of_act", "anytime"):
+            for neow in (False, True):
+                world = self.make_world(ancient_relic_location=mode, neow_sanity=neow)
+                state = CollectionState(world.multiworld)
+                state.collect(world.create_item("Silent Progressive Smith"), prevent_sweep=True)
+                for _ in range(100):
+                    state.collect(world.create_item("Silent Card Reward"), prevent_sweep=True)
+                for received in range(4):
+                    for act in (2, 3):
+                        with self.subTest(mode=mode, neow=neow, received=received, act=act):
+                            required = act - 1 + int(neow)
+                            entrance = world.get_entrance(f"Silent Early Act {act}")
+                            self.assertEqual(mode == "anytime" or received >= required,
+                                             entrance.access_rule(state))
+                            if mode == "start_of_act" and received == required - 1:
+                                # The encounter check must stay reachable before its reward gate.
+                                self.assertTrue(world.get_location(f"Silent Ancient Act {act}").can_reach(state))
+                    state.collect(world.create_item("Silent Progressive Ancient"), prevent_sweep=True)
 
-        shop = self.get_item_by_name(f"{self.prefix} Shop Card Slot")
-        for _ in range(power.shop):
-            state.collect(shop)
+    def test_ordinary_card_diminishing_returns_follow_shuffle_mode(self):
+        for full_shuffle, first_discounted in ((True, 12), (False, 6)):
+            world = self.make_world(shuffle_all_cards=full_shuffle)
+            rule: SpireHasPower.Resolved = SpireHasPower(
+                world.characters[0].char_offset, 9, card_rewards=21).resolve(world)
+            state = CollectionState(world.multiworld)
+            before = rule.strength(state)
+            self.assertEqual(0 if full_shuffle else 10.5, before[0])
+            for received in range(1, first_discounted + 3):
+                with self.subTest(full_shuffle=full_shuffle, received=received):
+                    state.collect(world.create_item("Silent Card Reward"), prevent_sweep=True)
+                    after = rule.strength(state)
+                    expected = 1 if received < first_discounted else 0.5
+                    self.assertEqual(expected, after[0] - before[0])
+                    self.assertEqual(expected, after[1] - before[1])
+                    self.assertEqual(before[2], after[2])
+                    before = after
+            state.collect(world.create_item("Silent Rare Card Reward"), prevent_sweep=True)
+            self.assertEqual(1.5, rule.strength(state)[1] - before[1])
 
-        gold = self.get_item_by_name(f"{self.prefix} Elite Gold")
-        for _ in range(power.gold):
-            state.collect(gold)
+    def test_unshuffled_slots_count_as_available(self):
+        world = self.make_world()
+        state = CollectionState(world.multiworld)
+        for _, item, _ in self.shop_slots:
+            state.collect(world.create_item(f"Silent {item}"), prevent_sweep=True)
+        partial_world = self.make_world(**{option: total - 1 for option, _, total in self.shop_slots})
+        partial_state = CollectionState(partial_world.multiworld)
+        self.assertGreater(self.power_rule(world).shop_penalty(state), 0)
+        self.assertEqual(self.power_rule(world).shop_penalty(state),
+                         self.power_rule(partial_world).shop_penalty(partial_state))
 
-        remove = self.get_item_by_name(f"{self.prefix} Progressive Shop Remove")
-        for _ in range(power.shop_remove):
-            state.collect(remove)
+    def test_restoring_shop_slots_reduces_penalty_to_zero(self):
+        world = self.make_world()
+        state = CollectionState(world.multiworld)
+        rules = [self.power_rule(world, act) for act in (1, 2, 3)]
+        penalties = [rule.shop_penalty(state) for rule in rules]
+        self.assertGreater(penalties[0], penalties[1])
+        self.assertGreater(penalties[1], penalties[2])
+        self.assertGreater(penalties[2], 0)
+        for _, item, count in self.shop_slots:
+            for tier in range(1, count + 1):
+                with self.subTest(item=item, tier=tier):
+                    state.collect(world.create_item(f"Silent {item}"), prevent_sweep=True)
+                    updated = [rule.shop_penalty(state) for rule in rules]
+                    for before, after in zip(penalties, updated):
+                        self.assertLess(after, before)
+                    penalties = updated
+        self.assertEqual([0, 0, 0], penalties)
 
+    def test_smith_and_removal_tiers_only_help_from_their_act(self):
+        world = self.make_world()
+        rules = [self.power_rule(world, act) for act in (1, 2, 3)]
+        for item in ("Progressive Smith", "Progressive Shop Remove"):
+            state = CollectionState(world.multiworld)
+            for tier in (1, 2, 3):
+                before = [rule.strength(state)[2] for rule in rules]
+                state.collect(world.create_item(f"Silent {item}"), prevent_sweep=True)
+                for act, rule in enumerate(rules, start=1):
+                    with self.subTest(item=item, tier=tier, act=act):
+                        after = rule.strength(state)[2]
+                        if act < tier:
+                            self.assertEqual(before[act - 1], after)
+                        else:
+                            self.assertLess(after, before[act - 1])
 
-        return state
+        for act in (1, 2, 3):
+            state = CollectionState(world.multiworld)
+            for _ in range(act - 1):
+                state.collect(world.create_item("Silent Progressive Smith"), prevent_sweep=True)
+            for stage in ("Mid", "Late"):
+                with self.subTest(act=act, stage=stage):
+                    rule = world.get_entrance(f"Silent {stage} Act {act}").access_rule
+                    assert isinstance(rule, SpireHasPower.Resolved)
+                    with_smith = state.copy()
+                    with_smith.collect(world.create_item("Silent Progressive Smith"), prevent_sweep=True)
+                    self.assertEqual(act > 1, rule.strength(with_smith)[2] < rule.strength(state)[2])
 
-    def _setup_state_inaccessible(self, power: PowerLevel, type: str):
+    def test_early_acts_ignore_rest_but_account_for_smith_support(self):
+        world = self.make_world(ancient_relic_location="anytime")
+        for act in (2, 3):
+            with self.subTest(act=act):
+                rule = world.get_entrance(f"Silent Early Act {act}").access_rule
+                assert isinstance(rule, SpireHasPower.Resolved)
+                state = CollectionState(world.multiworld)
+                before = rule.strength(state)
+                for _ in range(3):
+                    state.collect(world.create_item("Silent Progressive Rest"), prevent_sweep=True)
+                    self.assertEqual(before, rule.strength(state))
+                for tier in range(1, 4):
+                    before = rule.strength(state)
+                    state.collect(world.create_item("Silent Progressive Smith"), prevent_sweep=True)
+                    after = rule.strength(state)
+                    if tier <= act:
+                        self.assertLess(after[2], before[2])
+                    else:
+                        self.assertEqual(before, after)
 
-        state = CollectionState(self.multiworld)
+    def test_starters_restore_baseline_then_add_upgrade_power_without_hard_gates(self):
+        world = self.make_world(characters=character_list,
+                                progressive_starter_card=True, progressive_starter_relic=True)
+        for config in world.characters:
+            rule: SpireHasPower.Resolved = SpireHasPower(config.char_offset, 9).resolve(world)
+            for kind in ("Card", "Relic"):
+                state = CollectionState(world.multiworld)
+                before = rule.strength(state)
+                for tier in (1, 2, 3):
+                    with self.subTest(character=config.name, kind=kind, tier=tier):
+                        state.collect(world.create_item(f"{config.name} Progressive Starter {kind}"),
+                                      prevent_sweep=True)
+                        after = rule.strength(state)
+                        if tier == 1:
+                            self.assertEqual(after[:2], before[:2])
+                            self.assertLess(after[2], before[2])
+                        elif tier == 2:
+                            self.assertGreater(after[1], before[1])
+                            self.assertEqual(after[2], before[2])
+                            if kind == "Card":
+                                self.assertEqual(after[0] - before[0], after[1] - before[1])
+                            else:
+                                self.assertEqual(after[0], before[0])
+                        else:
+                            self.assertEqual(before, after)
+                        before = after
+            state = CollectionState(world.multiworld)
+            for _ in range(100):
+                state.collect(world.create_item(f"{config.name} Card Reward"), prevent_sweep=True)
+            with self.subTest(character=config.name, gate="Late Act 1"):
+                self.assertTrue(world.get_entrance(f"{config.name} Late Act 1").access_rule(state))
 
-        draw = self.get_item_by_name(f"{self.prefix} Card Reward")
-        draws = [draw for _ in range(power.draw)]
+    def test_modded_starters_keep_each_gate_without_power_bonuses(self):
+        world = self.make_world(characters=[], modded_characters=["TestCharacter"],
+                                progressive_starter_card=True, progressive_starter_relic=True)
+        prefix = world.characters[0].name
+        state = CollectionState(world.multiworld)
+        for _ in range(100):
+            state.collect(world.create_item(f"{prefix} Card Reward"), prevent_sweep=True)
+        gate = world.get_entrance(f"{prefix} Late Act 1").access_rule
+        rule = self.power_rule(world)
+        before = rule.strength(state)
+        for kind in ("Card", "Relic"):
+            with self.subTest(only_starter=kind):
+                partial = state.copy()
+                partial.collect(world.create_item(f"{prefix} Progressive Starter {kind}"), prevent_sweep=True)
+                self.assertFalse(gate(partial))
+                self.assertEqual(before, rule.strength(partial))
+        for kind in ("Card", "Relic"):
+            for _ in range(2):
+                state.collect(world.create_item(f"{prefix} Progressive Starter {kind}"), prevent_sweep=True)
+        self.assertTrue(gate(state))
+        self.assertEqual(before, rule.strength(state))
 
-        relic = self.get_item_by_name(f"{self.prefix} Relic")
-        relics = [relic for _ in range(power.relic)]
+    def test_disabled_starter_options_give_no_power_credit(self):
+        for kind in ("Card", "Relic"):
+            with self.subTest(disabled_starter=kind):
+                world = self.make_world(progressive_starter_card=kind != "Card",
+                                        progressive_starter_relic=kind != "Relic")
+                state = CollectionState(world.multiworld)
+                rule = self.power_rule(world)
+                before = rule.strength(state)
+                for _ in range(2):
+                    state.collect(world.create_item(f"Silent Progressive Starter {kind}"), prevent_sweep=True)
+                self.assertEqual(before, rule.strength(state))
 
-        ancient = self.get_item_by_name(f"{self.prefix} Progressive Ancient")
-        ancients = [ancient for _ in range(power.ancient)]
+    def test_restored_starters_match_unshuffled_loadout(self):
+        for character in ("Ironclad", "Silent", "Defect", "Necrobinder", "Regent"):
+            baseline = self.make_world(characters=[character],
+                                       progressive_starter_card=False, progressive_starter_relic=False)
+            expected = self.power_rule(baseline).strength(CollectionState(baseline.multiworld))
+            for card_enabled, relic_enabled in ((True, False), (False, True), (True, True)):
+                with self.subTest(character=character, card=card_enabled, relic=relic_enabled):
+                    world = self.make_world(characters=[character],
+                                            progressive_starter_card=card_enabled,
+                                            progressive_starter_relic=relic_enabled)
+                    state = CollectionState(world.multiworld)
+                    rule = self.power_rule(world)
+                    self.assertGreater(rule.strength(state)[2], expected[2])
+                    for kind, enabled in (("Card", card_enabled), ("Relic", relic_enabled)):
+                        if enabled:
+                            state.collect(world.create_item(f"{character} Progressive Starter {kind}"),
+                                          prevent_sweep=True)
+                    self.assertEqual(expected, rule.strength(state))
 
-        # boss_relic = self.get_item_by_name(f"{self.prefix} Boss Relic")
-        # boss_relics = [boss_relic for _ in range(power.boss_relic)]
-
-        rest = self.get_item_by_name(f"{self.prefix} Progressive Rest")
-        rests = [rest for _ in range(power.rest)]
-
-        smith = self.get_item_by_name(f"{self.prefix} Progressive Smith")
-        smiths = [smith for _ in range(power.smith)]
-
-        shop = self.get_item_by_name(f"{self.prefix} Shop Card Slot")
-        shops = [shop for _ in range(power.shop)]
-
-        remove = self.get_item_by_name(f"{self.prefix} Progressive Shop Remove")
-        removes = [remove for _ in range(power.shop_remove)]
-
-        gold = self.get_item_by_name(f"{self.prefix} Elite Gold")
-        golds = [gold for _ in range(power.gold)]
-
-
-        if type == "Card Reward":
-            draws.pop()
-        elif type == "Relic":
-            relics.pop()
-        elif type == "Progressive Ancient":
-            ancients.pop()
-        # elif type == "Boss Relic":
-        #     boss_relics.pop()
-        elif type == "Progressive Rest":
-            rests.pop()
-        elif type == "Progressive Smith":
-            smiths.pop()
-        elif type == "Shop Card Slot":
-            shops.pop()
-        elif type == "Progressive Shop Remove":
-            removes.pop()
-        elif type == "Elite Gold":
-            golds.pop()
-
-
-        for list in [draws, relics, ancients, rests, smiths, shops, removes, golds]:
-        # for list in [draws, relics, boss_relics, rests, smiths, shops, removes, golds, keys]:
-            for item in list:
-                state.collect(item)
-
-        return state
-
-    def _test_inaccessible(self, power: PowerLevel, locations: Iterable[str]):
-
-        requirements = [
-            ("Card Reward", power.draw),
-            ("Relic", power.relic),
-            ("Progressive Ancient", power.ancient),
-            ("Progressive Rest", power.rest),
-            ("Progressive Smith", power.smith),
-            ("Shop Card Slot", power.shop),
-            ("Progressive Shop Remove", power.shop_remove),
-            ("Elite Gold", power.gold),
-        ]
-        for type, count in requirements:
-            if count == 0:
-                continue
-            state = self._setup_state_inaccessible(power, type)
-
-            for location in locations:
-                with self.subTest(f"Cannot access {location} while missing one {type}", reqs=power):
-                    loc = self.world.get_location(location)
-                    self.assertFalse(loc.can_reach(state),
-                                     f"Location {location} can be reached with power level {power}, but missing one {type}; state {state.prog_items}")
-
-    def _test_accessible(self, power: PowerLevel, locations: Iterable[str]):
-        state = self._setup_state_accessible(power)
-
-        for location in locations:
-            with self.subTest(f"Can access {location} with all reqs", reqs=power):
-                loc = self.world.get_location(location)
-                self.assertTrue(loc.can_reach(state),
-                                f"Location {location} cannot be reached with power level {power} and state {state.prog_items}")
-
-
-class LogicTests(LogicTestBase):
-
-    power_map: dict[PowerLevel, List[str]]
-
-    def setUp(self) -> None:
-        super().setUp()
-        self.power_map = setup_power_map(logic_map, self.prefix)
-
-    def test_accessible(self):
-        for key, value in self.power_map.items():
-            self._test_accessible(key, value)
-
-    def test_inaccessible(self):
-        for key, value in self.power_map.items():
-            self._test_inaccessible(key, value)
-
-# class CustomCharTest(LogicTests):
-#     prefix = "Custom Character 1"
-#     options = {
-#         'use_advanced_characters': 1,
-#         'advanced_characters': {
-#             "foobar": {
-#                 'final_act': 1,
-#                 'ascension': 1,
-#                 'key_sanity': 1,
-#             }
-#         },
-#         'campfire_sanity': 1,
-#         'shop_sanity': 1,
-#         'shop_card_slots': 5,
-#         'shop_neutral_card_slots': 2,
-#         'shop_relic_slots': 3,
-#         'shop_potion_slots': 3,
-#         'shop_remove_slots': 1,
-#         'gold_sanity': 1,
-#         'potion_sanity': 1,
-#         'key_sanity': 1,
-#     }
+    def test_necrobinder_missing_synergy_is_charged_once_until_both_starters_return(self):
+        world = self.make_world(characters=["Necrobinder"],
+                                progressive_starter_card=True, progressive_starter_relic=True)
+        rule = self.power_rule(world)
+        for first in ("Card", "Relic"):
+            with self.subTest(first=first):
+                state = CollectionState(world.multiworld)
+                self.assertEqual(0.5, rule.power_adjustments(state)["Missing starter card/relic synergy"])
+                state.collect(world.create_item(f"Necrobinder Progressive Starter {first}"), prevent_sweep=True)
+                self.assertEqual(0.5, rule.power_adjustments(state)["Missing starter card/relic synergy"])
+                second = "Relic" if first == "Card" else "Card"
+                state.collect(world.create_item(f"Necrobinder Progressive Starter {second}"), prevent_sweep=True)
+                self.assertNotIn("Missing starter card/relic synergy", rule.power_adjustments(state))

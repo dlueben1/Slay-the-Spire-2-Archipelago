@@ -5,7 +5,16 @@ Archipelago Client & APWorld for STS2
 # Download the Latest Playable Release [Here](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest)
 
 > [!IMPORTANT]
-> We **currently** support the Beta Branch (v0.111.0), and also the Main Branch of the game! (v.107.1) The Beta Branch may break our mod whenever it updates so be aware if a fix could take several days to fix and hence we recommend using the Main Branch (though Beta Branch does work for now).
+> We recommend the **beta branch**, where Terairk mainly develops and tests the mod.
+> The main branch remains supported, but receives little, if any, gameplay testing;
+> compatibility is assessed primarily through compile-time checks and player bug reports.
+> Beta branch updates can temporarily break compatibility until the mod is updated.
+>
+> The client contains exact builds for the main branch **v0.107.1** and beta branch
+> **v0.111.0** game versions. Later patch releases on those same version lines
+> can use the newest earlier build (for example, v0.107.2 uses v0.107.1).
+> The loader refuses unreadable versions, earlier patches, and new major/minor
+> lines.
 
 ## 1.0 Development onwards
 
@@ -15,6 +24,8 @@ This mod is currently in 1.0 stage and is practically feature-parity with the AP
 > The mod only supports English at the moment, but as we understand localization better, we can work with the community to support more languages
 
 # Installing the Mod
+
+See the [setup guide](world/spire2/docs/setup_en.md) for installation, YAML configuration, generation and connection instructions.
 
 There are two ways to install the mod, detailed below.
 
@@ -29,9 +40,12 @@ Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetai
 2. Download `Archipelago.zip` from the [Releases](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest) section of the repo
 3. Go to your Slay the Spire II directory (In Steam, click "Browse Local Files")
 4. If a folder called `mods` does not exist, create it
-5. Unzip the **contents** of `Archipelago.zip` into `mods`
+5. Put `Archipelago.zip` in `mods`, then extract it into the archive program's default `Archipelago` directory
 
-- If you've done this step correctly, your directory structure should look like this: `/<slay-the-spire-2-local-files>/mods/Archipelago/` and the contents of that folder should be a bunch of `.dll` files and a `.pck` file (there may be more files too, please don't touch anything in this folder)
+- If you've done this step correctly, `mods/Archipelago/` contains the loader DLL,
+  common dependencies, the PCK, and `lib/0.107.1/` plus `lib/0.111.0/`. Keep that
+  directory structure intact.
+- The bundled `spire2.apworld` lets hosts use the **Install APWorld** button from the game's main menu.
 
 6. Start the game
 
@@ -58,7 +72,7 @@ Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetai
 - Polish
 
 > [!CAUTION]
-> With the exception of character mods, we don't recommend having any other mods installed whatsoever. Do it at your own risk.
+> I don't recommend having any other mods installed whatsoever, especially while this is in Alpha development. Do it at your own risk.
 
 # Special Thanks
 

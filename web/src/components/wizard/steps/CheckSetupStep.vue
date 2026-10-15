@@ -14,6 +14,7 @@ import {
   type WizardQuestion as WizardQuestionDefinition,
 } from "../../../wizard/WizardStep";
 import BonusItemsStep from "../bespoke/BonusItemsStep.vue";
+import TrapStep from "../bespoke/TrapStep.vue";
 import FillerStep from "../bespoke/FillerStep.vue";
 import WizardControl from "../core/WizardControl.vue";
 import WizardQuestion from "../core/WizardQuestion.vue";
@@ -242,6 +243,32 @@ function setFillerAnswers(filler: FillerAnswers): void {
         :items="fillerItems"
         :question="question('filler-weights')"
         @update:model-value="setFillerAnswers"
+      />
+    </section>
+    <section class="wizard-subsection">
+      <div class="wizard-subsection__header">
+        <h3>Traps</h3>
+        <p>
+          Replace some filler rewards with traps. Leave the chance at 0% to play
+          without traps.
+        </p>
+      </div>
+      <WizardQuestion
+        :question="question('trap-chance')"
+        :help-text="resolveQuestionHelp(question('trap-chance'), answers)"
+      >
+        <WizardControl
+          :question="question('trap-chance')"
+          :model-value="modelValue"
+          @update:model-value="forwardUpdate"
+        />
+      </WizardQuestion>
+      <TrapStep
+        v-if="visibleQuestionIds.has('trap-weights')"
+        class="mt-6"
+        :model-value="modelValue.traps"
+        :question="question('trap-weights')"
+        @update:model-value="updateAnswers({ traps: $event })"
       />
     </section>
   </div>

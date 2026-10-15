@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>10.0</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="10.1.302" />
+    <Compile Include="RewardMaterialization.fs" />
+    <Compile Include="MirroredReward.fs" />
+    <Compile Include="ProgressiveStarter.fs" />
+    <Compile Include="Participant.fs" />
+  </ItemGroup>
+</Project>

@@ -4,6 +4,8 @@ on:
   pull_request:
     branches:
       - main
+      - multiplayer-squashed
+      - v2
 
 permissions:
   contents: read
@@ -15,7 +17,7 @@ concurrency:
 
 jobs:
   release-scripts:
-    name: Run Release Tests
+    name: Test automation scripts
     runs-on: ubuntu-latest
 
     steps:
@@ -27,12 +29,8 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Run release automation tests
+      - name: Test automation scripts
         run: python -m unittest discover -s scripts/tests -p "test_*.py"
-
-  # Grab the StS2 Versions we want to validate against
-  versions:
-    uses: ./.github/workflows/get-sts2-versions.yml
 
   apworld:
     name: Build APWorld
@@ -40,16 +38,4 @@ jobs:
     with:
       upload_artifact: false
 
-  client:
-    name: Build C# Client - StS2 v${{ matrix.sts2-version }}
-    needs: versions
-
-    strategy:
-      fail-fast: false
-      matrix:
-        sts2-version: ${{ fromJSON(needs.versions.outputs.matrix) }}
-
-    uses: ./.github/workflows/build-client.yml
-    with:
-      build_mode: CompileOnly
-      sts2_api_compat: ${{ matrix.sts2-version }}
+  # Client/loader compilation and manifest checks belong to build-sts2-compat.yml.

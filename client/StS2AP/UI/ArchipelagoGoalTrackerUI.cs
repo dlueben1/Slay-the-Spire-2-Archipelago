@@ -1,7 +1,6 @@
 ﻿using Godot;
 using MegaCrit.Sts2.addons.mega_text;
 using StS2AP.Utils;
-using System;
 
 namespace StS2AP.UI
 {
@@ -169,11 +168,19 @@ namespace StS2AP.UI
         /// </summary>
         public static void UpdateGoalProgress()
         {
+            ArchipelagoSettings? settings = ArchipelagoClient.Settings;
+            if (settings == null)
+            {
+                LogUtility.Error("Cannot update goal progress without AP slot settings.");
+                return;
+            }
             // Get the number of characters you need to beat the game with. If the value for `NumCharsGoal` is `0`, we need to use the number of characters available
-            var charsToGoal = ArchipelagoClient.Settings.NumCharsGoal > 0 ? ArchipelagoClient.Settings.NumCharsGoal : ArchipelagoClient.Settings.TotalCharacters;
+            var charsToGoal = settings.NumCharsGoal > 0 ? settings.NumCharsGoal : settings.TotalCharacters;
 
             // Update the UI
-            SetContent($"[gold]Goal: Slay the Spire with {charsToGoal} Characters[/gold]\nProgress: {GameUtility.GoaledCharactersCount} / {charsToGoal}");
+            string owner = settings.PlayerCount > 1 ? $"Player {settings.PlayerNumber} progress" : "Progress";
+            SetContent($"[gold]Goal: Slay the Spire with {charsToGoal} Characters[/gold]\n{owner}: {GameUtility.GoaledCharactersCount} / {charsToGoal}"
+                + (settings.PlayerCount > 1 ? $"\nAll {settings.PlayerCount} players must finish to goal the slot." : ""));
         }
 
         #endregion

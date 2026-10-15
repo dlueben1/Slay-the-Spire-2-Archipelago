@@ -8,6 +8,7 @@
  */
 
 import type { OptionValue } from "../generated/optionCatalog";
+import { TRAP_ITEM_DEFINITIONS } from "./TrapItem";
 import { FILLER_ITEM_DEFINITIONS } from "./FillerItem";
 import {
   CHARACTER_OPTION_KEYS,
@@ -19,6 +20,7 @@ import {
   RUN_OPTION_KEYS,
   SHOP_OPTION_KEYS,
   STARTING_EQUIPMENT_OPTION_KEYS,
+  TRAP_CHANCE_OPTION_KEY,
 } from "./WizardOptionKey";
 
 /** Basic character keys omitted when the advanced dictionary is authoritative. */
@@ -55,6 +57,11 @@ export function getGuidedOptionKeys(): string[] {
   for (const definition of FILLER_ITEM_DEFINITIONS) {
     optionKeys.push(definition.optionKey);
   }
+
+  optionKeys.push(
+    TRAP_CHANCE_OPTION_KEY,
+    ...TRAP_ITEM_DEFINITIONS.map((item) => item.optionKey),
+  );
 
   // Death Link follows the combined Checks & Rewards ownership group.
   optionKeys.push(...Object.values(DEATH_LINK_OPTION_KEYS));

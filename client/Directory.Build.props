@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <!-- Windows Rider and WSL must not share NuGet assets containing absolute OS paths. -->
+    <BaseIntermediateOutputPath>obj/$(OS)/</BaseIntermediateOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj/**</DefaultItemExcludes>
+  </PropertyGroup>
+</Project>

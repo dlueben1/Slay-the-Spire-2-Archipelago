@@ -13,8 +13,8 @@ import type {
   CharacterAnswers,
 } from "./WizardAnswers";
 
-/** Maximum custom characters supported by the current Python world. */
-export const MAX_MODDED_CHARACTERS = 5;
+/** Maximum modded characters selected for one generated roster. */
+export const MAX_MODDED_CHARACTERS = 20;
 
 /**
  * Copies an Ascension configuration for immutable answer-model updates.

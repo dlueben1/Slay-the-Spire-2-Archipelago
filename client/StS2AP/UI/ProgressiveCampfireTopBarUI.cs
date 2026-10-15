@@ -1,5 +1,4 @@
 using Godot;
-using StS2AP.Models;
 using STS2RitsuLib.CardPiles.Nodes;
 using STS2RitsuLib.Interop.AutoRegistration;
 using STS2RitsuLib.TopBar;
@@ -23,7 +22,9 @@ public abstract class ProgressiveCampfireTopBarHandler(bool smith) : IModTopBarB
         if (ctx.Player == null)
             return false;
 
-        ArchipelagoSettings settings = ArchipelagoClient.Settings;
+        ArchipelagoSettings? settings = ArchipelagoClient.Settings;
+        if (settings == null)
+            return false;
         if (!settings.Characters.TryGetValue(ctx.Player.Character.Id.Entry, out var character))
             return false;
 
@@ -46,13 +47,13 @@ public abstract class ProgressiveCampfireTopBarHandler(bool smith) : IModTopBarB
 [RegisterOwnedTopBarButton(
     "progressive_rest",
     IconPath = "res://images/relics/regal_pillow.png",
-    ButtonOrder = 1)]
+    ButtonOrder = 2)]
 public sealed class ProgressiveRestTopBarHandler() : ProgressiveCampfireTopBarHandler(smith: false);
 
 [RegisterOwnedTopBarButton(
     "progressive_smith",
     IconPath = "res://images/relics/whetstone.png",
-    ButtonOrder = 2)]
+    ButtonOrder = 3)]
 public sealed class ProgressiveSmithTopBarHandler() : ProgressiveCampfireTopBarHandler(smith: true);
 
 internal static class ProgressiveCampfireTopBarUI
@@ -93,6 +94,8 @@ internal sealed partial class CampfireStatusBadge : Control
 
     private bool _enabled;
 
+    public CampfireStatusBadge() => Draw += DrawBadge;
+
     public void SetEnabled(bool enabled)
     {
         if (_enabled == enabled)
@@ -102,7 +105,7 @@ internal sealed partial class CampfireStatusBadge : Control
         QueueRedraw();
     }
 
-    public override void _Draw()
+    private void DrawBadge()
     {
         var center = Size / 2f;
         DrawCircle(center, 12f, OutlineColor);

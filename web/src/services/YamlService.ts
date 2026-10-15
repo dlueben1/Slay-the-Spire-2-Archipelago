@@ -9,6 +9,7 @@
  */
 
 import type { OptionValue } from "../generated/optionCatalog";
+import worldManifest from "../../../world/spire2/archipelago.json";
 import { validateWizardPlayerName } from "../wizard/validation/validateWizardMetadata";
 
 /** Stable description embedded in every generated wizard document. */
@@ -234,11 +235,18 @@ export function buildWizardYaml(
 
   // Serialize generated options through the established recursive implementation.
   const serializedOptions = optionsToYaml(options).trimEnd().split("\n");
+  // YAML options are compatible across patch releases of the same APWorld minor version.
+  const [worldMajor, worldMinor] = worldManifest.world_version.split(".");
+  const minimumWorldVersion = `${worldMajor}.${worldMinor}.0`;
   const lines = [
     // Archipelago's player-name field is conventionally a readable plain YAML scalar.
     `name: ${normalizedPlayerName}`,
     `description: ${scalar(WIZARD_YAML_DESCRIPTION)}`,
     `game: ${scalar(WIZARD_GAME_NAME)}`,
+    "requires:",
+    `  version: ${scalar(worldManifest.minimum_ap_version)}`,
+    "  game:",
+    `    ${scalar(WIZARD_GAME_NAME)}: ${scalar(minimumWorldVersion)}`,
     `${WIZARD_GAME_NAME}:`,
   ];
 

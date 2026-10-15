@@ -21,8 +21,8 @@ import typing
 from collections import defaultdict
 from enum import Enum, auto
 
-from worlds.spire2.characters import character_list
-from worlds.spire2.constants import CHAR_OFFSET, NUM_CUSTOM
+from worlds.spire2.characters import CharacterDefinition, character_registry
+from worlds.spire2.constants import CHAR_OFFSET
 
 MAX_CARD_REWARDS = 20
 # 17 floors act 1
@@ -97,44 +97,30 @@ def create_location_data() -> typing.List[LocationData]:
              for j in range(1, 50)]
     )
 
-def create_location_tables(vanilla_chars: typing.List[str], extras: int) -> typing.Tuple[dict[str, int], dict[
-    typing.Union[str, int],dict[str,LocationData]],dict[int,LocationData]]:
-    loc_name_to_id = dict()
-    characters_to_locs: dict[typing.Union[str, int],dict[str, LocationData]] = defaultdict(lambda: dict())
-    ids_to_data: dict[int, LocationData] = dict()
-    char_num = 0
-
+def create_location_tables(registry: dict[int, CharacterDefinition]) -> tuple[
+        dict[str, typing.Optional[int]], dict[str, dict[str, LocationData]], dict[int, LocationData]]:
+    loc_name_to_id = {}
+    character_locations: dict[str, dict[str, LocationData]] = defaultdict(dict)
+    ids_to_data = {}
     base_location_data = create_location_data()
-
-    ids = { x.id for x in base_location_data if x.id is not None}
-    assert len(ids) == (len(base_location_data) - 3), f"{len(ids)} != {len(base_location_data)}"
-    for char in vanilla_chars:
+    ids = {data.id for data in base_location_data if data.id is not None}
+    assert len(ids) == sum(data.id is not None for data in base_location_data)
+    for block, definition in registry.items():
         for data in base_location_data:
-            newkey = f"{char} {data.name}"
-            newval = data.id + char_num*CHAR_OFFSET if data.type != LocationType.Event else data.id
-            loc_name_to_id[newkey] = newval
-            characters_to_locs[char][newkey] = data
-            if newval is not None:
-                ids_to_data[newval] = data
-        char_num += 1
+            name = f"{definition.name} {data.name}"
+            location_id = data.id + (block - 1) * CHAR_OFFSET if data.id is not None else None
+            loc_name_to_id[name] = location_id
+            character_locations[definition.name][name] = data
+            if location_id is not None:
+                ids_to_data[location_id] = data
+    return loc_name_to_id, character_locations, ids_to_data
 
-    for i in range(extras):
-        for data in base_location_data:
-            newkey = f"Custom Character {i+1} {data.name}"
-            newval = data.id + char_num * CHAR_OFFSET if data.type != LocationType.Event else data.id
-            loc_name_to_id[newkey] = newval
-            characters_to_locs[i+1][newkey] = data
-            if newval is not None:
-                ids_to_data[newval] = data
-        char_num += 1
 
-    return loc_name_to_id, characters_to_locs, ids_to_data
-
-location_table, characters_to_locs, loc_ids_to_data = create_location_tables(character_list, NUM_CUSTOM)
+location_table, characters_to_locs, loc_ids_to_data = create_location_tables(character_registry)
 
 
 def create_location_groups(
-        characters_to_locations: dict[typing.Union[str, int], dict[str, LocationData]],
+        characters_to_locations: dict[str, dict[str, LocationData]],
 ) -> dict[str, typing.Set[str]]:
     groups: dict[str, typing.Set[str]] = {
         "Act 1": set(),
@@ -144,8 +130,7 @@ def create_location_groups(
         "Act 2 Boss": set(),
     }
 
-    for character_key, character_locations in characters_to_locations.items():
-        character_name = character_key if isinstance(character_key, str) else f"Custom Character {character_key}"
+    for character_name, character_locations in characters_to_locations.items():
         character_act_groups = {
             act: groups.setdefault(f"{character_name} Act {act}", set()) for act in range(1, 4)
         }

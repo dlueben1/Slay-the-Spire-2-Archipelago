@@ -7,6 +7,5 @@
   "OPTION_NOTHING.name": "Do Nothing",
   "OPTION_NOTHING.descriptionDisabled": "Leave without resting or upgrading a card.",
   "OPTION_HEAL.descriptionDisabled": "[red]You have not received enough Progressive Rests[/red]",
-  "OPTION_SMITH.descriptionDisabled": "[red]You have not received enough Progressive Smiths[/red]",
   "OPTION_CHECK.description": "{description}"
 }

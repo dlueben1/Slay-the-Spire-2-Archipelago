@@ -1,5 +1,4 @@
-﻿using System;
-using MegaCrit.Sts2.Core.Logging;
+﻿using MegaCrit.Sts2.Core.Logging;
 
 public static class LogUtility
 {

@@ -1,6 +1,5 @@
 ﻿using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Logging;
-using System.Reflection;
 
 namespace StS2AP.Utils;
 
@@ -11,9 +10,9 @@ namespace StS2AP.Utils;
 public static class TextUtility
 {
     /// <summary>
-    /// Registers a new LocTable at runtime by injecting it into LocManager's private table dictionary.
+    /// Registers a new LocTable at runtime in LocManager's table dictionary.
     /// This takes effect immediately for any subsequent LocString lookups.
-    /// Uses reflection because LocManager exposes no public "Add table" API.
+    /// The publicized game reference makes the internal table a compile-time checked member.
     /// </summary>
     public static void RegisterLocTableAtRuntime(string tableName, Dictionary<string, string> entries, string? fallbackTableName = null)
     {
@@ -22,17 +21,7 @@ public static class TextUtility
             throw new InvalidOperationException("LocManager.Instance is not initialized.");
         }
 
-        FieldInfo? tablesField = typeof(LocManager).GetField("_tables", BindingFlags.Instance | BindingFlags.NonPublic);
-        if (tablesField == null)
-        {
-            throw new InvalidOperationException("Could not find _tables field on LocManager (reflection failure).");
-        }
-
-        var tables = tablesField.GetValue(LocManager.Instance) as Dictionary<string, LocTable>;
-        if (tables == null)
-        {
-            throw new InvalidOperationException("Unexpected _tables field type.");
-        }
+        Dictionary<string, LocTable> tables = LocManager.Instance._tables;
 
         LocTable? fallback = null;
         if (!string.IsNullOrEmpty(fallbackTableName) && tables.TryGetValue(fallbackTableName!, out var fb))
@@ -60,27 +49,7 @@ public static class TextUtility
         }
         catch (LocException)
         {
-            // You'll need to use reflection or find another way to inject the table
             Log.Warn($"Loc table '{tableName}' not found. Consider pre-creating it.");
-        }
-    }
-
-    /// <summary>
-    /// Inject multiple localized strings into the specified localization table.
-    /// </summary>
-    /// <param name="text">A dictionary of key-value pairs representing the localized strings</param>
-    /// <param name="tableName">The name of the localization table</param>
-    public static void RegisterLocStrings(Dictionary<string, string> text, string tableName)
-    {
-        try
-        {
-            LocTable table = LocManager.Instance.GetTable(tableName);
-            table.MergeWith(text);
-        }
-        catch (LocException)
-        {
-            // You'll need to use reflection or find another way to inject the table
-            LogUtility.Error($"Loc table '{tableName}' not found. Consider pre-creating it.");
         }
     }
 
@@ -93,18 +62,5 @@ public static class TextUtility
     public static LocString GetLocString(string key, string tableName)
     {
         return new LocString(tableName, key);
-    }
-
-    public static string GetRawTextByKey(string key, string tableName)
-    {
-        try
-        {
-            return LocManager.Instance.GetTable(tableName).GetRawText(key);
-        }
-        catch (LocException)
-        {
-            LogUtility.Error($"Loc table '{tableName}' not found. Consider pre-creating it.");
-            return $"[{tableName}:{key}]";
-        }
     }
 }

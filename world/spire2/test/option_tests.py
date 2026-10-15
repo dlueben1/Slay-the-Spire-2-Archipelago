@@ -1,5 +1,9 @@
+import json
+from importlib.resources import files
+import unittest
+
 from Utils import restricted_dumps
-from test.general import setup_solo_multiworld
+from test.general import setup_multiworld, setup_solo_multiworld
 from worlds.AutoWorld import call_all
 from worlds.spire2 import SlayTheSpire2World
 from worlds.spire2.options import CharacterOptions, UnlockedCharacter, filler_item_options
@@ -7,6 +11,10 @@ from worlds.spire2.test import Spire2TestBase
 
 
 class TestOptionDefaults(Spire2TestBase):
+    def test_slot_version_matches_apworld_manifest(self):
+        manifest = json.loads(files("worlds.spire2").joinpath("archipelago.json").read_text())
+        self.assertEqual(self.world.fill_slot_data()["mod_compat_version"], manifest["world_version"])
+
     def test_compat_flag_is_sent(self):
         self.assertEqual(
             SlayTheSpire2World.compat_flag,
@@ -14,7 +22,8 @@ class TestOptionDefaults(Spire2TestBase):
         )
 
     def test_unlocked_character_default_is_a_named_choice(self):
-        self.assertIn(UnlockedCharacter.default, UnlockedCharacter.name_lookup)
+        option = UnlockedCharacter.from_any(UnlockedCharacter.default)
+        self.assertIn(option.value, option.name_lookup)
 
     def test_filler_weight_defaults_are_picklable(self):
         for option in filler_item_options.options:
@@ -31,6 +40,8 @@ class TestUniversalTrackerCardRewards(Spire2TestBase):
     def test_regeneration_preserves_card_reward_locations(self):
         slot_data = self.world.fill_slot_data()
         regenerated = setup_solo_multiworld(SlayTheSpire2World, steps=())
+        # Universal Tracker attaches this extension to MultiWorld dynamically.
+        # noinspection PyUnresolvedReferences
         regenerated.re_gen_passthrough = {
             self.game: SlayTheSpire2World.interpret_slot_data(slot_data),
         }
@@ -85,7 +96,7 @@ class Test48Floors(Spire2TestBase):
     }
 
     def test_no_floor_49(self):
-        self.assertFalse( "Ironclad Reached Floor 49" in self.world.get_locations())
+        self.assertNotIn("Ironclad Reached Floor 49", {location.name for location in self.world.get_locations()})
 
 
 class TestAncientRelicOptionsDefault(Spire2TestBase):
@@ -119,6 +130,31 @@ class TestAncientRelicOptionsTrueChaos(Spire2TestBase):
     def test_true_chaos_value_is_sent_in_slot_data(self):
         self.assertEqual(2, self.world.options.ancient_relic_pool.value)
         self.assertEqual(2, self.world.fill_slot_data()["ancient_relic_pool"])
+
+
+class TestAnytimeNeowContract(unittest.TestCase):
+    def test_neow_location_and_receipts_match_slot_settings_in_every_pool(self):
+        for neow_sanity in (0, 1):
+            for pool in (0, 1, 2):
+                with self.subTest(neow_sanity=neow_sanity, pool=pool):
+                    multiworld = setup_multiworld(SlayTheSpire2World, options={
+                        "characters": ["silent"],
+                        "neow_sanity": neow_sanity,
+                        "ancient_relic_location": 1,
+                        "ancient_relic_pool": pool,
+                    })
+                    slot_data = multiworld.worlds[1].fill_slot_data()
+                    self.assertEqual(neow_sanity, slot_data["neow_sanity"])
+                    self.assertEqual(1, slot_data["ancient_relic_location"])
+                    self.assertEqual(pool, slot_data["ancient_relic_pool"])
+                    self.assertEqual(2 + neow_sanity, sum(
+                        item.name == "Silent Progressive Ancient"
+                        for item in multiworld.itempool
+                    ))
+                    self.assertEqual(bool(neow_sanity), any(
+                        location.name == "Silent Ancient Act 1"
+                        for location in multiworld.get_locations(1)
+                    ))
 
 
 class TestProgressiveRelicOptionsDefault(Spire2TestBase):

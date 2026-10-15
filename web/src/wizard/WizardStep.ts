@@ -86,19 +86,8 @@ function hasModdedCharacters(answers: WizardAnswers): boolean {
  * @returns Whether the shared Ascension checklist should be shown.
  */
 function usesSharedAscensions(answers: WizardAnswers): boolean {
-  // Shared mode compiles through the standard `ascension` option arrays.
+  // Starter overrides can require advanced YAML even with shared Ascensions.
   return answers.characters.ascensionMode === "shared";
-}
-
-/**
- * Checks whether each configured character needs independent Ascension settings.
- *
- * @param answers - Current player-facing wizard answers.
- * @returns Whether the per-character advanced editor should be shown.
- */
-function usesIndividualAscensions(answers: WizardAnswers): boolean {
-  // Individual mode compiles through the `advanced_characters` dictionary.
-  return answers.characters.ascensionMode === "individual";
 }
 
 /**
@@ -179,7 +168,7 @@ export const characterSetupStep: WizardStep = {
     {
       id: "modded-characters",
       title: "Setup Modded Characters",
-      description: `Enter each modded character's unique ID so that the Archipelago mod can find them and use them properly in-game. You can have up to ${MAX_MODDED_CHARACTERS} modded characters.`,
+      description: `Enter each modded character's unique ID so that the Archipelago mod can find them and use them properly in-game. Each generated roster can include up to ${MAX_MODDED_CHARACTERS} modded characters. Larger candidate lists require random selection. Recognised characters use their display names; other selected characters are numbered in table order.`,
       isVisible: hasModdedCharacters,
     },
     {
@@ -211,8 +200,9 @@ export const characterSetupStep: WizardStep = {
     },
     {
       id: "individual-ascensions",
-      title: "Configure each character's Ascensions",
-      isVisible: usesIndividualAscensions,
+      title: "Per-character settings",
+      description:
+        "Configure progressive starter overrides for each character here, alongside individual Ascensions when selected. Global starter settings are under Checks & Rewards.",
     },
     {
       id: "selection",
@@ -341,7 +331,7 @@ export const checkSetupStep: WizardStep = {
       id: "starting-equipment",
       title: "Which starting equipment should be progressive?",
       description:
-        "These options require Floor Checks and add two progressive items per configured character.",
+        "These global defaults require Floor Checks and add two progressive items per enabled character. Override them for individual characters in Character Setup.",
       help: startingEquipmentHelp,
       isEnabled: usesFloorChecks,
       control: {
@@ -552,6 +542,23 @@ export const checkSetupStep: WizardStep = {
       id: "filler-weights",
       title: "How often should each filler item appear?",
     },
+    {
+      id: "trap-chance",
+      title: "How often should filler items become traps?",
+      help: "0% disables traps. Received traps apply at most once per player per turn; extras stay queued.",
+      control: {
+        kind: "slider",
+        field: "traps.chance",
+        range: generatedRange("trapChance"),
+        unit: "%",
+        ariaLabel: "Trap chance",
+      },
+    },
+    {
+      id: "trap-weights",
+      title: "Which traps should appear?",
+      isVisible: (answers) => answers.checksAndRewards.traps.chance > 0,
+    },
   ],
 };
 
@@ -634,9 +641,26 @@ export const progressionSetupStep: WizardStep = {
   id: "progression",
   title: "Progression",
   description:
-    "Configure Archipelago's progression-balancing and accessibility settings.",
+    "Choose generation logic, progression balancing, and accessibility.",
   sectionKey: "progression",
   questions: [
+    {
+      id: "use-new-logic",
+      control: {
+        kind: "checkbox",
+        field: "useNewLogic",
+        label: "Use New Logic",
+        description:
+          "Allow extra cards and relics to make up for missing progression items. Disable to use the previous logic.",
+      },
+      help: (answers) =>
+        answers.progression.useNewLogic &&
+        !answers.checksAndRewards.checks.includeFloorChecks &&
+        !answers.checksAndRewards.checks.goldSanity &&
+        !answers.checksAndRewards.checks.potionSanity
+          ? "Previous logic will still be used because Floor Checks, Gold Rewards, and Potion Drops are all disabled."
+          : "Previous logic is used automatically when Floor Checks, Gold Rewards, and Potion Drops are all disabled.",
+    },
     {
       id: "progression-balancing",
       title: "How strongly should Archipelago balance progression items?",

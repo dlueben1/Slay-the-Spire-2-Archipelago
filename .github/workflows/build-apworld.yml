@@ -7,7 +7,7 @@ on:
         description: "Archipelago branch, tag, or commit"
         required: false
         type: string
-        default: "debe4cf035c7c15efe6fb95f72343af0d420c68c" # The SHA for v0.6.7
+        default: "54803be064fc7e80c4628777ed0b46a9390f255f" # Archipelago 0.6.8
 
       upload_artifact:
         description: "Upload spire2.apworld for another job to consume"
@@ -64,31 +64,16 @@ jobs:
           python -m pip install --upgrade pip
           python ModuleUpdate.py -y
 
-      # When we eventually go to the next version after Archipelago 0.6.7, we can uncomment this
-      # - name: Build APWorld
-      #   shell: bash
-      #   working-directory: external/Archipelago
-      #   env:
-      #     SKIP_REQUIREMENTS_UPDATE: "true"
-      #   run: |
-      #     python Launcher.py "Build APWorlds" -- "Slay the Spire II" --skip_open_folder
-
-      - name: Build APWorld (for AP v0.6.7)
+      - name: Build APWorld
         shell: bash
         working-directory: external/Archipelago
         env:
           SKIP_REQUIREMENTS_UPDATE: "true"
         run: |
-          python - <<'PY'
-          import Launcher
+          python - <<'PYCODE'
           from worlds.LauncherComponents import _build_apworlds
-
-          # Archipelago 0.6.7 always opens the output folder after building.
-          # CI has no desktop, so disable that UI-only behavior.
-          Launcher.open_folder = lambda *_: None
-
-          _build_apworlds("Slay the Spire II")
-          PY
+          _build_apworlds("Slay the Spire II", "--skip_open_folder")
+          PYCODE
 
       - name: Collect APWorld
         shell: bash

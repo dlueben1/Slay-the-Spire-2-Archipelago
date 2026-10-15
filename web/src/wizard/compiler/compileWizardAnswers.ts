@@ -51,7 +51,12 @@ export function compileWizardAnswers(
   }
 
   // Section compilers own the only mapping from player concepts to option keys.
-  applyCharacterOptions(options, answers.characters, catalog);
+  applyCharacterOptions(
+    options,
+    answers.characters,
+    catalog,
+    answers.checksAndRewards.checks.includeFloorChecks,
+  );
   applyRunOptions(options, answers.run, catalog);
   applyChecksAndRewardsOptions(options, answers.checksAndRewards, catalog);
   applyDeathLinkOptions(options, answers.deathLink, catalog);
