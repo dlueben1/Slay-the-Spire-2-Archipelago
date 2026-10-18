@@ -11,8 +11,7 @@ Archipelago Client & APWorld for STS2
 > Beta branch updates can temporarily break compatibility until the mod is updated.
 >
 > The client contains exact builds for the main branch **v0.107.1** and beta branch
-> **v0.111.0** game versions. Later patch releases on those same version lines
-> should use the newest earlier build (for example, v0.107.2 uses v0.107.1). But this hasn't beeen tested because StS2 hasn't updated in 2/4 months.
+> **v0.111.0** game versions.
 
 ## 1.0 Development onwards
 
