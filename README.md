@@ -12,20 +12,18 @@ Archipelago Client & APWorld for STS2
 >
 > The client contains exact builds for the main branch **v0.107.1** and beta branch
 > **v0.111.0** game versions. Later patch releases on those same version lines
-> can use the newest earlier build (for example, v0.107.2 uses v0.107.1).
-> The loader refuses unreadable versions, earlier patches, and new major/minor
-> lines.
+> should use the newest earlier build (for example, v0.107.2 uses v0.107.1). But this hasn't beeen tested because StS2 hasn't updated in 2/4 months.
 
 ## 1.0 Development onwards
 
-This mod is currently in 1.0 stage and is practically feature-parity with the AP from the StS1 (barring a few features). While there are some edge case bugs, most people have successfully played an Archipelago with this world and had no issues.
+This mod is currently in 2.0 stage and is practically feature-parity with the AP from the StS1. While there are some edge case bugs, most people have successfully played an Archipelago with this world and had no issues.
 
 > [!WARNING]
 > The mod only supports English at the moment, but as we understand localization better, we can work with the community to support more languages
 
 # Installing the Mod
 
-See the [setup guide](world/spire2/docs/setup_en.md) for installation, YAML configuration, generation and connection instructions.
+See the [setup guide](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/multiplayer_setup.md) for installation, YAML configuration, generation and connection instructions.
 
 There are two ways to install the mod, detailed below.
 
@@ -63,16 +61,12 @@ Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetai
 - Interesting Filler Items
 - Progressive Ancients
 - Progressive Starter Card and Relic (ie None -> Bash -> Break)
-
-## What's **NOT** Included
-
-- **Multiplayer Support**
-  - This is a popular request, but it will not be something we work on until _everything else_ is stable. You will be waiting a very long time for this, sorry.
-- Traps
-- Polish
+- Multiplayer Support
+- Traps (more will be added)
+- Modded Character Support
 
 > [!CAUTION]
-> I don't recommend having any other mods installed whatsoever, especially while this is in Alpha development. Do it at your own risk.
+> Mods such as modded character are supported but may or may not work. I do know that 'Downfall Classic' and 'IntoTheSpireVerse' and also 'Watcher by Lamali' all work well as of the 2.0.0 release.
 
 # Special Thanks
 
