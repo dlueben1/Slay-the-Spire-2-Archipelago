@@ -88,8 +88,16 @@ server address, port and any password for connecting.
 3. Enter the session's server address/port, your YAML's slot name and any password.
 4. Connect, then follow the mod's character/run selection.
 
-Avoid unrelated gameplay mods when troubleshooting. All players sharing an
-in-game multiplayer lobby should use the same Archipelago mod version.
+Avoid unrelated gameplay mods when troubleshooting.
+
+## Multiplayer
+
+The mod supports the game's co-op. Everyone in a lobby needs the same game
+version and the same gameplay-changing mods, and the host must be connected to
+an AP slot. Other players can share the host's slot, use their own slots, or
+join as vanilla guests without a slot. See the
+[multiplayer setup guide](../../../docs/multiplayer_setup.md) for hosting,
+joining and recommended settings.
 
 ## Troubleshooting
 
