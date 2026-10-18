@@ -37,6 +37,7 @@ PREDEFINED_CHARACTERS = (
     CharacterDefinition("Tectonic", "INTOTHESPIREVERSE-SHADOW_IRONCLAD"),
     CharacterDefinition("Captain", "INTOTHESPIREVERSE-SHADOW_REGENT"),
     CharacterDefinition("Acolyte", "INTOTHESPIREVERSE-SHADOW_SILENT"),
+    # Downfall - Classic Characters
     CharacterDefinition("Slime Boss", "SLIMEBOSS-SLIME_BOSS"),
     CharacterDefinition("Guardian", "GUARDIAN-GUARDIAN"),
     CharacterDefinition("Hexaghost", "HEXAGHOST-HEXAGHOST"),
@@ -45,8 +46,10 @@ PREDEFINED_CHARACTERS = (
     CharacterDefinition("Snecko", "SNECKO-SNECKO"),
     CharacterDefinition("Hermit", "HERMIT-HERMIT"),
     CharacterDefinition("Awakened One", "AWAKENED-AWAKENED"),
+    # Watcher by Lamali
     CharacterDefinition("Watcher", "WATCHER-WATCHER"),
     CharacterDefinition("Hornet", "HORNET_MOD_CHARACTER_HORNET_MOD_CHARACTER"),
+    # Slugcat the Spirell
     CharacterDefinition("Slugcat Survivor", "SLUGCAT_THE_SPIRE_II_CHARACTER_RAINWORLD_LIVER"),
     CharacterDefinition("Slugcat Hunter", "SLUGCAT_THE_SPIRE_II_CHARACTER_RAINWORLD_REDCAT"),
     CharacterDefinition("Slugcat Rivulet", "SLUGCAT_THE_SPIRE_II_CHARACTER_RAINWORLD_RIVER"),
