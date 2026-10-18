@@ -46,6 +46,18 @@ PREDEFINED_CHARACTERS = (
     CharacterDefinition("Hermit", "HERMIT-HERMIT"),
     CharacterDefinition("Awakened One", "AWAKENED-AWAKENED"),
     CharacterDefinition("Watcher", "WATCHER-WATCHER"),
+    CharacterDefinition("Hornet", "HORNET_MOD_CHARACTER_HORNET_MOD_CHARACTER"),
+    CharacterDefinition("Slugcat Survivor", "SLUGCAT_THE_SPIRE_II_CHARACTER_RAINWORLD_LIVER"),
+    CharacterDefinition("Slugcat Hunter", "SLUGCAT_THE_SPIRE_II_CHARACTER_RAINWORLD_REDCAT"),
+    CharacterDefinition("Slugcat Rivulet", "SLUGCAT_THE_SPIRE_II_CHARACTER_RAINWORLD_RIVER"),
+    # IDs from each mod's beta-branch Workshop edition; main-branch editions are separate items.
+    CharacterDefinition("Alchemist", "ALCHEMIST-ALCHEMIST"),
+    CharacterDefinition("Runesmith", "RUNESMITH2-RUNESMITH2"),
+    CharacterDefinition("Witch", "THEWITCH-WITCH"),
+    CharacterDefinition("Tailor", "THETAILOR-THE_TAILOR"),
+    CharacterDefinition("Engineer", "THEENGINEER-THE_ENGINEER"),
+    CharacterDefinition("Kakarot", "KAKAROTMOD-KAKAROT"),
+    CharacterDefinition("Fae Sorceress", "FAESORCERESS-FAE_SORCERESS"),
 )
 
 

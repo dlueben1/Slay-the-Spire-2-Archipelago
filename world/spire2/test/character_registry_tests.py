@@ -46,6 +46,17 @@ class TestCharacterRegistry(unittest.TestCase):
             ("Hermit", "HERMIT-HERMIT"),
             ("Awakened One", "AWAKENED-AWAKENED"),
             ("Watcher", "WATCHER-WATCHER"),
+            ("Hornet", "HORNET_MOD_CHARACTER_HORNET_MOD_CHARACTER"),
+            ("Slugcat Survivor", "SLUGCAT_THE_SPIRE_II_CHARACTER_RAINWORLD_LIVER"),
+            ("Slugcat Hunter", "SLUGCAT_THE_SPIRE_II_CHARACTER_RAINWORLD_REDCAT"),
+            ("Slugcat Rivulet", "SLUGCAT_THE_SPIRE_II_CHARACTER_RAINWORLD_RIVER"),
+            ("Alchemist", "ALCHEMIST-ALCHEMIST"),
+            ("Runesmith", "RUNESMITH2-RUNESMITH2"),
+            ("Witch", "THEWITCH-WITCH"),
+            ("Tailor", "THETAILOR-THE_TAILOR"),
+            ("Engineer", "THEENGINEER-THE_ENGINEER"),
+            ("Kakarot", "KAKAROTMOD-KAKAROT"),
+            ("Fae Sorceress", "FAESORCERESS-FAE_SORCERESS"),
         ]
         for block, (name, internal_id) in enumerate(expected, start=40):
             self.assertEqual((name, internal_id),
@@ -120,20 +131,24 @@ class TestCharacterRosters(unittest.TestCase):
         self.assertEqual([1, 2, 3], [c.mod_num for c in world.characters])
 
     def test_every_predefined_alias_matches_its_internal_id_in_both_modes(self):
+        # A single roster is capped at NUM_CUSTOM modded characters, so check the registry in batches.
+        batches = [PREDEFINED_CHARACTERS[start:start + NUM_CUSTOM]
+                   for start in range(0, len(PREDEFINED_CHARACTERS), NUM_CUSTOM)]
         for advanced in (False, True):
-            aliases = [definition.name.swapcase() for definition in PREDEFINED_CHARACTERS]
-            ids = [definition.internal_id for definition in PREDEFINED_CHARACTERS]
-            def generate(roster):
-                return self.generate(modded_characters=roster, use_advanced_characters=advanced,
-                                     advanced_characters={name: {"progressive_starter_card": True}
-                                                          for name in roster})
-            by_alias, by_id = generate(aliases), generate(ids)
-            self.assertEqual([(c.name, c.official_name, c.char_offset, c.mod_num) for c in by_id.characters],
-                             [(c.name, c.official_name, c.char_offset, c.mod_num) for c in by_alias.characters])
-            self.assertEqual([(loc.name, loc.address) for loc in by_id.get_locations()],
-                             [(loc.name, loc.address) for loc in by_alias.get_locations()])
-            if advanced:
-                self.assertTrue(all(c.progressive_starter_card for c in by_alias.characters))
+            for batch in batches:
+                aliases = [definition.name.swapcase() for definition in batch]
+                ids = [definition.internal_id for definition in batch]
+                def generate(roster):
+                    return self.generate(modded_characters=roster, use_advanced_characters=advanced,
+                                         advanced_characters={name: {"progressive_starter_card": True}
+                                                              for name in roster})
+                by_alias, by_id = generate(aliases), generate(ids)
+                self.assertEqual([(c.name, c.official_name, c.char_offset, c.mod_num) for c in by_id.characters],
+                                 [(c.name, c.official_name, c.char_offset, c.mod_num) for c in by_alias.characters])
+                self.assertEqual([(loc.name, loc.address) for loc in by_id.get_locations()],
+                                 [(loc.name, loc.address) for loc in by_alias.get_locations()])
+                if advanced:
+                    self.assertTrue(all(c.progressive_starter_card for c in by_alias.characters))
 
     def test_fixed_start_accepts_alias_or_internal_id_with_either_roster_spelling(self):
         for advanced in (False, True):
@@ -180,7 +195,9 @@ class TestCharacterRosters(unittest.TestCase):
                          (fixed.characters[0].name, fixed.characters[0].official_name))
 
     def test_twenty_modded_characters_and_vanilla_can_generate_and_fill(self):
-        roster = [definition.internal_id for definition in PREDEFINED_CHARACTERS] + [f"Mod-{i}" for i in range(8)]
+        generic = [f"Mod-{i}" for i in range(8)]
+        predefined = [definition.internal_id for definition in PREDEFINED_CHARACTERS[:NUM_CUSTOM - len(generic)]]
+        roster = predefined + generic
         for new_logic in (False, True):
             with self.subTest(new_logic=new_logic):
                 world = self.generate(characters=character_list, modded_characters=roster,

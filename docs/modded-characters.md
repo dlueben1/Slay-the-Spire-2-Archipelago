@@ -1,6 +1,9 @@
 # Finding a modded character ID
 
-Predefined characters accept their display names as YAML aliases: **Tectonic, Captain, Acolyte, Slime Boss, Guardian, Hexaghost, Champ, Automaton, Snecko, Hermit, Awakened One, and Watcher**. Names are case-insensitive; full internal IDs still work. Use these aliases in `modded_characters`, as `advanced_characters` keys, or in `unlocked_character`.
+Predefined characters accept their display names as YAML aliases: **Tectonic, Captain, Acolyte, Slime Boss, Guardian, Hexaghost, Champ, Automaton, Snecko, Hermit, Awakened One, Watcher, Hornet, Slugcat Survivor, Slugcat Hunter, Slugcat Rivulet, Alchemist, Runesmith, Witch, Tailor, Engineer, Kakarot, and Fae Sorceress**. Names are case-insensitive; full internal IDs still work.
+
+> [!NOTE]
+> Alchemist, Runesmith, Witch, Tailor and Engineer use the IDs from those mods' beta-branch Workshop editions. If you play the main-branch edition and connecting reports that the character is not loaded, use the internal ID shown in-game instead of the name. Use these aliases in `modded_characters`, as `advanced_characters` keys, or in `unlocked_character`.
 
 ```yaml
 modded_characters:
