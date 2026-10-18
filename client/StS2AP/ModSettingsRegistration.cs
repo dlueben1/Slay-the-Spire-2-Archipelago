@@ -139,6 +139,14 @@ public static class ModSettingsRegistration
     {
         section.WithTitle(ModSettingsText.Literal("Installed Characters"))
                 .WithDescription(ModSettingsText.Literal("Internal Names of Installed Modded Characters"))
+                // The info card cannot scroll or select text, so long rosters need the copy button.
+                .AddButton("copy_modded_character_ids", ModSettingsText.Literal("Copy character IDs"),
+                    ModSettingsText.Literal("Copy"), host =>
+                    {
+                        InstalledCharacterIds.TryCopyToClipboard(out _);
+                        host.RequestRefresh();
+                    }, description: ModSettingsText.Dynamic(() =>
+                        InstalledCharacterIds.Status + " You can also type ap characters in the console."))
                 .AddInfoCard("ap-modded-chars", ModSettingsText.Literal("Character Names"), ModSettingsText.Dynamic(GetModdedNames));
 
     }
@@ -157,31 +165,8 @@ public static class ModSettingsRegistration
                 ModSettingsText.Dynamic(() => ApBugReport.Status));
     }
 
-    private static string GetModdedNames()
-    {
-        StringWriter sw =  new StringWriter();
-        var moddedChars = ModelDb.AllCharacters.Where(c => {
-            if(!c.IsPlayable)
-            {
-                return false;
-            }
-            switch(c.Id.Entry)
-            {
-                case "IRONCLAD":
-                case "SILENT":
-                case "REGENT":
-                case "DEFECT":
-                case "NECROBINDER":
-                    return false;
-            }
-            return true;
-        });
-        foreach(var c in moddedChars)
-        {
-            sw.WriteLine(c.Id.Entry);
-        }
-        return sw.ToString();
-    }
+    private static string GetModdedNames() =>
+        string.Join(System.Environment.NewLine, InstalledCharacterIds.GetModdedIds());
 
     /// <summary>
     /// Composes the Keybinds settings section
