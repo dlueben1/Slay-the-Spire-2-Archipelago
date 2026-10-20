@@ -5,6 +5,7 @@ from test.general import setup_multiworld
 from worlds.spire2 import SlayTheSpire2World
 from worlds.spire2.characters import character_list
 from worlds.spire2.rules import SpireHasPower
+from worlds.spire2.rules_new import LATER_CARD_POWER
 
 
 class LogicTests(unittest.TestCase):
@@ -137,9 +138,9 @@ class LogicTests(unittest.TestCase):
                 with self.subTest(full_shuffle=full_shuffle, received=received):
                     state.collect(world.create_item("Silent Card Reward"), prevent_sweep=True)
                     after = rule.strength(state)
-                    expected = 1 if received < first_discounted else 0.5
-                    self.assertEqual(expected, after[0] - before[0])
-                    self.assertEqual(expected, after[1] - before[1])
+                    expected = 1 if received < first_discounted else LATER_CARD_POWER
+                    self.assertAlmostEqual(expected, after[0] - before[0])
+                    self.assertAlmostEqual(expected, after[1] - before[1])
                     self.assertEqual(before[2], after[2])
                     before = after
             state.collect(world.create_item("Silent Rare Card Reward"), prevent_sweep=True)

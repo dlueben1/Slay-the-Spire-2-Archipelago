@@ -17,6 +17,10 @@ if TYPE_CHECKING:
 # Sparse-opening item guarantees use the same budget as this first power check.
 MID_ACT_1_POWER = 4.0
 
+# Power from each ordinary card reward after the full-value ones. Higher values reach power
+# checks with fewer card rewards, so players are expected to progress with weaker decks.
+LATER_CARD_POWER = 0.7
+
 
 # First useful choices matter more than a full page. Values are marginal per slot;
 # colored-card/relic choice contributes 1.5 each, neutral 0.5, potions 1 altogether.
@@ -102,7 +106,7 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
             # Later ordinary choices are more likely to be skipped; half shuffle reaches
             # this point with fewer AP receipts because it also provides free combat cards.
             cards = (min(received_cards, self.full_value_cards)
-                     + 0.5 * max(0, received_cards - self.full_value_cards)
+                     + LATER_CARD_POWER * max(0, received_cards - self.full_value_cards)
                      + 1.5 * state.count(f"{self.char} Rare Card Reward", self.player)
                      + self.vanilla_cards)
             # The first receipt restores the normal loadout; only the second adds power above it.
@@ -201,7 +205,8 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
             else:
                 lines.append(f"  Minimum card strength: {self.minimum_cards:g}; support adjusts required power.")
             lines.extend((
-                f"  Ordinary cards: first {self.full_value_cards} worth 1 each, later cards 0.5; rare cards 1.5.",
+                f"  Ordinary cards: first {self.full_value_cards} worth 1 each, "
+                f"later cards {LATER_CARD_POWER:g}; rare cards 1.5.",
                 f"  Expected unshuffled card power: {self.vanilla_cards:g}.",
                 "  Support adjustments can be offset by power. Separate item gates still apply.",
             ))
