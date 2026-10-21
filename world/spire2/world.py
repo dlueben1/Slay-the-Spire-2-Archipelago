@@ -10,7 +10,7 @@ from BaseClasses import CollectionState, Item, Location, Region, MultiWorld, Ite
 from Options import OptionError
 from worlds.AutoWorld import World
 from .regions import create_regions
-from .rules import FALLBACK_REASON, select_logic, set_rules
+from .rules import FALLBACK_REASON, is_sparse, select_logic, set_rules
 from .rules_new import shop_gold_by_act
 from . import rules_old
 from .logic_table import REGIONS, RELIC_POWER, card_reward_strength, card_reward_table, card_rewards_needed
@@ -27,6 +27,31 @@ from .options import Spire2Options
 COMBAT_GOLD_ITEM_COUNT = 13
 ELITE_GOLD_ITEM_COUNT = 7
 BOSS_GOLD_ITEM_COUNT = 2
+
+SPARSE_SHOP_ITEM_TYPES = {ItemType.SHOP_CARD, ItemType.SHOP_NEUTRAL, ItemType.SHOP_RELIC, ItemType.SHOP_POTION,
+                          ItemType.SHOP_REMOVE}
+
+
+def sparse_placement_rank(item: 'SlayTheSpire2Item') -> int:
+    """When fill should place this progression item in a sparse world; lower ranks go first.
+
+    Items placed first are placed while nearly every other item is still held, so they can take
+    the late checks. Card Rewards, which matter least one at a time, should take those. Support
+    that early gates need goes last, when only early checks are still reachable.
+    """
+    item_type = item.item_data.type
+    if item_type == ItemType.CARD_REWARD:
+        return 0
+    if item_type in (ItemType.RELIC, ItemType.RARE_CARD_REWARD) or item_type in SPARSE_SHOP_ITEM_TYPES:
+        return 1
+    if item.name.endswith(" Progressive Smith"):
+        return 2
+    if item_type == ItemType.PROGRESSIVE_ANCIENT:
+        return 3
+    if item.name.endswith(" Progressive Rest"):
+        return 4
+    # Unlocks and anything else.
+    return 5
 
 
 class SlayTheSpire2Item(Item):
@@ -646,6 +671,19 @@ class SlayTheSpire2World(World):
 
     def set_rules(self) -> None:
         set_rules(self)
+
+    def fill_hook(self, progitempool: List[Item], usefulitempool: List[Item], filleritempool: List[Item],
+                  fill_locations: List[Location]) -> None:
+        # A sparse world on new logic has about one location per item. Fill takes each player's
+        # items from the end of this pool, so order this world's own items by placement rank,
+        # within the positions they already hold. Other players' items do not move.
+        if self.effective_logic != "new" or not is_sparse(self.options):
+            return
+        positions = [index for index, item in enumerate(progitempool) if item.player == self.player]
+        # Python's sort is stable, so items of one rank keep their shuffled order.
+        ordered = sorted((progitempool[index] for index in positions), key=sparse_placement_rank, reverse=True)
+        for index, item in zip(positions, ordered):
+            progitempool[index] = item
 
     def fill_slot_data(self) -> dict:
         slot_data = {

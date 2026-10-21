@@ -20,7 +20,8 @@ class UseNewLogic(DefaultOnToggle):
     no longer requires this as 'Power' can be made up with extra cards/relics. Similar cases for ancients/smiths/rests.
 
     Old logic is used automatically (regardless of this option) when floor, gold, and potion checks
-     are all disabled to reduce failed generations.
+    are all disabled and this is the only world in the generation, to reduce failed generations.
+    The spoiler log records which logic a world used.
     """
     display_name = "Use New Logic"
 

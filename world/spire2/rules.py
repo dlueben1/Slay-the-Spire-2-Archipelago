@@ -3,12 +3,18 @@ from . import rules_new, rules_old
 # Preserve imports used by the progression-analysis tools and existing tests.
 from .rules_new import MID_ACT_1_POWER, SpireHasPower, SpireHasGold
 
-__all__ = ["MID_ACT_1_POWER", "SpireHasPower", "SpireHasGold", "FALLBACK_REASON", "select_logic", "set_rules"]
+__all__ = ["MID_ACT_1_POWER", "SpireHasPower", "SpireHasGold", "FALLBACK_REASON", "is_sparse", "select_logic",
+           "set_rules"]
 
 FALLBACK_REASON = (
-    "Floor, gold, and potion checks are all disabled; "
+    "Floor, gold, and potion checks are all disabled in a single-player generation; "
     "use old logic to avoid known sparse-fill failures."
 )
+
+
+def is_sparse(options) -> bool:
+    """Whether a world has about one location per item: floor, gold and potion checks all off."""
+    return not any((options.include_floor_checks, options.gold_sanity, options.potion_sanity))
 
 
 def select_logic(world) -> None:
@@ -16,11 +22,10 @@ def select_logic(world) -> None:
     world.effective_logic = "new" if options.use_new_logic else "old"
     world.logic_fallback_reason = None
 
-    # fallback to previous logic to prevent generation issues in restricted options
-    if world.effective_logic == "new" and not any((
-        options.include_floor_checks,
-        options.gold_sanity, options.potion_sanity,
-    )):
+    # A sparse world generated alone has nowhere to put its items but its own few locations, and
+    # new logic's late gates then leave fill too little room. Other players' locations give it
+    # that room, as fuzzing confirms.
+    if world.effective_logic == "new" and is_sparse(options) and world.multiworld.players == 1:
         world.effective_logic = "old"
         world.logic_fallback_reason = FALLBACK_REASON
 
