@@ -42,20 +42,27 @@ def format_columns(rows: list[tuple[str, ...]]) -> list[str]:
 
 
 def format_tables(table: ModuleType) -> str:
-    rows = [("Region", "Act", "Power", "Card rewards", "Vanilla cards*", "Min cards",
-             "Rest tier", "Smith tiers", "Removal tiers", "Shop scale")]
+    relics: dict[str, list[int]] = {}
+    for number, region in table.RELIC_REGIONS.items():
+        relics.setdefault(region, []).append(number)
+    rows = [("Region", "Act", "Power", "Seeded", "Card rewards", "Vanilla cards*", "Min cards",
+             "Rest tier", "Smith tiers", "Removal tiers", "Shop scale", "Relic checks")]
     for region, check in table.REGIONS.items():
         rows.append((
-            region, str(check.act), f"{check.power:g}", str(check.card_rewards),
+            region, str(check.act), f"{check.power:g}",
+            f"{check.seeded_power:g}" if check.seeded_power is not None else "-", str(check.card_rewards),
             f"{check.vanilla_card_strength:g}", f"{check.minimum_cards:g}",
             str(check.rest_tier) if check.rest_tier else "-", tiers(check.smith_tiers),
             tiers(check.removal_tiers), f"{check.shop_scale:.3g}" if check.shop_scale else "-",
+            ", ".join(map(str, relics.get(region, []))) or "-",
         ))
     lines = [
         "Regions: power >= base power + missing support, and card strength >= min cards",
         *format_columns(rows),
         "* Half shuffle only: vanilla card rewards already in the run, counted as card strength.",
+        "  Seeded: power with Seeded Run, when it differs.",
         "  Rest, smith and removal tiers count only when that support is shuffled.",
+        "  Act 2 and Act 3 Elites also need the previous act's Elites region.",
         "",
         "Card strength and power from AP items",
         f"  Card Reward: first {table.FULL_VALUE_CARD_REWARDS} worth 1 each "

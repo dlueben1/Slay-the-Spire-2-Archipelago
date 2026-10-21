@@ -5,7 +5,7 @@ from typing_extensions import override
 from BaseClasses import CollectionState
 from NetUtils import JSONMessagePart
 from rule_builder.options import OptionFilter
-from rule_builder.rules import Rule, True_, Has, HasFromListUnique
+from rule_builder.rules import Rule, True_, CanReachRegion, Has, HasFromListUnique
 from .characters import CharacterConfig, VANILLA_CHARACTERS, DEFAULT_STARTER_POWER
 from .logic_table import (
     ANCIENT_POWER_BY_TIER, BOSS_GOLD, ELITE_GOLD, FULL_VALUE_CARD_REWARDS, FULL_VALUE_CARD_REWARDS_ALL_SHUFFLED,
@@ -47,12 +47,15 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
     smith: bool = False
     remove: bool = False
     shop: bool = False
+    # Region name for explanations; checks built outside the region table may leave it empty.
+    region: str = ""
 
     @classmethod
-    def for_region(cls, char_offset: int, check: PowerCheck) -> 'SpireHasPower':
-        return cls(char_offset, check.power, card_rewards=check.card_rewards, act=check.act,
+    def for_region(cls, char_offset: int, region: str, seeded: bool) -> 'SpireHasPower':
+        check = REGIONS[region]
+        return cls(char_offset, check.power_for(seeded), card_rewards=check.card_rewards, act=check.act,
                    minimum_cards=check.minimum_cards, rest=check.rest, smith=check.smith,
-                   remove=check.remove, shop=check.shop)
+                   remove=check.remove, shop=check.shop, region=region)
 
     @override
     def _instantiate(self, world: 'SlayTheSpire2World') -> Rule.Resolved:
@@ -86,6 +89,7 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
                                 if reviewed_starters and config.progressive_starter_relic else (0, 0),
             starter_pair_power=STARTER_PAIR_POWER.get(config.name, DEFAULT_STARTER_POWER.missing_pair)
                                if reviewed_starters else 0,
+            region=self.region or f"Act {self.act}",
             player=world.player,
         )
 
@@ -107,6 +111,7 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
         starter_card_power: tuple[float, float]
         starter_relic_power: tuple[float, float]
         starter_pair_power: float
+        region: str
 
         def count(self, state: CollectionState, item: str) -> int:
             return state.count(f"{self.char} {item}", self.player)
@@ -217,7 +222,7 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
         def ledger_lines(self, state: CollectionState) -> List[str]:
             cards, power, required = self.strength(state)
             lines = [
-                f"{self.char} Act {self.act} power check: {'met' if self._evaluate(state) else 'not met'}",
+                f"{self.char} {self.region} power check: {'met' if self._evaluate(state) else 'not met'}",
                 f"  Card strength {cards:g} of {self.minimum_cards:g} needed",
                 *(f"    {entry.label}: {entry.amount:g}" for entry in self.card_entries(state)),
                 f"  Power {power:g} of {required:g} needed",
@@ -248,7 +253,7 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
             if self.shop_scale:
                 support.append("shop choices")
             lines = [
-                f"{self.char} Act {self.act} power check",
+                f"{self.char} {self.region} power check",
                 f"  Base power {self.power_level:g}; card strength at least {self.minimum_cards:g}.",
                 f"  Ordinary card rewards: first {self.full_value_cards} worth 1 each, "
                 f"later ones {LATER_CARD_POWER:g}; rare card rewards {RARE_CARD_POWER:g}; relics {RELIC_POWER:g}.",
@@ -301,8 +306,11 @@ def _set_rules(world: 'SlayTheSpire2World', config: CharacterConfig) -> None:
     neow_tier = int(bool(world.options.neow_sanity))
     world.set_rule(world.get_entrance(f"{prefix} Early Act 1"), Has(f"{prefix} Unlock"))
 
-    region_rules: dict[str, Rule] = {region: SpireHasPower.for_region(offset, check)
-                                     for region, check in REGIONS.items()}
+    seeded = bool(world.options.seeded)
+    region_rules: dict[str, Rule] = {region: SpireHasPower.for_region(offset, region, seeded) for region in REGIONS}
+    # Relic counts in later Elites regions assume the earlier acts' elites were fought too.
+    for act in (2, 3):
+        region_rules[f"Act {act} Elites"] &= CanReachRegion(f"{prefix} Act {act - 1} Elites")
     # Item gates that extra power cannot replace.
     if config.mod_num:
         # Unknown starter effects keep the conservative 'gates' for modded characters.

@@ -2,6 +2,7 @@ from math import ceil, floor
 from typing import TYPE_CHECKING, List
 
 from BaseClasses import Region
+from .logic_table import RELIC_REGIONS
 
 if TYPE_CHECKING:
     from worlds.spire2.world import SlayTheSpire2World
@@ -30,6 +31,15 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
     multiworld = world.multiworld
     every_other = not world.options.shuffle_all_cards
     ascension_mod = 1 if 'DoubleBoss'.lower() in config.ascension and 'DoubleBoss'.lower() not in config.ascension_down else 0
+    # Old logic has no elite track, so it keeps the relic checks in their original path regions.
+    two_tracks = world.effective_logic == "new"
+    relic_regions = RELIC_REGIONS if two_tracks else LEGACY_RELIC_REGIONS
+
+    def relics(region: str) -> List[str]:
+        return [f"Relic {number}" for number, name in relic_regions.items() if name == region]
+
+    def elites_exit(act: int) -> List[str]:
+        return [f"Act {act} Elites"] if two_tracks else []
 
     # IMPORTANT: Keep these location ranges at the canonical singleplayer counts. Multiplayer
     # has one fewer physical floor per act and fewer associated reward opportunities; the client
@@ -55,23 +65,24 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
 
     multiworld.regions.append(world.create_region(player, prefix, 'Mid Act 1', config,
                                                   [
-                                                      'Relic 1',
-                                                      'Relic 2',
+                                                      *relics('Mid Act 1'),
                                                       "Potion Drop 2",
                                                       "Act 1 Campfire 2",
                                                       *_create_floor_check(7, 11),
                                                       *_create_combat_check(5, 6),
                                                       *_create_card_rewards(5,6, every_other),
-                                                  ],["Late Act 1"]))
+                                                  ],["Late Act 1", *elites_exit(1)]))
 
     multiworld.regions.append(world.create_region(player, prefix, 'Late Act 1', config,
                                                   [
-                                                      'Relic 3',
+                                                      *relics('Late Act 1'),
                                                       "Potion Drop 3",
                                                       *_create_floor_check(12, 16),
                                                       *_create_combat_check(7, 8),
                                                       *_create_card_rewards(7,8, every_other)
                                                   ], ['Act 1 Boss Arena']))
+    if two_tracks:
+        multiworld.regions.append(world.create_region(player, prefix, 'Act 1 Elites', config, relics('Act 1 Elites')))
 
     multiworld.regions.append(world.create_region(player, prefix, 'Act 1 Boss Arena', config,
                                                   [
@@ -96,23 +107,24 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                   [f"Shop Slot {i}" for i in range(6,11)]))
     multiworld.regions.append(world.create_region(player, prefix, 'Mid Act 2', config,
                                                   [
-                                                      'Relic 4',
-                                                      'Relic 5',
+                                                      *relics('Mid Act 2'),
                                                       "Potion Drop 5",
                                                       "Act 2 Campfire 2",
                                                       *_create_floor_check(23, 27),
                                                       *_create_combat_check(11, 12),
                                                       *_create_card_rewards(11, 12, every_other)
-                                                  ], ["Late Act 2"]))
+                                                  ], ["Late Act 2", *elites_exit(2)]))
 
     multiworld.regions.append(world.create_region(player, prefix, 'Late Act 2', config,
                                                   [
-                                                      'Relic 6',
+                                                      *relics('Late Act 2'),
                                                       "Potion Drop 6",
                                                       *_create_floor_check(28, 32),
                                                       *_create_combat_check(13, 14),
                                                       *_create_card_rewards(13, 14, every_other)
                                                   ], ['Act 2 Boss Arena']))
+    if two_tracks:
+        multiworld.regions.append(world.create_region(player, prefix, 'Act 2 Elites', config, relics('Act 2 Elites')))
 
     multiworld.regions.append(world.create_region(player, prefix, 'Act 2 Boss Arena', config,
                                                   [
@@ -138,25 +150,25 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
 
     multiworld.regions.append(world.create_region(player, prefix, 'Mid Act 3', config,
                                                   [
-                                                      "Relic 7",
-                                                      "Relic 8",
+                                                      *relics('Mid Act 3'),
                                                       "Potion Drop 8",
                                                       "Act 3 Campfire 2",
                                                       *_create_floor_check(39, 43),
                                                       *_create_combat_check(17, 18),
                                                       *_create_card_rewards(17, 18, every_other)
-                                                  ], ["Late Act 3"]))
+                                                  ], ["Late Act 3", *elites_exit(3)]))
 
 
     multiworld.regions.append(world.create_region(player, prefix, 'Late Act 3', config,
                                                   [
-                                                      "Relic 9",
-                                                      "Relic 10",
+                                                      *relics('Late Act 3'),
                                                       "Potion Drop 9",
                                                       *_create_floor_check(44, 47),
                                                       *_create_combat_check(19, 20),
                                                       *_create_card_rewards(19, 20, every_other)
                                                   ], ['Act 3 Boss Arena']))
+    if two_tracks:
+        multiworld.regions.append(world.create_region(player, prefix, 'Act 3 Elites', config, relics('Act 3 Elites')))
 
 
     multiworld.regions.append(world.create_region(player, prefix, 'Act 3 Boss Arena', config,
@@ -164,6 +176,14 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                       "Act 3 Boss",
                                                       *_create_floor_check(48, 48 + ascension_mod),
                                                   ]))
+
+# Relic placement before the elite track. Old logic gates these path regions by power alone.
+LEGACY_RELIC_REGIONS = {
+    1: "Mid Act 1", 2: "Mid Act 1", 3: "Late Act 1",
+    4: "Mid Act 2", 5: "Mid Act 2", 6: "Late Act 2",
+    7: "Mid Act 3", 8: "Mid Act 3", 9: "Late Act 3", 10: "Late Act 3",
+}
+
 
 def _create_floor_check(start: int, end: int) -> List[str]:
     return [f"Reached Floor {i}" for i in range(start, end + 1)]

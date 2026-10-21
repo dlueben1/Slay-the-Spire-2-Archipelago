@@ -121,14 +121,16 @@ class SlayTheSpire2World(World):
             # Mixing cards and relics meets the power/card floor within the available checks;
             # ordinary cards alone can fill every opening slot and still fall short.
             early_items = self.multiworld.early_items[self.player]
-            mid_act_1 = REGIONS["Mid Act 1"]
-            vanilla_cards = 0 if self.options.shuffle_all_cards else mid_act_1.vanilla_card_strength
-            cards = max(0, ceil(mid_act_1.minimum_cards - vanilla_cards))
-            relics = ceil((mid_act_1.power - cards - vanilla_cards) / RELIC_POWER)
-            if self.effective_logic == "old" and not self.options.shuffle_all_cards:
-                # Old logic values a half-shuffled Card Reward at 2 power. Pair it with
-                # one Relic for 3.5 power using the same two early slots as two Relics.
-                cards, relics = 1, 1
+            if self.effective_logic == "old":
+                # Old logic's Mid Act 1 needs 3 power. It values a half-shuffled Card Reward at 2,
+                # so one Card Reward and one Relic use the same two early slots as two Relics.
+                cards, relics = (1, 2) if self.options.shuffle_all_cards else (1, 1)
+            else:
+                mid_act_1 = REGIONS["Mid Act 1"]
+                power = mid_act_1.power_for(bool(self.options.seeded))
+                vanilla_cards = 0 if self.options.shuffle_all_cards else mid_act_1.vanilla_card_strength
+                cards = max(0, ceil(mid_act_1.minimum_cards - vanilla_cards))
+                relics = max(0, ceil((power - cards - vanilla_cards) / RELIC_POWER))
             for config in self.characters:
                 if config.locked:
                     continue
@@ -703,6 +705,8 @@ class SlayTheSpire2World(World):
             FALLBACK_REASON if self.options.use_new_logic and self.effective_logic == "old" else None
         )
         self.options.lock_characters.value = slot_data['lock_characters']
+        # Seeded Run changes Act 1 power checks.
+        self.options.seeded.value = slot_data['seeded']
         self.options.shop_card_slots.value = slot_data["shop_sanity_options"]["card_slots"]
         self.options.shop_remove_slots.value = slot_data["shop_sanity_options"]["card_remove"]
         self.options.shop_neutral_card_slots.value = slot_data["shop_sanity_options"]["neutral_slots"]

@@ -58,13 +58,15 @@ class LogicTests(unittest.TestCase):
 
     def test_sparse_opening_guarantees_meet_first_power_check(self):
         for full_shuffle in (False, True):
-            with self.subTest(shuffle_all_cards=full_shuffle):
-                world = self.make_world(include_floor_checks=False, shuffle_all_cards=full_shuffle)
-                state = CollectionState(world.multiworld)
-                for item, count in world.multiworld.early_items[1].items():
-                    for _ in range(count):
-                        state.collect(world.create_item(item), prevent_sweep=True)
-                self.assertTrue(world.get_entrance('Silent Mid Act 1').access_rule(state))
+            for seeded in (False, True):
+                with self.subTest(shuffle_all_cards=full_shuffle, seeded=seeded):
+                    world = self.make_world(include_floor_checks=False, shuffle_all_cards=full_shuffle,
+                                            seeded=seeded)
+                    state = CollectionState(world.multiworld)
+                    for item, count in world.multiworld.early_items[1].items():
+                        for _ in range(count):
+                            state.collect(world.create_item(item), prevent_sweep=True)
+                    self.assertTrue(world.get_entrance('Silent Mid Act 1').access_rule(state))
 
     def test_gold_and_potion_sanity_do_not_change_power_requirements(self):
         for floors in (False, True):

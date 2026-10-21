@@ -32,6 +32,11 @@ class PowerCheck:
     smith: bool = False   # every smith tier up to this act
     remove: bool = False  # this act's card removal; without it, only earlier acts' removals
     shop: bool = False    # this act's shop choices
+    # Power with Seeded Run, where every run replays the same map, when it differs.
+    seeded_power: float | None = None
+
+    def power_for(self, seeded: bool) -> float:
+        return self.seeded_power if seeded and self.seeded_power is not None else self.power
 
     @property
     def vanilla_card_strength(self) -> float:
@@ -57,22 +62,43 @@ class PowerCheck:
 
 # --- Regions ---------------------------------------------------------------------------------
 
+# Each act has two tracks. The path track (Early, Mid, Late, Boss) holds every check a run can
+# reach while walking around elites: the map has no elites before row 6, where Mid begins, one
+# chest on a fixed row inside Mid, and ? rooms never become elites. The elite track holds the
+# later relic checks, which need elite fights. Each Elites region is entered from its act's Mid
+# region and also needs the previous act's Elites region, so relic counts add up across acts.
+#
 # Budget roughly seven combat card rewards per act: three before Mid, five before Late and
 # seven before the boss. Later acts expect this act's smiths from entry and its rest from Mid.
-# Act 1 waits until the boss for smiths so the sparse floorless opening stays loose.
+# Act 1 waits until the boss for smiths so the sparse floorless opening stays loose. Elite rows
+# copy their act's Late row apart from power.
 REGIONS: dict[str, PowerCheck] = {
     #                        act  power  card rewards  min cards
-    "Mid Act 1":        PowerCheck(1,  4.0,   3,  1.0, rest=True),
-    "Late Act 1":       PowerCheck(1, 10.0,   5,  1.0, rest=True, shop=True),
+    # Seeded Run replays one map, which may force an elite, so it keeps elite-inclusive power.
+    "Mid Act 1":        PowerCheck(1,  2.0,   3,  1.0, rest=True, seeded_power=4.0),
+    "Late Act 1":       PowerCheck(1,  7.0,   5,  1.0, rest=True, shop=True, seeded_power=10.0),
+    "Act 1 Elites":     PowerCheck(1,  7.0,   5,  1.0, rest=True, shop=True),
     "Act 1 Boss Arena": PowerCheck(1, 11.5,   7,  3.0, rest=True, smith=True, remove=True, shop=True),
     "Early Act 2":      PowerCheck(2, 12.0,   7,  3.0, smith=True, shop=True),
     "Mid Act 2":        PowerCheck(2, 14.0,  10,  3.0, rest=True, smith=True, shop=True),
     "Late Act 2":       PowerCheck(2, 18.0,  12,  3.0, rest=True, smith=True, shop=True),
+    "Act 2 Elites":     PowerCheck(2, 15.5,  12,  3.0, rest=True, smith=True, shop=True),
     "Act 2 Boss Arena": PowerCheck(2, 23.5,  14,  5.0, rest=True, smith=True, remove=True, shop=True),
     "Early Act 3":      PowerCheck(3, 23.5,  14,  5.0, smith=True, shop=True),
     "Mid Act 3":        PowerCheck(3, 25.5,  17,  5.0, rest=True, smith=True, shop=True),
     "Late Act 3":       PowerCheck(3, 27.0,  19,  5.0, rest=True, smith=True, shop=True),
+    "Act 3 Elites":     PowerCheck(3, 26.0,  19,  5.0, rest=True, smith=True, shop=True),
     "Act 3 Boss Arena": PowerCheck(3, 30.0,  21,  7.0, rest=True, smith=True, remove=True, shop=True),
+}
+
+# Relic N is the run's Nth elite, chest or Black Star reward. Relic 1 is the Act 1 chest on the
+# path. Elite-ready runs are expected to fight two elites in Acts 1 and 2 and three in Act 3:
+# two Act 1 elites give relics 2-3, Act 2's chest and elites give 4-6, and Act 3's give 7-10.
+RELIC_REGIONS = {
+    1: "Mid Act 1",
+    2: "Act 1 Elites", 3: "Act 1 Elites",
+    4: "Act 2 Elites", 5: "Act 2 Elites", 6: "Act 2 Elites",
+    7: "Act 3 Elites", 8: "Act 3 Elites", 9: "Act 3 Elites", 10: "Act 3 Elites",
 }
 
 
