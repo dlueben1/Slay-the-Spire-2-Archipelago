@@ -1,10 +1,9 @@
 """Select the logic implementation; keep each model's rules in its own module."""
 from . import rules_new, rules_old
-# Preserve imports used by the progression-analysis tools and existing tests.
-from .rules_new import MID_ACT_1_POWER, SpireHasPower, SpireHasGold
+# Preserve imports used by existing tests.
+from .rules_new import SpireHasPower, SpireHasGold
 
-__all__ = ["MID_ACT_1_POWER", "SpireHasPower", "SpireHasGold", "FALLBACK_REASON", "is_sparse", "select_logic",
-           "set_rules"]
+__all__ = ["SpireHasPower", "SpireHasGold", "FALLBACK_REASON", "is_sparse", "select_logic", "set_rules"]
 
 FALLBACK_REASON = (
     "Floor, gold, and potion checks are all disabled in a single-player generation; "

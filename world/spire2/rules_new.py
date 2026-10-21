@@ -19,9 +19,6 @@ if TYPE_CHECKING:
     from .world import SlayTheSpire2World
 
 
-# Sparse-opening item guarantees use the same budget as this first power check.
-MID_ACT_1_POWER = REGIONS["Mid Act 1"].power
-
 # Reviewed values live with character registration. New vanilla definitions explicitly
 # select DEFAULT_STARTER_POWER until their starting loadout has been assessed.
 STARTER_CARD_POWER = {definition.name: definition.starter_power.card
@@ -35,6 +32,10 @@ STARTER_PAIR_POWER = {definition.name: definition.starter_power.missing_pair
 class LedgerEntry(NamedTuple):
     label: str
     amount: float
+
+
+def tier_range(first: int, last: int) -> str:
+    return f"tier {first}" if first == last else f"tiers {first}-{last}"
 
 
 @dataclasses.dataclass()
@@ -184,7 +185,7 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
                 received = self.count(state, item)
                 missing = sum(weights[received:level])
                 if missing:
-                    adjustments[f"Missing {item} tiers {received + 1}-{level}"] = missing
+                    adjustments[f"Missing {item} {tier_range(received + 1, level)}"] = missing
 
             # Anytime can provide later rewards early; Start of Act cannot.
             # Missing rewards need replacement power wherever no hard gate applies.
@@ -245,19 +246,16 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
             return lines
 
         def describe(self) -> List[str]:
-            def up_to(tier: int) -> str:
-                return "tier 1" if tier == 1 else f"tiers 1-{tier}"
-
             support = []
             if self.starter_card_power[0] or self.starter_relic_power[0]:
                 support.append("starters")
             if self.rest_level:
                 support.append(f"Rest tier {self.rest_level}")
             if self.smith_level:
-                support.append(f"Smith {up_to(self.smith_level)}")
+                support.append(f"Smith {tier_range(1, self.smith_level)}")
             if self.remove_level:
-                support.append(f"Shop Remove {up_to(self.remove_level)}")
-            support.append(f"Ancient {up_to(self.act)}")
+                support.append(f"Shop Remove {tier_range(1, self.remove_level)}")
+            support.append(f"Ancient {tier_range(1, self.act)}")
             if self.shop_scale:
                 support.append("shop choices")
             table = self.card_rewards_table

@@ -211,6 +211,15 @@ class LogicTests(unittest.TestCase):
                     with_smith.collect(world.create_item("Silent Progressive Smith"), prevent_sweep=True)
                     self.assertEqual(act > 1, rule.strength(with_smith)[2] < rule.strength(state)[2])
 
+    def test_missing_tier_labels_name_a_single_tier_once(self):
+        world = self.make_world()
+        rule = self.power_rule(world, act=3)
+        state = CollectionState(world.multiworld)
+        self.assertIn("Missing Progressive Smith tiers 1-3", rule.power_adjustments(state))
+        for _ in range(2):
+            state.collect(world.create_item("Silent Progressive Smith"), prevent_sweep=True)
+        self.assertIn("Missing Progressive Smith tier 3", rule.power_adjustments(state))
+
     def test_early_acts_ignore_rest_but_account_for_smith_support(self):
         world = self.make_world(ancient_relic_location="anytime")
         for act in (2, 3):
