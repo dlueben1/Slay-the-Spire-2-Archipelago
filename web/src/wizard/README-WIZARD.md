@@ -79,7 +79,7 @@ Shared question styles live in `components/wizard/core/wizard.css` and use `wiza
 
 ## Regenerating the option catalog
 
-The generated `web/src/generated/options_compiled.json` file must be refreshed whenever option metadata changes in `world/spire2/options.py` or option grouping changes in `world/spire2/web_world.py`.
+The generated `web/src/generated/options_compiled.json` file must be refreshed whenever option metadata changes in `world/spire2/options.py`, option grouping changes in `world/spire2/web_world.py`, or the character registry changes in `world/spire2/characters.py` or `world/spire2/constants.py`.
 
 The generator expects an Archipelago source checkout containing `Options.py` in an `Archipelago` directory beside this repository. From the repository root, run:
 
@@ -93,7 +93,7 @@ The script uses `python` by default. To select another Python executable, pass i
 powershell -ExecutionPolicy Bypass -File .\scripts\generate_options_for_web.ps1 -PythonExecutable py
 ```
 
-The script checks for its required Python packages and installs missing dependencies with `pip`. It then executes the current Python world definitions, writes `web/src/generated/options_compiled.json`, and includes source hashes so consumers can detect schema drift.
+The script checks for its required Python packages and installs missing dependencies with `pip`. It then executes the current Python world definitions, writes `web/src/generated/options_compiled.json`, and includes source hashes so consumers can detect schema drift. Its `characters` section lists the predefined modded characters and the limit on characters without a predefined name, which Character Setup applies to generated rosters.
 
 After regeneration, review the JSON diff and run the website verification commands:
 

@@ -1,7 +1,8 @@
 # 10,000 this time to create plenty of space for items and locations
 CHAR_OFFSET = 10000
 
-# Maximum selected modded characters, including predefined and unnamed characters.
+# Maximum selected characters without a predefined block, i.e. registered "Custom Character N" blocks.
+# Vanilla and predefined modded characters have their own blocks and do not count against it.
 NUM_CUSTOM = 20
 
 # These are permanent ID ranges, not counts of currently installed characters.

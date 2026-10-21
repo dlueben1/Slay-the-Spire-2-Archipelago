@@ -118,8 +118,9 @@ class TestCharacterRegistry(unittest.TestCase):
         self.assertTrue(all(definition.starter_power is not None for definition in VANILLA_CHARACTERS),
                         "Every vanilla character must choose reviewed starter power or DEFAULT_STARTER_POWER")
         self.assertTrue(all(definition.starter_power is None for definition in PREDEFINED_CHARACTERS))
-        self.assertEqual(len(character_list) + NUM_CUSTOM, GoalNumChar.range_end)
-        self.assertEqual(len(character_list) + NUM_CUSTOM, PickNumberCharacters.range_end)
+        full_roster = len(character_list) + len(PREDEFINED_CHARACTERS) + NUM_CUSTOM
+        self.assertEqual(full_roster, GoalNumChar.range_end)
+        self.assertEqual(full_roster, PickNumberCharacters.range_end)
         for index, name in enumerate(character_list):
             self.assertEqual(index, UnlockedCharacter.from_any(name.lower()).value)
 
@@ -209,22 +210,37 @@ class TestCharacterRosters(unittest.TestCase):
         self.assertEqual(("Custom Character 1", roster[-1]),
                          (fixed.characters[0].name, fixed.characters[0].official_name))
 
-    def test_twenty_modded_characters_and_vanilla_can_generate_and_fill(self):
-        generic = [f"Mod-{i}" for i in range(8)]
-        predefined = [definition.internal_id for definition in PREDEFINED_CHARACTERS[:NUM_CUSTOM - len(generic)]]
-        roster = predefined + generic
+    def test_every_predefined_character_and_all_generic_slots_can_generate_and_fill(self):
+        # Predefined characters have their own blocks, so they do not count against NUM_CUSTOM.
+        predefined = [definition.internal_id for definition in PREDEFINED_CHARACTERS]
+        roster = predefined + [f"Mod-{i}" for i in range(NUM_CUSTOM)]
+        self.assertGreater(len(roster), NUM_CUSTOM)
         for new_logic in (False, True):
             with self.subTest(new_logic=new_logic):
                 world = self.generate(characters=character_list, modded_characters=roster,
                                       use_new_logic=new_logic)
-                self.assertEqual(len(character_list) + 20, len(world.characters))
-                self.assertEqual(20, world.modded_num)
+                self.assertEqual(len(character_list) + len(roster), len(world.characters))
+                self.assertEqual(len(roster), world.modded_num)
+                self.assertEqual(f"Custom Character {NUM_CUSTOM}", world.characters[-1].name)
                 distribute_items_restrictive(world.multiworld, panic_method="raise")
                 self.assertFalse(world.multiworld.get_unfilled_locations())
                 self.assertTrue(world.multiworld.can_beat_game())
 
-    def test_all_twenty_generic_slots_and_overflow(self):
-        roster = [f"Unknown-{i}" for i in range(21)]
+    def test_predefined_characters_beyond_the_generic_limit_are_accepted(self):
+        # Shrink the limit below the number of predefined characters.
+        predefined = [definition.name for definition in PREDEFINED_CHARACTERS]
+        with patch("worlds.spire2.world.NUM_CUSTOM", 1):
+            world = self.generate(modded_characters=predefined + ["Unknown-A"])
+            self.assertEqual(len(predefined) + 1, world.modded_num)
+            self.assertEqual(["Custom Character 1"],
+                             [c.name for c in world.characters if c.char_offset in GENERIC_CHARACTER_BLOCKS])
+            with self.assertRaisesRegex(OptionError, "at most 1 selected characters without a predefined name"):
+                self.generate(modded_characters=predefined + ["Unknown-A", "Unknown-B"])
+
+    def test_all_generic_slots_and_overflow(self):
+        roster = [f"Unknown-{i}" for i in range(NUM_CUSTOM + 1)]
+        predefined = [definition.internal_id for definition in PREDEFINED_CHARACTERS]
+        overflow = f"at most {NUM_CUSTOM} selected characters without a predefined name"
         for advanced in (False, True):
             with self.subTest(advanced=advanced):
                 def generate(names, **options):
@@ -233,14 +249,45 @@ class TestCharacterRosters(unittest.TestCase):
                                              advanced_characters={name: {} for name in names}, **options)
                     return self.generate(modded_characters=names, **options)
 
-                world = generate(roster[:20])
-                self.assertEqual(20, world.modded_num)
-                self.assertEqual(30, world.characters[-1].char_offset)
-                self.assertEqual("Custom Character 20", world.characters[-1].name)
-                with self.assertRaisesRegex(OptionError, "at most 20"):
+                world = generate(roster[:NUM_CUSTOM])
+                self.assertEqual(NUM_CUSTOM, world.modded_num)
+                self.assertEqual(GENERIC_CHARACTER_BLOCKS[NUM_CUSTOM - 1], world.characters[-1].char_offset)
+                self.assertEqual(f"Custom Character {NUM_CUSTOM}", world.characters[-1].name)
+                with self.assertRaisesRegex(OptionError, overflow):
                     generate(roster)
-                with self.assertRaisesRegex(OptionError, "at most 20"):
-                    generate(roster, pick_num_characters=21)
+                with self.assertRaisesRegex(OptionError, overflow):
+                    generate(roster, pick_num_characters=NUM_CUSTOM + 1)
+                # Predefined characters neither use up nor free a generic slot.
+                with self.assertRaisesRegex(OptionError, overflow):
+                    generate(predefined + roster)
+
+    def test_random_subset_replaces_excess_generic_characters_with_predefined_ones(self):
+        predefined = [definition.internal_id for definition in PREDEFINED_CHARACTERS]
+        unknown = [f"Unknown-{i}" for i in range(NUM_CUSTOM + 10)]
+        # Interleave so the YAML order check covers both kinds of character.
+        roster = [name for pair in zip(unknown, predefined) for name in pair] + unknown[len(predefined):]
+        pick = len(predefined) + NUM_CUSTOM
+        for advanced in (False, True):
+            with self.subTest(advanced=advanced):
+                def generate(**options):
+                    if advanced:
+                        return self.generate(use_advanced_characters=True,
+                                             advanced_characters={name: {} for name in roster}, **options)
+                    return self.generate(modded_characters=roster, **options)
+
+                world = generate(pick_num_characters=pick, lock_characters=2, unlocked_character=unknown[-1])
+                self.assertEqual(pick, len(world.characters))
+                # Filling every generic slot leaves exactly enough room for every predefined character.
+                self.assertEqual(set(predefined), {c.option_name for c in world.characters} & set(predefined))
+                generic = [c for c in world.characters if c.char_offset in GENERIC_CHARACTER_BLOCKS]
+                self.assertEqual([f"Custom Character {i}" for i in range(1, NUM_CUSTOM + 1)],
+                                 [c.name for c in generic])
+                self.assertEqual([unknown[-1]], [c.option_name for c in world.characters if not c.locked])
+                selected = {c.option_name for c in world.characters}
+                self.assertEqual([name for name in roster if name in selected],
+                                 [c.option_name for c in world.characters])
+                with self.assertRaisesRegex(OptionError, "without a predefined name"):
+                    generate(pick_num_characters=pick + 1)
 
     def test_random_selection_replaces_excess_mods_without_shrinking_or_losing_fixed_start(self):
         roster = [f"Unknown-{i}" for i in range(30)]

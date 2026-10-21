@@ -122,6 +122,11 @@ def character_identity(value: str) -> str:
     return key
 
 
+def needs_generic_block(value: str) -> bool:
+    """Whether a character has no vanilla or predefined block and must take a Custom Character slot."""
+    return value.strip().casefold() not in registered_character_blocks
+
+
 def unique_character_ids(values: Sequence[str]) -> list[str]:
     """Keep the first occurrence of each character, resolving aliases before deduplication."""
     result = []

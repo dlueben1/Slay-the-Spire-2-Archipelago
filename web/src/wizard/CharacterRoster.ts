@@ -8,13 +8,47 @@
  * without exposing generated option keys.
  */
 
+import { optionCatalog, type OptionCatalog } from "../generated/optionCatalog";
 import type {
   AscensionConfigurationAnswers,
   CharacterAnswers,
 } from "./WizardAnswers";
 
-/** Maximum modded characters selected for one generated roster. */
-export const MAX_MODDED_CHARACTERS = 20;
+/**
+ * Maximum characters without a predefined name in one generated roster.
+ *
+ * @remarks Built-in and predefined modded characters have their own Archipelago ID
+ * blocks; only the remaining characters use the limited generic Custom Character slots.
+ */
+export const MAX_GENERIC_CHARACTERS =
+  optionCatalog.characters.generic_character_limit;
+
+/**
+ * Checks whether a character needs one of the limited generic Custom Character slots.
+ *
+ * @param name - Built-in name, predefined display name, or modded internal ID.
+ * @param catalog - Generated schema supplying built-in and predefined characters.
+ * @returns Whether the APWorld will number this character as a Custom Character.
+ * @remarks Matches the APWorld's case-insensitive alias lookup, so a predefined
+ * character's display name and full internal ID are both recognised.
+ */
+export function usesGenericCharacterSlot(
+  name: string,
+  catalog: OptionCatalog,
+): boolean {
+  const key = name.trim().toLowerCase();
+  const builtIns = catalog.options.characters?.valid_keys ?? [];
+
+  if (builtIns.some((builtIn) => builtIn.toLowerCase() === key)) {
+    return false;
+  }
+
+  return !catalog.characters.predefined.some(
+    (character) =>
+      character.name.toLowerCase() === key ||
+      character.internal_id.toLowerCase() === key,
+  );
+}
 
 /**
  * Copies an Ascension configuration for immutable answer-model updates.

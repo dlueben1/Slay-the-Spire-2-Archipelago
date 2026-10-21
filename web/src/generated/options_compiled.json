@@ -4,20 +4,117 @@
   "sources": {
     "characters": {
       "path": "world/spire2/characters.py",
-      "sha256": "c8c54f1a375bc6f9d24ec13a92525d7cf78e42a3d06abbf1ca4e6c5899902bd0"
+      "sha256": "63329a600216b1c76af0fe48028cc1c4a2765b343c5997c865dd8c3cf3e28e8b"
     },
     "constants": {
       "path": "world/spire2/constants.py",
-      "sha256": "964c569fdddc19ec01fbcae0a29b709c6853973bf420b695ed4c137c78d7f5e7"
+      "sha256": "d72ba9e7d126b9553812f17d97649f5fe3a4bd2d21a903388e4b403914bd3723"
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "98c64a01a50c8cc67389973903a742da4849d26290e4082c126f5e700cf510ad"
+      "sha256": "ac87ef21ee1f8779802c92e50882e0b8bf995b1cb62282282bfe151d4dded36c"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
       "sha256": "787ecb32efed12fde3e3c1fd466dd46f008297a2d1293129861362847012190c"
     }
+  },
+  "characters": {
+    "generic_character_limit": 20,
+    "predefined": [
+      {
+        "name": "Tectonic",
+        "internal_id": "INTOTHESPIREVERSE-SHADOW_IRONCLAD"
+      },
+      {
+        "name": "Captain",
+        "internal_id": "INTOTHESPIREVERSE-SHADOW_REGENT"
+      },
+      {
+        "name": "Acolyte",
+        "internal_id": "INTOTHESPIREVERSE-SHADOW_SILENT"
+      },
+      {
+        "name": "Slime Boss",
+        "internal_id": "SLIMEBOSS-SLIME_BOSS"
+      },
+      {
+        "name": "Guardian",
+        "internal_id": "GUARDIAN-GUARDIAN"
+      },
+      {
+        "name": "Hexaghost",
+        "internal_id": "HEXAGHOST-HEXAGHOST"
+      },
+      {
+        "name": "Champ",
+        "internal_id": "CHAMP-CHAMP"
+      },
+      {
+        "name": "Automaton",
+        "internal_id": "AUTOMATON-AUTOMATON"
+      },
+      {
+        "name": "Snecko",
+        "internal_id": "SNECKO-SNECKO"
+      },
+      {
+        "name": "Hermit",
+        "internal_id": "HERMIT-HERMIT"
+      },
+      {
+        "name": "Awakened One",
+        "internal_id": "AWAKENED-AWAKENED"
+      },
+      {
+        "name": "Watcher",
+        "internal_id": "WATCHER-WATCHER"
+      },
+      {
+        "name": "Hornet",
+        "internal_id": "HORNET_MOD_CHARACTER_HORNET_MOD_CHARACTER"
+      },
+      {
+        "name": "Slugcat Survivor",
+        "internal_id": "SLUGCAT_THE_SPIRE_II_CHARACTER_RAINWORLD_LIVER"
+      },
+      {
+        "name": "Slugcat Hunter",
+        "internal_id": "SLUGCAT_THE_SPIRE_II_CHARACTER_RAINWORLD_REDCAT"
+      },
+      {
+        "name": "Slugcat Rivulet",
+        "internal_id": "SLUGCAT_THE_SPIRE_II_CHARACTER_RAINWORLD_RIVER"
+      },
+      {
+        "name": "Alchemist",
+        "internal_id": "ALCHEMIST-ALCHEMIST"
+      },
+      {
+        "name": "Runesmith",
+        "internal_id": "RUNESMITH2-RUNESMITH2"
+      },
+      {
+        "name": "Witch",
+        "internal_id": "THEWITCH-WITCH"
+      },
+      {
+        "name": "Tailor",
+        "internal_id": "THETAILOR-THE_TAILOR"
+      },
+      {
+        "name": "Engineer",
+        "internal_id": "THEENGINEER-THE_ENGINEER"
+      },
+      {
+        "name": "Kakarot",
+        "internal_id": "KAKAROTMOD-KAKAROT"
+      },
+      {
+        "name": "Fae Sorceress",
+        "internal_id": "FAESORCERESS-FAE_SORCERESS"
+      }
+    ]
   },
   "option_order": [
     "progression_balancing",
@@ -588,7 +685,7 @@
       "module": "worlds.spire2.options",
       "kind": "list",
       "display_name": "Modded Characters",
-      "description": "Modded characters to include when Advanced Characters is disabled. Enter each character's\ninternal ID or a predefined display name, such as Watcher, Guardian, or Tectonic.\nThe list of predefined display names will probably be pinned somewhere on Discord.\nAt most 20 modded characters can be present in the generated character set.\nDuplicate aliases and IDs are removed, keeping the first occurrence. Predefined characters use their\ndisplay names; other selected characters are numbered consecutively in YAML order.\nA larger candidate list is allowed when Pick Number of Characters selects a subset.\n\nIf using a modded character:\nPredefined display names and internal IDs are matched case-insensitively.\nUnrecognised characters still require their full internal ID.\n\nIf you don't know the exact ID to enter with the mod installed go to\n`Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.\n\nEvery configured character must be installed with the matching internal ID. The client\nrejects the AP connection if a configured character cannot be loaded.",
+      "description": "Modded characters to include when Advanced Characters is disabled. Enter each character's\ninternal ID or a predefined display name, such as Watcher, Guardian, or Tectonic.\nThe list of predefined display names will probably be pinned somewhere on Discord.\nAny number of predefined characters can be present in the generated character set, but at\nmost 20 characters without a predefined name.\nDuplicate aliases and IDs are removed, keeping the first occurrence. Predefined characters use their\ndisplay names; other selected characters are numbered consecutively in YAML order.\nA larger candidate list is allowed when Pick Number of Characters selects a subset.\n\nIf using a modded character:\nPredefined display names and internal IDs are matched case-insensitively.\nUnrecognised characters still require their full internal ID.\n\nIf you don't know the exact ID to enter with the mod installed go to\n`Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.\n\nEvery configured character must be installed with the matching internal ID. The client\nrejects the AP connection if a configured character cannot be loaded.",
       "default": [],
       "raw_default": [],
       "visibility": {
@@ -630,7 +727,7 @@
       },
       "source": "game",
       "minimum": 0,
-      "maximum": 25,
+      "maximum": 48,
       "supports_weighting": true,
       "group": "Character Options"
     },
@@ -656,7 +753,7 @@
       },
       "source": "game",
       "minimum": 0,
-      "maximum": 25,
+      "maximum": 48,
       "supports_weighting": true,
       "group": "Character Options"
     },

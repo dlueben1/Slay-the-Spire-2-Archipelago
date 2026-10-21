@@ -17,7 +17,7 @@ import {
 import {
   getConfiguredCharacterNames,
   getNamedModdedCharacters,
-  MAX_MODDED_CHARACTERS,
+  usesGenericCharacterSlot,
 } from "../CharacterRoster";
 import type {
   AscensionConfigurationAnswers,
@@ -338,10 +338,21 @@ export function applyCharacterOptions(
     );
   }
 
-  // Larger candidate lists are valid when random selection can stay within the modded cap.
-  if (count > answers.selectedCharacters.length + MAX_MODDED_CHARACTERS) {
+  // Only characters without a predefined name use the limited generic slots. Larger
+  // candidate lists are valid when random selection can fill the remainder with
+  // built-in or predefined characters, matching the APWorld's substitution.
+  const genericLimit = catalog.characters.generic_character_limit;
+  let namedCount = answers.selectedCharacters.length;
+
+  for (const name of moddedCharacterNames) {
+    if (!usesGenericCharacterSlot(name, catalog)) {
+      namedCount += 1;
+    }
+  }
+
+  if (count > namedCount + genericLimit) {
     throw new Error(
-      `Select no more than ${MAX_MODDED_CHARACTERS} modded characters per generated roster; reduce the random character count.`,
+      `Select no more than ${genericLimit} characters without a predefined name per generated roster; reduce the random character count.`,
     );
   }
 

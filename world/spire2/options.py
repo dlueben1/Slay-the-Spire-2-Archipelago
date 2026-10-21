@@ -6,8 +6,11 @@ from Options import OptionSet, OptionList, Range, Toggle, DefaultOnToggle, Visib
 
 from schema import Schema, Optional, And
 
-from .characters import character_list, unique_character_ids
+from .characters import PREDEFINED_CHARACTERS, character_list, unique_character_ids
 from .constants import NUM_CUSTOM, ASCENSIONS
+
+# Vanilla and predefined characters, plus every registered generic Custom Character block.
+MAX_ROSTER_SIZE = len(character_list) + len(PREDEFINED_CHARACTERS) + NUM_CUSTOM
 
 
 class UseNewLogic(DefaultOnToggle):
@@ -38,7 +41,8 @@ class ModdedCharacters(OptionList):
     """Modded characters to include when Advanced Characters is disabled. Enter each character's
     internal ID or a predefined display name, such as Watcher, Guardian, or Tectonic.
     The list of predefined display names will probably be pinned somewhere on Discord.
-    At most 20 modded characters can be present in the generated character set.
+    Any number of predefined characters can be present in the generated character set, but at
+    most 20 characters without a predefined name.
     Duplicate aliases and IDs are removed, keeping the first occurrence. Predefined characters use their
     display names; other selected characters are numbered consecutively in YAML order.
     A larger candidate list is allowed when Pick Number of Characters selects a subset.
@@ -63,7 +67,7 @@ class GoalNumChar(Range):
     """How many characters you need to complete a run with before you goal. 0 means all characters"""
     display_name = "Number of Characters to Goal"
     range_start = 0
-    range_end = len(character_list) + NUM_CUSTOM
+    range_end = MAX_ROSTER_SIZE
     default = 0
 
 class PickNumberCharacters(Range):
@@ -79,7 +83,7 @@ class PickNumberCharacters(Range):
     """
     display_name = "Pick Number of Characters"
     range_start = 0
-    range_end = len(character_list) + NUM_CUSTOM
+    range_end = MAX_ROSTER_SIZE
     default = 0
 
 class LockCharacters(Choice):
