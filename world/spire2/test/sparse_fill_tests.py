@@ -5,6 +5,7 @@ from Fill import distribute_items_restrictive
 from test.general import setup_multiworld
 from worlds.AutoWorld import call_all
 from worlds.spire2 import SlayTheSpire2World
+from worlds.spire2.test import path_power
 from worlds.spire2.world import sparse_placement_rank
 
 
@@ -85,8 +86,8 @@ class SparseFillTests(unittest.TestCase):
         restored = regenerated.worlds[1]
         self.assertEqual('new', restored.effective_logic)
         self.assertIsNone(restored.logic_fallback_reason)
-        self.assertEqual(world.get_entrance('Ironclad Late Act 1').access_rule.power_level,
-                         restored.get_entrance('Ironclad Late Act 1').access_rule.power_level)
+        self.assertEqual(path_power(world.get_entrance('Ironclad Late Act 1').access_rule).power_level,
+                         path_power(restored.get_entrance('Ironclad Late Act 1').access_rule).power_level)
 
 
 if __name__ == '__main__':

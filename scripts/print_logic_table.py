@@ -64,6 +64,8 @@ def format_tables(table: ModuleType) -> str:
         "  Rest, smith and removal tiers count only when that support is shuffled.",
         "  Act 2 and Act 3 Elites also need the previous act's Elites region.",
         "",
+        *format_claimable_relics(table),
+        "",
         "Card strength and power from AP items",
         "  Card strength by ordinary Card Rewards held (each later one adds the last step):",
         f"    Half shuffle: {values(table.CARD_REWARD_STRENGTH)}",
@@ -84,6 +86,18 @@ def format_tables(table: ModuleType) -> str:
         *format_shop_gold(table),
     ]
     return "\n".join(lines)
+
+
+def format_claimable_relics(table: ModuleType) -> list[str]:
+    rows = [("Region", "Walking around elites", "After an earlier Elites region")]
+    for region in table.REGIONS:
+        alternatives = table.ELITE_RELIC_REWARDS.get(region, {})
+        rows.append((region, str(table.PATH_RELIC_REWARDS[region]),
+                     ", ".join(f"{elites} {count}" for elites, count in alternatives.items()) or "-"))
+    return [
+        "Claimable relics: power counts at most Relic Rewards Available Anytime + these relic rewards",
+        *format_columns(rows),
+    ]
 
 
 # Shop Sanity Costs choices, in option value order.

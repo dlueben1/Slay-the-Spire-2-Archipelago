@@ -6,6 +6,7 @@ from worlds.AutoWorld import call_all
 from worlds.spire2 import SlayTheSpire2World
 from worlds.spire2.logic_table import REGIONS, RELIC_REGIONS
 from worlds.spire2.regions import LEGACY_RELIC_REGIONS
+from worlds.spire2.test import path_power
 
 
 class TwoTrackTests(unittest.TestCase):
@@ -54,7 +55,7 @@ class TwoTrackTests(unittest.TestCase):
             world = self.make_world(seeded=seeded)
             for region in ("Mid Act 1", "Late Act 1"):
                 with self.subTest(seeded=seeded, region=region):
-                    rule = world.get_entrance(f"Ironclad {region}").access_rule
+                    rule = path_power(world.get_entrance(f"Ironclad {region}").access_rule)
                     self.assertEqual(REGIONS[region].power_for(seeded), rule.power_level)
                     self.assertEqual(seeded, rule.power_level == REGIONS[region].seeded_power)
 
@@ -67,5 +68,5 @@ class TwoTrackTests(unittest.TestCase):
         restored = regenerated.worlds[1]
         for region in ("Mid Act 1", "Late Act 1"):
             with self.subTest(region=region):
-                self.assertEqual(world.get_entrance(f"Ironclad {region}").access_rule.power_level,
-                                 restored.get_entrance(f"Ironclad {region}").access_rule.power_level)
+                self.assertEqual(path_power(world.get_entrance(f"Ironclad {region}").access_rule).power_level,
+                                 path_power(restored.get_entrance(f"Ironclad {region}").access_rule).power_level)

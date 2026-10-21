@@ -186,6 +186,10 @@ class RelicRewardsAvailableAnytime(Range):
     i.e. A value of 2 here and receiving 3 relics from AP means you get 2 relics in your AP menu and the 3rd 
     requires beating one elite or visiting one chest. 
     tldr; fight elites and go to chests to get more relics. Lower value = elites matter more so don't skip them
+
+    Logic only counts the relics a run can claim: these, plus one per chest and elite on the way. With a lower
+    value, logic expects more Card Rewards or elite fights before later checks. Setting a lower value in the
+    mod's settings than in this YAML can put checks in logic that your relics cannot reach yet.
     """
     display_name = "Relic Rewards Available Anytime"
     range_start = 0

@@ -13,7 +13,8 @@ from .regions import create_regions
 from .rules import FALLBACK_REASON, is_sparse, select_logic, set_rules
 from .rules_new import shop_gold_by_act
 from . import rules_old
-from .logic_table import REGIONS, RELIC_POWER, card_reward_strength, card_reward_table, card_rewards_needed
+from .logic_table import (PATH_RELIC_REWARDS, REGIONS, RELIC_POWER, card_reward_strength, card_reward_table,
+                          card_rewards_needed)
 from .web_world import SlayTheSpire2Web
 from .characters import (CharacterConfig, character_list, vanilla_character_ids, character_registry,
                          registered_character_blocks, unique_character_ids, character_identity,
@@ -158,7 +159,12 @@ class SlayTheSpire2World(World):
                 table = card_reward_table(bool(self.options.shuffle_all_cards))
                 cards = card_rewards_needed(table, mid_act_1.minimum_cards - vanilla_cards)
                 card_strength = card_reward_strength(table, cards) + vanilla_cards
-                relics = max(0, ceil((power - card_strength) / RELIC_POWER))
+                # Relics past those a run can claim in Mid Act 1 do not help; Card Rewards make up
+                # the rest.
+                claimable = self.options.relic_rewards_available_anytime.value + PATH_RELIC_REWARDS["Mid Act 1"]
+                relics = min(max(0, ceil((power - card_strength) / RELIC_POWER)), claimable)
+                cards = card_rewards_needed(table, max(mid_act_1.minimum_cards, power - relics * RELIC_POWER)
+                                            - vanilla_cards)
             for config in self.characters:
                 if config.locked:
                     continue

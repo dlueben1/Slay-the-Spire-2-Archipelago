@@ -5,6 +5,7 @@ from test.general import setup_multiworld
 from worlds.spire2 import SlayTheSpire2World
 from worlds.spire2.characters import character_list
 from worlds.spire2.rules import SpireHasPower
+from worlds.spire2.test import path_power
 from worlds.spire2.logic_table import (VANILLA_CARD_POWER, VANILLA_CARD_REWARD_SHARE, card_reward_strength,
                                        card_reward_table)
 
@@ -205,8 +206,7 @@ class LogicTests(unittest.TestCase):
                 state.collect(world.create_item("Silent Progressive Smith"), prevent_sweep=True)
             for stage in ("Mid", "Late"):
                 with self.subTest(act=act, stage=stage):
-                    rule = world.get_entrance(f"Silent {stage} Act {act}").access_rule
-                    assert isinstance(rule, SpireHasPower.Resolved)
+                    rule = path_power(world.get_entrance(f"Silent {stage} Act {act}").access_rule)
                     with_smith = state.copy()
                     with_smith.collect(world.create_item("Silent Progressive Smith"), prevent_sweep=True)
                     self.assertEqual(act > 1, rule.strength(with_smith)[2] < rule.strength(state)[2])
@@ -215,8 +215,7 @@ class LogicTests(unittest.TestCase):
         world = self.make_world(ancient_relic_location="anytime")
         for act in (2, 3):
             with self.subTest(act=act):
-                rule = world.get_entrance(f"Silent Early Act {act}").access_rule
-                assert isinstance(rule, SpireHasPower.Resolved)
+                rule = path_power(world.get_entrance(f"Silent Early Act {act}").access_rule)
                 state = CollectionState(world.multiworld)
                 before = rule.strength(state)
                 for _ in range(3):

@@ -8,9 +8,9 @@ from rule_builder.options import OptionFilter
 from rule_builder.rules import Rule, True_, CanReachRegion, Has, HasFromListUnique
 from .characters import CharacterConfig, VANILLA_CHARACTERS, DEFAULT_STARTER_POWER
 from .logic_table import (
-    ANCIENT_POWER_BY_TIER, BOSS_GOLD, ELITE_GOLD, RARE_CARD_POWER, REGIONS, RELIC_POWER, REST_POWER_BY_ACT,
-    SHOP_REMOVE_POWER_BY_TIER, SHOP_SLOT_VALUES, SMITH_POWER_BY_TIER, PowerCheck,
-    card_reward_strength, card_reward_table, shop_gold_needed, shop_page,
+    ANCIENT_POWER_BY_TIER, BOSS_GOLD, ELITE_GOLD, ELITE_RELIC_REWARDS, PATH_RELIC_REWARDS, RARE_CARD_POWER,
+    REGIONS, RELIC_POWER, REST_POWER_BY_ACT, SHOP_REMOVE_POWER_BY_TIER, SHOP_SLOT_VALUES, SMITH_POWER_BY_TIER,
+    PowerCheck, card_reward_strength, card_reward_table, shop_gold_needed, shop_page,
 )
 from .options import AncientRelicLocation, CampfireSanity
 
@@ -50,13 +50,17 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
     shop: bool = False
     # Region name for explanations; checks built outside the region table may leave it empty.
     region: str = ""
+    # Relic rewards the run has taken by this region, which with the anytime claims limit the
+    # relics that count. None counts every received relic.
+    relic_rewards: int | None = None
 
     @classmethod
-    def for_region(cls, char_offset: int, region: str, seeded: bool) -> 'SpireHasPower':
+    def for_region(cls, char_offset: int, region: str, seeded: bool,
+                   relic_rewards: int | None = None) -> 'SpireHasPower':
         check = REGIONS[region]
         return cls(char_offset, check.power_for(seeded), card_rewards=check.card_rewards, act=check.act,
                    minimum_cards=check.minimum_cards, rest=check.rest, smith=check.smith,
-                   remove=check.remove, shop=check.shop, region=region)
+                   remove=check.remove, shop=check.shop, region=region, relic_rewards=relic_rewards)
 
     @override
     def _instantiate(self, world: 'SlayTheSpire2World') -> Rule.Resolved:
@@ -90,6 +94,8 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
             starter_pair_power=STARTER_PAIR_POWER.get(config.name, DEFAULT_STARTER_POWER.missing_pair)
                                if reviewed_starters else 0,
             region=self.region or f"Act {self.act}",
+            relic_cap=None if self.relic_rewards is None
+                      else options.relic_rewards_available_anytime.value + self.relic_rewards,
             player=world.player,
         )
 
@@ -112,6 +118,7 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
         starter_relic_power: tuple[float, float]
         starter_pair_power: float
         region: str
+        relic_cap: int | None
 
         def count(self, state: CollectionState, item: str) -> int:
             return state.count(f"{self.char} {item}", self.player)
@@ -134,10 +141,13 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
 
         def relic_entries(self, state: CollectionState) -> List[LedgerEntry]:
             """Contributions to power beyond card strength, in the order they are added up."""
-            # Credit receipts immediately, as in the previous APWorld. Claim timing
-            # remains a client setting rather than an additional logic restriction.
+            # Relics past the anytime claims are claimable only after relic rewards in the run.
             relics = self.count(state, "Relic")
-            entries = [LedgerEntry(f"Relics ({relics} received)", RELIC_POWER * relics)]
+            label = f"Relics ({relics} received)"
+            if self.relic_cap is not None and relics > self.relic_cap:
+                label = f"Relics ({relics} received, {self.relic_cap} claimable)"
+                relics = self.relic_cap
+            entries = [LedgerEntry(label, RELIC_POWER * relics)]
             if self.count(state, "Progressive Starter Relic") >= 2:
                 entries.append(LedgerEntry("Upgraded starter relic", self.starter_relic_power[1]))
             return entries
@@ -259,6 +269,8 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
                 f"  Card strength by ordinary card rewards held: {strengths}; each later one adds {later_step:.3g}.",
                 f"  Rare card rewards {RARE_CARD_POWER:g}; relics {RELIC_POWER:g}.",
             ]
+            if self.relic_cap is not None:
+                lines.append(f"  At most {self.relic_cap} relics count: the anytime claims and relic rewards so far.")
             if self.vanilla_cards:
                 lines.append(f"  Vanilla card rewards add {self.vanilla_cards:g} card strength.")
             lines.extend((
@@ -321,6 +333,16 @@ def shop_gold_by_act(options: 'Spire2Options') -> tuple[int, int, int]:
             shop_gold_needed(page, 3, cost_mode))
 
 
+def region_power(offset: int, prefix: str, region: str, seeded: bool) -> Rule:
+    """The region's power check, counting the relics a run can claim by then: walking around
+    elites, or after fighting the elites of an earlier Elites region that is reachable."""
+    rule: Rule = SpireHasPower.for_region(offset, region, seeded, relic_rewards=PATH_RELIC_REWARDS[region])
+    for elites, rewards in ELITE_RELIC_REWARDS.get(region, {}).items():
+        rule |= (SpireHasPower.for_region(offset, region, seeded, relic_rewards=rewards)
+                 & CanReachRegion(f"{prefix} {elites}"))
+    return rule
+
+
 def set_rules(world: 'SlayTheSpire2World') -> None:
     for config in world.characters:
         _set_rules(world, config)
@@ -339,7 +361,7 @@ def _set_rules(world: 'SlayTheSpire2World', config: CharacterConfig) -> None:
     world.set_rule(world.get_entrance(f"{prefix} Early Act 1"), Has(f"{prefix} Unlock"))
 
     seeded = bool(world.options.seeded)
-    region_rules: dict[str, Rule] = {region: SpireHasPower.for_region(offset, region, seeded) for region in REGIONS}
+    region_rules: dict[str, Rule] = {region: region_power(offset, prefix, region, seeded) for region in REGIONS}
     # Relic counts in later Elites regions assume the earlier acts' elites were fought too.
     for act in (2, 3):
         region_rules[f"Act {act} Elites"] &= CanReachRegion(f"{prefix} Act {act - 1} Elites")

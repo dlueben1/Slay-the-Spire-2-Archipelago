@@ -6,8 +6,8 @@ Each region entrance checks the character's run against that region's row in REG
     power         >= the row's base power + the value of any support the run is missing
 
 Card strength counts AP card rewards, the vanilla card rewards that half shuffle leaves in a
-run, and an upgraded starter card. Power is card strength plus relics and an upgraded starter
-relic. Support is what a normal run already has: its starting card and relic, rests, smiths,
+run, and an upgraded starter card. Power is card strength plus the relics a run can claim by
+then and an upgraded starter relic. Support is what a normal run already has: its starting card and relic, rests, smiths,
 card removals, Ancients and shop choices. While AP items have not restored a kind of shuffled
 support, its value raises the requirement, so extra power can make up for it. Support that the
 options leave unshuffled is never missing.
@@ -101,6 +101,36 @@ RELIC_REGIONS = {
     2: "Act 1 Elites", 3: "Act 1 Elites",
     4: "Act 2 Elites", 5: "Act 2 Elites", 6: "Act 2 Elites",
     7: "Act 3 Elites", 8: "Act 3 Elites", 9: "Act 3 Elites", 10: "Act 3 Elites",
+}
+
+# --- Claimable relics ------------------------------------------------------------------------
+
+# A run claims AP Relics past Relic Rewards Available Anytime only by taking elite, chest or Black
+# Star rewards, one claim per reward. A power check counts at most anytime + the relic rewards a
+# run has taken by then: by walking around elites, or, when an earlier Elites region is
+# reachable, by fighting its elites too. Boss checks assume elite relics, so chests alone would
+# leave a low anytime count unable to reach the Act 3 boss.
+#
+# Relic rewards taken by each region while walking around elites: the chests passed, including
+# the chest on a fixed row inside each Mid region. Elites regions count the rewards before their
+# last relic.
+PATH_RELIC_REWARDS = {
+    "Mid Act 1": 1, "Late Act 1": 1, "Act 1 Elites": 2, "Act 1 Boss Arena": 1,
+    "Early Act 2": 1, "Mid Act 2": 2, "Act 2 Elites": 5, "Late Act 2": 2, "Act 2 Boss Arena": 2,
+    "Early Act 3": 2, "Mid Act 3": 3, "Act 3 Elites": 9, "Late Act 3": 3, "Act 3 Boss Arena": 3,
+}
+# Relic rewards taken by a region after also fighting an earlier Elites region's elites.
+ELITE_RELIC_REWARDS = {
+    "Late Act 1": {"Act 1 Elites": 3},
+    "Act 1 Boss Arena": {"Act 1 Elites": 3},
+    "Early Act 2": {"Act 1 Elites": 3},
+    "Mid Act 2": {"Act 1 Elites": 4},
+    "Late Act 2": {"Act 1 Elites": 4, "Act 2 Elites": 6},
+    "Act 2 Boss Arena": {"Act 1 Elites": 4, "Act 2 Elites": 6},
+    "Early Act 3": {"Act 1 Elites": 4, "Act 2 Elites": 6},
+    "Mid Act 3": {"Act 1 Elites": 5, "Act 2 Elites": 7},
+    "Late Act 3": {"Act 1 Elites": 5, "Act 2 Elites": 7, "Act 3 Elites": 10},
+    "Act 3 Boss Arena": {"Act 1 Elites": 5, "Act 2 Elites": 7, "Act 3 Elites": 10},
 }
 
 
