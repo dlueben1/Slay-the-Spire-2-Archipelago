@@ -212,7 +212,6 @@ namespace StS2AP.Patches
             JsonElement? saveData = apSave?.SaveData;
             if (
                 apSave == null
-                || apSave.PlayerNumber != CoopSlot.PlayerNumber
                 || apSave.Progress is not { Initialized: true }
                 || saveData == null
                 || saveData.Value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined

@@ -9,12 +9,11 @@ open global.Xunit
 
 module ParticipantTests =
     let private identity kind seed team slot : ParticipationInput =
-        { Kind = kind; RoomSeed = seed; ApTeamId = Nullable team; ApSlotId = Nullable slot; PlayerNumber = 1 }
+        { Kind = kind; RoomSeed = seed; ApTeamId = Nullable team; ApSlotId = Nullable slot }
 
     let private input () : ParticipantContributionInput =
         { SchemaVersion = 9
           Participation = identity 1 "seed" 0 1
-          PlayerCount = 1
           HasSettings = true
           ReceiptSourceReady = true
           RelicReceipts = Dictionary<int64, IReadOnlyList<int>>()
@@ -135,30 +134,6 @@ module ParticipantTests =
                          { valid with ApSlotId = Nullable() } ] do
             Assert.True(ParticipantResume.Match(9, 9, invalid, valid) |> Result.isError)
             Assert.True(ParticipantResume.Match(9, 9, valid, invalid) |> Result.isError)
-
-    [<Property(MaxTest = 100)>]
-    let ``resume separates numbered players within the same AP slot`` (PositiveInt numberA) (PositiveInt numberB) =
-        let a = 1 + numberA % 4
-        let b = 1 + numberB % 4
-        let saved = { identity 1 "seed" 0 1 with PlayerNumber = a }
-        let current = { saved with PlayerNumber = b }
-        Result.isOk (ParticipantResume.Match(9, 9, saved, current)) = (a = b)
-
-    [<Fact>]
-    let ``lobby readiness validates player count and number before history`` () =
-        for count in [0..5] do
-            for number in [0..5] do
-                let candidate =
-                    { input () with PlayerCount = count
-                                    Participation = { identity 1 "seed" 0 1 with PlayerNumber = number } }
-                let expected =
-                    if number < 1 || number > 4 then "invalid-ap-identity"
-                    elif count < 1 || count > 4 || number > count then "invalid-coop-player-number"
-                    else "ready"
-                Assert.Equal(expected, evaluate candidate |> outcome)
-        let pending = { input () with PlayerCount = 2; ReceiptSourceReady = false
-                                      Participation = { identity 1 "seed" 0 1 with PlayerNumber = 3 } }
-        Assert.Equal("invalid-coop-player-number", evaluate pending |> outcome)
 
     [<Property(MaxTest = 100)>]
     let ``own-slot resume matches exactly room team and slot``

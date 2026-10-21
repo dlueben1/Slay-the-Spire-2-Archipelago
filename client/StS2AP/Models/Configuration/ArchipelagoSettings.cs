@@ -14,8 +14,6 @@ namespace StS2AP.Models
     /// </summary>
     public class ArchipelagoSettings
     {
-        public int PlayerCount { get; set; } = 1;
-        public int PlayerNumber { get; set; } = 1;
         private static readonly StringComparer CharacterNameComparer =
             StringComparer.InvariantCultureIgnoreCase;
 

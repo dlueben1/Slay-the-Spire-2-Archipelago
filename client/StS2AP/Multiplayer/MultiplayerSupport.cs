@@ -308,8 +308,7 @@ public static class MultiplayerSupport
     {
         reason = string.Empty;
         var candidate = ApSessionIdentity.Create(
-            ArchipelagoClient.ServerAddress, roomSeed, apTeamId, apSlotId,
-            CoopSlot.PlayerNumber);
+            ArchipelagoClient.ServerAddress, roomSeed, apTeamId, apSlotId);
         if (_preparedSessionIdentity is { } expected
             && expected != candidate)
         {
@@ -324,7 +323,7 @@ public static class MultiplayerSupport
     public static void NoteApSessionConnected(string roomSeed, int apTeamId, int apSlotId)
     {
         var identity = ApSessionIdentity.Create(
-            ArchipelagoClient.ServerAddress, roomSeed, apTeamId, apSlotId, CoopSlot.PlayerNumber);
+            ArchipelagoClient.ServerAddress, roomSeed, apTeamId, apSlotId);
         if (_deferredSessionIdentity != null && _deferredSessionIdentity != identity)
         {
             LogUtility.Info(
@@ -368,7 +367,7 @@ public static class MultiplayerSupport
         }
 
         var identity = ApSessionIdentity.Create(
-            ArchipelagoClient.ServerAddress, roomSeed, apTeamId, apSlotId, CoopSlot.PlayerNumber);
+            ArchipelagoClient.ServerAddress, roomSeed, apTeamId, apSlotId);
 
         DeferredItems.Clear();
         var receipts = new List<IndexedItemInfo>();
@@ -869,8 +868,6 @@ public static class MultiplayerSupport
         // TODO: is there seriously no automatic setter for this? where snapshot = source and then do slight modifications after
         var snapshot = new ArchipelagoSettings
         {
-            PlayerCount = source.PlayerCount,
-            PlayerNumber = source.PlayerNumber,
             AscensionLevel = source.AscensionLevel,
             ShouldShuffleAllCards = source.ShouldShuffleAllCards,
             IsSeeded = source.IsSeeded,

@@ -18,10 +18,8 @@ internal static class ParticipantAdapter
         return ContributionReadiness.Evaluate(ApRunData.RunSchemaVersion, new ParticipantContributionInput
         {
             SchemaVersion = state.SchemaVersion,
-            Participation = IdentityInput(state.Participation, state.ApRoomSeed, state.ApTeamId,
-                state.ApSlotId, state.SlotSettings?.PlayerNumber ?? 1),
+            Participation = IdentityInput(state.Participation, state.ApRoomSeed, state.ApTeamId, state.ApSlotId),
             HasSettings = state.SlotSettings != null,
-            PlayerCount = state.SlotSettings?.PlayerCount ?? 0,
             ReceiptSourceReady = state.ReceiptSourceReady,
             RelicReceipts = state.InitialRelicReceiptIndexesByCharacter?.Select(
                 pair => new KeyValuePair<long, IReadOnlyList<int>>(pair.Key, pair.Value))!,
@@ -35,14 +33,12 @@ internal static class ParticipantAdapter
     public static FSharpResult<ParticipantIdentity, ParticipantResumeError> MatchReturning(
         ApPlayerRunState saved, ApParticipationKind currentKind, ApSlotIdentity? currentSlot) =>
         ParticipantResume.Match(ApRunData.RunSchemaVersion, saved.SchemaVersion,
-            IdentityInput(saved.Participation, saved.ApRoomSeed, saved.ApTeamId,
-                saved.ApSlotId, saved.SlotSettings?.PlayerNumber ?? 0),
-            IdentityInput(currentKind, currentSlot?.RoomSeed, currentSlot?.ApTeamId,
-                currentSlot?.ApSlotId, currentSlot?.PlayerNumber ?? 0));
+            IdentityInput(saved.Participation, saved.ApRoomSeed, saved.ApTeamId, saved.ApSlotId),
+            IdentityInput(currentKind, currentSlot?.RoomSeed, currentSlot?.ApTeamId, currentSlot?.ApSlotId));
 
     private static ParticipationInput IdentityInput(
-        ApParticipationKind kind, string? seed, int? team, int? slot, int playerNumber) => new()
+        ApParticipationKind kind, string? seed, int? team, int? slot) => new()
     {
-        Kind = (int)kind, RoomSeed = seed!, ApTeamId = team, ApSlotId = slot, PlayerNumber = playerNumber,
+        Kind = (int)kind, RoomSeed = seed!, ApTeamId = team, ApSlotId = slot,
     };
 }

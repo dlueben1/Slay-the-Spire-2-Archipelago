@@ -15,30 +15,24 @@ type ParticipantKind =
 [<RequireQualifiedAccess>]
 type SlotIdentityError = Incomplete | Invalid
 
-/// Game-independent room/team/slot/player value. Server-qualified ownership stays in the C# session type.
+/// Game-independent room/team/slot value. Server-qualified ownership stays in the C# session type.
 type ParticipantSlot =
-    private | Slot of roomSeed: string * teamId: int * slotId: int * playerNumber: int
+    private | Slot of roomSeed: string * teamId: int * slotId: int
 
-    member this.RoomSeed = let (Slot(seed, _, _, _)) = this in seed
-    member this.ApTeamId = let (Slot(_, team, _, _)) = this in team
-    member this.ApSlotId = let (Slot(_, _, slot, _)) = this in slot
-    member this.PlayerNumber = let (Slot(_, _, _, number)) = this in number
-    override this.ToString() =
-        $"{this.RoomSeed}/ap-team-{this.ApTeamId}/ap-slot-{this.ApSlotId}"
-        + (if this.PlayerNumber = 1 then "" else $"/player-{this.PlayerNumber}")
-
-    static member Decode(seed: string, team: Nullable<int>, slot: Nullable<int>, playerNumber: int) =
-        if isNull seed || not team.HasValue || not slot.HasValue then Error SlotIdentityError.Incomplete
-        elif String.IsNullOrWhiteSpace(seed) || team.Value < 0 || slot.Value < 0 || playerNumber < 1 || playerNumber > 4 then Error SlotIdentityError.Invalid
-        else Ok (Slot(seed, team.Value, slot.Value, playerNumber))
+    member this.RoomSeed = let (Slot(seed, _, _)) = this in seed
+    member this.ApTeamId = let (Slot(_, team, _)) = this in team
+    member this.ApSlotId = let (Slot(_, _, slot)) = this in slot
+    override this.ToString() = $"{this.RoomSeed}/ap-team-{this.ApTeamId}/ap-slot-{this.ApSlotId}"
 
     static member Decode(seed: string, team: Nullable<int>, slot: Nullable<int>) =
-        ParticipantSlot.Decode(seed, team, slot, 1)
+        if isNull seed || not team.HasValue || not slot.HasValue then Error SlotIdentityError.Incomplete
+        elif String.IsNullOrWhiteSpace(seed) || team.Value < 0 || slot.Value < 0 then Error SlotIdentityError.Invalid
+        else Ok (Slot(seed, team.Value, slot.Value))
 
 /// Untrusted save/lobby fields. A missing contribution is represented by missing input, not a guest.
 [<CLIMutable>]
 type ParticipationInput =
-    { Kind: int; RoomSeed: string; ApTeamId: Nullable<int>; ApSlotId: Nullable<int>; PlayerNumber: int }
+    { Kind: int; RoomSeed: string; ApTeamId: Nullable<int>; ApSlotId: Nullable<int> }
 
 type ParticipantIdentity =
     private | GuestIdentity | OwnSlotIdentity of ParticipantSlot
@@ -63,7 +57,6 @@ type ContributionError =
     | UnsupportedSchema of int
     | UnsupportedParticipation of int
     | InvalidIdentity
-    | InvalidCoopPlayerNumber of playerCount: int * playerNumber: int
     | InvalidReceipts of string
 
     member this.Code =
@@ -71,15 +64,13 @@ type ContributionError =
         | UnsupportedSchema version -> $"unsupported-ap-run-schema-{version}"
         | UnsupportedParticipation _ -> "unsupported-ap-participation"
         | InvalidIdentity -> "invalid-ap-identity"
-        | InvalidCoopPlayerNumber _ -> "invalid-coop-player-number"
         | InvalidReceipts _ -> "invalid-ap-history"
 
     member this.Description =
         match this with
         | UnsupportedSchema version -> $"unsupported AP run schema {version}"
         | UnsupportedParticipation kind -> $"unsupported AP participation {kind}"
-        | InvalidIdentity -> "invalid AP room/team/slot/player identity"
-        | InvalidCoopPlayerNumber(count, number) -> $"Player {number}, player_count={count}"
+        | InvalidIdentity -> "invalid AP room/team/slot identity"
         | InvalidReceipts reason -> reason
 
 /// Borrowed input for synchronous validation. Collections must stay stable during Evaluate.
@@ -87,7 +78,6 @@ type ContributionError =
 type ParticipantContributionInput =
     { SchemaVersion: int
       Participation: ParticipationInput
-      PlayerCount: int
       HasSettings: bool
       ReceiptSourceReady: bool
       RelicReceipts: IEnumerable<KeyValuePair<int64, IReadOnlyList<int>>>
@@ -129,13 +119,11 @@ type ContributionReadiness =
             | Error kind -> Rejected (ContributionError.UnsupportedParticipation kind)
             | Ok ParticipantKind.VanillaGuest -> Ready GuestIdentity
             | Ok ParticipantKind.OwnApSlot ->
-                match ParticipantSlot.Decode(input.Participation.RoomSeed, input.Participation.ApTeamId, input.Participation.ApSlotId, input.Participation.PlayerNumber) with
+                match ParticipantSlot.Decode(input.Participation.RoomSeed, input.Participation.ApTeamId, input.Participation.ApSlotId) with
                 | Error SlotIdentityError.Incomplete -> Waiting PreparationBlocker.MissingIdentity
                 | Error SlotIdentityError.Invalid -> Rejected ContributionError.InvalidIdentity
                 | Ok slot ->
                     if not input.HasSettings then Waiting PreparationBlocker.MissingSettings
-                    elif input.PlayerCount < 1 || input.PlayerCount > 4 || slot.PlayerNumber > input.PlayerCount then
-                        Rejected (ContributionError.InvalidCoopPlayerNumber(input.PlayerCount, slot.PlayerNumber))
                     elif not input.ReceiptSourceReady then Waiting PreparationBlocker.MissingHistory
                     else
                         match ContributionReadiness.ValidateReceipts(input) with
@@ -179,8 +167,8 @@ type ParticipantResume private () =
                 Error (ParticipantResumeError.ParticipationMismatch(ParticipantKind.OwnApSlot, ParticipantKind.VanillaGuest))
             | Ok ParticipantKind.VanillaGuest, Ok ParticipantKind.VanillaGuest -> Ok GuestIdentity
             | Ok ParticipantKind.OwnApSlot, Ok ParticipantKind.OwnApSlot ->
-                match ParticipantSlot.Decode(saved.RoomSeed, saved.ApTeamId, saved.ApSlotId, saved.PlayerNumber),
-                      ParticipantSlot.Decode(current.RoomSeed, current.ApTeamId, current.ApSlotId, current.PlayerNumber) with
+                match ParticipantSlot.Decode(saved.RoomSeed, saved.ApTeamId, saved.ApSlotId),
+                      ParticipantSlot.Decode(current.RoomSeed, current.ApTeamId, current.ApSlotId) with
                 | Error error, _ -> Error (ParticipantResumeError.InvalidSavedIdentity error)
                 | _, Error error -> Error (ParticipantResumeError.InvalidCurrentIdentity error)
                 | Ok savedSlot, Ok currentSlot when savedSlot <> currentSlot -> Error (ParticipantResumeError.SlotMismatch(savedSlot, currentSlot))

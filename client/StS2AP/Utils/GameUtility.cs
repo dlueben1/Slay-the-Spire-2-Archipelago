@@ -352,15 +352,14 @@ namespace StS2AP.Utils
             // Goal records only grow. A delayed initial read must not erase a newer notification.
             if (stored != null)
                 _allGoaledCharacters.UnionWith(stored.Where(pair => pair.Value).Select(pair => pair.Key));
-            _goaledCharacters.UnionWith(settings.Characters.Keys.Where(character =>
-                _allGoaledCharacters.Contains(ArchipelagoIdCodec.PlayerName(character, settings.PlayerNumber))));
-            if (!_slotGoalSent && CoopGoalPolicy.IsComplete(_allGoaledCharacters, settings.Characters.Keys,
-                    settings.PlayerCount, settings.NumCharsGoal))
+            _goaledCharacters.UnionWith(settings.Characters.Keys.Where(_allGoaledCharacters.Contains));
+            if (!_slotGoalSent && SlotGoalPolicy.IsComplete(_allGoaledCharacters, settings.Characters.Keys,
+                    settings.NumCharsGoal))
             {
                 session.SetGoalAchieved();
                 _slotGoalSent = true;
-                LogUtility.Success($"All {settings.PlayerCount} co-op players completed their character goals. SetGoalAchieved sent.");
-                NotificationUtility.ShowRawText("Goal Complete! Every player has finished their goals.");
+                LogUtility.Success("The slot's character goal is complete. SetGoalAchieved sent.");
+                NotificationUtility.ShowRawText("Goal Complete!");
             }
         }
 
@@ -427,7 +426,7 @@ namespace StS2AP.Utils
                         Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
                         .Initialize(new Newtonsoft.Json.Linq.JObject());
 
-                    var updateDict = new Dictionary<string, bool> { { CoopSlot.Name(charName), true } };
+                    var updateDict = new Dictionary<string, bool> { { charName, true } };
  
                     session.DataStorage[
                         Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
@@ -453,8 +452,8 @@ namespace StS2AP.Utils
                     LogUtility.Info($"TrySetGoalAchieved: '{charName}' already recorded as goaled. Total goaled: {_goaledCharacters.Count}");
                 }
 
-                // Shared-slot completion is evaluated from merged server records, including updates
-                // from other connected clients. Never goal from this player's local count alone.
+                // Completion is evaluated from merged server records, including victories by other
+                // clients connected to this slot. Never goal from this client's local count alone.
                 var merged = await session.DataStorage[Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
                     .GetAsync<Dictionary<string, bool>>();
                 ArchipelagoClient.RunForSession(session, () => ApplySharedGoalProgress(session, settings, merged));

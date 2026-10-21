@@ -35,8 +35,7 @@ namespace StS2AP.Utils
                 serverAddress,
                 roomSeed,
                 session.ConnectionInfo.Team,
-                session.ConnectionInfo.Slot,
-                CoopSlot.PlayerNumber
+                session.ConnectionInfo.Slot
             );
 
             lock (_stateLock)

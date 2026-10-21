@@ -123,11 +123,6 @@ namespace StS2AP
             out string reason)
         {
             ArgumentNullException.ThrowIfNull(settings);
-            if (settings.PlayerNumber != CoopSlot.PlayerNumber)
-            {
-                reason = $"The saved host uses Player {settings.PlayerNumber}, but this connection uses Player {CoopSlot.PlayerNumber}.";
-                return false;
-            }
 
             // RitsuLib's JSON round-trip does not preserve the comparer from the initialized
             // ConcurrentDictionary. Native character IDs are upper-case while AP slot-data keys

@@ -11,25 +11,20 @@ public sealed class RemoteSingleplayerSaveKeyTests
         Assert.False(new ClientSettings().EnableRemoteSingleplayerSaves);
     }
 
+    // Keys must match those already stored on AP servers, including the legacy "_P1" segment.
     [Theory]
-    [InlineData(1, "IRONCLAD", "StS2AP_RemoteSingleplayerSave_v1_P1_IRONCLAD")]
-    [InlineData(2, "IRONCLAD", "StS2AP_RemoteSingleplayerSave_v1_P2_IRONCLAD")]
-    [InlineData(1, "SILENT", "StS2AP_RemoteSingleplayerSave_v1_P1_SILENT")]
-    public void CharacterAndPlayerHaveExactlyOneIndependentKey(
-        int playerNumber,
-        string character,
-        string expected)
+    [InlineData("IRONCLAD", "StS2AP_RemoteSingleplayerSave_v1_P1_IRONCLAD")]
+    [InlineData("SILENT", "StS2AP_RemoteSingleplayerSave_v1_P1_SILENT")]
+    public void EachCharacterHasExactlyOneExistingKey(string character, string expected)
     {
-        Assert.Equal(expected, RemoteSingleplayerSaveKey.For(character, playerNumber));
+        Assert.Equal(expected, RemoteSingleplayerSaveKey.For(character));
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(5)]
-    public void InvalidPlayerNumberIsRejected(int playerNumber)
+    [InlineData("")]
+    [InlineData("   ")]
+    public void BlankCharacterIsRejected(string character)
     {
-        Assert.Throws<ArgumentOutOfRangeException>(
-            () => RemoteSingleplayerSaveKey.For("IRONCLAD", playerNumber)
-        );
+        Assert.Throws<ArgumentException>(() => RemoteSingleplayerSaveKey.For(character));
     }
 }

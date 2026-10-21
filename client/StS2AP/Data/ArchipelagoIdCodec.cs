@@ -10,9 +10,6 @@ namespace StS2AP.Data
     {
         public const long BlockSize = 10000L;
 
-        public static string PlayerName(string name, int playerNumber) =>
-            playerNumber == 1 ? name : $"P{playerNumber} {name}";
-
         /// <summary>
         /// Archipelago reserves negative IDs for its own "Nothing" item and server locations.
         /// </summary>

@@ -64,8 +64,8 @@ internal sealed class CombatEffectDelivery
     private bool _initialized;
     private CombatEffectActionMessage? _pendingAction;
     private string? _lastRequestError;
-    // Consumption belongs to the AP slot, including its numbered co-op identity, across runs.
-    private string StorageKey => CoopSlot.StorageKey(_trap ? "StS2AP_LastConsumedTrapIdx" : "StS2AP_LastConsumedBuffIdx");
+    // Consumption belongs to the AP slot across runs.
+    private string StorageKey => _trap ? "StS2AP_LastConsumedTrapIdx" : "StS2AP_LastConsumedBuffIdx";
 
     /// <summary>
     /// Registers this category's multiplayer action once at mod startup.

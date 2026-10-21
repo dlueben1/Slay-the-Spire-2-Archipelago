@@ -51,14 +51,13 @@ public static class ApCoopLobbyWarning
             // unrelated popup that is already open (for example a disconnect notice).
             if (NModalContainer.Instance is not { OpenModal: null })
                 throw new InvalidOperationException("The game's modal container is unavailable or busy.");
-            string numbers = string.Join(", ", CoopPlayerSelection.GetDuplicates(roster)
-                .Select(member => $"P{member.PlayerNumber} (AP slot {member.Slot})"));
-            TextUtility.RegisterLocString("AP_COOP_DUPLICATES_HEADER", "Share AP Player Progress?", "ap");
+            string slots = string.Join(", ", CoopPlayerSelection.GetDuplicates(roster)
+                .Select(member => $"AP slot {member.Slot}"));
+            TextUtility.RegisterLocString("AP_COOP_DUPLICATES_HEADER", "Share AP Slot Progress?", "ap");
             TextUtility.RegisterLocString("AP_COOP_DUPLICATES_BODY",
-                $"Multiple people selected {numbers}. People using the same AP player number "
-                + "receive that player's items and send the same checks. Completing a check twice "
-                + "does not create another check, and the other numbered players' goals still need "
-                + "to be completed. Continue with these shared player numbers?", "ap");
+                $"Multiple people are connected to {slots}. People sharing an AP slot receive "
+                + "that slot's items and send the same checks. Completing a check twice does not "
+                + "create another check. Continue with these shared AP slots?", "ap");
             var popup = new ConfirmPopup
             {
                 Header = TextUtility.GetLocString("AP_COOP_DUPLICATES_HEADER", "ap"),
@@ -80,13 +79,13 @@ public static class ApCoopLobbyWarning
                             NotificationUtility.ShowRawText("The AP lobby lineup changed. Press Embark again to review it.");
                             return;
                         }
-                        LogUtility.Info($"Host confirmed shared AP player numbers: {numbers}");
+                        LogUtility.Info($"Host confirmed shared AP slots: {slots}");
                         // Re-enter all character/campaign checks and the authoritative final guard.
                         screen.OnEmbarkPressed(null!);
                     }
                     catch (Exception ex)
                     {
-                        LogUtility.Warn($"Could not resume AP embark after shared-player confirmation: {ex.Message}");
+                        LogUtility.Warn($"Could not resume AP embark after shared-slot confirmation: {ex.Message}");
                         NotificationUtility.ShowRawText("Could not resume embarking. Press Embark to retry.");
                     }
                 },
@@ -98,8 +97,8 @@ public static class ApCoopLobbyWarning
         catch (Exception ex)
         {
             consent.Pending = false;
-            LogUtility.Warn($"Could not confirm shared AP player numbers: {ex.Message}");
-            NotificationUtility.ShowRawText("Could not show the shared-player warning. Press Embark to retry.");
+            LogUtility.Warn($"Could not confirm shared AP slots: {ex.Message}");
+            NotificationUtility.ShowRawText("Could not show the shared-slot warning. Press Embark to retry.");
         }
     }
 
@@ -111,8 +110,6 @@ public static class ApCoopLobbyWarning
             return new CoopPlayerSelection.Member(netId,
                 ownsSlot ? state!.ApRoomSeed : null,
                 ownsSlot ? state!.ApTeamId : null,
-                ownsSlot ? state!.ApSlotId : null,
-                state?.SlotSettings?.PlayerCount ?? 0,
-                state?.SlotSettings?.PlayerNumber ?? 0);
+                ownsSlot ? state!.ApSlotId : null);
         }).ToArray();
 }

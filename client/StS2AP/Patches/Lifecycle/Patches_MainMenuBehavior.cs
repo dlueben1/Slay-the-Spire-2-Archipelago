@@ -352,7 +352,7 @@ namespace StS2AP.Patches
                 NClickableControl.SignalName.Released,
                 Callable.From<NButton>(_ =>
                 {
-                    // clear state so people can change their player number
+                    // Forget the pending play destination; settings may change before the next one.
                     MultiplayerSupport.ClearPendingPlaySelection();
                     MenuUtility.OpenArchipelagoSettings();
                 })
