@@ -72,7 +72,8 @@ class PowerCheck:
 # Budget roughly seven combat card rewards per act: three before Mid, five before Late and
 # seven before the boss. Later acts expect this act's smiths from entry and its rest from Mid.
 # Act 1 waits until the boss for smiths so the sparse floorless opening stays loose. Elite rows
-# copy their act's Late row apart from power.
+# copy their act's Late row apart from power. The Act 2 boss and Early Act 3 split the climb to
+# Act 3, where Early Act 3 also expects the third Ancient.
 REGIONS: dict[str, PowerCheck] = {
     #                        act  power  card rewards  min cards
     # Seeded Run replays one map, which may force an elite, so it keeps elite-inclusive power.
@@ -84,8 +85,8 @@ REGIONS: dict[str, PowerCheck] = {
     "Mid Act 2":        PowerCheck(2, 14.0,  10,  3.0, rest=True, smith=True, shop=True),
     "Late Act 2":       PowerCheck(2, 18.0,  12,  3.0, rest=True, smith=True, shop=True),
     "Act 2 Elites":     PowerCheck(2, 15.5,  12,  3.0, rest=True, smith=True, shop=True),
-    "Act 2 Boss Arena": PowerCheck(2, 23.5,  14,  5.0, rest=True, smith=True, remove=True, shop=True),
-    "Early Act 3":      PowerCheck(3, 23.5,  14,  5.0, smith=True, shop=True),
+    "Act 2 Boss Arena": PowerCheck(2, 22.0,  14,  4.0, rest=True, smith=True, remove=True, shop=True),
+    "Early Act 3":      PowerCheck(3, 23.0,  14,  5.0, smith=True, shop=True),
     "Mid Act 3":        PowerCheck(3, 25.5,  17,  5.0, rest=True, smith=True, shop=True),
     "Late Act 3":       PowerCheck(3, 27.0,  19,  5.0, rest=True, smith=True, shop=True),
     "Act 3 Elites":     PowerCheck(3, 26.0,  19,  5.0, rest=True, smith=True, shop=True),
