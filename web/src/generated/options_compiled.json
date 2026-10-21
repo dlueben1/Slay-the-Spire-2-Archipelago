@@ -12,7 +12,7 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "ac87ef21ee1f8779802c92e50882e0b8bf995b1cb62282282bfe151d4dded36c"
+      "sha256": "4a0af2f4ff4533d80f0041ba7482fb1c31fdfe96248534c0bdf1c42fe8ec4ef1"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
@@ -685,7 +685,7 @@
       "module": "worlds.spire2.options",
       "kind": "list",
       "display_name": "Modded Characters",
-      "description": "Modded characters to include when Advanced Characters is disabled. Enter each character's\ninternal ID or a predefined display name, such as Watcher, Guardian, or Tectonic.\nThe list of predefined display names will probably be pinned somewhere on Discord.\nAny number of predefined characters can be present in the generated character set, but at\nmost 20 characters without a predefined name.\nDuplicate aliases and IDs are removed, keeping the first occurrence. Predefined characters use their\ndisplay names; other selected characters are numbered consecutively in YAML order.\nA larger candidate list is allowed when Pick Number of Characters selects a subset.\n\nIf using a modded character:\nPredefined display names and internal IDs are matched case-insensitively.\nUnrecognised characters still require their full internal ID.\n\nIf you don't know the exact ID to enter with the mod installed go to\n`Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.\n\nEvery configured character must be installed with the matching internal ID. The client\nrejects the AP connection if a configured character cannot be loaded.",
+      "description": "Modded characters to include when Advanced Characters is disabled. Enter each character's\ninternal ID or a predefined display name, such as Watcher, Guardian, or Tectonic.\nPredefined characters, with their internal IDs and mods, are listed at\nhttps://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/main/docs/predefined-characters.md\nAny number of predefined characters can be present in the generated character set, but at\nmost 20 characters without a predefined name.\nDuplicate aliases and IDs are removed, keeping the first occurrence. Predefined characters use their\ndisplay names; other selected characters are numbered consecutively in YAML order.\nA larger candidate list is allowed when Pick Number of Characters selects a subset.\n\nIf using a modded character:\nPredefined display names and internal IDs are matched case-insensitively.\nUnrecognised characters still require their full internal ID.\n\nIf you don't know the exact ID to enter with the mod installed go to\n`Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.\n\nEvery configured character must be installed with the matching internal ID. The client\nrejects the AP connection if a configured character cannot be loaded.",
       "default": [],
       "raw_default": [],
       "visibility": {
@@ -804,7 +804,7 @@
       "module": "worlds.spire2.options",
       "kind": "text_choice",
       "display_name": "Unlocked Character",
-      "description": "Which character you start with when lock_characters is set to locked_fixed.\nIt must be one of your configured characters, and is always kept when Pick Number of\nCharacters selects a subset. Leave it empty (\"\") to start with a random character.\nCan also enter a predefined display name or full internal ID for modded characters.\nThe list of predefined display names will probably be pinned somewhere on Discord.",
+      "description": "Which character you start with when lock_characters is set to locked_fixed.\nIt must be one of your configured characters, and is always kept when Pick Number of\nCharacters selects a subset. Leave it empty (\"\") to start with a random character.\nCan also enter a predefined display name or full internal ID for modded characters.\nPredefined characters, with their internal IDs and mods, are listed at\nhttps://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/main/docs/predefined-characters.md",
       "default": "ironclad",
       "raw_default": 0,
       "visibility": {
@@ -1859,7 +1859,7 @@
       "module": "worlds.spire2.options",
       "kind": "dictionary",
       "display_name": "Advanced Characters",
-      "description": "The configuration for advanced characters.  Each character's options can be configured\nindependently of each other.  No validation is done on the character name, so use carefully.\nFormat is:\n    <char name>:\n        ascension:\n            - <string or number>\n        ascension_down:\n            - <string or number>\n        progressive_starter_card: <true or false>\n        progressive_starter_relic: <true or false>\n\nOmitted progressive starter options inherit their global settings. Explicit true/false\nvalues override them for that character. Both still require Include Floor Checks.\n\nIf using a modded character:\nEnter its full internal ID or a predefined display name, such as Watcher.\nThe list of predefined display names will probably be pinned somewhere on Discord.\nDo not include both an alias and its full ID as separate entries.\n\nIf you don't know the exact ID to enter with the mod installed go to\n`Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.\n\nEvery configured character must be installed with the matching internal ID. The client\nrejects the AP connection if a configured character cannot be loaded.",
+      "description": "The configuration for advanced characters.  Each character's options can be configured\nindependently of each other.  No validation is done on the character name, so use carefully.\nFormat is:\n    <char name>:\n        ascension:\n            - <string or number>\n        ascension_down:\n            - <string or number>\n        progressive_starter_card: <true or false>\n        progressive_starter_relic: <true or false>\n\nOmitted progressive starter options inherit their global settings. Explicit true/false\nvalues override them for that character. Both still require Include Floor Checks.\n\nIf using a modded character:\nEnter its full internal ID or a predefined display name, such as Watcher.\nPredefined characters, with their internal IDs and mods, are listed at\nhttps://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/main/docs/predefined-characters.md\nDo not include both an alias and its full ID as separate entries.\n\nIf you don't know the exact ID to enter with the mod installed go to\n`Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.\n\nEvery configured character must be installed with the matching internal ID. The client\nrejects the AP connection if a configured character cannot be loaded.",
       "default": {
         "ironclad": {
           "ascension": [
