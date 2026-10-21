@@ -1,6 +1,5 @@
 import dataclasses
-import typing
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, NamedTuple
 from typing_extensions import override
 
 from BaseClasses import CollectionState
@@ -8,6 +7,11 @@ from NetUtils import JSONMessagePart
 from rule_builder.options import OptionFilter
 from rule_builder.rules import Rule, True_, Has, HasFromListUnique
 from .characters import CharacterConfig, VANILLA_CHARACTERS, DEFAULT_STARTER_POWER
+from .logic_table import (
+    ANCIENT_POWER_BY_TIER, BOSS_GOLD, ELITE_GOLD, FULL_VALUE_CARD_REWARDS, FULL_VALUE_CARD_REWARDS_ALL_SHUFFLED,
+    LATER_CARD_POWER, RARE_CARD_POWER, REGIONS, RELIC_POWER, REST_POWER_BY_ACT, SHOP_GOLD_BY_ACT,
+    SHOP_REMOVE_POWER_BY_TIER, SHOP_SLOT_VALUES, SMITH_POWER_BY_TIER, PowerCheck,
+)
 from .options import AncientRelicLocation, CampfireSanity, GoldSanity
 
 if TYPE_CHECKING:
@@ -15,23 +19,7 @@ if TYPE_CHECKING:
 
 
 # Sparse-opening item guarantees use the same budget as this first power check.
-MID_ACT_1_POWER = 4.0
-
-# Power from each ordinary card reward after the full-value ones. Higher values reach power
-# checks with fewer card rewards, so players are expected to progress with weaker decks.
-LATER_CARD_POWER = 0.7
-
-
-# First useful choices matter more than a full page. Values are marginal per slot;
-# colored-card/relic choice contributes 1.5 each, neutral 0.5, potions 1 altogether.
-# The client restores entries from the end: first available is Power/rare neutral.
-SHOP_SLOT_VALUES = (
-    ("Shop Card Slot", 5, (0.625, 0.375, 0.25, 0.125, 0.125)),
-    ("Neutral Shop Card Slot", 2, (0.375, 0.125)),
-    ("Shop Relic Slot", 3, (0.75, 0.5, 0.25)),
-    ("Shop Potion Slot", 3, (0.5, 0.375, 0.125)),
-)
-
+MID_ACT_1_POWER = REGIONS["Mid Act 1"].power
 
 # Reviewed values live with character registration. New vanilla definitions explicitly
 # select DEFAULT_STARTER_POWER until their starting loadout has been assessed.
@@ -39,6 +27,13 @@ STARTER_CARD_POWER = {definition.name: definition.starter_power.card
                       for definition in VANILLA_CHARACTERS if definition.starter_power is not None}
 STARTER_RELIC_POWER = {definition.name: definition.starter_power.relic
                        for definition in VANILLA_CHARACTERS if definition.starter_power is not None}
+STARTER_PAIR_POWER = {definition.name: definition.starter_power.missing_pair
+                      for definition in VANILLA_CHARACTERS if definition.starter_power is not None}
+
+
+class LedgerEntry(NamedTuple):
+    label: str
+    amount: float
 
 
 @dataclasses.dataclass()
@@ -53,33 +48,44 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
     remove: bool = False
     shop: bool = False
 
+    @classmethod
+    def for_region(cls, char_offset: int, check: PowerCheck) -> 'SpireHasPower':
+        return cls(char_offset, check.power, card_rewards=check.card_rewards, act=check.act,
+                   minimum_cards=check.minimum_cards, rest=check.rest, smith=check.smith,
+                   remove=check.remove, shop=check.shop)
+
     @override
     def _instantiate(self, world: 'SlayTheSpire2World') -> Rule.Resolved:
         config = next(config for config in world.characters if config.char_offset == self.char_offset)
         options = world.options
+        check = PowerCheck(self.act, self.power_level, self.card_rewards, self.minimum_cards,
+                           rest=self.rest, smith=self.smith, remove=self.remove, shop=self.shop)
+        # The APWorld cannot verify a modded character's Orobas mappings. Do not assume
+        # those receipts grant upgrades when the client may leave its starters unchanged.
+        reviewed_starters = config.mod_num == 0
         return self.Resolved(
             char=config.name,
             power_level=self.power_level,
-            vanilla_cards=0 if options.shuffle_all_cards else self.card_rewards / 2,
-            full_value_cards=11 if options.shuffle_all_cards else 5,
+            vanilla_cards=0 if options.shuffle_all_cards else check.vanilla_card_strength,
+            full_value_cards=(FULL_VALUE_CARD_REWARDS_ALL_SHUFFLED if options.shuffle_all_cards
+                              else FULL_VALUE_CARD_REWARDS),
             minimum_cards=self.minimum_cards,
-            rest_level=self.act if self.rest and options.campfire_sanity else 0,
-            smith_level=self.act if self.smith and options.campfire_sanity else 0,
-            remove_level=(self.act if self.remove else self.act - 1)
-                         if options.shop_sanity and options.shop_remove_slots else 0,
+            rest_level=check.rest_tier if options.campfire_sanity else 0,
+            smith_level=check.smith_tiers if options.campfire_sanity else 0,
+            remove_level=check.removal_tiers if options.shop_sanity and options.shop_remove_slots else 0,
             act=self.act,
             neow_sanity=bool(options.neow_sanity),
             ancient_anytime=bool(options.ancient_relic_location),
             shop_sanity=bool(options.shop_sanity),
-            shop_scale=(2 / 3, 1 / 3, 1 / 6)[self.act - 1] if self.shop and options.shop_sanity else 0,
+            shop_scale=check.shop_scale if options.shop_sanity else 0,
             shuffled_shop_slots=(options.shop_card_slots.value, options.shop_neutral_card_slots.value,
                                  options.shop_relic_slots.value, options.shop_potion_slots.value),
-            # The APWorld cannot verify a modded character's Orobas mappings. Do not assume
-            # those receipts grant upgrades when the client may leave its starters unchanged.
             starter_card_power=STARTER_CARD_POWER.get(config.name, DEFAULT_STARTER_POWER.card)
-                               if config.mod_num == 0 and config.progressive_starter_card else (0, 0),
+                               if reviewed_starters and config.progressive_starter_card else (0, 0),
             starter_relic_power=STARTER_RELIC_POWER.get(config.name, DEFAULT_STARTER_POWER.relic)
-                                if config.mod_num == 0 and config.progressive_starter_relic else (0, 0),
+                                if reviewed_starters and config.progressive_starter_relic else (0, 0),
+            starter_pair_power=STARTER_PAIR_POWER.get(config.name, DEFAULT_STARTER_POWER.missing_pair)
+                               if reviewed_starters else 0,
             player=world.player,
         )
 
@@ -100,63 +106,78 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
         shuffled_shop_slots: tuple[int, int, int, int]
         starter_card_power: tuple[float, float]
         starter_relic_power: tuple[float, float]
+        starter_pair_power: float
 
-        def strength(self, state: CollectionState) -> tuple[float, float, float]:
-            received_cards = state.count(f"{self.char} Card Reward", self.player)
-            # Later ordinary choices are more likely to be skipped; half shuffle reaches
-            # this point with fewer AP receipts because it also provides free combat cards.
-            cards = (min(received_cards, self.full_value_cards)
-                     + LATER_CARD_POWER * max(0, received_cards - self.full_value_cards)
-                     + 1.5 * state.count(f"{self.char} Rare Card Reward", self.player)
-                     + self.vanilla_cards)
+        def count(self, state: CollectionState, item: str) -> int:
+            return state.count(f"{self.char} {item}", self.player)
+
+        def card_entries(self, state: CollectionState) -> List[LedgerEntry]:
+            """Contributions to card strength, in the order they are added up."""
+            received = self.count(state, "Card Reward")
+            entries = [
+                # Later ordinary choices are more likely to be skipped.
+                LedgerEntry(f"Card Rewards ({received} received)",
+                            min(received, self.full_value_cards)
+                            + LATER_CARD_POWER * max(0, received - self.full_value_cards)),
+                LedgerEntry(f"Rare Card Rewards ({self.count(state, 'Rare Card Reward')} received)",
+                            RARE_CARD_POWER * self.count(state, "Rare Card Reward")),
+            ]
+            if self.vanilla_cards:
+                entries.append(LedgerEntry("Vanilla card rewards", self.vanilla_cards))
             # The first receipt restores the normal loadout; only the second adds power above it.
-            if state.has(f"{self.char} Progressive Starter Card", self.player, 2):
-                cards += self.starter_card_power[1]
+            if self.count(state, "Progressive Starter Card") >= 2:
+                entries.append(LedgerEntry("Upgraded starter card", self.starter_card_power[1]))
+            return entries
+
+        def relic_entries(self, state: CollectionState) -> List[LedgerEntry]:
+            """Contributions to power beyond card strength, in the order they are added up."""
             # Credit receipts immediately, as in the previous APWorld. Claim timing
             # remains a client setting rather than an additional logic restriction.
-            relics = state.count(f"{self.char} Relic", self.player)
-            power = cards + 1.5 * relics
-            if state.has(f"{self.char} Progressive Starter Relic", self.player, 2):
-                power += self.starter_relic_power[1]
+            relics = self.count(state, "Relic")
+            entries = [LedgerEntry(f"Relics ({relics} received)", RELIC_POWER * relics)]
+            if self.count(state, "Progressive Starter Relic") >= 2:
+                entries.append(LedgerEntry("Upgraded starter relic", self.starter_relic_power[1]))
+            return entries
 
+        def strength(self, state: CollectionState) -> tuple[float, float, float]:
+            cards = 0.0
+            for entry in self.card_entries(state):
+                cards += entry.amount
+            power = cards
+            for entry in self.relic_entries(state):
+                power += entry.amount
             required = self.power_level
             for adjustment in self.power_adjustments(state).values():
                 required += adjustment
             return cards, power, required
 
         def power_adjustments(self, state: CollectionState) -> dict[str, float]:
+            """Missing support, in the order it is added to the requirement."""
             # Share the actual adjustments with UT's explanation so it cannot drift from logic.
             adjustments = {}
             for kind, weights in (("Card", self.starter_card_power), ("Relic", self.starter_relic_power)):
-                if weights[0] and not state.has(f"{self.char} Progressive Starter {kind}", self.player):
+                if weights[0] and not self.count(state, f"Progressive Starter {kind}"):
                     adjustments[f"Missing Starter {kind}"] = weights[0]
-            # Normal Necrobinder starts with both halves of this synergy. Losing either half
-            # needs compensation; restoring both should match leaving the starters unshuffled.
-            if self.char == "Necrobinder" and adjustments:
-                adjustments["Missing starter card/relic synergy"] = 0.5
+            if self.starter_pair_power and adjustments:
+                adjustments["Missing starter card/relic synergy"] = self.starter_pair_power
 
-            if self.rest_level and not state.has(f"{self.char} Progressive Rest", self.player, self.rest_level):
-                adjustments[f"Missing Rest tier {self.rest_level}"] = (3, 3.5, 4)[self.act - 1]
+            if self.rest_level and self.count(state, "Progressive Rest") < self.rest_level:
+                adjustments[f"Missing Rest tier {self.rest_level}"] = REST_POWER_BY_ACT[self.act - 1]
 
-            # earlier progressive smith's matter way more, act 3 one is weaker
-            # for progressive shop remove's - early on it doesn't matter but later on
-            # it matters more? its sort of unclear how to do shop remove's here
-            # its all vibe based anyway
             for item, level, weights in (
-                ("Progressive Smith", self.smith_level, (3.5, 3.0, 1.5)),
-                ("Progressive Shop Remove", self.remove_level, (1, 1.5, 2)),
+                ("Progressive Smith", self.smith_level, SMITH_POWER_BY_TIER),
+                ("Progressive Shop Remove", self.remove_level, SHOP_REMOVE_POWER_BY_TIER),
             ):
-                received = state.count(f"{self.char} {item}", self.player)
+                received = self.count(state, item)
                 missing = sum(weights[received:level])
                 if missing:
                     adjustments[f"Missing {item} tiers {received + 1}-{level}"] = missing
 
             # Anytime can provide later rewards early; Start of Act cannot.
             # Missing rewards need replacement power wherever no hard gate applies.
-            ancient_weights = (2, 4.5, 4.5)
-            received = state.count(f"{self.char} Progressive Ancient", self.player) + int(not self.neow_sanity)
+            received = self.count(state, "Progressive Ancient") + int(not self.neow_sanity)
             claimable = min(3 if self.ancient_anytime else self.act, received)
-            ancient_adjustment = sum(ancient_weights[:self.act]) - sum(ancient_weights[:claimable])
+            ancient_adjustment = sum(ANCIENT_POWER_BY_TIER[:self.act]) - sum(ANCIENT_POWER_BY_TIER[:claimable])
             if ancient_adjustment:
                 mode = "Anytime" if self.ancient_anytime else "Start of Act"
                 adjustments[f"Ancient support ({mode})"] = ancient_adjustment
@@ -174,11 +195,9 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
             if not self.shop_sanity:
                 return 0.0
             missing = 0.0
-
-            # later missing stuff matters less than the initial amounts
-            for (item, total, values), shuffled in zip(SHOP_SLOT_VALUES, self.shuffled_shop_slots):
-                restored = min(state.count(f"{self.char} {item}", self.player), shuffled)
-                available = total - shuffled + restored
+            for (item, values), shuffled in zip(SHOP_SLOT_VALUES, self.shuffled_shop_slots):
+                restored = min(self.count(state, item), shuffled)
+                available = len(values) - shuffled + restored
                 missing += sum(values[available:])
             return missing
 
@@ -189,28 +208,58 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
 
         @override
         def explain_json(self, state: CollectionState | None = None) -> List[JSONMessagePart]:
-            lines = [f"{self.char} Act {self.act} power check"]
-            if state is not None:
-                cards, power, required = self.strength(state)
-                lines.extend((
-                    f"  Power: {power:g} / {required:g} required ({'met' if power >= required else 'not met'})",
-                    f"  Card strength: {cards:g} / {self.minimum_cards:g} required "
-                    f"({'met' if cards >= self.minimum_cards else 'not met'})",
-                    f"  Power includes {cards:g} card strength and {power - cards:g} relic/starter relic power.",
-                ))
-            lines.append(f"  Base power requirement: {self.power_level:g}")
-            if state is not None:
-                for label, adjustment in self.power_adjustments(state).items():
-                    lines.append(f"    {label}: {adjustment:+g}")
+            if state is None:
+                lines = self.describe()
             else:
-                lines.append(f"  Minimum card strength: {self.minimum_cards:g}; support adjusts required power.")
-            lines.extend((
-                f"  Ordinary cards: first {self.full_value_cards} worth 1 each, "
-                f"later cards {LATER_CARD_POWER:g}; rare cards 1.5.",
-                f"  Expected unshuffled card power: {self.vanilla_cards:g}.",
-                "  Support adjustments can be offset by power. Separate item gates still apply.",
-            ))
+                lines = self.ledger_lines(state)
             return [{"type": "text", "text": "\n".join(lines) + "\n"}]
+
+        def ledger_lines(self, state: CollectionState) -> List[str]:
+            cards, power, required = self.strength(state)
+            lines = [
+                f"{self.char} Act {self.act} power check: {'met' if self._evaluate(state) else 'not met'}",
+                f"  Card strength {cards:g} of {self.minimum_cards:g} needed",
+                *(f"    {entry.label}: {entry.amount:g}" for entry in self.card_entries(state)),
+                f"  Power {power:g} of {required:g} needed",
+                f"    Card strength: {cards:g}",
+                *(f"    {entry.label}: {entry.amount:g}" for entry in self.relic_entries(state)),
+                f"  Requirement {required:g}",
+                f"    Base: {self.power_level:g}",
+                *(f"    {label}: {adjustment:+g}" for label, adjustment in self.power_adjustments(state).items()),
+                "  Missing support raises the requirement; extra power can make up for it.",
+                "  Separate item gates still apply.",
+            ]
+            return lines
+
+        def describe(self) -> List[str]:
+            def up_to(tier: int) -> str:
+                return "tier 1" if tier == 1 else f"tiers 1-{tier}"
+
+            support = []
+            if self.starter_card_power[0] or self.starter_relic_power[0]:
+                support.append("starters")
+            if self.rest_level:
+                support.append(f"Rest tier {self.rest_level}")
+            if self.smith_level:
+                support.append(f"Smith {up_to(self.smith_level)}")
+            if self.remove_level:
+                support.append(f"Shop Remove {up_to(self.remove_level)}")
+            support.append(f"Ancient {up_to(self.act)}")
+            if self.shop_scale:
+                support.append("shop choices")
+            lines = [
+                f"{self.char} Act {self.act} power check",
+                f"  Base power {self.power_level:g}; card strength at least {self.minimum_cards:g}.",
+                f"  Ordinary card rewards: first {self.full_value_cards} worth 1 each, "
+                f"later ones {LATER_CARD_POWER:g}; rare card rewards {RARE_CARD_POWER:g}; relics {RELIC_POWER:g}.",
+            ]
+            if self.vanilla_cards:
+                lines.append(f"  Vanilla card rewards add {self.vanilla_cards:g} card strength.")
+            lines.extend((
+                f"  Missing support raises the requirement: {', '.join(support)}.",
+                "  Separate item gates still apply.",
+            ))
+            return lines
 
 
 @dataclasses.dataclass()
@@ -230,9 +279,8 @@ class SpireHasGold(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
 
         @override
         def _evaluate(self, state: CollectionState) -> bool:
-            # Keep the conservative Poverty allowance. Combat/filler gold is not progression.
-            return (state.count(f"{self.char} Elite Gold", self.player) * 30
-                    + state.count(f"{self.char} Boss Gold", self.player) * 75 >= self.gold)
+            return (state.count(f"{self.char} Elite Gold", self.player) * ELITE_GOLD
+                    + state.count(f"{self.char} Boss Gold", self.player) * BOSS_GOLD >= self.gold)
 
 
 def set_rules(world: 'SlayTheSpire2World') -> None:
@@ -253,48 +301,24 @@ def _set_rules(world: 'SlayTheSpire2World', config: CharacterConfig) -> None:
     neow_tier = int(bool(world.options.neow_sanity))
     world.set_rule(world.get_entrance(f"{prefix} Early Act 1"), Has(f"{prefix} Unlock"))
 
-    # Budget roughly seven combat rewards per act: three before Mid, five before Late,
-    # seven before the boss. Half shuffle leaves half of those rewards as free cards.
-    world.set_rule(world.get_entrance(f"{prefix} Mid Act 1"),
-                   SpireHasPower(offset, MID_ACT_1_POWER, card_rewards=3, minimum_cards=1.0, rest=True))
-    late_act_1 = SpireHasPower(offset, 10, card_rewards=5, minimum_cards=1.0, rest=True, shop=True)
+    region_rules: dict[str, Rule] = {region: SpireHasPower.for_region(offset, check)
+                                     for region, check in REGIONS.items()}
+    # Item gates that extra power cannot replace.
     if config.mod_num:
         # Unknown starter effects keep the conservative 'gates' for modded characters.
         if config.progressive_starter_relic:
-            late_act_1 &= Has(f"{prefix} Progressive Starter Relic")
+            region_rules["Late Act 1"] &= Has(f"{prefix} Progressive Starter Relic")
         if config.progressive_starter_card:
-            late_act_1 &= Has(f"{prefix} Progressive Starter Card")
-    world.set_rule(world.get_entrance(f"{prefix} Late Act 1"), late_act_1)
-    world.set_rule(world.get_entrance(f"{prefix} Act 1 Boss Arena"),
-                   SpireHasPower(offset, 11.5, card_rewards=7, minimum_cards=3.0,
-                                 rest=True, smith=True, remove=True, shop=True)
-                   & Has(f"{prefix} Progressive Smith", options=[OptionFilter(CampfireSanity, 1)], filtered_resolution=True))
-
-    world.set_rule(world.get_entrance(f"{prefix} Early Act 2"),
-                   SpireHasPower(offset, 12.0, card_rewards=7, act=2, minimum_cards=3.0, smith=True, shop=True)
-                   & Has(f"{prefix} Progressive Ancient", count=1 + neow_tier, **ancient_filter))
-    # Later acts account for current-act smithing from entry, and resting from Mid Act.
-    # Act 1 keeps smithing at the boss to avoid tightening the sparse floorless opening.
-    world.set_rule(world.get_entrance(f"{prefix} Mid Act 2"),
-                   SpireHasPower(offset, 14.0, card_rewards=10, act=2, minimum_cards=3.0, rest=True, smith=True, shop=True))
-    world.set_rule(world.get_entrance(f"{prefix} Late Act 2"),
-                   SpireHasPower(offset, 18.0, card_rewards=12, act=2, minimum_cards=3.0, rest=True, smith=True, shop=True))
-    world.set_rule(world.get_entrance(f"{prefix} Act 2 Boss Arena"),
-                   SpireHasPower(offset, 23.5, card_rewards=14, act=2, minimum_cards=5.0,
-                                 rest=True, smith=True, remove=True, shop=True))
-
-    world.set_rule(world.get_entrance(f"{prefix} Early Act 3"),
-                   SpireHasPower(offset, 23.5, card_rewards=14, act=3, minimum_cards=5.0, smith=True, shop=True)
-                   & Has(f"{prefix} Progressive Ancient", count=2 + neow_tier, **ancient_filter))
-    world.set_rule(world.get_entrance(f"{prefix} Mid Act 3"),
-                   SpireHasPower(offset, 25.5, card_rewards=17, act=3, minimum_cards=5.0, rest=True, smith=True, shop=True))
-    world.set_rule(world.get_entrance(f"{prefix} Late Act 3"),
-                   SpireHasPower(offset, 27.0, card_rewards=19, act=3, minimum_cards=5.0, rest=True, smith=True, shop=True))
-    world.set_rule(world.get_entrance(f"{prefix} Act 3 Boss Arena"),
-                   SpireHasPower(offset, 30.0, card_rewards=21, act=3, minimum_cards=7.0,
-                                 rest=True, smith=True, remove=True, shop=True))
+            region_rules["Late Act 1"] &= Has(f"{prefix} Progressive Starter Card")
+    region_rules["Act 1 Boss Arena"] &= Has(f"{prefix} Progressive Smith",
+                                            options=[OptionFilter(CampfireSanity, 1)], filtered_resolution=True)
+    for act in (2, 3):
+        region_rules[f"Early Act {act}"] &= Has(f"{prefix} Progressive Ancient", count=act - 1 + neow_tier,
+                                                **ancient_filter)
+    for region, rule in region_rules.items():
+        world.set_rule(world.get_entrance(f"{prefix} {region}"), rule)
 
     if world.options.shop_sanity:
-        for act, purchase_gold in enumerate((50, 150, 270), start=1):
+        for act, purchase_gold in enumerate(SHOP_GOLD_BY_ACT, start=1):
             world.set_rule(world.get_entrance(f"{prefix} Act {act} Shop"),
                            SpireHasGold(prefix, purchase_gold, **gold_filter))

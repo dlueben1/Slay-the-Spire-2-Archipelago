@@ -10,8 +10,9 @@ from BaseClasses import CollectionState, Item, Location, Region, MultiWorld, Ite
 from Options import OptionError
 from worlds.AutoWorld import World
 from .regions import create_regions
-from .rules import FALLBACK_REASON, MID_ACT_1_POWER, select_logic, set_rules
+from .rules import FALLBACK_REASON, select_logic, set_rules
 from . import rules_old
+from .logic_table import REGIONS, RELIC_POWER
 from .web_world import SlayTheSpire2Web
 from .characters import (CharacterConfig, character_list, vanilla_character_ids, character_registry,
                          registered_character_blocks, unique_character_ids, character_identity,
@@ -120,9 +121,10 @@ class SlayTheSpire2World(World):
             # Mixing cards and relics meets the power/card floor within the available checks;
             # ordinary cards alone can fill every opening slot and still fall short.
             early_items = self.multiworld.early_items[self.player]
-            cards = 1 if self.options.shuffle_all_cards else 0
-            vanilla_cards = 0 if self.options.shuffle_all_cards else 1.5
-            relics = ceil((MID_ACT_1_POWER - cards - vanilla_cards) / 1.5)
+            mid_act_1 = REGIONS["Mid Act 1"]
+            vanilla_cards = 0 if self.options.shuffle_all_cards else mid_act_1.vanilla_card_strength
+            cards = max(0, ceil(mid_act_1.minimum_cards - vanilla_cards))
+            relics = ceil((mid_act_1.power - cards - vanilla_cards) / RELIC_POWER)
             if self.effective_logic == "old" and not self.options.shuffle_all_cards:
                 # Old logic values a half-shuffled Card Reward at 2 power. Pair it with
                 # one Relic for 3.5 power using the same two early slots as two Relics.

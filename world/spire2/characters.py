@@ -10,6 +10,9 @@ class StarterPower:
     # Missing-starter penalty, then second-receipt bonus above the normal loadout.
     card: tuple[float, float] = (1.0, 4.0)
     relic: tuple[float, float] = (2.5, 4.0)
+    # Extra penalty, charged once, while either starter is missing. For a starter card and relic
+    # that work as a pair, restoring both should match leaving the starters unshuffled.
+    missing_pair: float = 0.0
 
 
 DEFAULT_STARTER_POWER = StarterPower()
@@ -30,7 +33,8 @@ VANILLA_CHARACTERS = (
     CharacterDefinition("Silent", "Silent", StarterPower((1.5, 4.5), (2.0, 3.5))),
     CharacterDefinition("Defect", "Defect", StarterPower((1.0, 3.0), (1.0, 3.0))),
     CharacterDefinition("Regent", "Regent", StarterPower((1.5, 5.0), (1.5, 2.5))),
-    CharacterDefinition("Necrobinder", "Necrobinder", StarterPower((1.0, 2.5), (4.0, 5.0))),
+    # Normal Necrobinder starts with both halves of a card/relic synergy.
+    CharacterDefinition("Necrobinder", "Necrobinder", StarterPower((1.0, 2.5), (4.0, 5.0), missing_pair=0.5)),
 )
 
 # Fill these in with their known starter power once people know them better
