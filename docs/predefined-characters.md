@@ -19,4 +19,4 @@ A generated roster can include all of them. They do not count towards the limit 
 | Awakened One | `AWAKENED-AWAKENED` | Downfall - Classic | [Workshop page](https://steamcommunity.com/sharedfiles/filedetails/?id=3747508091) |
 | Watcher | `WATCHER-WATCHER` | The Watcher | [Workshop page](https://steamcommunity.com/sharedfiles/filedetails/?id=3747492505) |
 
-The matching mod must still be installed when you play. Any other modded character works too, using its internal ID; see [Finding a modded character ID](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/main/docs/modded-characters.md).
+The matching mod must still be installed when you play. Any other modded character works too, using its internal ID; see [Finding a modded character ID](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/modded-characters.md).

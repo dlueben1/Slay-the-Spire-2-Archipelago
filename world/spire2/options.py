@@ -41,7 +41,7 @@ class ModdedCharacters(OptionList):
     """Modded characters to include when Advanced Characters is disabled. Enter each character's
     internal ID or a predefined display name, such as Watcher, Guardian, or Tectonic.
     Predefined characters, with their internal IDs and mods, are listed at
-    https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/main/docs/predefined-characters.md
+    https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/predefined-characters.md
     Any number of predefined characters can be present in the generated character set, but at
     most 20 characters without a predefined name.
     Duplicate aliases and IDs are removed, keeping the first occurrence. Predefined characters use their
@@ -104,7 +104,7 @@ class UnlockedCharacter(TextChoice):
     Characters selects a subset. Leave it empty ("") to start with a random character.
     Can also enter a predefined display name or full internal ID for modded characters.
     Predefined characters, with their internal IDs and mods, are listed at
-    https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/main/docs/predefined-characters.md"""
+    https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/predefined-characters.md"""
     default = 0
     # Choice's metaclass reads these attributes; keep UI indices separate from AP ID blocks.
     for _index, _name in enumerate(character_list):
@@ -370,7 +370,7 @@ class CharacterOptions(OptionDict):
     If using a modded character:
     Enter its full internal ID or a predefined display name, such as Watcher.
     Predefined characters, with their internal IDs and mods, are listed at
-    https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/main/docs/predefined-characters.md
+    https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/predefined-characters.md
     Do not include both an alias and its full ID as separate entries.
 
     If you don't know the exact ID to enter with the mod installed go to

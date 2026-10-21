@@ -29,7 +29,7 @@ Slay the Spire II:
   # Extra modded characters, by predefined display name (e.g. Watcher) or full internal ID.
   # Any number of predefined characters; at most 20 characters without a predefined name.
   # The mod must be installed; installed IDs are listed in-game under Archipelago Settings.
-  # Predefined characters, their internal IDs and their mods: https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/main/docs/predefined-characters.md
+  # Predefined characters, their internal IDs and their mods: https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/predefined-characters.md
   modded_characters: []
 
   # Randomly pick this many characters from the lists above. 0-37; 0 uses all of them.
