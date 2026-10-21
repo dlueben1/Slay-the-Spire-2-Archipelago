@@ -69,10 +69,7 @@ public sealed class CombatEffectReceiptQueueTests
     public void CombatBuffTrialsDoNotContributeToMultiplayerGold()
     {
         foreach (APItem item in Enum.GetValues<APItem>())
-        {
-            long id = ArchipelagoIdCodec.ForPlayer((long)item, 2);
-            Assert.False(ItemTable.IsMultiplayerBuffGoldFallback(id));
-        }
+            Assert.False(ItemTable.IsMultiplayerBuffGoldFallback((long)item));
         int converted = Enum.GetValues<APItem>().Count(item =>
             ItemTable.IsUniversalCombatBuff((long)item)
             && ItemTable.IsMultiplayerBuffGoldFallback((long)item));

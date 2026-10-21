@@ -99,8 +99,8 @@ namespace StS2AP.Patches
         /// <param name="liveDelivery">Whether to dispatch live effects rather than only rebuild history.</param>
         private static void ProcessItem(IndexedItemInfo indexedInfo, bool liveDelivery = true)
         {
-            // Keep the original SDK index, including gaps occupied by the other players.
-            if (!CoopSlot.Owns(indexedInfo.Item.ItemId))
+            // Skip Archipelago's own "Nothing" item but keep the original SDK index.
+            if (ArchipelagoIdCodec.IsArchipelagoReservedId(indexedInfo.Item.ItemId))
                 return;
             // AP_MP: This is the receipt-level fail-closed gate for unconverted features.
             if (MultiplayerSupport.ShouldDeferItem(indexedInfo))

@@ -49,7 +49,7 @@ namespace StS2AP
                 LogUtility.Error($"Could not parse universal item ID from item #{item?.ItemId}");
                 return 0L;
             }
-            return (APItem)ArchipelagoIdCodec.WithoutPlayer(item.ItemId);
+            return (APItem)item.ItemId;
         }
 
         public static bool Advancement(this ItemInfo info)

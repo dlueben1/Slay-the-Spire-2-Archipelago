@@ -394,7 +394,7 @@ public static class MultiplayerSupport
         for (int index = 0; index < receivedItems.Count; index++)
         {
             ItemInfo item = receivedItems[index];
-            if (!CoopSlot.Owns(item.ItemId))
+            if (ArchipelagoIdCodec.IsArchipelagoReservedId(item.ItemId))
                 continue;
             var indexedItem = new IndexedItemInfo(item, index + 1);
             MultiplayerFeature feature = GetFeatureForItem(indexedItem);

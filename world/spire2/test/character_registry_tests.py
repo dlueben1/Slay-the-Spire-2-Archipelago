@@ -12,7 +12,7 @@ from worlds.spire2.characters import (
     CharacterDefinition, DEFAULT_STARTER_POWER, PREDEFINED_CHARACTERS, VANILLA_CHARACTERS,
     character_list, character_registry, create_character_registry,
 )
-from worlds.spire2.constants import CHAR_OFFSET, NUM_CUSTOM
+from worlds.spire2.constants import CHAR_OFFSET, GENERIC_CHARACTER_BLOCKS, NUM_CUSTOM, PREDEFINED_CHARACTER_BLOCKS
 from worlds.spire2.items import base_item_table, create_item_tables, item_table
 from worlds.spire2.locations import create_location_data, create_location_tables, location_table
 from worlds.spire2.options import GoalNumChar, ModdedCharacters, PickNumberCharacters, UnlockedCharacter
@@ -58,7 +58,7 @@ class TestCharacterRegistry(unittest.TestCase):
             ("Kakarot", "KAKAROTMOD-KAKAROT"),
             ("Fae Sorceress", "FAESORCERESS-FAE_SORCERESS"),
         ]
-        for block, (name, internal_id) in enumerate(expected, start=40):
+        for block, (name, internal_id) in enumerate(expected, start=200):
             self.assertEqual((name, internal_id),
                              (character_registry[block].name, character_registry[block].internal_id))
             self.assertEqual(block * CHAR_OFFSET + 4, item_table[f"{name} Progressive Ancient"].code)
@@ -91,11 +91,26 @@ class TestCharacterRegistry(unittest.TestCase):
             create_character_registry((*VANILLA_CHARACTERS, *future,
                                        CharacterDefinition("Overflow", "OVERFLOW", DEFAULT_STARTER_POWER)))
 
-    def test_ids_are_unique_and_stay_within_the_client_player_block(self):
+    def test_raising_the_generic_cap_adds_blocks_without_moving_named_ids(self):
+        self.assertEqual(f"Custom Character {NUM_CUSTOM}", character_registry[10 + NUM_CUSTOM].name)
+        self.assertNotIn(11 + NUM_CUSTOM, character_registry)
+        with patch("worlds.spire2.characters.NUM_CUSTOM", len(GENERIC_CHARACTER_BLOCKS)):
+            registry = create_character_registry()
+        self.assertEqual("Custom Character 189", registry[199].name)
+        self.assertEqual(character_registry, {block: registry[block] for block in character_registry})
+        with patch("worlds.spire2.characters.NUM_CUSTOM", len(GENERIC_CHARACTER_BLOCKS) + 1):
+            with self.assertRaisesRegex(ValueError, "reserved ID range"):
+                create_character_registry()
+
+    def test_ids_are_unique_and_every_reserved_block_fits_a_signed_32_bit_id(self):
         for ids in ([data.code for data in item_table.values() if data.code is not None],
                     [code for code in location_table.values() if code is not None]):
             self.assertEqual(len(ids), len(set(ids)))
-            self.assertTrue(all(0 < code < 1_000_000 for code in ids))
+            self.assertTrue(all(0 < code for code in ids))
+        # Item IDs use one-based blocks, so the last reserved block's items end here.
+        self.assertLess((PREDEFINED_CHARACTER_BLOCKS[-1] + 1) * CHAR_OFFSET, 2**31)
+        # Named characters sit above the old 1,000,000-ID co-op partition the client used to strip.
+        self.assertGreater(item_table["Watcher Relic"].code, 1_000_000)
 
     def test_starter_profiles_cover_exactly_every_registered_vanilla_character(self):
         self.assertEqual(set(character_list), set(STARTER_CARD_POWER))
@@ -173,7 +188,7 @@ class TestCharacterRosters(unittest.TestCase):
                                   advanced_characters={name: {} for name in roster})
             self.assertEqual(["Watcher", "Custom Character 1", "Guardian", "Custom Character 2"],
                              [config.name for config in world.characters])
-            self.assertEqual([51, 11, 44, 12], [config.char_offset for config in world.characters])
+            self.assertEqual([211, 11, 204, 12], [config.char_offset for config in world.characters])
             self.assertEqual(roster, [config.official_name for config in world.characters])
 
     def test_advanced_case_collisions_are_rejected(self):

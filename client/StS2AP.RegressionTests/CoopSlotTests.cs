@@ -1,4 +1,3 @@
-using StS2AP.Data;
 using StS2AP.Utils;
 using Xunit;
 
@@ -6,27 +5,6 @@ namespace StS2AP.RegressionTests;
 
 public sealed class CoopSlotTests
 {
-    [Theory]
-    [InlineData(1)]
-    [InlineData(2)]
-    [InlineData(3)]
-    [InlineData(4)]
-    public void PlayerBlocksPreserveUniversalAndCharacterIdentity(int player)
-    {
-        long buff = ArchipelagoIdCodec.ForPlayer(500, player);
-        long relic = ArchipelagoIdCodec.ForPlayer(100003, player);
-        Assert.True(ArchipelagoIdCodec.IsUniversalItemId(buff));
-        Assert.False(ArchipelagoIdCodec.IsCharacterItemId(buff));
-        Assert.Equal(500, ArchipelagoIdCodec.WithoutPlayer(buff));
-        Assert.Equal(10, ArchipelagoIdCodec.GetAPCharacterNumberFromItemId(relic));
-        Assert.Equal(3, ArchipelagoIdCodec.GetCharacterItemTypeId(relic));
-        Assert.Equal(player, ArchipelagoIdCodec.GetPlayerNumber(buff));
-        Assert.Equal(player, ArchipelagoIdCodec.GetPlayerNumber(relic));
-        Assert.True(ArchipelagoIdCodec.TryComposeLocationId(88, 10, out long location));
-        Assert.Equal(90088 + (player - 1) * 1000000L, ArchipelagoIdCodec.ForPlayer(location, player));
-        Assert.Equal(88, ArchipelagoIdCodec.GetBaseLocationId(ArchipelagoIdCodec.ForPlayer(location, player)));
-    }
-
     [Fact]
     public void DifferentNumberedPlayersHaveDifferentPersistentIdentities()
     {

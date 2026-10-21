@@ -477,9 +477,7 @@ namespace StS2AP.Utils
                 return;
             long blockStart = (characterNumber.Value - 1) * ArchipelagoIdCodec.BlockSize;
             var locations = ArchipelagoClient.SlotLocationIds.Where(id =>
-                CoopSlot.Owns(id)
-                && ArchipelagoIdCodec.WithoutPlayer(id) >= blockStart
-                && ArchipelagoIdCodec.WithoutPlayer(id) < blockStart + ArchipelagoIdCodec.BlockSize);
+                id >= blockStart && id < blockStart + ArchipelagoIdCodec.BlockSize);
             QueueChecks(locations);
         }
 
@@ -519,7 +517,7 @@ namespace StS2AP.Utils
             var pending = new List<long>();
             foreach (long id in requested)
             {
-                if (id < 0 || !CoopSlot.Owns(id) || !ArchipelagoClient.SlotLocationIds.Contains(id))
+                if (id < 0 || !ArchipelagoClient.SlotLocationIds.Contains(id))
                     notInSlot++;
                 else if (ArchipelagoClient.CheckedLocations.Contains(id))
                     alreadyChecked++;

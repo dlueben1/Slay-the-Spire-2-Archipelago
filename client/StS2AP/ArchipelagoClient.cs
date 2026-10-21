@@ -38,7 +38,7 @@ namespace StS2AP
         /// Compatibility marker emitted by APWorld releases. The marker is diagnostic rather
         /// than a symmetric protocol version: a newer APWorld may still support an older client.
         /// </summary>
-        public const int SupportedCompatFlag = 2;
+        public const int SupportedCompatFlag = 3;
 
         private const string ModManifestResourceName = "StS2AP.Archipelago.json";
         private const string ApWorldManifestResourceName = "StS2AP.Spire2Archipelago.json";
@@ -701,7 +701,6 @@ namespace StS2AP
                     RejectIncompatibleConnection($"Invalid AP player settings: {ex.Message}", wasAutomaticReconnect);
                     return;
                 }
-                LogUtility.Info($"Using co-op Player {preparedSettings.PlayerNumber}/{preparedSettings.PlayerCount} in AP slot {apSlotId}.");
                 if (!TryValidateConfiguredCharacters(preparedSettings, out string characterError))
                 {
                     RejectIncompatibleConnection(characterError, wasAutomaticReconnect);
@@ -1021,14 +1020,14 @@ namespace StS2AP
             int apSlotId = session.ConnectionInfo.Slot;
             MultiplayerSupport.NoteApSessionConnected(Seed, apTeamId, apSlotId);
 
-            SlotLocationIds = new HashSet<long>(session.Locations.AllLocations.Where(CoopSlot.Owns));
+            SlotLocationIds = new HashSet<long>(session.Locations.AllLocations);
 
             // Bind durable external effects only after login has authenticated the exact room,
             // team, and slot represented by this session.
             PendingCheckUtility.BindAuthenticatedSession(session, ServerAddress, Seed);
 
             // Restore checked locations from server so "Claimed" state survives restarts
-            CheckedLocations = session.Locations.AllLocationsChecked.Where(CoopSlot.Owns).ToList();
+            CheckedLocations = session.Locations.AllLocationsChecked.ToList();
             LogUtility.Info(
                 $"Restored {CheckedLocations.Count} previously checked location(s) from server."
             );
@@ -1445,7 +1444,7 @@ namespace StS2AP
                 RunForSession(_session, () =>
                 {
                     foreach (long id in ids)
-                        if (CoopSlot.Owns(id) && !CheckedLocations.Contains(id))
+                        if (!CheckedLocations.Contains(id))
                             CheckedLocations.Add(id);
                     // This SDK event also includes optimistic local checks. Do not use it
                     // to acknowledge durable outbox entries; fresh login still owns that.
@@ -1508,14 +1507,11 @@ namespace StS2AP
                 throw new InvalidDataException("No slot data found for this player!");
             }
             slotData = ApSlotData.Normalize(slotData);
-            var player = ApSlotData.ReadPlayer(slotData, LocalSettings.Value.MultiplayerPlayerNumber);
+            JArray playerCharacters = ApSlotData.ReadCharacters(slotData);
             ArchipelagoSettings settings = new()
             {
                 APWorldVersion = apWorldVersion,
-                PlayerCount = player.Count,
-                PlayerNumber = player.Number,
             };
-            JArray playerCharacters = player.Characters;
 
             // Apply all found settings
             if (slotData.ContainsKey("seeded"))

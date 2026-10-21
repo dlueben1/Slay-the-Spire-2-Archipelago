@@ -8,8 +8,6 @@
     /// </summary>
     public sealed class ClientSettings
     {
-        public int MultiplayerPlayerNumber { get; set; } = 1;
-
         /// <summary>
         /// Opts in to mirroring eligible local singleplayer checkpoints to AP DataStorage.
         /// Local checkpoints are always created regardless of this setting.

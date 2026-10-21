@@ -88,7 +88,7 @@ namespace StS2AP.Utils
             long[] requested = locationIds.Distinct().ToArray();
             if (requested.Length == 0)
                 return LocationCheckSendResult.DispatchStatus.None;
-            if (requested.Any(id => id < 0 || !CoopSlot.Owns(id)))
+            if (requested.Any(id => id < 0))
                 return LocationCheckSendResult.DispatchStatus.NoAuthenticatedSlot;
             if (MultiplayerSupport.IsMultiplayerScope)
                 return RecordAndSendMultiplayer(requested);
@@ -148,7 +148,6 @@ namespace StS2AP.Utils
                 return;
 
             var recognized = pending
-                .Where(id => ArchipelagoIdCodec.GetPlayerNumber(id) == bound.Identity.PlayerNumber)
                 .Where(bound.Session.Locations.AllLocations.Contains)
                 .ToHashSet();
             int unrecognizedCount = pending.Count - recognized.Count;
@@ -209,7 +208,6 @@ namespace StS2AP.Utils
                 return;
 
             var recognized = pending
-                .Where(id => ArchipelagoIdCodec.GetPlayerNumber(id) == bound.Identity.PlayerNumber)
                 .Where(bound.Session.Locations.AllLocations.Contains)
                 .ToHashSet();
             int unrecognizedCount = pending.Count - recognized.Count;

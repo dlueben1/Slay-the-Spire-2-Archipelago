@@ -12,40 +12,34 @@ public sealed class ApSlotDataTests
     [InlineData("1.1.2")]
     [InlineData("2.2.0")]
     [InlineData("3.0.0")]
-    public void OrdinarySlotsUsePlayerOneRegardlessOfVersionOrSavedSelection(string version)
+    public void OrdinarySlotsReadTheirCharactersAtEveryVersion(string version)
     {
         var characters = JArray.Parse("[{\"name\":\"Ironclad\"}]");
         var slot = new Dictionary<string, object>
         {
             ["mod_compat_version"] = version, ["characters"] = characters,
         };
-        var player = ApSlotData.ReadPlayer(slot, selectedPlayer: 4);
-        Assert.Equal(1, player.Count);
-        Assert.Equal(1, player.Number);
-        Assert.Same(characters, player.Characters);
+        Assert.Same(characters, ApSlotData.ReadCharacters(slot));
     }
 
     [Fact]
-    public void SharedSlotsRetainPlayerSelectionAndRejectIncompleteData()
+    public void SharedSlotsAreRejectedButTheirSinglePlayerFormIsStillRead()
     {
+        // The removed shared-slot APWorld always emitted both shapes, even for one player.
         var characters = JArray.Parse("[{\"name\":\"Silent\"}]");
         var slot = new Dictionary<string, object>
         {
-            ["player_count"] = 2L, ["players"] = new JObject { ["2"] = characters },
+            ["player_count"] = 1L, ["players"] = new JObject { ["1"] = characters }, ["characters"] = characters,
         };
-        var player = ApSlotData.ReadPlayer(slot, selectedPlayer: 2);
-        Assert.Equal(2, player.Count);
-        Assert.Equal(2, player.Number);
-        Assert.Same(characters, player.Characters);
-        Assert.Throws<InvalidDataException>(() => ApSlotData.ReadPlayer(slot, 3));
-        Assert.Throws<InvalidDataException>(() => ApSlotData.ReadPlayer(slot, 1));
-        slot.Remove("player_count");
-        Assert.Throws<InvalidDataException>(() => ApSlotData.ReadPlayer(slot, 2));
+        Assert.Same(characters, ApSlotData.ReadCharacters(slot));
+        foreach (long count in new[] { 0L, 2L, 4L })
+        {
+            slot["player_count"] = count;
+            var error = Assert.Throws<InvalidDataException>(() => ApSlotData.ReadCharacters(slot));
+            Assert.Contains($"player_count={count}", error.Message);
+        }
         slot.Clear();
-        slot["player_count"] = 1;
-        Assert.Throws<InvalidDataException>(() => ApSlotData.ReadPlayer(slot, 1));
-        slot.Clear();
-        Assert.Throws<InvalidDataException>(() => ApSlotData.ReadPlayer(slot, 1));
+        Assert.Throws<InvalidDataException>(() => ApSlotData.ReadCharacters(slot));
     }
 
     [Fact]

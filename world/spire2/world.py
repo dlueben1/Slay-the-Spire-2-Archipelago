@@ -42,8 +42,8 @@ class SlayTheSpire2World(World):
     web = SlayTheSpire2Web()
     options_dataclass = Spire2Options
     options: Spire2Options
-    # Named modded characters use independent ID blocks and APWorld-supplied names.
-    compat_flag = 2
+    # Named modded characters use ID blocks from 200, so IDs can reach 1,000,000 and above.
+    compat_flag = 3
     origin_region_name = "Neow's Room"
 
     # Build the final Item Table
