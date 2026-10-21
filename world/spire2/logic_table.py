@@ -41,7 +41,7 @@ class PowerCheck:
     @property
     def vanilla_card_strength(self) -> float:
         """Card strength from the card rewards that half shuffle leaves vanilla."""
-        return self.card_rewards * VANILLA_CARD_REWARD_SHARE
+        return self.card_rewards * VANILLA_CARD_REWARD_SHARE * VANILLA_CARD_POWER
 
     @property
     def rest_tier(self) -> int:
@@ -104,16 +104,41 @@ RELIC_REGIONS = {
 
 # --- Card strength and power from AP items ---------------------------------------------------
 
-# The first ordinary card rewards are worth one card each. Later ones are worth less because
-# later choices are skipped more often; a higher value expects players to progress with weaker
-# decks. Half shuffle reaches the discount sooner because its vanilla card rewards also add cards.
-FULL_VALUE_CARD_REWARDS = 5
-FULL_VALUE_CARD_REWARDS_ALL_SHUFFLED = 11
-LATER_CARD_POWER = 0.7
+# Total card strength from ordinary AP Card Rewards, by how many the run holds (index 0 is none).
+# The first rewards are worth a full card each, until a lean deck has most of the cards it keeps.
+# After that, extra rewards add choice rather than cards, and each adds less than the one before
+# (see docs/contributing/apworld-logic.md). Half shuffle reaches that point sooner because its
+# vanilla card rewards also add cards. Keep a full pool's total (8.5 and 17.3) unless the region
+# power is retuned too. Past the end of a table, each extra reward adds the table's last step.
+CARD_REWARD_STRENGTH = (0, 1, 2, 3, 4, 5, 5.9, 6.7, 7.4, 8.0, 8.5)
+CARD_REWARD_STRENGTH_ALL_SHUFFLED = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                                     11, 11.95, 12.85, 13.65, 14.4, 15.1, 15.75, 16.3, 16.8, 17.3)
 RARE_CARD_POWER = 1.5
 RELIC_POWER = 1.5
-# Half shuffle leaves every other combat card reward vanilla, each worth one card.
+# Half shuffle leaves every other combat card reward vanilla.
 VANILLA_CARD_REWARD_SHARE = 0.5
+# Card strength of each vanilla card reward. Vanilla rewards arrive one at a time, so early ones
+# are often survival picks; every AP Card Reward can be compared at the start of a run.
+VANILLA_CARD_POWER = 0.85
+
+
+def card_reward_table(all_shuffled: bool) -> tuple[float, ...]:
+    return CARD_REWARD_STRENGTH_ALL_SHUFFLED if all_shuffled else CARD_REWARD_STRENGTH
+
+
+def card_reward_strength(table: tuple[float, ...], rewards: int) -> float:
+    """Card strength from this many ordinary card rewards, extending the table by its last step."""
+    if rewards < len(table):
+        return table[rewards]
+    return table[-1] + (rewards - len(table) + 1) * (table[-1] - table[-2])
+
+
+def card_rewards_needed(table: tuple[float, ...], strength: float) -> int:
+    """The fewest ordinary card rewards whose card strength reaches the given amount."""
+    for rewards in range(len(table) + 100):
+        if card_reward_strength(table, rewards) >= strength:
+            return rewards
+    raise ValueError(f"Card rewards cannot reach card strength {strength:g}")
 
 
 # --- Missing support: requirement added until AP items restore it ----------------------------

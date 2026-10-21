@@ -65,9 +65,10 @@ def format_tables(table: ModuleType) -> str:
         "  Act 2 and Act 3 Elites also need the previous act's Elites region.",
         "",
         "Card strength and power from AP items",
-        f"  Card Reward: first {table.FULL_VALUE_CARD_REWARDS} worth 1 each "
-        f"({table.FULL_VALUE_CARD_REWARDS_ALL_SHUFFLED} with all card rewards shuffled), "
-        f"then {table.LATER_CARD_POWER:g} each",
+        "  Card strength by ordinary Card Rewards held (each later one adds the last step):",
+        f"    Half shuffle: {values(table.CARD_REWARD_STRENGTH)}",
+        f"    All shuffled: {values(table.CARD_REWARD_STRENGTH_ALL_SHUFFLED)}",
+        f"  Vanilla card reward (half shuffle): {table.VANILLA_CARD_POWER:g}",
         f"  Rare Card Reward: {table.RARE_CARD_POWER:g}",
         f"  Relic: {table.RELIC_POWER:g}",
         "  Starter card and relic upgrades: per character in characters.py",

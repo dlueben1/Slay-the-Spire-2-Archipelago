@@ -8,9 +8,9 @@ from rule_builder.options import OptionFilter
 from rule_builder.rules import Rule, True_, CanReachRegion, Has, HasFromListUnique
 from .characters import CharacterConfig, VANILLA_CHARACTERS, DEFAULT_STARTER_POWER
 from .logic_table import (
-    ANCIENT_POWER_BY_TIER, BOSS_GOLD, ELITE_GOLD, FULL_VALUE_CARD_REWARDS, FULL_VALUE_CARD_REWARDS_ALL_SHUFFLED,
-    LATER_CARD_POWER, RARE_CARD_POWER, REGIONS, RELIC_POWER, REST_POWER_BY_ACT, SHOP_GOLD_BY_ACT,
-    SHOP_REMOVE_POWER_BY_TIER, SHOP_SLOT_VALUES, SMITH_POWER_BY_TIER, PowerCheck,
+    ANCIENT_POWER_BY_TIER, BOSS_GOLD, ELITE_GOLD, RARE_CARD_POWER, REGIONS, RELIC_POWER, REST_POWER_BY_ACT,
+    SHOP_GOLD_BY_ACT, SHOP_REMOVE_POWER_BY_TIER, SHOP_SLOT_VALUES, SMITH_POWER_BY_TIER, PowerCheck,
+    card_reward_strength, card_reward_table,
 )
 from .options import AncientRelicLocation, CampfireSanity, GoldSanity
 
@@ -70,8 +70,7 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
             char=config.name,
             power_level=self.power_level,
             vanilla_cards=0 if options.shuffle_all_cards else check.vanilla_card_strength,
-            full_value_cards=(FULL_VALUE_CARD_REWARDS_ALL_SHUFFLED if options.shuffle_all_cards
-                              else FULL_VALUE_CARD_REWARDS),
+            card_rewards_table=card_reward_table(bool(options.shuffle_all_cards)),
             minimum_cards=self.minimum_cards,
             rest_level=check.rest_tier if options.campfire_sanity else 0,
             smith_level=check.smith_tiers if options.campfire_sanity else 0,
@@ -97,7 +96,7 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
         char: str
         power_level: float
         vanilla_cards: float
-        full_value_cards: int
+        card_rewards_table: tuple[float, ...]
         minimum_cards: float
         rest_level: int
         smith_level: int
@@ -120,10 +119,8 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
             """Contributions to card strength, in the order they are added up."""
             received = self.count(state, "Card Reward")
             entries = [
-                # Later ordinary choices are more likely to be skipped.
                 LedgerEntry(f"Card Rewards ({received} received)",
-                            min(received, self.full_value_cards)
-                            + LATER_CARD_POWER * max(0, received - self.full_value_cards)),
+                            card_reward_strength(self.card_rewards_table, received)),
                 LedgerEntry(f"Rare Card Rewards ({self.count(state, 'Rare Card Reward')} received)",
                             RARE_CARD_POWER * self.count(state, "Rare Card Reward")),
             ]
@@ -252,11 +249,14 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
             support.append(f"Ancient {up_to(self.act)}")
             if self.shop_scale:
                 support.append("shop choices")
+            table = self.card_rewards_table
+            strengths = " / ".join(f"{strength:g}" for strength in table)
+            later_step = card_reward_strength(table, len(table)) - table[-1]
             lines = [
                 f"{self.char} {self.region} power check",
                 f"  Base power {self.power_level:g}; card strength at least {self.minimum_cards:g}.",
-                f"  Ordinary card rewards: first {self.full_value_cards} worth 1 each, "
-                f"later ones {LATER_CARD_POWER:g}; rare card rewards {RARE_CARD_POWER:g}; relics {RELIC_POWER:g}.",
+                f"  Card strength by ordinary card rewards held: {strengths}; each later one adds {later_step:.3g}.",
+                f"  Rare card rewards {RARE_CARD_POWER:g}; relics {RELIC_POWER:g}.",
             ]
             if self.vanilla_cards:
                 lines.append(f"  Vanilla card rewards add {self.vanilla_cards:g} card strength.")

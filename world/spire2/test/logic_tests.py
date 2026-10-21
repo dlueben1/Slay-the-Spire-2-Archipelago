@@ -5,7 +5,8 @@ from test.general import setup_multiworld
 from worlds.spire2 import SlayTheSpire2World
 from worlds.spire2.characters import character_list
 from worlds.spire2.rules import SpireHasPower
-from worlds.spire2.rules_new import LATER_CARD_POWER
+from worlds.spire2.logic_table import (VANILLA_CARD_POWER, VANILLA_CARD_REWARD_SHARE, card_reward_strength,
+                                       card_reward_table)
 
 
 class LogicTests(unittest.TestCase):
@@ -128,19 +129,24 @@ class LogicTests(unittest.TestCase):
                                 self.assertTrue(world.get_location(f"Silent Ancient Act {act}").can_reach(state))
                     state.collect(world.create_item("Silent Progressive Ancient"), prevent_sweep=True)
 
-    def test_ordinary_card_diminishing_returns_follow_shuffle_mode(self):
-        for full_shuffle, first_discounted in ((True, 12), (False, 6)):
+    def test_ordinary_card_rewards_follow_the_strength_table(self):
+        for full_shuffle in (True, False):
             world = self.make_world(shuffle_all_cards=full_shuffle)
+            table = card_reward_table(full_shuffle)
             rule: SpireHasPower.Resolved = SpireHasPower(
                 world.characters[0].char_offset, 9, card_rewards=21).resolve(world)
             state = CollectionState(world.multiworld)
             before = rule.strength(state)
-            self.assertEqual(0 if full_shuffle else 10.5, before[0])
-            for received in range(1, first_discounted + 3):
+            vanilla = 0 if full_shuffle else 21 * VANILLA_CARD_REWARD_SHARE * VANILLA_CARD_POWER
+            self.assertAlmostEqual(vanilla, before[0])
+            # Run past the end of the table, where each reward adds the table's last step.
+            for received in range(1, len(table) + 3):
                 with self.subTest(full_shuffle=full_shuffle, received=received):
                     state.collect(world.create_item("Silent Card Reward"), prevent_sweep=True)
                     after = rule.strength(state)
-                    expected = 1 if received < first_discounted else LATER_CARD_POWER
+                    expected = card_reward_strength(table, received) - card_reward_strength(table, received - 1)
+                    self.assertAlmostEqual(table[-1] - table[-2] if received >= len(table)
+                                           else table[received] - table[received - 1], expected)
                     self.assertAlmostEqual(expected, after[0] - before[0])
                     self.assertAlmostEqual(expected, after[1] - before[1])
                     self.assertEqual(before[2], after[2])

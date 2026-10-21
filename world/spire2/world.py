@@ -12,7 +12,7 @@ from worlds.AutoWorld import World
 from .regions import create_regions
 from .rules import FALLBACK_REASON, select_logic, set_rules
 from . import rules_old
-from .logic_table import REGIONS, RELIC_POWER
+from .logic_table import REGIONS, RELIC_POWER, card_reward_strength, card_reward_table, card_rewards_needed
 from .web_world import SlayTheSpire2Web
 from .characters import (CharacterConfig, character_list, vanilla_character_ids, character_registry,
                          registered_character_blocks, unique_character_ids, character_identity,
@@ -129,8 +129,10 @@ class SlayTheSpire2World(World):
                 mid_act_1 = REGIONS["Mid Act 1"]
                 power = mid_act_1.power_for(bool(self.options.seeded))
                 vanilla_cards = 0 if self.options.shuffle_all_cards else mid_act_1.vanilla_card_strength
-                cards = max(0, ceil(mid_act_1.minimum_cards - vanilla_cards))
-                relics = max(0, ceil((power - cards - vanilla_cards) / RELIC_POWER))
+                table = card_reward_table(bool(self.options.shuffle_all_cards))
+                cards = card_rewards_needed(table, mid_act_1.minimum_cards - vanilla_cards)
+                card_strength = card_reward_strength(table, cards) + vanilla_cards
+                relics = max(0, ceil((power - card_strength) / RELIC_POWER))
             for config in self.characters:
                 if config.locked:
                     continue
