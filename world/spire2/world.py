@@ -17,7 +17,7 @@ from .characters import (CharacterConfig, character_list, vanilla_character_ids,
                          registered_character_blocks, unique_character_ids, character_identity)
 from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET, GENERIC_CHARACTER_BLOCKS
 from .items import item_table, chars_to_items, bonus_item_table, ItemType, base_event_item_pairs, ItemData, item_groups
-from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType, location_groups
+from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
 from .options import Spire2Options
 
 COMBAT_GOLD_ITEM_COUNT = 13
@@ -55,7 +55,8 @@ class SlayTheSpire2World(World):
     ut_can_gen_without_yaml = True
 
     location_name_to_id = location_table
-    location_name_groups = location_groups
+    # No location groups beyond Archipelago's built-in "Everywhere". Act groups had to leave out numbered card
+    # rewards, whose act depends on options, yet they still made up most of the data package.
 
     filler_universal: dict[str, int]
     filler_characters: dict[str, dict[str, int]]
