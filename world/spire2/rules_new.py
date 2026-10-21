@@ -9,12 +9,13 @@ from rule_builder.rules import Rule, True_, CanReachRegion, Has, HasFromListUniq
 from .characters import CharacterConfig, VANILLA_CHARACTERS, DEFAULT_STARTER_POWER
 from .logic_table import (
     ANCIENT_POWER_BY_TIER, BOSS_GOLD, ELITE_GOLD, RARE_CARD_POWER, REGIONS, RELIC_POWER, REST_POWER_BY_ACT,
-    SHOP_GOLD_BY_ACT, SHOP_REMOVE_POWER_BY_TIER, SHOP_SLOT_VALUES, SMITH_POWER_BY_TIER, PowerCheck,
-    card_reward_strength, card_reward_table,
+    SHOP_REMOVE_POWER_BY_TIER, SHOP_SLOT_VALUES, SMITH_POWER_BY_TIER, PowerCheck,
+    card_reward_strength, card_reward_table, shop_gold_needed, shop_page,
 )
-from .options import AncientRelicLocation, CampfireSanity, GoldSanity
+from .options import AncientRelicLocation, CampfireSanity
 
 if TYPE_CHECKING:
+    from .options import Spire2Options
     from .world import SlayTheSpire2World
 
 
@@ -282,10 +283,42 @@ class SpireHasGold(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
         gold: int
         char: str
 
+        def gold_entries(self, state: CollectionState) -> List[LedgerEntry]:
+            entries = []
+            for item, amount in (("Elite Gold", ELITE_GOLD), ("Boss Gold", BOSS_GOLD)):
+                received = state.count(f"{self.char} {item}", self.player)
+                entries.append(LedgerEntry(f"{item} ({received} received)", received * amount))
+            return entries
+
         @override
         def _evaluate(self, state: CollectionState) -> bool:
-            return (state.count(f"{self.char} Elite Gold", self.player) * ELITE_GOLD
-                    + state.count(f"{self.char} Boss Gold", self.player) * BOSS_GOLD >= self.gold)
+            return sum(entry.amount for entry in self.gold_entries(state)) >= self.gold
+
+        @override
+        def explain_json(self, state: CollectionState | None = None) -> List[JSONMessagePart]:
+            if state is None:
+                lines = [f"{self.char} shop gold: {self.gold:g} from Elite Gold ({ELITE_GOLD:g} each) "
+                         f"and Boss Gold ({BOSS_GOLD:g} each)"]
+            else:
+                entries = self.gold_entries(state)
+                lines = [f"{self.char} shop gold: {sum(entry.amount for entry in entries):g} "
+                         f"of {self.gold:g} needed",
+                         *(f"  {entry.label}: {entry.amount:g}" for entry in entries)]
+            lines.append("  Starting gold and chest gold are already counted.")
+            return [{"type": "text", "text": "\n".join(lines) + "\n"}]
+
+
+def shop_gold_by_act(options: 'Spire2Options') -> tuple[int, int, int]:
+    """Gold from Elite and Boss Gold that each act's shop needs. Without Gold Sanity, vanilla
+    gold rewards pay for shops, and logic does not count them."""
+    if not (options.shop_sanity and options.gold_sanity):
+        return 0, 0, 0
+    page = shop_page(options.shop_card_slots.value, options.shop_neutral_card_slots.value,
+                     options.shop_relic_slots.value, options.shop_potion_slots.value,
+                     bool(options.shop_remove_slots))
+    cost_mode = options.shop_sanity_costs.value
+    return (shop_gold_needed(page, 1, cost_mode), shop_gold_needed(page, 2, cost_mode),
+            shop_gold_needed(page, 3, cost_mode))
 
 
 def set_rules(world: 'SlayTheSpire2World') -> None:
@@ -300,7 +333,6 @@ def set_rules(world: 'SlayTheSpire2World') -> None:
 def _set_rules(world: 'SlayTheSpire2World', config: CharacterConfig) -> None:
     prefix = config.name
     offset = config.char_offset
-    gold_filter = dict(options=[OptionFilter(GoldSanity, 1)], filtered_resolution=True)
     # Start of Act checkpoints require the corresponding Ancient reward in the client.
     ancient_filter = dict(options=[OptionFilter(AncientRelicLocation, 0)], filtered_resolution=True)
     neow_tier = int(bool(world.options.neow_sanity))
@@ -327,6 +359,5 @@ def _set_rules(world: 'SlayTheSpire2World', config: CharacterConfig) -> None:
         world.set_rule(world.get_entrance(f"{prefix} {region}"), rule)
 
     if world.options.shop_sanity:
-        for act, purchase_gold in enumerate(SHOP_GOLD_BY_ACT, start=1):
-            world.set_rule(world.get_entrance(f"{prefix} Act {act} Shop"),
-                           SpireHasGold(prefix, purchase_gold, **gold_filter))
+        for act, gold in enumerate(shop_gold_by_act(world.options), start=1):
+            world.set_rule(world.get_entrance(f"{prefix} Act {act} Shop"), SpireHasGold(prefix, gold))

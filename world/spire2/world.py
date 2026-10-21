@@ -11,6 +11,7 @@ from Options import OptionError
 from worlds.AutoWorld import World
 from .regions import create_regions
 from .rules import FALLBACK_REASON, select_logic, set_rules
+from .rules_new import shop_gold_by_act
 from . import rules_old
 from .logic_table import REGIONS, RELIC_POWER, card_reward_strength, card_reward_table, card_rewards_needed
 from .web_world import SlayTheSpire2Web
@@ -394,9 +395,10 @@ class SlayTheSpire2World(World):
         data = item_table[name]
         item_id = data.code
         classification = data.classification
-        if (self.effective_logic == 'new' and not self.options.shop_sanity
-                and name.endswith((' Elite Gold', ' Boss Gold'))):
-            # Only shops require gold in new logic; legacy boss gates still need it.
+        if (self.effective_logic == 'new' and name.endswith((' Elite Gold', ' Boss Gold'))
+                and not any(shop_gold_by_act(self.options))):
+            # New logic needs gold only where a shop's dearest checks cost more than a run's
+            # guaranteed gold; legacy boss gates still need it.
             classification = ItemClassification.useful
         return SlayTheSpire2Item(data, name, classification, item_id, self.player)
 

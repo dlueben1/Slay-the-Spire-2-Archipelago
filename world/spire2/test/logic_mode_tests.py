@@ -6,6 +6,7 @@ from Fill import distribute_items_restrictive
 from test.general import setup_multiworld
 from worlds.AutoWorld import call_all
 from worlds.spire2 import SlayTheSpire2World
+from worlds.spire2.rules_new import shop_gold_by_act
 from worlds.spire2.rules_old import LegacySpireHasPower
 
 
@@ -30,7 +31,7 @@ class LogicModeTests(unittest.TestCase):
                 mw = setup_multiworld(SlayTheSpire2World, seed=42,
                                       options={'characters': ['Ironclad'], **options})
                 world = mw.worlds[1]
-                useful_gold = world.effective_logic == 'new' and not world.options.shop_sanity
+                useful_gold = world.effective_logic == 'new' and not any(shop_gold_by_act(world.options))
                 for suffix, legacy in legacy_flags.items():
                     expected = ItemClassification.useful if useful_gold else legacy
                     # Includes names used for modded characters and explicit item creation.

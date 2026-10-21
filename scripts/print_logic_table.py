@@ -81,10 +81,36 @@ def format_tables(table: ModuleType) -> str:
         f"  Shop slots, scaled by act ({values(table.SHOP_SCALE_BY_ACT, '.3g')}):",
         *(f"    {item}: {values(slot_values)}" for item, slot_values in table.SHOP_SLOT_VALUES),
         "",
-        f"Shop gold by act: {values(table.SHOP_GOLD_BY_ACT)} "
-        f"(Elite Gold {table.ELITE_GOLD}, Boss Gold {table.BOSS_GOLD})",
+        *format_shop_gold(table),
     ]
     return "\n".join(lines)
+
+
+# Shop Sanity Costs choices, in option value order.
+SHOP_COST_MODES = ("Fixed", "Super Discount", "Discount", "Tiered")
+# Shop pages to show: (label, card, neutral, relic and potion slots, removal checks).
+SHOP_PAGES = (("Default page 2/1/2/2", 2, 1, 2, 2, False), ("Full page 5/2/3/3 + removals", 5, 2, 3, 3, True))
+
+
+def format_shop_gold(table: ModuleType) -> list[str]:
+    prices = ", ".join(f"{category} {price}" for category, price in table.SHOP_TIERED_PRICES.items())
+    shares = ", ".join(f"{mode} {share:g}" for mode, share in zip(SHOP_COST_MODES, table.SHOP_PRICE_SHARE)
+                       if share is not None)
+    per_visit = ", ".join(f"{mode} {checks}" for mode, checks in zip(SHOP_COST_MODES, table.SHOP_CHECKS_PER_VISIT))
+    rows = [("Elite and Boss Gold needed", *SHOP_COST_MODES)]
+    for label, *slots in SHOP_PAGES:
+        page = table.shop_page(*slots)
+        rows.append((label, *(values(table.shop_gold_needed(page, act, mode) for act in (1, 2, 3))
+                              for mode in range(len(SHOP_COST_MODES)))))
+    return [
+        "Shop gold (Shop and Gold Sanity), by act",
+        f"  Elite Gold {table.ELITE_GOLD}, Boss Gold {table.BOSS_GOLD}; a run already has "
+        f"{table.STARTING_GOLD} plus {table.CHEST_GOLD} per earlier chest.",
+        f"  Dearest Tiered check by page position: {prices}.",
+        f"  Fixed checks cost {table.FIXED_SHOP_PRICE}; other modes charge a share of Tiered: {shares}.",
+        f"  Checks one visit should afford: {per_visit}.",
+        *(f"  {line}" for line in format_columns(rows)),
+    ]
 
 
 def main() -> None:

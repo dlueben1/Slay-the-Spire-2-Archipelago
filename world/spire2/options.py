@@ -316,7 +316,8 @@ class ShopSanityCosts(Choice):
     Discount Tiered: 50 percent of the calculated baseline.
     Tiered: the full calculated baseline.
 
-    Generation logic does not account for these prices."""
+    With Gold Sanity, logic expects enough Elite and Boss Gold, on top of starting and chest gold,
+    to buy the two most expensive checks a shop can list (one with Tiered prices)."""
     display_name = "Shop Sanity Costs"
     option_Fixed = 0
     option_Super_Discount_Tiered = 1

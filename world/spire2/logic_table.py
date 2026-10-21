@@ -17,6 +17,7 @@ scripts/print_logic_table.py prints these tables. Keep this module free of Archi
 so that script can load it on its own.
 """
 from dataclasses import dataclass
+from math import ceil
 
 
 @dataclass(frozen=True)
@@ -165,8 +166,55 @@ SHOP_SCALE_BY_ACT = (2 / 3, 1 / 3, 1 / 6)
 
 # --- Shop gold (Gold Sanity with Shop Sanity) ------------------------------------------------
 
-# Only Elite and Boss Gold are progression; combat gold stays filler. These amounts keep a
-# conservative allowance for Poverty.
+# Shop checks persist between runs, and every shop visit lists the unchecked Shop Slot checks in
+# slot order, up to the act's ceiling. A run needs gold for the dearest checks its shop can list:
+# two per visit, so clearing a shop takes fewer restarts, but one with Tiered prices, where two
+# would need almost every gold item and a shop takes several runs to clear anyway.
+#
+# Only Elite and Boss Gold count; combat gold stays useful. Gold amounts keep a conservative
+# allowance for Poverty (x0.75). Each act's chest is on every path and gives 42-52 gold.
 ELITE_GOLD = 30
 BOSS_GOLD = 75
-SHOP_GOLD_BY_ACT = (50, 150, 270)
+STARTING_GOLD = 99
+CHEST_GOLD = 31
+SHOP_CHECKS_LISTED_BY_ACT = (5, 10, 16)
+# AP page positions in the order shop checks fill them, up to each category's vanilla count.
+# The card-removal checks take otherwise unused positions in the same order.
+SHOP_PAGE = (("card", 5), ("neutral", 2), ("relic", 3), ("potion", 3))
+SHOP_REMOVE_CHECKS = 3
+# Dearest Tiered price of a check in each position: cards cost as rare cards (the price for a
+# progression item), relics as shop relics and potions as common potions, at the top of the
+# shop's random price range.
+SHOP_TIERED_PRICES = {"card": 158, "neutral": 158, "relic": 230, "potion": 53}
+FIXED_SHOP_PRICE = 15
+# By Shop Sanity Costs: the share of the Tiered price (Fixed charges FIXED_SHOP_PRICE instead),
+# and how many checks one shop visit should afford.
+SHOP_PRICE_SHARE = (None, 0.2, 0.5, 1.0)
+SHOP_CHECKS_PER_VISIT = (2, 2, 2, 1)
+
+
+def shop_page(card_slots: int, neutral_slots: int, relic_slots: int, potion_slots: int,
+              remove_slots: bool) -> list[str]:
+    """The category of each AP page position that shop checks fill, in fill order."""
+    spare = SHOP_REMOVE_CHECKS if remove_slots else 0
+    page = []
+    for (category, limit), configured in zip(SHOP_PAGE, (card_slots, neutral_slots, relic_slots, potion_slots)):
+        borrowed = min(limit - configured, spare)
+        spare -= borrowed
+        page += [category] * (configured + borrowed)
+    return page
+
+
+def shop_check_price(category: str, cost_mode: int) -> int:
+    share = SHOP_PRICE_SHARE[cost_mode]
+    if share is None:
+        return FIXED_SHOP_PRICE
+    return ceil(SHOP_TIERED_PRICES[category] * share)
+
+
+def shop_gold_needed(page: list[str], act: int, cost_mode: int) -> int:
+    """Gold from Elite and Boss Gold that a run needs for the dearest checks this act's shop lists."""
+    listed = page[:SHOP_CHECKS_LISTED_BY_ACT[act - 1]]
+    prices = sorted((shop_check_price(category, cost_mode) for category in listed), reverse=True)
+    dearest = sum(prices[:SHOP_CHECKS_PER_VISIT[cost_mode]])
+    return max(0, dearest - STARTING_GOLD - CHEST_GOLD * (act - 1))
