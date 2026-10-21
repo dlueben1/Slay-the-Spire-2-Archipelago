@@ -10,7 +10,7 @@ from .characters import CharacterConfig, VANILLA_CHARACTERS, DEFAULT_STARTER_POW
 from .logic_table import (
     ANCIENT_POWER_BY_TIER, BOSS_GOLD, ELITE_GOLD, ELITE_RELIC_REWARDS, PATH_RELIC_REWARDS, RARE_CARD_POWER,
     REGIONS, RELIC_POWER, REST_POWER_BY_ACT, SHOP_REMOVE_POWER_BY_TIER, SHOP_SLOT_VALUES, SMITH_POWER_BY_TIER,
-    PowerCheck, card_reward_strength, card_reward_table, shop_gold_needed, shop_page,
+    PowerCheck, card_reward_strength, card_reward_table, last_elite, shop_gold_needed, shop_page,
 )
 from .options import AncientRelicLocation, CampfireSanity
 
@@ -335,7 +335,7 @@ def shop_gold_by_act(options: 'Spire2Options') -> tuple[int, int, int]:
 
 def region_power(offset: int, prefix: str, region: str, seeded: bool) -> Rule:
     """The region's power check, counting the relics a run can claim by then: walking around
-    elites, or after fighting the elites of an earlier Elites region that is reachable."""
+    elites, or after fighting every elite up to an earlier act's last elite when it is reachable."""
     rule: Rule = SpireHasPower.for_region(offset, region, seeded, relic_rewards=PATH_RELIC_REWARDS[region])
     for elites, rewards in ELITE_RELIC_REWARDS.get(region, {}).items():
         rule |= (SpireHasPower.for_region(offset, region, seeded, relic_rewards=rewards)
@@ -362,9 +362,11 @@ def _set_rules(world: 'SlayTheSpire2World', config: CharacterConfig) -> None:
 
     seeded = bool(world.options.seeded)
     region_rules: dict[str, Rule] = {region: region_power(offset, prefix, region, seeded) for region in REGIONS}
-    # Relic counts in later Elites regions assume the earlier acts' elites were fought too.
+    # Relic counts on the elite track assume every earlier elite was fought: each later elite is
+    # entered from the one before, and each act's chest and first elite need the previous act's last.
     for act in (2, 3):
-        region_rules[f"Act {act} Elites"] &= CanReachRegion(f"{prefix} Act {act - 1} Elites")
+        for region in (f"Act {act} Chest", f"Act {act} Elite 1"):
+            region_rules[region] &= CanReachRegion(f"{prefix} {last_elite(act - 1)}")
     # Item gates that extra power cannot replace.
     if config.mod_num:
         # Unknown starter effects keep the conservative 'gates' for modded characters.

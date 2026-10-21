@@ -2,7 +2,7 @@ from math import ceil, floor
 from typing import TYPE_CHECKING, List
 
 from BaseClasses import Region
-from .logic_table import RELIC_REGIONS
+from .logic_table import ELITES_PER_ACT, RELIC_REGIONS
 
 if TYPE_CHECKING:
     from worlds.spire2.world import SlayTheSpire2World
@@ -38,8 +38,25 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
     def relics(region: str) -> List[str]:
         return [f"Relic {number}" for number, name in relic_regions.items() if name == region]
 
-    def elites_exit(act: int) -> List[str]:
-        return [f"Act {act} Elites"] if two_tracks else []
+    def elite_track_entrances(act: int) -> List[str]:
+        """Elite track regions entered from an act's Mid region: its chest and its first elite."""
+        if not two_tracks:
+            return []
+        return ([f"Act {act} Chest"] if act > 1 else []) + [f"Act {act} Elite 1"]
+
+    def create_elite_track(act: int) -> None:
+        """One region per relic: the act's chest after the previous act's elites, then each elite in
+        turn, entered from the one before."""
+        if not two_tracks:
+            return
+        if act > 1:
+            chest = f"Act {act} Chest"
+            multiworld.regions.append(world.create_region(player, prefix, chest, config, relics(chest)))
+        elites = ELITES_PER_ACT[act - 1]
+        for number in range(1, elites + 1):
+            elite = f"Act {act} Elite {number}"
+            exits = [f"Act {act} Elite {number + 1}"] if number < elites else []
+            multiworld.regions.append(world.create_region(player, prefix, elite, config, relics(elite), exits))
 
     # IMPORTANT: Keep these location ranges at the canonical singleplayer counts. Multiplayer
     # has one fewer physical floor per act and fewer associated reward opportunities; the client
@@ -71,7 +88,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                       *_create_floor_check(7, 11),
                                                       *_create_combat_check(5, 6),
                                                       *_create_card_rewards(5,6, every_other),
-                                                  ],["Late Act 1", *elites_exit(1)]))
+                                                  ],["Late Act 1", *elite_track_entrances(1)]))
 
     multiworld.regions.append(world.create_region(player, prefix, 'Late Act 1', config,
                                                   [
@@ -81,8 +98,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                       *_create_combat_check(7, 8),
                                                       *_create_card_rewards(7,8, every_other)
                                                   ], ['Act 1 Boss Arena']))
-    if two_tracks:
-        multiworld.regions.append(world.create_region(player, prefix, 'Act 1 Elites', config, relics('Act 1 Elites')))
+    create_elite_track(1)
 
     multiworld.regions.append(world.create_region(player, prefix, 'Act 1 Boss Arena', config,
                                                   [
@@ -113,7 +129,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                       *_create_floor_check(23, 27),
                                                       *_create_combat_check(11, 12),
                                                       *_create_card_rewards(11, 12, every_other)
-                                                  ], ["Late Act 2", *elites_exit(2)]))
+                                                  ], ["Late Act 2", *elite_track_entrances(2)]))
 
     multiworld.regions.append(world.create_region(player, prefix, 'Late Act 2', config,
                                                   [
@@ -123,8 +139,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                       *_create_combat_check(13, 14),
                                                       *_create_card_rewards(13, 14, every_other)
                                                   ], ['Act 2 Boss Arena']))
-    if two_tracks:
-        multiworld.regions.append(world.create_region(player, prefix, 'Act 2 Elites', config, relics('Act 2 Elites')))
+    create_elite_track(2)
 
     multiworld.regions.append(world.create_region(player, prefix, 'Act 2 Boss Arena', config,
                                                   [
@@ -156,7 +171,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                       *_create_floor_check(39, 43),
                                                       *_create_combat_check(17, 18),
                                                       *_create_card_rewards(17, 18, every_other)
-                                                  ], ["Late Act 3", *elites_exit(3)]))
+                                                  ], ["Late Act 3", *elite_track_entrances(3)]))
 
 
     multiworld.regions.append(world.create_region(player, prefix, 'Late Act 3', config,
@@ -167,8 +182,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                       *_create_combat_check(19, 20),
                                                       *_create_card_rewards(19, 20, every_other)
                                                   ], ['Act 3 Boss Arena']))
-    if two_tracks:
-        multiworld.regions.append(world.create_region(player, prefix, 'Act 3 Elites', config, relics('Act 3 Elites')))
+    create_elite_track(3)
 
 
     multiworld.regions.append(world.create_region(player, prefix, 'Act 3 Boss Arena', config,

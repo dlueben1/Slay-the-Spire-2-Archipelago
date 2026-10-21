@@ -4,7 +4,7 @@ from BaseClasses import CollectionState
 from test.general import setup_multiworld
 from worlds.AutoWorld import call_all
 from worlds.spire2 import SlayTheSpire2World
-from worlds.spire2.logic_table import REGIONS, RELIC_REGIONS
+from worlds.spire2.logic_table import ELITES_PER_ACT, REGIONS, RELIC_REGIONS, last_elite
 from worlds.spire2.regions import LEGACY_RELIC_REGIONS
 from worlds.spire2.test import path_power
 
@@ -28,20 +28,28 @@ class TwoTrackTests(unittest.TestCase):
                 with self.subTest(logic=logic, relic=number):
                     location = world.get_location(f"Ironclad Relic {number}")
                     self.assertEqual(f"Ironclad {region}", location.parent_region.name)
-            elite_regions = {region.name for region in world.get_regions() if region.name.endswith("Elites")}
-            self.assertEqual(logic == "new", bool(elite_regions))
+            elite_track = {f"Ironclad {region}" for region in RELIC_REGIONS.values() if region != "Mid Act 1"}
+            self.assertEqual(elite_track if logic == "new" else set(),
+                             elite_track & {region.name for region in world.get_regions()})
 
-    def test_later_elites_need_the_previous_acts_elites(self):
+    def test_elite_track_follows_every_earlier_elite(self):
         world = self.make_world()
         for act in (2, 3):
-            with self.subTest(act=act):
-                rule = world.get_entrance(f"Ironclad Act {act} Elites").access_rule
-                self.assertIn(f"Ironclad Act {act - 1} Elites", rule.region_dependencies())
+            for region in (f"Act {act} Chest", f"Act {act} Elite 1"):
+                with self.subTest(region=region):
+                    entrance = world.get_entrance(f"Ironclad {region}")
+                    self.assertEqual(f"Ironclad Mid Act {act}", entrance.parent_region.name)
+                    self.assertIn(f"Ironclad {last_elite(act - 1)}", entrance.access_rule.region_dependencies())
+        for act, elites in enumerate(ELITES_PER_ACT, start=1):
+            for number in range(2, elites + 1):
+                with self.subTest(act=act, elite=number):
+                    entrance = world.get_entrance(f"Ironclad Act {act} Elite {number}")
+                    self.assertEqual(f"Ironclad Act {act} Elite {number - 1}", entrance.parent_region.name)
 
     def test_path_checks_do_not_wait_for_elite_power(self):
         world = self.make_world()
         state = CollectionState(world.multiworld)
-        # Half shuffle's vanilla cards plus one Card Reward clear Mid Act 1, not Act 1 Elites.
+        # Half shuffle's vanilla cards plus one Card Reward clear Mid Act 1, not the first Act 1 elite.
         state.collect(world.create_item("Ironclad Card Reward"), prevent_sweep=True)
         self.assertTrue(world.get_location("Ironclad Reached Floor 11").can_reach(state))
         self.assertTrue(world.get_location("Ironclad Relic 1").can_reach(state))

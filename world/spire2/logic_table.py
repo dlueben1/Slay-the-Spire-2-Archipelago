@@ -66,71 +66,87 @@ class PowerCheck:
 # Each act has two tracks. The path track (Early, Mid, Late, Boss) holds every check a run can
 # reach while walking around elites: the map has no elites before row 6, where Mid begins, one
 # chest on a fixed row inside Mid, and ? rooms never become elites. The elite track holds the
-# later relic checks, which need elite fights. Each Elites region is entered from its act's Mid
-# region and also needs the previous act's Elites region, so relic counts add up across acts.
+# later relic checks, one region per relic: each elite fight, and in Acts 2 and 3 the chest a run
+# reaches after the previous act's elites. Each act's chest and first elite are entered from its
+# Mid region and need the previous act's last elite; each later elite is entered from the one
+# before, so relic counts add up across a run.
 #
 # Budget roughly seven combat card rewards per act: three before Mid, five before Late and
 # seven before the boss. Later acts expect this act's smiths from entry and its rest from Mid.
-# Act 1 waits until the boss for smiths so the sparse floorless opening stays loose. Elite rows
-# copy their act's Late row apart from power. The Act 2 boss and Early Act 3 split the climb to
-# Act 3, where Early Act 3 also expects the third Ancient.
+# Act 1 waits until the boss for smiths so the sparse floorless opening stays loose. Elite track
+# rows copy their act's Late row apart from power: chests take Mid power, and elites climb from
+# about Mid power to Late power. The Act 2 boss and Early Act 3 split the climb to Act 3, where
+# Early Act 3 also expects the third Ancient.
 REGIONS: dict[str, PowerCheck] = {
     #                        act  power  card rewards  min cards
     # Seeded Run replays one map, which may force an elite, so it keeps elite-inclusive power.
     "Mid Act 1":        PowerCheck(1,  2.0,   3,  1.0, rest=True, seeded_power=4.0),
     "Late Act 1":       PowerCheck(1,  7.0,   5,  1.0, rest=True, shop=True, seeded_power=10.0),
-    "Act 1 Elites":     PowerCheck(1,  7.0,   5,  1.0, rest=True, shop=True),
+    "Act 1 Elite 1":    PowerCheck(1,  4.5,   5,  1.0, rest=True, shop=True),
+    "Act 1 Elite 2":    PowerCheck(1,  6.5,   5,  1.0, rest=True, shop=True),
     "Act 1 Boss Arena": PowerCheck(1, 11.5,   7,  3.0, rest=True, smith=True, remove=True, shop=True),
     "Early Act 2":      PowerCheck(2, 12.0,   7,  3.0, smith=True, shop=True),
     "Mid Act 2":        PowerCheck(2, 14.0,  10,  3.0, rest=True, smith=True, shop=True),
     "Late Act 2":       PowerCheck(2, 18.0,  12,  3.0, rest=True, smith=True, shop=True),
-    "Act 2 Elites":     PowerCheck(2, 15.5,  12,  3.0, rest=True, smith=True, shop=True),
+    "Act 2 Chest":      PowerCheck(2, 14.0,  12,  3.0, rest=True, smith=True, shop=True),
+    "Act 2 Elite 1":    PowerCheck(2, 15.5,  12,  3.0, rest=True, smith=True, shop=True),
+    "Act 2 Elite 2":    PowerCheck(2, 17.0,  12,  3.0, rest=True, smith=True, shop=True),
     "Act 2 Boss Arena": PowerCheck(2, 22.0,  14,  4.0, rest=True, smith=True, remove=True, shop=True),
     "Early Act 3":      PowerCheck(3, 23.0,  14,  5.0, smith=True, shop=True),
     "Mid Act 3":        PowerCheck(3, 25.5,  17,  5.0, rest=True, smith=True, shop=True),
     "Late Act 3":       PowerCheck(3, 27.0,  19,  5.0, rest=True, smith=True, shop=True),
-    "Act 3 Elites":     PowerCheck(3, 26.0,  19,  5.0, rest=True, smith=True, shop=True),
+    "Act 3 Chest":      PowerCheck(3, 25.5,  19,  5.0, rest=True, smith=True, shop=True),
+    "Act 3 Elite 1":    PowerCheck(3, 26.0,  19,  5.0, rest=True, smith=True, shop=True),
+    "Act 3 Elite 2":    PowerCheck(3, 26.5,  19,  5.0, rest=True, smith=True, shop=True),
+    "Act 3 Elite 3":    PowerCheck(3, 27.0,  19,  5.0, rest=True, smith=True, shop=True),
     "Act 3 Boss Arena": PowerCheck(3, 30.0,  21,  7.0, rest=True, smith=True, remove=True, shop=True),
 }
 
 # Relic N is the run's Nth elite, chest or Black Star reward. Relic 1 is the Act 1 chest on the
 # path. Elite-ready runs are expected to fight two elites in Acts 1 and 2 and three in Act 3:
 # two Act 1 elites give relics 2-3, Act 2's chest and elites give 4-6, and Act 3's give 7-10.
+ELITES_PER_ACT = (2, 2, 3)
 RELIC_REGIONS = {
     1: "Mid Act 1",
-    2: "Act 1 Elites", 3: "Act 1 Elites",
-    4: "Act 2 Elites", 5: "Act 2 Elites", 6: "Act 2 Elites",
-    7: "Act 3 Elites", 8: "Act 3 Elites", 9: "Act 3 Elites", 10: "Act 3 Elites",
+    2: "Act 1 Elite 1", 3: "Act 1 Elite 2",
+    4: "Act 2 Chest", 5: "Act 2 Elite 1", 6: "Act 2 Elite 2",
+    7: "Act 3 Chest", 8: "Act 3 Elite 1", 9: "Act 3 Elite 2", 10: "Act 3 Elite 3",
 }
+
+
+def last_elite(act: int) -> str:
+    """The elite track region of an act's last expected elite."""
+    return f"Act {act} Elite {ELITES_PER_ACT[act - 1]}"
 
 # --- Claimable relics ------------------------------------------------------------------------
 
 # A run claims AP Relics past Relic Rewards Available Anytime only by taking elite, chest or Black
 # Star rewards, one claim per reward. A power check counts at most anytime + the relic rewards a
-# run has taken by then: by walking around elites, or, when an earlier Elites region is
-# reachable, by fighting its elites too. Boss checks assume elite relics, so chests alone would
-# leave a low anytime count unable to reach the Act 3 boss.
+# run has taken by then: by walking around elites, or, when an earlier act's last elite is
+# reachable, by fighting the elites up to it too. Boss checks assume elite relics, so chests
+# alone would leave a low anytime count unable to reach the Act 3 boss.
 #
-# Relic rewards taken by each region while walking around elites: the chests passed, including
-# the chest on a fixed row inside each Mid region. Elites regions count the rewards before their
-# last relic.
+# Relic rewards taken by each path region while walking around elites: the chests passed,
+# including the chest on a fixed row inside each Mid region. Each elite track region counts the
+# rewards before its relic: one fewer than its relic number.
 PATH_RELIC_REWARDS = {
-    "Mid Act 1": 1, "Late Act 1": 1, "Act 1 Elites": 2, "Act 1 Boss Arena": 1,
-    "Early Act 2": 1, "Mid Act 2": 2, "Act 2 Elites": 5, "Late Act 2": 2, "Act 2 Boss Arena": 2,
-    "Early Act 3": 2, "Mid Act 3": 3, "Act 3 Elites": 9, "Late Act 3": 3, "Act 3 Boss Arena": 3,
+    "Mid Act 1": 1, "Late Act 1": 1, "Act 1 Boss Arena": 1,
+    "Early Act 2": 1, "Mid Act 2": 2, "Late Act 2": 2, "Act 2 Boss Arena": 2,
+    "Early Act 3": 2, "Mid Act 3": 3, "Late Act 3": 3, "Act 3 Boss Arena": 3,
+    **{region: number - 1 for number, region in RELIC_REGIONS.items() if number > 1},
 }
-# Relic rewards taken by a region after also fighting an earlier Elites region's elites.
+# Relic rewards taken by a region after also fighting every elite up to an act's last elite.
 ELITE_RELIC_REWARDS = {
-    "Late Act 1": {"Act 1 Elites": 3},
-    "Act 1 Boss Arena": {"Act 1 Elites": 3},
-    "Early Act 2": {"Act 1 Elites": 3},
-    "Mid Act 2": {"Act 1 Elites": 4},
-    "Late Act 2": {"Act 1 Elites": 4, "Act 2 Elites": 6},
-    "Act 2 Boss Arena": {"Act 1 Elites": 4, "Act 2 Elites": 6},
-    "Early Act 3": {"Act 1 Elites": 4, "Act 2 Elites": 6},
-    "Mid Act 3": {"Act 1 Elites": 5, "Act 2 Elites": 7},
-    "Late Act 3": {"Act 1 Elites": 5, "Act 2 Elites": 7, "Act 3 Elites": 10},
-    "Act 3 Boss Arena": {"Act 1 Elites": 5, "Act 2 Elites": 7, "Act 3 Elites": 10},
+    "Late Act 1": {last_elite(1): 3},
+    "Act 1 Boss Arena": {last_elite(1): 3},
+    "Early Act 2": {last_elite(1): 3},
+    "Mid Act 2": {last_elite(1): 4},
+    "Late Act 2": {last_elite(1): 4, last_elite(2): 6},
+    "Act 2 Boss Arena": {last_elite(1): 4, last_elite(2): 6},
+    "Early Act 3": {last_elite(1): 4, last_elite(2): 6},
+    "Mid Act 3": {last_elite(1): 5, last_elite(2): 7},
+    "Late Act 3": {last_elite(1): 5, last_elite(2): 7, last_elite(3): 10},
+    "Act 3 Boss Arena": {last_elite(1): 5, last_elite(2): 7, last_elite(3): 10},
 }
 
 

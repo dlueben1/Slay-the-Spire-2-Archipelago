@@ -62,7 +62,8 @@ def format_tables(table: ModuleType) -> str:
         "* Half shuffle only: vanilla card rewards already in the run, counted as card strength.",
         "  Seeded: power with Seeded Run, when it differs.",
         "  Rest, smith and removal tiers count only when that support is shuffled.",
-        "  Act 2 and Act 3 Elites also need the previous act's Elites region.",
+        "  Each elite is entered from the one before; Act 2 and 3 chests and first elites need",
+        "  the previous act's last elite.",
         "",
         *format_claimable_relics(table),
         "",
@@ -89,7 +90,7 @@ def format_tables(table: ModuleType) -> str:
 
 
 def format_claimable_relics(table: ModuleType) -> list[str]:
-    rows = [("Region", "Walking around elites", "After an earlier Elites region")]
+    rows = [("Region", "Walking around elites", "After an earlier act's last elite")]
     for region in table.REGIONS:
         alternatives = table.ELITE_RELIC_REWARDS.get(region, {})
         rows.append((region, str(table.PATH_RELIC_REWARDS[region]),

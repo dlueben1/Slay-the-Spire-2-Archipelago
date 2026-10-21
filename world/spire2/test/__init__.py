@@ -8,7 +8,7 @@ from worlds.spire2.rules_new import SpireHasPower
 
 def power_checks(rule: Rule.Resolved) -> list[SpireHasPower.Resolved]:
     """Every power check in an entrance rule. The first one counts the relics a run claims while
-    walking around elites; any others count an earlier Elites region's rewards too."""
+    walking around elites; any others count the rewards of an earlier act's elites too."""
     if isinstance(rule, SpireHasPower.Resolved):
         return [rule]
     return [check for child in getattr(rule, "children", ()) for check in power_checks(child)]
