@@ -62,23 +62,34 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
     # has one fewer physical floor per act and fewer associated reward opportunities; the client
     # compensates at deterministic boss-room boundaries. Reducing the APWorld counts here would
     # also reduce singleplayer and prevent one generated slot from supporting either play mode.
+    # New logic ends Early Act 1 after the three weak hallway fights: the fourth fight's checks,
+    # including the floor after it, are in the Act 1 Hallway.
+    early_fights = 3 if two_tracks else 4
     first_char_region = world.create_region(player, prefix, 'Early Act 1', config,
                                             [
                                                 "Press Start",
                                                 "Potion Drop 1",
                                                 "Act 1 Campfire 1",
                                                 "Ancient Act 1",
-                                                *_create_floor_check(1,6),
-                                                *_create_combat_check(1,4),
-                                                *_create_card_rewards(1, 4, every_other)
+                                                *_create_floor_check(1, early_fights + 2),
+                                                *_create_combat_check(1, early_fights),
+                                                *_create_card_rewards(1, early_fights, every_other)
                                             ],
-                                            ["Mid Act 1", "Act 1 Shop"])
+                                            ["Act 1 Hallway" if two_tracks else "Mid Act 1", "Act 1 Shop"])
 
     neow.connect(first_char_region, first_char_region.name)
     multiworld.regions.append(first_char_region)
 
     multiworld.regions.append(world.create_region(player, prefix, "Act 1 Shop", config,
                                                   [f"Shop Slot {i}" for i in range(1,6)]))
+
+    if two_tracks:
+        multiworld.regions.append(world.create_region(player, prefix, "Act 1 Hallway", config,
+                                                      [
+                                                          *_create_floor_check(6, 6),
+                                                          *_create_combat_check(4, 4),
+                                                          *_create_card_rewards(4, 4, every_other),
+                                                      ], ["Mid Act 1"]))
 
     multiworld.regions.append(world.create_region(player, prefix, 'Mid Act 1', config,
                                                   [
@@ -203,9 +214,11 @@ def _create_floor_check(start: int, end: int) -> List[str]:
     return [f"Reached Floor {i}" for i in range(start, end + 1)]
 
 def _create_card_rewards(start: int, end: int, every_other: bool) -> List[str]:
+    """The Card Reward checks of combat card rewards start to end. With half shuffle the client
+    makes every odd one a check, so Card Reward N is the run's card reward 2N - 1."""
     if every_other:
-        start =  ceil(start/2)
-        end =  floor(end/2)
+        start = ceil((start + 1) / 2)
+        end = floor((end + 1) / 2)
     return [f"Card Reward {i}" for i in range(start, end + 1)]
 
 def _create_combat_check(start: int, end: int) -> List[str]:

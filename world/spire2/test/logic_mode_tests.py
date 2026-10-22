@@ -82,15 +82,17 @@ class LogicModeTests(unittest.TestCase):
                 self.assertEqual(power, state.power_level[1][world.characters[0].char_offset])
                 self.assertTrue(world.get_entrance('Ironclad Mid Act 1').access_rule(state))
         # New logic still uses its own opening mix when a sanity keeps it out of fallback.
-        # Seeded Run keeps elite-inclusive Mid Act 1 power, so it needs one more Relic.
-        for seeded, relics in ((False, 1), (True, 2)):
+        # Seeded Run keeps elite-inclusive Mid Act 1 power. With one relic claimable there (no anytime
+        # relics, plus the chest), it needs one more Card Reward.
+        for seeded, cards in ((False, 1), (True, 2)):
             with self.subTest(new_logic_seeded=seeded):
                 world = setup_multiworld(SlayTheSpire2World, seed=42, options={
                     **self.sparse, 'gold_sanity': True, 'shuffle_all_cards': False, 'seeded': seeded,
+                    'relic_rewards_available_anytime': 0,
                 }).worlds[1]
                 self.assertEqual('new', world.effective_logic)
-                self.assertEqual(0, world.multiworld.early_items[1].get('Ironclad Card Reward', 0))
-                self.assertEqual(relics, world.multiworld.early_items[1]['Ironclad Relic'])
+                self.assertEqual(cards, world.multiworld.early_items[1]['Ironclad Card Reward'])
+                self.assertEqual(1, world.multiworld.early_items[1]['Ironclad Relic'])
         world = setup_multiworld(SlayTheSpire2World, seed=42, options={
             **self.sparse, 'use_new_logic': False, 'include_floor_checks': True, 'shuffle_all_cards': False,
         }).worlds[1]

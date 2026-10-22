@@ -73,14 +73,18 @@ class PowerCheck:
 #
 # Budget roughly seven combat card rewards per act: three before Mid, five before Late and
 # seven before the boss. Later acts expect this act's smiths from entry and its rest from Mid.
-# Act 1 waits until the boss for smiths so the sparse floorless opening stays loose. Elite track
-# rows copy their act's Late row apart from power: chests take Mid power, and elites climb from
-# about Mid power to Late power. The Act 2 boss and Early Act 3 split the climb to Act 3, where
-# Early Act 3 also expects the third Ancient.
+# Act 1 waits until the boss for smiths so the sparse floorless opening stays loose. Early Act 1
+# needs only the character: Act 1 opens with three weak hallway fights. The Act 1 Hallway, between
+# Early and Mid, holds the checks of the fourth fight, the first from the normal pool. It asks only
+# for a normal start (starter card, starter relic and Neow), so a run without one needs power to
+# make up for it. Elite track rows copy their act's Late row apart from power: chests take Mid
+# power, and elites climb from about Mid power to Late power. The Act 2 boss and Early Act 3 split
+# the climb to Act 3, where Early Act 3 also expects the third Ancient.
 REGIONS: dict[str, PowerCheck] = {
     #                        act  power  card rewards  min cards
+    "Act 1 Hallway":    PowerCheck(1,  0.0,   3,  0.0),
     # Seeded Run replays one map, which may force an elite, so it keeps elite-inclusive power.
-    "Mid Act 1":        PowerCheck(1,  2.0,   3,  1.0, rest=True, seeded_power=4.0),
+    "Mid Act 1":        PowerCheck(1,  3.0,   3,  1.0, rest=True, seeded_power=4.0),
     "Late Act 1":       PowerCheck(1,  7.0,   5,  1.0, rest=True, shop=True, seeded_power=10.0),
     "Act 1 Elite 1":    PowerCheck(1,  4.5,   5,  1.0, rest=True, shop=True),
     "Act 1 Elite 2":    PowerCheck(1,  6.5,   5,  1.0, rest=True, shop=True),
@@ -130,7 +134,7 @@ def last_elite(act: int) -> str:
 # including the chest on a fixed row inside each Mid region. Each elite track region counts the
 # rewards before its relic: one fewer than its relic number.
 PATH_RELIC_REWARDS = {
-    "Mid Act 1": 1, "Late Act 1": 1, "Act 1 Boss Arena": 1,
+    "Act 1 Hallway": 0, "Mid Act 1": 1, "Late Act 1": 1, "Act 1 Boss Arena": 1,
     "Early Act 2": 1, "Mid Act 2": 2, "Late Act 2": 2, "Act 2 Boss Arena": 2,
     "Early Act 3": 2, "Mid Act 3": 3, "Late Act 3": 3, "Act 3 Boss Arena": 3,
     **{region: number - 1 for number, region in RELIC_REGIONS.items() if number > 1},
