@@ -23,7 +23,8 @@ class CharacterDefinition:
     name: str
     internal_id: str | None
     # Vanilla entries explicitly choose reviewed values or DEFAULT_STARTER_POWER.
-    # Modded entries have no assumed power credit for unverified starter upgrades.
+    # Modded entries use DEFAULT_STARTER_POWER: they are assumed to define Archaic Tooth and Touch
+    # of Orobas mappings.
     starter_power: StarterPower | None = None
 
 

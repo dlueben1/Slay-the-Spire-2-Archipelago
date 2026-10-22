@@ -3,7 +3,7 @@ import unittest
 from BaseClasses import CollectionState
 from test.general import setup_multiworld
 from worlds.spire2 import SlayTheSpire2World
-from worlds.spire2.characters import character_list
+from worlds.spire2.characters import DEFAULT_STARTER_POWER, character_list
 from worlds.spire2.rules import SpireHasPower
 from worlds.spire2.test import path_power
 from worlds.spire2.logic_table import (VANILLA_CARD_POWER, VANILLA_CARD_REWARD_SHARE, card_reward_strength,
@@ -271,27 +271,25 @@ class LogicTests(unittest.TestCase):
             with self.subTest(character=config.name, gate="Late Act 1"):
                 self.assertTrue(world.get_entrance(f"{config.name} Late Act 1").access_rule(state))
 
-    def test_modded_starters_keep_each_gate_without_power_bonuses(self):
+    def test_modded_starters_use_default_starter_power(self):
         world = self.make_world(characters=[], modded_characters=["TestCharacter"],
                                 progressive_starter_card=True, progressive_starter_relic=True)
         prefix = world.characters[0].name
         state = CollectionState(world.multiworld)
         for _ in range(100):
             state.collect(world.create_item(f"{prefix} Card Reward"), prevent_sweep=True)
-        gate = world.get_entrance(f"{prefix} Late Act 1").access_rule
+        # Enough power replaces missing starters: no item gate remains.
+        self.assertTrue(world.get_entrance(f"{prefix} Late Act 1").access_rule(state))
         rule = self.power_rule(world)
-        before = rule.strength(state)
-        for kind in ("Card", "Relic"):
-            with self.subTest(only_starter=kind):
-                partial = state.copy()
-                partial.collect(world.create_item(f"{prefix} Progressive Starter {kind}"), prevent_sweep=True)
-                self.assertFalse(gate(partial))
-                self.assertEqual(before, rule.strength(partial))
-        for kind in ("Card", "Relic"):
-            for _ in range(2):
+        for kind, (charge, upgrade) in (("Card", DEFAULT_STARTER_POWER.card),
+                                        ("Relic", DEFAULT_STARTER_POWER.relic)):
+            with self.subTest(starter=kind):
+                cards, power, required = rule.strength(state)
                 state.collect(world.create_item(f"{prefix} Progressive Starter {kind}"), prevent_sweep=True)
-        self.assertTrue(gate(state))
-        self.assertEqual(before, rule.strength(state))
+                self.assertEqual((cards, power, required - charge), rule.strength(state))
+                state.collect(world.create_item(f"{prefix} Progressive Starter {kind}"), prevent_sweep=True)
+                card_upgrade = upgrade if kind == "Card" else 0
+                self.assertEqual((cards + card_upgrade, power + upgrade, required - charge), rule.strength(state))
 
     def test_disabled_starter_options_give_no_power_credit(self):
         for kind in ("Card", "Relic"):

@@ -69,9 +69,16 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
         options = world.options
         check = PowerCheck(self.act, self.power_level, self.card_rewards, self.minimum_cards,
                            rest=self.rest, smith=self.smith, remove=self.remove, shop=self.shop)
-        # The APWorld cannot verify a modded character's Orobas mappings. Do not assume
-        # those receipts grant upgrades when the client may leave its starters unchanged.
-        reviewed_starters = config.mod_num == 0
+        if config.mod_num:
+            # Modded characters are assumed to define Archaic Tooth and Touch of Orobas mappings,
+            # as every predefined one does, so their starters use the default values.
+            card_power = DEFAULT_STARTER_POWER.card
+            relic_power = DEFAULT_STARTER_POWER.relic
+            pair_power = DEFAULT_STARTER_POWER.missing_pair
+        else:
+            card_power = STARTER_CARD_POWER.get(config.name, DEFAULT_STARTER_POWER.card)
+            relic_power = STARTER_RELIC_POWER.get(config.name, DEFAULT_STARTER_POWER.relic)
+            pair_power = STARTER_PAIR_POWER.get(config.name, DEFAULT_STARTER_POWER.missing_pair)
         return self.Resolved(
             char=config.name,
             power_level=self.power_level,
@@ -88,12 +95,9 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
             shop_scale=check.shop_scale if options.shop_sanity else 0,
             shuffled_shop_slots=(options.shop_card_slots.value, options.shop_neutral_card_slots.value,
                                  options.shop_relic_slots.value, options.shop_potion_slots.value),
-            starter_card_power=STARTER_CARD_POWER.get(config.name, DEFAULT_STARTER_POWER.card)
-                               if reviewed_starters and config.progressive_starter_card else (0, 0),
-            starter_relic_power=STARTER_RELIC_POWER.get(config.name, DEFAULT_STARTER_POWER.relic)
-                                if reviewed_starters and config.progressive_starter_relic else (0, 0),
-            starter_pair_power=STARTER_PAIR_POWER.get(config.name, DEFAULT_STARTER_POWER.missing_pair)
-                               if reviewed_starters else 0,
+            starter_card_power=card_power if config.progressive_starter_card else (0, 0),
+            starter_relic_power=relic_power if config.progressive_starter_relic else (0, 0),
+            starter_pair_power=pair_power,
             region=self.region or f"Act {self.act}",
             relic_cap=None if self.relic_rewards is None
                       else options.relic_rewards_available_anytime.value + self.relic_rewards,
@@ -366,12 +370,6 @@ def _set_rules(world: 'SlayTheSpire2World', config: CharacterConfig) -> None:
         for region in (f"Act {act} Chest", f"Act {act} Elite 1"):
             region_rules[region] &= CanReachRegion(f"{prefix} {last_elite(act - 1)}")
     # Item gates that extra power cannot replace.
-    if config.mod_num:
-        # Unknown starter effects keep the conservative 'gates' for modded characters.
-        if config.progressive_starter_relic:
-            region_rules["Late Act 1"] &= Has(f"{prefix} Progressive Starter Relic")
-        if config.progressive_starter_card:
-            region_rules["Late Act 1"] &= Has(f"{prefix} Progressive Starter Card")
     region_rules["Act 1 Boss Arena"] &= Has(f"{prefix} Progressive Smith",
                                             options=[OptionFilter(CampfireSanity, 1)], filtered_resolution=True)
     for act in (2, 3):
