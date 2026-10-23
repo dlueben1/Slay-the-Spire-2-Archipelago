@@ -184,6 +184,21 @@ class RelicRewardsAvailableAnytime(Range):
     default = 2
 
 
+class RemoveOPRelics(OptionSet):
+    """Removes relics that are much stronger in Archipelago than in a normal run.
+    Each category removes only the relics that the Archipelago mod lists for it, so the exact
+    relics can change between mod versions. Leave this empty to keep every relic.
+
+    - 'Ancient': Removes Pael's Growth and Glitter from Anytime Ancient rewards. Ancient rewards
+      offered at the start of an act are unaffected.
+    - 'Rare': Removes Prayer Wheel and White Star from every relic source.
+    """
+    display_name = "Remove Overpowered Relics"
+    valid_keys = {"Ancient", "Rare"}
+    valid_keys_casefold = False
+    default = frozenset()
+
+
 class ReleaseOnVictory(Toggle):
     """Release the winning character's remaining checks when their goal is recorded."""
     display_name = "Release Checks On Victory"
@@ -724,6 +739,7 @@ class Spire2Options(PerGameCommonOptions):
     ancient_relic_location: AncientRelicLocation
     ancient_relic_pool: AncientRelicPool
     relic_rewards_available_anytime: RelicRewardsAvailableAnytime
+    remove_op_relics: RemoveOPRelics
     progressive_starter_card: ProgressiveStarterCard
     progressive_starter_relic: ProgressiveStarterRelic
     shuffle_all_cards: CardReward

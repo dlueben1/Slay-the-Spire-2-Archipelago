@@ -572,14 +572,7 @@ public static class AscensionMultiplayer
                 break;
 
             case AscensionLevel.DoubleBoss:
-                foreach (var act in runState.Acts)
-                    act.SetSecondBossEncounter(null);
-                if (runState.Act.Index == 2
-                    && runState.Map.SecondBossMapPoint is { } secondBossPoint)
-                {
-                    runState.Map.BossMapPoint.RemoveChildPoint(secondBossPoint);
-                }
-                StS2AP.Patches.Patches_APBossPresentation.Refresh();
+                AscensionManager.RemoveDoubleBoss(runState);
                 break;
         }
     }

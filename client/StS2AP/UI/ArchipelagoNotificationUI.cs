@@ -159,8 +159,6 @@ namespace StS2AP.UI
         /// </summary>
         public static void UpdateSpeakerIcon()
         {
-            LogUtility.Info($"AP: Updating speaker icon based on current announcer setting");
-
             // If the UI hasn't been injected yet, there's nothing to update
             if (_speakerIcon == null || !IsInstanceValid(_speakerIcon))
             {
@@ -175,13 +173,11 @@ namespace StS2AP.UI
                 var settings = store.Get<ClientSettings>("apsettings");
                 var announcer = settings.Announcer?.ToLower() ?? "neow";
 
-                LogUtility.Info($"ANNOUNCER: {announcer}");
-
                 // Load the appropriate icon texture
                 var iconPath = $"res://images/ui/run_history/{announcer}.png";
                 _speakerIcon.Texture = GD.Load<Texture2D>(iconPath);
 
-                LogUtility.Info($"AP: Updated notification speaker icon to: {announcer}");
+                LogUtility.Debug($"AP: Updated notification speaker icon to: {announcer}");
             }
             catch (Exception ex)
             {
@@ -201,7 +197,6 @@ namespace StS2AP.UI
                     LogUtility.Error($"Failed to load fallback Neow icon: {fallbackEx.Message}");
                 }
             }
-            LogUtility.Info($"AP: Finished updating speaker icon");
         }
 
         #endregion

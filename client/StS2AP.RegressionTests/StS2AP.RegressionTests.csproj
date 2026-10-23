@@ -75,6 +75,7 @@
     <Compile Include="..\StS2AP\Persistence\ApProgressDelta.cs" Link="Persistence\ApProgressDelta.cs" />
     <Compile Include="..\StS2AP\Persistence\ApProgressiveStarterState.cs" Link="Persistence\ApProgressiveStarterState.cs" />
     <Compile Include="..\StS2AP\Models\Configuration\AncientRewardSettings.cs" Link="Models\AncientRewardSettings.cs" />
+    <Compile Include="..\StS2AP\Models\Configuration\OpRelicCategories.cs" Link="Models\OpRelicCategories.cs" />
     <Compile Include="..\StS2AP\Models\Configuration\ClientSettings.cs" Link="Models\ClientSettings.cs" />
     <Compile Include="..\StS2AP\Persistence\ApRunProgressState.cs" Link="Persistence\ApRunProgressState.cs" />
     <Compile Include="..\StS2AP\Persistence\ApCardAssignmentState.cs" Link="Persistence\ApCardAssignmentState.cs" />

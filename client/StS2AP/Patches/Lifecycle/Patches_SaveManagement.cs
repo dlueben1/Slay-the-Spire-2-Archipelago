@@ -60,10 +60,12 @@ namespace StS2AP.Patches
 
                 if (!ApSingleplayerSaves.IsHandlingSingleplayerRun) return true;
 
-                LogUtility.Info($"Game attempted to save in room of type '{preFinishedRoom?.RoomType}'");
-                LogUtility.Info($"Current room type {RunManager.Instance.DebugOnlyGetState()?.CurrentRoom?.RoomType}");
-                LogUtility.Info($"Current Map node type {RunManager.Instance.DebugOnlyGetState()?.CurrentMapPoint?.PointType}");
-                LogUtility.Info($"Game thinks we should save: {RunManager.Instance.ShouldSave}");
+                LogUtility.Debug(
+                    $"Game attempted to save: room type '{preFinishedRoom?.RoomType}', "
+                        + $"current room type '{RunManager.Instance.DebugOnlyGetState()?.CurrentRoom?.RoomType}', "
+                        + $"map node type '{RunManager.Instance.DebugOnlyGetState()?.CurrentMapPoint?.PointType}', "
+                        + $"should save {RunManager.Instance.ShouldSave}"
+                );
 
                 // Save at room-entry checkpoints, after boss kills, and after ancient selections.
                 bool isEligibleCheckpoint = TryGetCheckpointEligibility(
@@ -74,7 +76,7 @@ namespace StS2AP.Patches
                 if ((RunManager.Instance.NetService.Type != MegaCrit.Sts2.Core.Multiplayer.Game.NetGameType.Singleplayer && RunManager.Instance.NetService.Type != MegaCrit.Sts2.Core.Multiplayer.Game.NetGameType.Host)
                     || !isEligibleCheckpoint)
                 {
-                    LogUtility.Info(
+                    LogUtility.Debug(
                         $"Skipping save {preFinishedRoom?.RoomType}: {checkpointReason}"
                     );
                     __result = Task.CompletedTask;
@@ -131,7 +133,7 @@ namespace StS2AP.Patches
                     && currentAct > 1
                     && maxSaveAct < currentAct;
 
-                LogUtility.Info(
+                LogUtility.Debug(
                     $"Max Act: {maxSaveAct} Current Act: {currentAct} "
                         + $"AncientRelicLocation: {ancientRelicLocation}"
                 );

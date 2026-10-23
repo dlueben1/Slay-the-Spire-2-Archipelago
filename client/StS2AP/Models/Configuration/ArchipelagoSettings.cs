@@ -72,6 +72,9 @@ namespace StS2AP.Models
         /// <summary>Whether a victory releases the winning character's remaining checks.</summary>
         public bool ReleaseOnVictory { get; set; } = true;
 
+        /// <summary>Overpowered-relic categories this slot removes from its runs.</summary>
+        public OpRelicCategories RemovedOpRelics { get; set; }
+
         private Dictionary<string, List<BonusItemDefinition>> _bonusItemsByCategory =
             new(StringComparer.OrdinalIgnoreCase);
 

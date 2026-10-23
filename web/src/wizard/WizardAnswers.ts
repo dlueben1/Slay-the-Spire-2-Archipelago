@@ -18,6 +18,7 @@ import {
   CHECK_OPTION_KEYS,
   DEATH_LINK_OPTION_KEYS,
   ANCIENT_OPTION_KEYS,
+  OP_RELIC_CATEGORY_KEYS,
   PROGRESSION_OPTION_KEYS,
   RUN_OPTION_KEYS,
   SHOP_OPTION_KEYS,
@@ -118,8 +119,15 @@ export interface FillerAnswers {
   weights: Record<FillerItemId, FillerWeightLevel>;
 }
 
+/** Which categories of overpowered relics are removed from every run. */
+export interface OpRelicRemovalAnswers {
+  ancient: boolean;
+  rare: boolean;
+}
+
 export interface RunAnswers {
   relicRewardsAvailableAnytime: number;
+  removeOpRelics: OpRelicRemovalAnswers;
   releaseOnVictory: boolean;
   seeded: boolean;
 }
@@ -251,6 +259,32 @@ function getNumberDefault(catalog: OptionCatalog, optionKey: string): number {
 }
 
 /**
+ * Reads a text-list default for a guided option set.
+ *
+ * @param catalog - Generated catalog containing the option-set definition.
+ * @param optionKey - Generated option set whose default is required.
+ * @returns The schema-provided entries in generated order.
+ * @throws When the generated default is not a list of strings.
+ */
+function getStringSetDefault(
+  catalog: OptionCatalog,
+  optionKey: string,
+): string[] {
+  // Read through the shared presence check before validating the list shape.
+  const value = getGeneratedDefault(catalog, optionKey);
+
+  if (
+    !Array.isArray(value) ||
+    !value.every((entry): entry is string => typeof entry === "string")
+  ) {
+    throw new Error(`Generated option '${optionKey}' has no text-list default.`);
+  }
+
+  // Copy so answer initialization never aliases generated metadata.
+  return [...value];
+}
+
+/**
  * Reads and narrows a generated choice default to a supported semantic value.
  *
  * @param catalog - Generated catalog containing the choice definition.
@@ -324,6 +358,12 @@ export function createDefaultWizardAnswers(
     DEATH_LINK_OPTION_KEYS.damagePercent,
   );
 
+  // Present the generated category list as one checkbox per category.
+  const removedOpRelics = getStringSetDefault(
+    catalog,
+    RUN_OPTION_KEYS.removeOpRelics,
+  );
+
   // Initialize every field explicitly to keep this the single setup entry point.
   return {
     playerName: "",
@@ -345,6 +385,10 @@ export function createDefaultWizardAnswers(
         catalog,
         RUN_OPTION_KEYS.relicRewardsAvailableAnytime,
       ),
+      removeOpRelics: {
+        ancient: removedOpRelics.includes(OP_RELIC_CATEGORY_KEYS.ancient),
+        rare: removedOpRelics.includes(OP_RELIC_CATEGORY_KEYS.rare),
+      },
       releaseOnVictory: getBooleanDefault(
         catalog,
         RUN_OPTION_KEYS.releaseOnVictory,

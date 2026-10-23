@@ -32,6 +32,8 @@ namespace StS2AP.Utils
             // Golden Compass regenerates the current map on pickup. Only offer it at the
             // Act 2 Ancient, never in an Anytime reward or at the start of another act.
             || (relic is GoldenCompass && startOfActIndex != 1)
+            // remove_op_relics' Ancient category applies only to Anytime rewards (no start act).
+            || (startOfActIndex == null && OpRelicPolicy.IsRemovedFromAnytimeAncients(relic, player, settings))
             || ProgressiveStarterUtility.ShouldExcludeAncientRelic(relic, player, settings);
 
         /// <summary>

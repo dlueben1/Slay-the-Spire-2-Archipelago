@@ -103,14 +103,11 @@ namespace StS2AP.Patches
                     if (IntoTheSpireverseSelection.RefreshButton(button, __instance))
                         continue;
                     var charModel = button.Character;
-                    LogUtility.Info($"Character Model id: {charModel.Id.Entry}");
                     var name = charModel.Id.Entry;
-                    LogUtility.Info($"OverrideCharacterSelectMenuOptions: Checking button with character '{name}'");
 
                     // Hide any character that isn't in the available characters list for this Archipelago slot
                     bool isVisible = ArchipelagoClient.Settings.Characters.ContainsKey(name);
-                    LogUtility.Info($"OverrideCharacterSelectMenuOptions: '{name}' isVisible={isVisible}");
-                    LogUtility.Info($"Current Configured Characters: {string.Join(",", ArchipelagoClient.Settings.Characters.Keys)}");
+                    LogUtility.Debug($"OverrideCharacterSelectMenuOptions: '{name}' isVisible={isVisible}");
 
                     button.Visible = isVisible;
 

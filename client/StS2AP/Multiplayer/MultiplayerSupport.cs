@@ -884,6 +884,7 @@ public static class MultiplayerSupport
                 ? local.RelicRewardsAvailableAnytime
                 : source.RelicRewardsAvailableAnytime,
             ReleaseOnVictory = source.ReleaseOnVictory,
+            RemovedOpRelics = source.RemovedOpRelics,
             CampfireSanity = source.CampfireSanity,
             GoldSanity = source.GoldSanity,
             BonusItems = source.BonusItems.ToArray(),

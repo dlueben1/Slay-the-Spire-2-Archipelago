@@ -26,6 +26,7 @@ import {
   getVisibleQuestionIds,
 } from "../WizardStep";
 import { compileWizardAnswers } from "../compiler/compileWizardAnswers";
+import { summarizeRunAnswers } from "../review";
 
 /**
  * Creates complete schema-derived answers for gameplay-section tests.
@@ -76,6 +77,7 @@ function compilesConfiguredGameplaySections(): void {
   const answers = createTestAnswers();
   answers.run = {
     relicRewardsAvailableAnytime: 7,
+    removeOpRelics: { ancient: true, rare: true },
     releaseOnVictory: false,
     seeded: true,
   };
@@ -124,6 +126,7 @@ function compilesConfiguredGameplaySections(): void {
   expect(options.ancient_relic_location).toBe("start_of_act");
   expect(options.ancient_relic_pool).toBe("true_chaos");
   expect(options.relic_rewards_available_anytime).toBe(7);
+  expect(options.remove_op_relics).toEqual(["Ancient", "Rare"]);
   expect(options.release_on_victory).toBe(false);
   expect(options.neow_sanity).toBe(true);
   expect(options.seeded).toBe(true);
@@ -146,6 +149,25 @@ function compilesConfiguredGameplaySections(): void {
   expect(options.death_link).toBe(true);
   expect(options.enable_death_fragments).toBe(false);
   expect(options.death_link_damage_percent).toBe(37);
+}
+
+/**
+ * Verifies each overpowered-relic checkbox maps to exactly its own category.
+ *
+ * @returns Nothing; Vitest records assertion failures.
+ */
+function compilesSingleOpRelicCategory(): void {
+  // Remove only the Rare category so the Ancient checkbox is proven independent.
+  const answers = createTestAnswers();
+  answers.run.removeOpRelics = { ancient: false, rare: true };
+
+  // Compile through the same boundary used by Review and YAML generation.
+  const options = compileWizardAnswers(answers, optionCatalog);
+
+  expect(options.remove_op_relics).toEqual(["Rare"]);
+  expect(summarizeRunAnswers(answers.run)).toContain(
+    "Overpowered Rare relics are removed.",
+  );
 }
 
 /**
@@ -405,6 +427,10 @@ function coversEveryGameSpecificOption(): void {
 function registerGameplayCompilerTests(): void {
   // Cover default fidelity, explicit mappings, dependencies, and key ownership.
   it("round-trips generated defaults", compilesGeneratedGameplayDefaults);
+  it(
+    "compiles one overpowered-relic category on its own",
+    compilesSingleOpRelicCategory,
+  );
   it(
     "compiles configured gameplay sections",
     compilesConfiguredGameplaySections,

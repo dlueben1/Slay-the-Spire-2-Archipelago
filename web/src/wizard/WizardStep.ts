@@ -316,6 +316,30 @@ export const runSetupStep: WizardStep = {
         range: generatedRange("relicRewardsAvailableAnytime"),
       },
     },
+    {
+      id: "remove-op-relics",
+      title: "Should overpowered relics be removed?",
+      description:
+        "Some relics are much stronger in Archipelago than in a normal run. Leave both unchecked to keep every relic.",
+      help: "The Archipelago mod decides the exact relics in each category, so the list can change between mod versions.",
+      control: {
+        kind: "checkbox-grid",
+        items: [
+          {
+            field: "removeOpRelics.ancient",
+            label: "Ancient Relics",
+            description:
+              "Remove Pael's Growth and Glitter from Ancient rewards claimed Anytime. Ancient rewards at the start of an act still offer them.",
+          },
+          {
+            field: "removeOpRelics.rare",
+            label: "Rare Relics",
+            description:
+              "Remove Prayer Wheel and White Star from every relic source.",
+          },
+        ],
+      },
+    },
   ],
 };
 

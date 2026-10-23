@@ -27,8 +27,15 @@ export const CHARACTER_OPTION_KEYS = {
 /** Generated option keys owned by the Gameplay Modifiers compiler. */
 export const RUN_OPTION_KEYS = {
   relicRewardsAvailableAnytime: "relic_rewards_available_anytime",
+  removeOpRelics: "remove_op_relics",
   releaseOnVictory: "release_on_victory",
   seeded: "seeded",
+} as const;
+
+/** Generated `remove_op_relics` category names keyed by their Gameplay Modifiers answer field. */
+export const OP_RELIC_CATEGORY_KEYS = {
+  ancient: "Ancient",
+  rare: "Rare",
 } as const;
 
 /** Generated option keys owned by Checks & Rewards' Starting Equipment subsection. */

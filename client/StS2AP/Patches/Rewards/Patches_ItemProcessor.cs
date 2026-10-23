@@ -36,11 +36,11 @@ namespace StS2AP.Patches
         /// <param name="info"> The item to process</param>
         public static void AddToQueue(IndexedItemInfo info)
         {
-            LogUtility.Info($"Enqueuing {info.Item.ItemName}");
+            LogUtility.Debug($"Enqueuing {info.Item.ItemName}");
             ProcessQueue.Enqueue(info);
             if(!RunManager.Instance.IsInProgress) 
             {
-                LogUtility.Info($"Processing {info.Item.ItemName}, since not in game");
+                LogUtility.Debug($"Processing {info.Item.ItemName}, since not in game");
                 // We're not in a run, so the NRun._Process function won't fire.
                 // As such, send a task to the main thread to do stuff
                 Callable.From(ProcessItemInQueue).CallDeferred();
@@ -139,25 +139,20 @@ namespace StS2AP.Patches
                 // Character Unlocks
                 case APItem.Unlock:
                 {
-                    LogUtility.Info("Before GameUtility Unlock");
                     GameUtility.UnlockCharacter(item);
-                    LogUtility.Info("After GameUtility Unlock");
 
                     /// Fire the CharacterUnlocked event on the Godot main thread.
                     /// This allows the character select screen (if open) to immediately
                     /// refresh the appropriate button without waiting for OnSubmenuOpened.
                     var offset = item.GetAPCharacterNumber();
-                    LogUtility.Info("After offset acquisition");
                     var config = Settings.Characters.Values.FirstOrDefault(
                         config => config.CharOffset == offset
                     );
-                    LogUtility.Info("After Settings check");
                     if (config == null)
                     {
                         LogUtility.Warn($"Got Unlock for character not configured {item.ItemId}");
                         break;
                     }
-                    LogUtility.Info("after config null check");
                     CharacterUnlocked?.Invoke(config);
 
                     break;
@@ -317,7 +312,7 @@ namespace StS2AP.Patches
                             var haveKey = source.TryGetValue(playerId, out int amount);
                             if (!haveKey) amount = 0;
                             source[playerId] = amount + 1;
-                            LogUtility.Success($"New Value for {itemId} is {source[playerId]}");
+                            LogUtility.Debug($"New Value for {itemId} is {source[playerId]}");
                         }
                         catch (KeyNotFoundException e)
                         {
@@ -455,7 +450,7 @@ namespace StS2AP.Patches
                 if (!haveKey)
                     amount = 0;
                 source[offset] = amount + 1;
-                LogUtility.Success($"New Value for {name} is {source[offset]}");
+                LogUtility.Debug($"New Value for {name} is {source[offset]}");
             }
             catch (KeyNotFoundException e)
             {

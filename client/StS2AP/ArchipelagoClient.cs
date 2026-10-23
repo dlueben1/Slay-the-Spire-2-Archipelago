@@ -670,10 +670,7 @@ namespace StS2AP
                 // Log all slot data
                 LogUtility.Info("Dumping Slot Data:");
                 foreach (var kvp in SlotData)
-                {
-                    LogUtility.Info($"KEY: {kvp.Key}");
-                    LogUtility.Info($"VAL: {kvp.Value ?? "<null>"}");
-                }
+                    LogUtility.Info($"SLOT {kvp.Key}: {kvp.Value ?? "<null>"}");
 
                 if (!TryReadApWorldCompatibility(
                         out System.Version apWorldVersion,
@@ -1130,23 +1127,30 @@ namespace StS2AP
                 return false;
             }
 
-            IReadOnlyList<ItemInfo> receivedItems = Session.Items.AllItemsReceived;
-            // A different AP owner may have used this process previously. Rebuild the
-            // selectable set only from this slot's settings and authoritative history.
-            RebuildUnlockedCharactersFromSettings();
-            if (!MultiplayerSupport.PrepareApSession(
-                    Seed,
-                    Session.ConnectionInfo.Team,
-                    Session.ConnectionInfo.Slot,
-                    receivedItems,
-                    out reason))
+            // The SDK adds each item to its history before OnItemReceived runs. Holding the
+            // receipt lock from the snapshot to the watermark means a concurrent receipt is either
+            // in the snapshot (and then ignored by OnItemReceived) or queued after the watermark,
+            // never cleared from the queue unprocessed or counted twice.
+            lock (_itemLock)
             {
-                return false;
-            }
+                IReadOnlyList<ItemInfo> receivedItems = Session.Items.AllItemsReceived;
+                // A different AP owner may have used this process previously. Rebuild the
+                // selectable set only from this slot's settings and authoritative history.
+                RebuildUnlockedCharactersFromSettings();
+                if (!MultiplayerSupport.PrepareApSession(
+                        Seed,
+                        Session.ConnectionInfo.Team,
+                        Session.ConnectionInfo.Slot,
+                        receivedItems,
+                        out reason))
+                {
+                    return false;
+                }
 
-            Patches_ItemProcessor.ClearQueue();
-            Index = receivedItems.Count;
-            Patches_ItemProcessor.LastIndexHandled = Index;
+                Patches_ItemProcessor.ClearQueue();
+                Index = receivedItems.Count;
+                Patches_ItemProcessor.LastIndexHandled = Index;
+            }
             MultiplayerSupport.RestoreFrozenHostSettingsForActiveRun();
             AscensionMultiplayer.QueueReconnectReconciliation();
             return true;
@@ -1191,9 +1195,6 @@ namespace StS2AP
                     string locKey = $"AP_LOC_{loc.Key}";
                     string locText = $"{loc.Value.ItemDisplayName} for {loc.Value.Player.Name}";
                     locationLocalizations.Add(locKey, locText);
-                    LogUtility.Warn(
-                        $"{loc.Key}:{loc.Value.LocationName}:{loc.Value.LocationDisplayName}"
-                    );
                 }
                 RunForSession(session, () =>
                 {
@@ -1383,7 +1384,7 @@ namespace StS2AP
 
         private static void OnMessageReceived(LogMessage message)
         {
-            LogUtility.Info($"Got PrintJson packet {message.GetType().Name} {message.ToString()}");
+            LogUtility.Debug($"Got PrintJson packet {message.GetType().Name} {message.ToString()}");
             switch (message)
             {
                 case ItemSendLogMessage itemSend:
@@ -1573,6 +1574,15 @@ namespace StS2AP
                 settings.RelicRewardsAvailableAnytime = Convert.ToInt32(slotData["relic_rewards_available_anytime"]);
             if(slotData.ContainsKey("release_on_victory"))
                 settings.ReleaseOnVictory = Convert.ToBoolean(slotData["release_on_victory"]);
+            // Older APWorlds omit this key; their slots keep every relic.
+            if (slotData.GetValueOrDefault("remove_op_relics") is JArray categoryNames)
+            {
+                settings.RemovedOpRelics = OpRelicCategoryNames.Parse(
+                    categoryNames.Select(name => name.Type == JTokenType.String ? (string?)name : name.ToString()),
+                    unknown => LogUtility.Warn($"SLOT - Ignoring unknown remove_op_relics category '{unknown}'")
+                );
+                LogUtility.Info($"SLOT - Removed overpowered relic categories: {settings.RemovedOpRelics}");
+            }
 
             if (slotData.TryGetValue("bonus_items", out object? bonusItemsValue))
             {

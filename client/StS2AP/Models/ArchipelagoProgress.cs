@@ -44,12 +44,16 @@ namespace StS2AP.Models
         public const int _maxGoldRewards = 20;
 
         /// <summary>
+        /// Boss Gold locations, one each for the Act 1 and Act 2 bosses. GoldSanity adds these
+        /// alongside the Combat Gold locations.
+        /// </summary>
+        public const int _maxBossGoldRewards = 2;
+
+        /// <summary>
         /// The maximum possible number of Potion Rewards that a player could have replaced with AP locations.
         /// Only used if PotionSanity is on. Matches the APWorld's 9 locations per character.
         /// </summary>
         public const int _maxPotionRewards = 9;
-
-        public const int _maxBossRewards = 3;
 
         /// <summary>
         /// The maximum Progressive Shop Card Removal level a player could receive (one per Act).

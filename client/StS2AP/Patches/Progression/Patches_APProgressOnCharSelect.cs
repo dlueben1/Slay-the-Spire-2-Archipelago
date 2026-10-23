@@ -97,7 +97,11 @@ namespace StS2AP.Patches
                 if (settings.GoldSanity)
                 {
                     var goldLocations = LocationData.GetGoldsanityLocations(character);
-                    SetCheckedLocation(ArchipelagoCharTrackerUI.GoldsanityChecks, goldLocations, ArchipelagoProgress._maxGoldRewards);
+                    SetCheckedLocation(
+                        ArchipelagoCharTrackerUI.GoldsanityChecks,
+                        goldLocations,
+                        ArchipelagoProgress._maxGoldRewards + ArchipelagoProgress._maxBossGoldRewards
+                    );
                 }
 
                 // Update Potionsanity Locations
@@ -170,9 +174,8 @@ namespace StS2AP.Patches
 
                 long offset = (long) checkMe;
                 // Update Gold Rewards
-                LogUtility.Info($"Checking for gold rewards for character ID {offset}");
                 ArchipelagoClient.Progress.GoldReceived.TryGetValue(offset, out int gold);
-                LogUtility.Info($"Gold rewards received for character ID {offset}: {gold}");
+                LogUtility.Debug($"Gold rewards received for character ID {offset}: {gold}");
                 ArchipelagoCharTrackerUI.GoldRewards?.SetText(gold.ToString());
 
                 if(settings.CampfireSanity)

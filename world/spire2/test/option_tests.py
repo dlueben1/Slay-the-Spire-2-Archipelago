@@ -180,6 +180,21 @@ class TestProgressiveRelicOptionsConfigured(Spire2TestBase):
         self.assertEqual(0, slot_data["release_on_victory"])
 
 
+class TestRemoveOPRelicsDefault(Spire2TestBase):
+    def test_default_keeps_every_relic(self):
+        self.assertEqual([], self.world.fill_slot_data()["remove_op_relics"])
+
+
+class TestRemoveOPRelicsConfigured(Spire2TestBase):
+    options = {
+        "remove_op_relics": ["Rare", "Ancient"],
+    }
+
+    def test_categories_are_sent_in_slot_data(self):
+        # The client maps categories to relics, so slot data carries only the category names.
+        self.assertEqual(["Ancient", "Rare"], self.world.fill_slot_data()["remove_op_relics"])
+
+
 class TestAscensionDowns(Spire2TestBase):
     options = {
         "characters": [

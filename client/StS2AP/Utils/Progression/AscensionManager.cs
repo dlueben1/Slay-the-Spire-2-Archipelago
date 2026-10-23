@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Entities.Ascension;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
+using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Runs;
@@ -128,7 +129,6 @@ namespace StS2AP.Utils
                 foreach (var item in ArchipelagoClient.Progress.AllReceivedItems)
                 {
                     var id = item.Item.GetCharacterItemType();
-                    LogUtility.Info($"Checking if item is an ascension {item.Item.ItemName} {id}");
                     if (((int)id) >= 19 && ((int)id) <= 28)
                     {
                         LogUtility.Info($"Removing ascension via item {item.Item.ItemName}");
@@ -272,21 +272,8 @@ namespace StS2AP.Utils
                     var state = RunManager.Instance.DebugOnlyGetState();
                     if(state != null)
                     {
-                        foreach(var act in state.Acts)
-                        {
-                            act.SetSecondBossEncounter(null);
-                        }
-                        var currentAct = state.Act;
-                        if(currentAct.Index == 2)
-                        {
-                            var secondBossPoint = state.Map.SecondBossMapPoint;
-                            if(secondBossPoint != null)
-                            {
-                                state.Map.BossMapPoint.RemoveChildPoint(secondBossPoint);
-                            }
-                        }
+                        RemoveDoubleBoss(state);
                     }
-                    Patches_APBossPresentation.Refresh();
                     break;
                 case AscensionLevel.Poverty:
                     // Multiplayer routes Ascension Downs through AscensionMultiplayer, which
@@ -319,6 +306,32 @@ namespace StS2AP.Utils
                     // Nothing to do with the other ascensions
                     return;
             }
+        }
+
+        /// <summary>
+        /// Removes an already generated Double Boss after its Ascension Down arrives mid-run, for
+        /// both single-player and every multiplayer peer. Call it only after Double Boss has been
+        /// removed from the current ascension set.
+        /// </summary>
+        public static void RemoveDoubleBoss(RunState runState)
+        {
+            foreach(var act in runState.Acts)
+            {
+                act.SetSecondBossEncounter(null);
+            }
+
+            // Find the generated point through the first boss's children: once Double Boss is
+            // removed, the patched SecondBossMapPoint getter already returns null. Only the final
+            // act's map has this point.
+            MapPoint bossPoint = runState.Map.BossMapPoint;
+            MapPoint? secondBossPoint = bossPoint.Children
+                .FirstOrDefault(child => child.PointType == MapPointType.Boss);
+            if(secondBossPoint != null)
+            {
+                bossPoint.RemoveChildPoint(secondBossPoint);
+            }
+
+            Patches_APBossPresentation.Refresh();
         }
 
         private static async Task RemoveAscendersBaneAsync(CardModel card)

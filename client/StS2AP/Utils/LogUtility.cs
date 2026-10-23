@@ -24,6 +24,9 @@ public static class LogUtility
 
     public static void Debug(string message)
     {
+        // Keep the console as quiet as the game log; launch with "-log Generic Debug" to see these.
+        if (!_logger.WillLog(LogLevel.Debug))
+            return;
         WriteColored(message, ConsoleColor.Gray);
         _logger.Debug(message);
     }

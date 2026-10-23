@@ -86,6 +86,11 @@ Slay the Spire II:
   # Any further relics are claimed by beating elites or opening chests. tldr; fight elites
   relic_rewards_available_anytime: 2
 
+  # Removes relics that are much stronger in Archipelago. Leave empty to keep every relic.
+  #   Ancient  - Pael's Growth and Glitter, from Anytime Ancient rewards only
+  #   Rare     - Prayer Wheel and White Star, from every relic source
+  remove_op_relics: []
+
   # Start without your special starter card (Bash, Neutralize, ...); two items restore and then
   # upgrade it. Requires include_floor_checks. Can make the early game much harder but late game easier
   progressive_starter_card: false

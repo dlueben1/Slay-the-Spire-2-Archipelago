@@ -4,7 +4,7 @@
   "sources": {
     "characters": {
       "path": "world/spire2/characters.py",
-      "sha256": "fbbad75e5c458518fe37b245bcc9d3279e052b39f9f9885cc1af50b5ce8d10ea"
+      "sha256": "c8c54f1a375bc6f9d24ec13a92525d7cf78e42a3d06abbf1ca4e6c5899902bd0"
     },
     "constants": {
       "path": "world/spire2/constants.py",
@@ -12,11 +12,11 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "a1c26659cf23e24211472a6631e1fd7b600835dbfedba7a8e43372a3623e9f1d"
+      "sha256": "98c64a01a50c8cc67389973903a742da4849d26290e4082c126f5e700cf510ad"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "f6b75f70365b4eb322c1fabe1d8486f4ce9b179ea4669b786a5d6b5fc65608b3"
+      "sha256": "787ecb32efed12fde3e3c1fd466dd46f008297a2d1293129861362847012190c"
     }
   },
   "option_order": [
@@ -43,6 +43,7 @@
     "ancient_relic_location",
     "ancient_relic_pool",
     "relic_rewards_available_anytime",
+    "remove_op_relics",
     "progressive_starter_card",
     "progressive_starter_relic",
     "shuffle_all_cards",
@@ -118,6 +119,7 @@
         "ancient_relic_location",
         "ancient_relic_pool",
         "relic_rewards_available_anytime",
+        "remove_op_relics",
         "progressive_starter_card",
         "progressive_starter_relic",
         "shuffle_all_cards"
@@ -988,6 +990,36 @@
       "minimum": 0,
       "maximum": 10,
       "supports_weighting": true,
+      "group": "Game Options"
+    },
+    "remove_op_relics": {
+      "key": "remove_op_relics",
+      "class_name": "RemoveOPRelics",
+      "module": "worlds.spire2.options",
+      "kind": "set",
+      "display_name": "Remove Overpowered Relics",
+      "description": "Removes relics that are much stronger in Archipelago than in a normal run.\nEach category removes only the relics that the Archipelago mod lists for it, so the exact\nrelics can change between mod versions. Leave this empty to keep every relic.\n\n- 'Ancient': Removes Pael's Growth and Glitter from Anytime Ancient rewards. Ancient rewards\n  offered at the start of an act are unaffected.\n- 'Rare': Removes Prayer Wheel and White Star from every relic source.",
+      "default": [],
+      "raw_default": [],
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "valid_keys": [
+        "Ancient",
+        "Rare"
+      ],
+      "valid_keys_casefold": false,
+      "allow_custom_values": false,
+      "supports_weighting": false,
       "group": "Game Options"
     },
     "progressive_starter_card": {

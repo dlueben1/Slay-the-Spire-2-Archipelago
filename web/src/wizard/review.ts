@@ -278,7 +278,7 @@ export function summarizeFillerAnswers(answers: FillerAnswers): string {
  * Summarizes the gameplay modifiers that affect an individual climb.
  *
  * @param answers - Valid current Gameplay Modifiers answers.
- * @returns A compact paragraph describing Relic availability, victory, and seeds.
+ * @returns A compact paragraph describing Relic availability and removal, victory, and seeds.
  */
 export function summarizeRunAnswers(answers: RunAnswers): string {
   const immediateRelics =
@@ -289,6 +289,16 @@ export function summarizeRunAnswers(answers: RunAnswers): string {
         )} Archipelago Relic ${
           answers.relicRewardsAvailableAnytime === 1 ? "item is" : "items are"
         } available immediately.`;
+  const removedCategories: string[] = [];
+  if (answers.removeOpRelics.ancient) {
+    removedCategories.push("Anytime Ancient");
+  }
+  if (answers.removeOpRelics.rare) {
+    removedCategories.push("Rare");
+  }
+  const opRelics = removedCategories.length
+    ? `Overpowered ${removedCategories.join(" and ")} relics are removed.`
+    : "Every relic can appear.";
   const victoryRelease = answers.releaseOnVictory
     ? "A winning character's remaining checks are released when their goal is recorded."
     : "A winning character's remaining checks are not released automatically.";
@@ -296,7 +306,7 @@ export function summarizeRunAnswers(answers: RunAnswers): string {
     ? "Each character uses a fixed seed."
     : "Runs are not assigned fixed seeds.";
 
-  return `${immediateRelics} ${victoryRelease} ${seeded}`;
+  return `${immediateRelics} ${opRelics} ${victoryRelease} ${seeded}`;
 }
 
 /**

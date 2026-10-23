@@ -130,11 +130,22 @@ on GitHub before retrying. No publish command is needed to prepare/test artifact
 
 Provide reviewed Markdown notes, or omit --notes-file to create a draft with the
 version-expanded [release notes template](../scripts/release-notes-template.md).
-Replace its changelist/known-issues placeholders before publishing. Keep setup
-instructions in [the player setup guide](../world/spire2/docs/setup_en.md) and
-link there from every release; release notes should focus on that update. The
-player requirement is Archipelago Launcher v0.6.7+ for generation, independent
-of the 0.6.8 environment used to test/build releases here.
+The template follows the 2.0.0 release. Between releases it keeps the
+development warning, the Setup section and its requirements line, the Version
+Information list (filled in automatically), the Changelist layout (Major
+changes, then a collapsed Full details block) and the standing multiplayer and
+modded-character limitations. Before publishing, replace each **TODO** with
+this release's changes and issues, and remove a standing limitation once it is
+fixed. Update the requirements line when the minimum Launcher or RitsuLib
+version changes; a test keeps the RitsuLib version in step with
+`client/StS2AP/Archipelago.json`.
+
+Keep setup instructions in [the player setup guide](../world/spire2/docs/setup_en.md)
+rather than in release notes. Release notes link to the guide's copy on the
+`setup-docs-do-not-delete` branch, which is kept for stable documentation links,
+and a test rejects setup links to any other branch. Update that branch when
+setup steps change. The player requirement is Archipelago Launcher v0.6.7+ for
+generation, independent of the 0.6.8 environment used to test/build releases here.
 Manual assets use `spire2.apworld`; CI uses a versioned filename. Both include
 the YAML template, and the setup guide covers both APWorld naming conventions.
 

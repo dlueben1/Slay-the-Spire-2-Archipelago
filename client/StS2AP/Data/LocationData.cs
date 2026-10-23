@@ -92,7 +92,7 @@ namespace StS2AP.Data
             GetLocationForPlayer(player, rewardNumber is >= 1 and <= ArchipelagoProgress._maxGoldRewards ? 53 + rewardNumber : -1);
 
         internal static long GetBossGoldLocation(Player player, int act) =>
-            GetLocationForPlayer(player, act is >= 1 and <= 2 ? 98 + act : -1);
+            GetLocationForPlayer(player, act is >= 1 and <= ArchipelagoProgress._maxBossGoldRewards ? 98 + act : -1);
 
         internal static long GetPotionDropLocation(Player player, int rewardNumber) =>
             GetLocationForPlayer(player, rewardNumber is >= 1 and <= ArchipelagoProgress._maxPotionRewards ? 78 + rewardNumber : -1);
@@ -139,7 +139,7 @@ namespace StS2AP.Data
         /// <returns>A list of location IDs for the specified character's Rare Card Rewards.</returns>
         public static List<long> GetRareCardRewardLocations(CharacterModel character)
         {
-            return GetLocationsByPattern($"{character.APName()} Rare Card Reward #", ArchipelagoProgress._maxBossRewards);
+            return GetLocationsByPattern($"{character.APName()} Rare Card Reward #", ArchipelagoProgress._maxRareCardRewards);
         }
 
         /// <summary>
@@ -183,13 +183,15 @@ namespace StS2AP.Data
         }
 
         /// <summary>
-        /// Returns all location IDs for Goldsanity for a given character.
+        /// Returns all location IDs for Goldsanity for a given character: its Combat Gold and Boss Gold locations.
         /// </summary>
         /// <param name="character">The character to get Goldsanity locations for.</param>
         /// <returns>A list of location IDs for the specified character's gold rewards.</returns>
         public static List<long> GetGoldsanityLocations(CharacterModel character)
         {
-            return GetLocationsByPattern($"{character.APName()} Combat Gold #", ArchipelagoProgress._maxGoldRewards);
+            var locations = GetLocationsByPattern($"{character.APName()} Combat Gold #", ArchipelagoProgress._maxGoldRewards);
+            locations.AddRange(GetLocationsByPattern($"{character.APName()} Boss Gold #", ArchipelagoProgress._maxBossGoldRewards));
+            return locations;
         }
 
         /// <summary>

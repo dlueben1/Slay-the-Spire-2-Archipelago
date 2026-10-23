@@ -77,7 +77,6 @@ namespace StS2AP.Utils
             bool includeInDevConsole = true
         )
         {
-            LogUtility.Info($"Attempting to enqueue notification {message} {type}");
             var notification = new ArchipelagoNotification(message, type);
             notification.DisplayDuration = timeout;
             notification.Priority = priority;
@@ -96,7 +95,7 @@ namespace StS2AP.Utils
             {
                 _devQueue.Enqueue(notification);
             }
-            LogUtility.Info($"Notification queued ({type}): {message}");
+            LogUtility.Debug($"Notification queued ({type}): {message}");
         }
 
         /// <summary>
@@ -240,7 +239,7 @@ namespace StS2AP.Utils
         private static String ToColoredString(ItemSendLogMessage msg)
         {
             ItemInfo info = msg.Item;
-            LogUtility.Info(
+            LogUtility.Debug(
                 $"ItemInfo: Item Game: {info.ItemGame} Location Game: {info.LocationGame}"
             );
             return ToColoredString(msg, info);
@@ -255,7 +254,7 @@ namespace StS2AP.Utils
             {
                 itemIcon = GetItemIcon(info);
             }
-            LogUtility.Info($"Got item icon: {itemIcon}");
+            LogUtility.Debug($"Got item icon: {itemIcon}");
 
             foreach (var part in msg.Parts)
             {
