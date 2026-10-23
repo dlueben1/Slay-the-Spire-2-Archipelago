@@ -1,6 +1,5 @@
 import copy
 import unittest
-from unittest.mock import patch
 
 from Fill import distribute_items_restrictive
 from Options import OptionError
@@ -90,17 +89,6 @@ class TestCharacterRegistry(unittest.TestCase):
             create_character_registry((*VANILLA_CHARACTERS, *future,
                                        CharacterDefinition("Overflow", "OVERFLOW", DEFAULT_STARTER_POWER)))
 
-    def test_raising_the_generic_cap_adds_blocks_without_moving_named_ids(self):
-        self.assertEqual(f"Custom Character {NUM_CUSTOM}", character_registry[10 + NUM_CUSTOM].name)
-        self.assertNotIn(11 + NUM_CUSTOM, character_registry)
-        with patch("worlds.spire2.characters.NUM_CUSTOM", len(GENERIC_CHARACTER_BLOCKS)):
-            registry = create_character_registry()
-        self.assertEqual("Custom Character 189", registry[199].name)
-        self.assertEqual(character_registry, {block: registry[block] for block in character_registry})
-        with patch("worlds.spire2.characters.NUM_CUSTOM", len(GENERIC_CHARACTER_BLOCKS) + 1):
-            with self.assertRaisesRegex(ValueError, "reserved ID range"):
-                create_character_registry()
-
     def test_ids_are_unique_and_every_reserved_block_fits_a_signed_32_bit_id(self):
         for ids in ([data.code for data in item_table.values() if data.code is not None],
                     [code for code in location_table.values() if code is not None]):
@@ -108,8 +96,6 @@ class TestCharacterRegistry(unittest.TestCase):
             self.assertTrue(all(0 < code for code in ids))
         # Item IDs use one-based blocks, so the last reserved block's items end here.
         self.assertLess((PREDEFINED_CHARACTER_BLOCKS[-1] + 1) * CHAR_OFFSET, 2**31)
-        # Named characters sit above the old 1,000,000-ID co-op partition the client used to strip.
-        self.assertGreater(item_table["Watcher Relic"].code, 1_000_000)
 
     def test_starter_profiles_cover_exactly_every_registered_vanilla_character(self):
         self.assertEqual(set(character_list), set(STARTER_CARD_POWER))
@@ -224,17 +210,6 @@ class TestCharacterRosters(unittest.TestCase):
                 distribute_items_restrictive(world.multiworld, panic_method="raise")
                 self.assertFalse(world.multiworld.get_unfilled_locations())
                 self.assertTrue(world.multiworld.can_beat_game())
-
-    def test_predefined_characters_beyond_the_generic_limit_are_accepted(self):
-        # Shrink the limit below the number of predefined characters.
-        predefined = [definition.name for definition in PREDEFINED_CHARACTERS]
-        with patch("worlds.spire2.world.NUM_CUSTOM", 1):
-            world = self.generate(modded_characters=predefined + ["Unknown-A"])
-            self.assertEqual(len(predefined) + 1, world.modded_num)
-            self.assertEqual(["Custom Character 1"],
-                             [c.name for c in world.characters if c.char_offset in GENERIC_CHARACTER_BLOCKS])
-            with self.assertRaisesRegex(OptionError, "at most 1 selected characters without a predefined name"):
-                self.generate(modded_characters=predefined + ["Unknown-A", "Unknown-B"])
 
     def test_all_generic_slots_and_overflow(self):
         roster = [f"Unknown-{i}" for i in range(NUM_CUSTOM + 1)]

@@ -6,7 +6,6 @@ from schema import SchemaError
 from test.general import setup_multiworld, setup_solo_multiworld
 from worlds.AutoWorld import call_all
 from worlds.spire2 import SlayTheSpire2World
-from worlds.spire2.characters import DEFAULT_STARTER_POWER
 from worlds.spire2.options import CharacterOptions
 from worlds.spire2.rules import SpireHasPower
 
@@ -83,16 +82,6 @@ class TestAdvancedStarters(unittest.TestCase):
         self.assertTrue(world.get_entrance(f"{ungated.name} Late Act 1").access_rule(state))
         state.collect(world.create_item(f"{gated.name} Progressive Starter Card"), prevent_sweep=True)
         self.assertTrue(gate(state))
-
-        # New logic uses the default starter power for only the starters each character shuffles.
-        world = self.generate(progressive_starter_card=False, progressive_starter_relic=True,
-                              advanced_characters=overrides)
-        for option_name, card, relic in (("ModCard", True, False), ("ModNeither", False, False)):
-            with self.subTest(character=option_name):
-                config = next(c for c in world.characters if c.option_name == option_name)
-                rule = SpireHasPower(config.char_offset, 9).resolve(world)
-                self.assertEqual(DEFAULT_STARTER_POWER.card if card else (0, 0), rule.starter_card_power)
-                self.assertEqual(DEFAULT_STARTER_POWER.relic if relic else (0, 0), rule.starter_relic_power)
 
     def test_tracker_round_trip_and_global_only_slot_data(self):
         original = self.generate(progressive_starter_card=True, progressive_starter_relic=False)

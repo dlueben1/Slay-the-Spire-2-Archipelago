@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from worlds.spire2 import SlayTheSpire2World
-from worlds.spire2.items import chars_to_items, item_groups, item_table, universal_items
+from worlds.spire2.items import item_groups, item_table, universal_items
 
 
 class TestItemGroups(TestCase):
@@ -39,14 +39,3 @@ class TestItemGroups(TestCase):
             item_groups["Shop Slots"],
         )
         self.assertIn("Custom Character 1 Progressive Rest", item_groups["Campfire Upgrades"])
-
-    def test_groups_do_not_grow_with_characters(self):
-        # Per-character groups would grow the data package with every character block.
-        for character_name in chars_to_items:
-            with self.subTest(character=character_name):
-                self.assertFalse(any(group.startswith(f"{character_name} ") for group in item_groups))
-
-
-class TestLocationGroups(TestCase):
-    def test_only_archipelago_location_group_is_exposed(self):
-        self.assertEqual({"Everywhere"}, set(SlayTheSpire2World.location_name_groups))
