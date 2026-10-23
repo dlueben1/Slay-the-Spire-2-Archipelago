@@ -177,8 +177,8 @@ ELITE_RELIC_REWARDS = {
 
 # Total card strength from ordinary AP Card Rewards, by how many the run holds (index 0 is none).
 # The first rewards are worth a full card each, until a lean deck has most of the cards it keeps.
-# After that, extra rewards add choice rather than cards, and each adds less than the one before
-# (see docs/contributing/apworld-logic.md). Half shuffle reaches that point sooner because its
+# After that, extra rewards add choice rather than cards, and each adds less than the one before,
+# as a simple card draft model suggested. Half shuffle reaches that point sooner because its
 # vanilla card rewards also add cards. Keep a full pool's total (8.5 and 17.3) unless the region
 # power is retuned too. Past the end of a table, each extra reward adds the table's last step.
 # Basically have diminishing returns on card rewards. Tweak as you see fit
