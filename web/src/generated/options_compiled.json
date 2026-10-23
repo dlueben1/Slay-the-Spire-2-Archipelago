@@ -12,7 +12,7 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "84c2d0333b6428fadd020fb84273d365f2fb5d82466b6d2b3c57557f5f9a5b84"
+      "sha256": "89dccb9779e7ea89d6b4376d6556ae3a4944db8c39feecebb21f80e3bb794c73"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
@@ -711,7 +711,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Pick Number of Characters",
-      "description": "Randomly select from the configured characters this many characters for each player to generate for.\nEach player's selection is rolled independently, and selections may overlap.\n0 gives every player all configured characters.\nFor example, if \"character\" is configured to be:\n    characters:\n        - Ironclad\n        - Silent\n        - Defect\nand pick_num_characters is 2, one possible generated set is Ironclad and Defect.",
+      "description": "Randomly select this many of the configured characters to generate for.\n0, or a number at least as large as the configured list, uses every configured character.\nFor example, if \"character\" is configured to be:\n    characters:\n        - Ironclad\n        - Silent\n        - Defect\nand pick_num_characters is 2, one possible generated set is Ironclad and Defect.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -737,7 +737,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Number of Characters to Goal",
-      "description": "How many characters you need to complete a run with before you goal. 0 means all characters",
+      "description": "How many characters you need to complete a run with before you goal. 0, or a number larger than the\ngenerated set of characters, means all characters.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -804,7 +804,7 @@
       "module": "worlds.spire2.options",
       "kind": "text_choice",
       "display_name": "Unlocked Character",
-      "description": "Which character you start with when lock_characters is set to locked_fixed.\nIt must be one of your configured characters, and is always kept when Pick Number of\nCharacters selects a subset. Leave it empty (\"\") to start with a random character.\nCan also enter a predefined display name or full internal ID for modded characters.\nPredefined characters, with their internal IDs and mods, are listed at\nhttps://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/predefined-characters.md",
+      "description": "Which character you start with when lock_characters is set to locked_fixed.\nIt must be one of your configured characters, and is always kept when Pick Number of\nCharacters selects a subset. Defaults to Ironclad, so generation fails if you use locked_fixed\nwithout Ironclad and leave this unset. Enter \"\" to start with a random character.\nCan also enter a predefined display name or full internal ID for modded characters.\nPredefined characters, with their internal IDs and mods, are listed at\nhttps://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/predefined-characters.md",
       "default": "ironclad",
       "raw_default": 0,
       "visibility": {
@@ -1095,7 +1095,7 @@
       "module": "worlds.spire2.options",
       "kind": "set",
       "display_name": "Remove Overpowered Relics",
-      "description": "Removes relics that are much stronger in Archipelago than in a normal run.\nEach category removes only the relics that the Archipelago mod lists for it, so the exact\nrelics can change between mod versions. Leave this empty to keep every relic.\n\n- 'Ancient': Removes Pael's Growth and Glitter from Anytime Ancient rewards. Ancient rewards\n  offered at the start of an act are unaffected.\n- 'Rare': Removes Prayer Wheel and White Star from every relic source.",
+      "description": "Removes relics that are much stronger in Archipelago than in a normal run.\nEach category removes only the relics that the Archipelago mod lists for it, so the exact\nrelics can change between mod versions. Leave this empty to keep every relic.\n\n- 'Ancient': Removes Pael's Growth and Glitter from Anytime Ancient rewards. Ancient rewards\n  offered at the start of an act are unaffected.\n- 'Rare': Removes Prayer Wheel and White Star from every relic source. In multiplayer, one player\n  choosing this removes them from the whole run.",
       "default": [],
       "raw_default": [],
       "visibility": {
@@ -1435,7 +1435,7 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Shop Sanity",
-      "description": "Move the configured shop slots to a separate AP shop page as purchasable location checks and\nshuffle items that progressively restore the corresponding slots on the normal shop page.",
+      "description": "Move the configured shop slots to a separate AP shop page as purchasable location checks and\nshuffle items that progressively restore the corresponding slots on the normal shop page.\nShop Sanity is turned off if every slot count below is 0 and Shop Remove Slots is off.",
       "default": false,
       "raw_default": 0,
       "visibility": {
@@ -1827,7 +1827,7 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Advanced Characters",
-      "description": "Whether to use the advanced characters feature. The normal options for character, ascension, etc. are ignored.\nGlobal progressive starter options remain defaults unless overridden for a character.\nSee the \"advanced_characters\" option.",
+      "description": "Whether to use the advanced characters feature. Characters, Modded Characters, Ascension and Ascension Down\nare ignored; Pick Number of Characters, Lock Characters, Unlocked Character and Number of Characters to Goal\nstill apply. Global progressive starter options remain defaults unless overridden for a character.\nSee the \"advanced_characters\" option.",
       "default": false,
       "raw_default": 0,
       "visibility": {
@@ -1859,7 +1859,7 @@
       "module": "worlds.spire2.options",
       "kind": "dictionary",
       "display_name": "Advanced Characters",
-      "description": "The configuration for advanced characters.  Each character's options can be configured\nindependently of each other.  No validation is done on the character name, so use carefully.\nFormat is:\n    <char name>:\n        ascension:\n            - <string or number>\n        ascension_down:\n            - <string or number>\n        progressive_starter_card: <true or false>\n        progressive_starter_relic: <true or false>\n\nOmitted progressive starter options inherit their global settings. Explicit true/false\nvalues override them for that character. Both still require Include Floor Checks.\n\nIf using a modded character:\nEnter its full internal ID or a predefined display name, such as Watcher.\nPredefined characters, with their internal IDs and mods, are listed at\nhttps://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/predefined-characters.md\nDo not include both an alias and its full ID as separate entries.\n\nIf you don't know the exact ID to enter with the mod installed go to\n`Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.\n\nEvery configured character must be installed with the matching internal ID. The client\nrejects the AP connection if a configured character cannot be loaded.",
+      "description": "The configuration for advanced characters.  Each character's options can be configured\nindependently of each other.  No validation is done on the character name, so use carefully.\nFormat is:\n    <char name>:\n        ascension:\n            - <string or number>\n        ascension_down:\n            - <string or number>\n        progressive_starter_card: <true or false>\n        progressive_starter_relic: <true or false>\n\nAscension names are not validated here either: a misspelled name is ignored, so check them\nagainst the list in the Ascension option.\n\nOmitted progressive starter options inherit their global settings. Explicit true/false\nvalues override them for that character. Both still require Include Floor Checks.\n\nIf using a modded character:\nEnter its full internal ID or a predefined display name, such as Watcher.\nPredefined characters, with their internal IDs and mods, are listed at\nhttps://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/predefined-characters.md\nDo not include both an alias and its full ID as separate entries.\n\nIf you don't know the exact ID to enter with the mod installed go to\n`Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.\n\nEvery configured character must be installed with the matching internal ID. The client\nrejects the AP connection if a configured character cannot be loaded.",
       "default": {
         "ironclad": {
           "ascension": [

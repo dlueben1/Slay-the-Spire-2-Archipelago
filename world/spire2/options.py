@@ -65,16 +65,16 @@ class ModdedCharacters(OptionList):
         super().__init__(unique_character_ids(list(value)))
 
 class GoalNumChar(Range):
-    """How many characters you need to complete a run with before you goal. 0 means all characters"""
+    """How many characters you need to complete a run with before you goal. 0, or a number larger than the
+    generated set of characters, means all characters."""
     display_name = "Number of Characters to Goal"
     range_start = 0
     range_end = MAX_ROSTER_SIZE
     default = 0
 
 class PickNumberCharacters(Range):
-    """Randomly select from the configured characters this many characters for each player to generate for.
-    Each player's selection is rolled independently, and selections may overlap.
-    0 gives every player all configured characters.
+    """Randomly select this many of the configured characters to generate for.
+    0, or a number at least as large as the configured list, uses every configured character.
     For example, if "character" is configured to be:
         characters:
             - Ironclad
@@ -101,10 +101,12 @@ class LockCharacters(Choice):
 class UnlockedCharacter(TextChoice):
     """Which character you start with when lock_characters is set to locked_fixed.
     It must be one of your configured characters, and is always kept when Pick Number of
-    Characters selects a subset. Leave it empty ("") to start with a random character.
+    Characters selects a subset. Defaults to Ironclad, so generation fails if you use locked_fixed
+    without Ironclad and leave this unset. Enter "" to start with a random character.
     Can also enter a predefined display name or full internal ID for modded characters.
     Predefined characters, with their internal IDs and mods, are listed at
     https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/predefined-characters.md"""
+    display_name = "Unlocked Character"
     default = 0
     # Choice's metaclass reads these attributes; keep UI indices separate from AP ID blocks.
     for _index, _name in enumerate(character_list):
@@ -197,7 +199,8 @@ class RemoveOPRelics(OptionSet):
 
     - 'Ancient': Removes Pael's Growth and Glitter from Anytime Ancient rewards. Ancient rewards
       offered at the start of an act are unaffected.
-    - 'Rare': Removes Prayer Wheel and White Star from every relic source.
+    - 'Rare': Removes Prayer Wheel and White Star from every relic source. In multiplayer, one player
+      choosing this removes them from the whole run.
     """
     display_name = "Remove Overpowered Relics"
     valid_keys = {"Ancient", "Rare"}
@@ -262,7 +265,8 @@ class CampfireSanity(Toggle):
 
 class ShopSanity(Toggle):
     """Move the configured shop slots to a separate AP shop page as purchasable location checks and
-    shuffle items that progressively restore the corresponding slots on the normal shop page."""
+    shuffle items that progressively restore the corresponding slots on the normal shop page.
+    Shop Sanity is turned off if every slot count below is 0 and Shop Remove Slots is off."""
     display_name = "Shop Sanity"
     option_true = 1
     option_false = 0
@@ -342,8 +346,9 @@ class SeededRun(Toggle):
     default = 0
 
 class AdvancedChar(Toggle):
-    """Whether to use the advanced characters feature. The normal options for character, ascension, etc. are ignored.
-    Global progressive starter options remain defaults unless overridden for a character.
+    """Whether to use the advanced characters feature. Characters, Modded Characters, Ascension and Ascension Down
+    are ignored; Pick Number of Characters, Lock Characters, Unlocked Character and Number of Characters to Goal
+    still apply. Global progressive starter options remain defaults unless overridden for a character.
     See the "advanced_characters" option.
     """
     visibility = Visibility.template
@@ -363,6 +368,9 @@ class CharacterOptions(OptionDict):
                 - <string or number>
             progressive_starter_card: <true or false>
             progressive_starter_relic: <true or false>
+
+    Ascension names are not validated here either: a misspelled name is ignored, so check them
+    against the list in the Ascension option.
 
     Omitted progressive starter options inherit their global settings. Explicit true/false
     values override them for that character. Both still require Include Floor Checks.
