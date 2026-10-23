@@ -79,6 +79,33 @@ class TwoTrackTests(unittest.TestCase):
             with self.subTest(card_rewards=count):
                 self.assertEqual(count == needed, rule(state))
 
+    def test_eighth_fight_waits_for_early_act_2(self):
+        # New logic budgets seven combat card rewards in Act 1; old logic keeps eight.
+        for logic, eighth in (("new", "Early Act 2"), ("old", "Late Act 1")):
+            world = self.make_world(shuffle_all_cards=True, use_new_logic=logic == "new")
+            for location, region in (("Combat Gold 7", "Late Act 1"), ("Card Reward 7", "Late Act 1"),
+                                     ("Combat Gold 8", eighth), ("Card Reward 8", eighth)):
+                with self.subTest(logic=logic, location=location):
+                    self.assertEqual(f"Ironclad {region}",
+                                     world.get_location(f"Ironclad {location}").parent_region.name)
+        # With half shuffle, Card Reward 4 is the seventh fight's and stays in Late Act 1.
+        world = self.make_world()
+        self.assertEqual("Ironclad Late Act 1", world.get_location("Ironclad Card Reward 4").parent_region.name)
+        self.assertEqual("Ironclad Early Act 2", world.get_location("Ironclad Card Reward 5").parent_region.name)
+
+    def test_first_campfire_waits_for_a_rest_site(self):
+        # Rest sites start in each Mid region. Floorless openings and old logic keep Campfire 1 early.
+        for floors, logic, stage in ((True, "new", "Mid"), (False, "new", "Early"), (True, "old", "Early")):
+            world = self.make_world(campfire_sanity=True, include_floor_checks=floors,
+                                    use_new_logic=logic == "new")
+            self.assertEqual(logic, world.effective_logic)
+            for act in (1, 2, 3):
+                with self.subTest(floors=floors, logic=logic, act=act):
+                    self.assertEqual(f"Ironclad {stage} Act {act}",
+                                     world.get_location(f"Ironclad Act {act} Campfire 1").parent_region.name)
+                    self.assertEqual(f"Ironclad Mid Act {act}",
+                                     world.get_location(f"Ironclad Act {act} Campfire 2").parent_region.name)
+
     def test_path_checks_do_not_wait_for_elite_power(self):
         world = self.make_world()
         state = CollectionState(world.multiworld)

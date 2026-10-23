@@ -65,11 +65,23 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
     # New logic ends Early Act 1 after the three weak hallway fights: the fourth fight's checks,
     # including the floor after it, are in the Act 1 Hallway.
     early_fights = 3 if two_tracks else 4
+    # New logic budgets seven combat card rewards per act (logic_table.REGIONS), so the eighth
+    # fight's checks wait for Early Act 2.
+    act_1_fights = 7 if two_tracks else 8
+    # A rest site offers every unchecked campfire check of its act and earlier acts, and rest
+    # sites start on each act's first Mid floor, so an act's first campfire check opens with its
+    # Mid region. Floorless openings have few other locations, and fill needs Campfire 1 there:
+    # in Mid Act 1 it failed many more sparse seeds.
+    first_campfire_stage = "Mid" if two_tracks and world.options.include_floor_checks else "Early"
+
+    def first_campfire(act: int, stage: str) -> List[str]:
+        return [f"Act {act} Campfire 1"] if stage == first_campfire_stage else []
+
     first_char_region = world.create_region(player, prefix, 'Early Act 1', config,
                                             [
                                                 "Press Start",
                                                 "Potion Drop 1",
-                                                "Act 1 Campfire 1",
+                                                *first_campfire(1, "Early"),
                                                 "Ancient Act 1",
                                                 *_create_floor_check(1, early_fights + 2),
                                                 *_create_combat_check(1, early_fights),
@@ -95,6 +107,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                   [
                                                       *relics('Mid Act 1'),
                                                       "Potion Drop 2",
+                                                      *first_campfire(1, "Mid"),
                                                       "Act 1 Campfire 2",
                                                       *_create_floor_check(7, 11),
                                                       *_create_combat_check(5, 6),
@@ -106,8 +119,8 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                       *relics('Late Act 1'),
                                                       "Potion Drop 3",
                                                       *_create_floor_check(12, 16),
-                                                      *_create_combat_check(7, 8),
-                                                      *_create_card_rewards(7,8, every_other)
+                                                      *_create_combat_check(7, act_1_fights),
+                                                      *_create_card_rewards(7, act_1_fights, every_other)
                                                   ], ['Act 1 Boss Arena']))
     create_elite_track(1)
 
@@ -125,9 +138,9 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                   [
                                                       "Potion Drop 4",
                                                       *_create_floor_check(18, 22),
-                                                      "Act 2 Campfire 1",
-                                                      *_create_combat_check(9, 10),
-                                                      *_create_card_rewards(9, 10, every_other),
+                                                      *first_campfire(2, "Early"),
+                                                      *_create_combat_check(act_1_fights + 1, 10),
+                                                      *_create_card_rewards(act_1_fights + 1, 10, every_other),
                                                   ], ["Mid Act 2", "Act 2 Shop"]))
 
     multiworld.regions.append(world.create_region(player, prefix, "Act 2 Shop", config,
@@ -136,6 +149,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                   [
                                                       *relics('Mid Act 2'),
                                                       "Potion Drop 5",
+                                                      *first_campfire(2, "Mid"),
                                                       "Act 2 Campfire 2",
                                                       *_create_floor_check(23, 27),
                                                       *_create_combat_check(11, 12),
@@ -165,7 +179,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
     multiworld.regions.append(world.create_region(player, prefix, 'Early Act 3', config,
                                                   [
                                                       "Potion Drop 7",
-                                                      "Act 3 Campfire 1",
+                                                      *first_campfire(3, "Early"),
                                                       *_create_floor_check(34, 38),
                                                       *_create_combat_check(15, 16),
                                                       *_create_card_rewards(15, 16, every_other)
@@ -178,6 +192,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                   [
                                                       *relics('Mid Act 3'),
                                                       "Potion Drop 8",
+                                                      *first_campfire(3, "Mid"),
                                                       "Act 3 Campfire 2",
                                                       *_create_floor_check(39, 43),
                                                       *_create_combat_check(17, 18),
