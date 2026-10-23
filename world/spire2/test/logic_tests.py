@@ -6,7 +6,8 @@ from worlds.spire2 import SlayTheSpire2World
 from worlds.spire2.characters import DEFAULT_STARTER_POWER, character_list
 from worlds.spire2.rules import SpireHasPower
 from worlds.spire2.test import path_power
-from worlds.spire2.logic_table import (VANILLA_CARD_POWER, VANILLA_CARD_REWARD_SHARE, card_reward_strength,
+from worlds.spire2.logic_table import (REGIONS, REST_POWER_BY_ACT, REST_SHARE_WHILE_SMITHING, SMITH_POWER_BY_TIER,
+                                       VANILLA_CARD_POWER, VANILLA_CARD_REWARD_SHARE, card_reward_strength,
                                        card_reward_table)
 
 
@@ -40,23 +41,37 @@ class LogicTests(unittest.TestCase):
     @staticmethod
     def power_rule(world, act=1) -> SpireHasPower.Resolved:
         rule = SpireHasPower(world.characters[0].char_offset, 9, act=act,
-                             rest=True, smith=True, remove=True, shop=True).resolve(world)
+                             rest=True, smith=1.0, remove=True, shop=True).resolve(world)
         assert isinstance(rule, SpireHasPower.Resolved)
         return rule
 
-    def test_first_smith_is_required_only_with_campfire_sanity(self):
-        for enabled in (False, True):
-            with self.subTest(campfire_sanity=enabled):
-                world = self.make_world(campfire_sanity=enabled)
-                state = CollectionState(world.multiworld)
-                for item in world.multiworld.get_items():
-                    if item.name != "Silent Progressive Smith":
-                        state.collect(item, prevent_sweep=True)
-                boss_rule = world.get_entrance("Silent Act 1 Boss Arena").access_rule
-                self.assertEqual(not enabled, boss_rule(state))
-                if enabled:
-                    state.collect(world.create_item("Silent Progressive Smith"), prevent_sweep=True)
-                    self.assertTrue(boss_rule(state))
+    def test_first_smith_costs_power_without_an_item_gate(self):
+        world = self.make_world()
+        state = CollectionState(world.multiworld)
+        for item in world.multiworld.get_items():
+            if item.name != "Silent Progressive Smith":
+                state.collect(item, prevent_sweep=True)
+        # Everything else outweighs the missing Smith: extra power replaces it, as for other support.
+        self.assertTrue(world.get_entrance("Silent Act 1 Boss Arena").access_rule(state))
+        rule = path_power(world.get_entrance("Silent Act 1 Boss Arena").access_rule)
+        self.assertEqual(SMITH_POWER_BY_TIER[0], rule.power_adjustments(state)["Missing Progressive Smith tier 1"])
+
+    def test_smith_tiers_count_the_rest_sites_passed_in_their_act(self):
+        world = self.make_world()
+        state = CollectionState(world.multiworld)
+        for region, check in REGIONS.items():
+            if check.smith is None:
+                continue
+            with self.subTest(region=region):
+                rule = path_power(world.get_entrance(f"Silent {region}").access_rule)
+                missing = sum(rule.power_adjustments(state)[label] for label in rule.power_adjustments(state)
+                              if label.startswith("Missing Progressive Smith"))
+                expected = sum(SMITH_POWER_BY_TIER[:check.act - 1]) + SMITH_POWER_BY_TIER[check.act - 1] * check.smith
+                self.assertAlmostEqual(expected, missing)
+        for act in (2, 3):
+            early, boss = (path_power(world.get_entrance(f"Silent {region}").access_rule)
+                           for region in (f"Early Act {act}", f"Act {act} Boss Arena"))
+            self.assertLess(early.strength(state)[2] - early.power_level, boss.strength(state)[2] - boss.power_level)
 
     def test_sparse_opening_guarantees_meet_first_power_check(self):
         for full_shuffle in (False, True):
@@ -70,7 +85,7 @@ class LogicTests(unittest.TestCase):
                             state.collect(world.create_item(item), prevent_sweep=True)
                     self.assertTrue(world.get_entrance('Silent Mid Act 1').access_rule(state))
 
-    def test_gold_and_potion_sanity_do_not_change_power_requirements(self):
+    def test_gold_and_potion_sanity_change_power_only_through_shop_gold(self):
         for floors in (False, True):
             reference = self.make_world(include_floor_checks=floors,
                                         gold_sanity=True, potion_sanity=True)
@@ -92,8 +107,48 @@ class LogicTests(unittest.TestCase):
                                         for _, item, count in self.shop_slots:
                                             for _ in range(count):
                                                 state.collect(w.create_item(f'Silent {item}'), prevent_sweep=True)
-                                expected = self.power_rule(reference, act).strength(states[0])
-                                self.assertEqual(expected, self.power_rule(world, act).strength(states[1]))
+                                expected = self.without_shop_gold(self.power_rule(reference, act), states[0])
+                                actual = self.without_shop_gold(self.power_rule(world, act), states[1])
+                                for want, got in zip(expected, actual):
+                                    self.assertAlmostEqual(want, got)
+
+    @staticmethod
+    def without_shop_gold(rule, state) -> tuple[float, float, float]:
+        cards, power, required = rule.strength(state)
+        gold = sum(amount for label, amount in rule.power_adjustments(state).items()
+                   if label.startswith("Missing shop gold"))
+        return cards, power, required - gold
+
+    def test_gold_sanity_shops_need_elite_and_boss_gold(self):
+        for shops in (False, True):
+            with self.subTest(shop_sanity=shops):
+                world = self.make_world(gold_sanity=True, shop_sanity=shops)
+                state = CollectionState(world.multiworld)
+                # Gold only buys the choices a shop offers, so restore every slot first.
+                for _, item, count in self.shop_slots:
+                    for _ in range(count if shops else 0):
+                        state.collect(world.create_item(f"Silent {item}"), prevent_sweep=True)
+                rules = [self.power_rule(world, act) for act in (1, 2, 3)]
+
+                def shop_gold() -> list[float]:
+                    return [sum(amount for label, amount in rule.power_adjustments(state).items()
+                                if label.startswith("Missing shop gold")) for rule in rules]
+                # Starting, chest and assumed Combat Gold cover Act 1; later acts need more.
+                before = shop_gold()
+                self.assertEqual(0, before[0])
+                self.assertLess(0, before[1])
+                self.assertLess(before[1], before[2])
+                for _ in range(13):
+                    state.collect(world.create_item("Silent Combat Gold"), prevent_sweep=True)
+                self.assertEqual(before, shop_gold())
+                for item, count in (("Elite Gold", 7), ("Boss Gold", 2)):
+                    for _ in range(count):
+                        state.collect(world.create_item(f"Silent {item}"), prevent_sweep=True)
+                self.assertEqual([0, 0, 0], shop_gold())
+        world = self.make_world(gold_sanity=False)
+        state = CollectionState(world.multiworld)
+        self.assertFalse(any(label.startswith("Missing shop gold")
+                             for label in self.power_rule(world, 3).power_adjustments(state)))
 
     def test_extra_power_can_replace_optional_support(self):
         world = self.make_world()
@@ -171,9 +226,10 @@ class LogicTests(unittest.TestCase):
         state = CollectionState(world.multiworld)
         rules = [self.power_rule(world, act) for act in (1, 2, 3)]
         penalties = [rule.shop_penalty(state) for rule in rules]
-        self.assertGreater(penalties[0], penalties[1])
-        self.assertGreater(penalties[1], penalties[2])
-        self.assertGreater(penalties[2], 0)
+        # Purchases stay for the run, so missing choices cost more in each later act.
+        self.assertGreater(penalties[0], 0)
+        self.assertLess(penalties[0], penalties[1])
+        self.assertLess(penalties[1], penalties[2])
         for _, item, count in self.shop_slots:
             for tier in range(1, count + 1):
                 with self.subTest(item=item, tier=tier):
@@ -202,6 +258,9 @@ class LogicTests(unittest.TestCase):
 
         for act in (1, 2, 3):
             state = CollectionState(world.multiworld)
+            # Hold every rest tier so a smith tier cannot lower a missing rest's cost.
+            for _ in range(3):
+                state.collect(world.create_item("Silent Progressive Rest"), prevent_sweep=True)
             for _ in range(act - 1):
                 state.collect(world.create_item("Silent Progressive Smith"), prevent_sweep=True)
             for stage in ("Mid", "Late"):
@@ -209,7 +268,26 @@ class LogicTests(unittest.TestCase):
                     rule = path_power(world.get_entrance(f"Silent {stage} Act {act}").access_rule)
                     with_smith = state.copy()
                     with_smith.collect(world.create_item("Silent Progressive Smith"), prevent_sweep=True)
-                    self.assertEqual(act > 1, rule.strength(with_smith)[2] < rule.strength(state)[2])
+                    self.assertLess(rule.strength(with_smith)[2], rule.strength(state)[2])
+
+    def test_missing_rest_costs_less_while_smithing_works(self):
+        world = self.make_world()
+        for act in (1, 2, 3):
+            with self.subTest(act=act):
+                rule = path_power(world.get_entrance(f"Silent Mid Act {act}").access_rule)
+                state = CollectionState(world.multiworld)
+                for _ in range(act - 1):
+                    state.collect(world.create_item("Silent Progressive Rest"), prevent_sweep=True)
+                for _ in range(act - 1):
+                    state.collect(world.create_item("Silent Progressive Smith"), prevent_sweep=True)
+                full = REST_POWER_BY_ACT[act - 1]
+                self.assertEqual(full, rule.power_adjustments(state)[f"Missing Rest tier {act}"])
+                state.collect(world.create_item("Silent Progressive Smith"), prevent_sweep=True)
+                self.assertEqual(full * REST_SHARE_WHILE_SMITHING,
+                                 rule.power_adjustments(state)[f"Missing Rest tier {act} (smithing instead)"])
+                state.collect(world.create_item("Silent Progressive Rest"), prevent_sweep=True)
+                self.assertFalse(any(label.startswith("Missing Rest")
+                                     for label in rule.power_adjustments(state)))
 
     def test_missing_tier_labels_name_a_single_tier_once(self):
         world = self.make_world()
@@ -234,7 +312,8 @@ class LogicTests(unittest.TestCase):
                     before = rule.strength(state)
                     state.collect(world.create_item("Silent Progressive Smith"), prevent_sweep=True)
                     after = rule.strength(state)
-                    if tier <= act:
+                    # An Early region has passed none of its own act's rest sites.
+                    if tier < act:
                         self.assertLess(after[2], before[2])
                     else:
                         self.assertEqual(before, after)

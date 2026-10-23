@@ -46,13 +46,14 @@ def format_tables(table: ModuleType) -> str:
     for number, region in table.RELIC_REGIONS.items():
         relics.setdefault(region, []).append(number)
     rows = [("Region", "Act", "Power", "Seeded", "Card rewards", "Vanilla cards*", "Min cards",
-             "Rest tier", "Smith tiers", "Removal tiers", "Shop scale", "Relic checks")]
+             "Rest tier", "Smith tiers", "Own smith share", "Removal tiers", "Shop scale", "Relic checks")]
     for region, check in table.REGIONS.items():
         rows.append((
             region, str(check.act), f"{check.power:g}",
             f"{check.seeded_power:g}" if check.seeded_power is not None else "-", str(check.card_rewards),
             f"{check.vanilla_card_strength:g}", f"{check.minimum_cards:g}",
             str(check.rest_tier) if check.rest_tier else "-", tiers(check.smith_tiers),
+            f"{check.smith:g}" if check.smith is not None else "-",
             tiers(check.removal_tiers), f"{check.shop_scale:.3g}" if check.shop_scale else "-",
             ", ".join(map(str, relics.get(region, []))) or "-",
         ))
@@ -62,6 +63,8 @@ def format_tables(table: ModuleType) -> str:
         "* Half shuffle only: vanilla card rewards already in the run, counted as card strength.",
         "  Seeded: power with Seeded Run, when it differs.",
         "  Rest, smith and removal tiers count only when that support is shuffled.",
+        "  Own smith share: the share of this act's rest sites passed, which its own smith tier",
+        "  counts for; earlier acts' tiers count in full.",
         "  Each elite is entered from the one before; Act 2 and 3 chests and first elites need",
         "  the previous act's last elite.",
         "",
@@ -77,12 +80,17 @@ def format_tables(table: ModuleType) -> str:
         "  Starter card and relic upgrades: per character in characters.py",
         "",
         "Missing support added to the requirement",
-        f"  Progressive Rest, by act: {values(table.REST_POWER_BY_ACT)}",
+        f"  Progressive Rest, by act: {values(table.REST_POWER_BY_ACT)}"
+        f" (x{table.REST_SHARE_WHILE_SMITHING:g} while that act's smith tier works)",
         f"  Progressive Smith, by tier: {values(table.SMITH_POWER_BY_TIER)}",
         f"  Progressive Shop Remove, by tier: {values(table.SHOP_REMOVE_POWER_BY_TIER)}",
         f"  Progressive Ancient, by tier: {values(table.ANCIENT_POWER_BY_TIER)}",
         f"  Shop slots, scaled by act ({values(table.SHOP_SCALE_BY_ACT, '.3g')}):",
         *(f"    {item}: {values(slot_values)}" for item, slot_values in table.SHOP_SLOT_VALUES),
+        "  With Gold Sanity, the offered choices count only as far as a run's gold reaches a",
+        f"  normal run's ({values(table.normal_run_gold(act) for act in (1, 2, 3))} by Acts 1 / 2 / 3).",
+        f"  A run has {values(table.gold_sanity_run_gold(act, 0, 0) for act in (1, 2, 3))} before Elite Gold"
+        f" ({table.ELITE_GOLD}) and Boss Gold ({table.BOSS_GOLD}), with every Combat Gold assumed.",
         "",
         *format_shop_gold(table),
     ]

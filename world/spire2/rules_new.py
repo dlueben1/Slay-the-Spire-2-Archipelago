@@ -8,11 +8,13 @@ from rule_builder.options import OptionFilter
 from rule_builder.rules import Rule, True_, CanReachRegion, Has, HasFromListUnique
 from .characters import CharacterConfig, VANILLA_CHARACTERS, DEFAULT_STARTER_POWER
 from .logic_table import (
-    ANCIENT_POWER_BY_TIER, BOSS_GOLD, ELITE_GOLD, ELITE_RELIC_REWARDS, PATH_RELIC_REWARDS, RARE_CARD_POWER,
-    REGIONS, RELIC_POWER, REST_POWER_BY_ACT, SHOP_REMOVE_POWER_BY_TIER, SHOP_SLOT_VALUES, SMITH_POWER_BY_TIER,
-    PowerCheck, card_reward_strength, card_reward_table, last_elite, shop_gold_needed, shop_page,
+    ANCIENT_POWER_BY_TIER, BOSS_GOLD, ELITE_GOLD, ELITE_RELIC_REWARDS, FULL_SHOP_PAGE_VALUE, PATH_RELIC_REWARDS,
+    RARE_CARD_POWER, REGIONS, RELIC_POWER, REST_POWER_BY_ACT, REST_SHARE_WHILE_SMITHING,
+    SHOP_REMOVE_POWER_BY_TIER, SHOP_SLOT_VALUES, SMITH_POWER_BY_TIER,
+    PowerCheck, card_reward_strength, card_reward_table, gold_sanity_run_gold, last_elite, normal_run_gold,
+    shop_gold_needed, shop_page,
 )
-from .options import AncientRelicLocation, CampfireSanity
+from .options import AncientRelicLocation
 
 if TYPE_CHECKING:
     from .options import Spire2Options
@@ -46,7 +48,8 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
     act: int = 1
     minimum_cards: float = 0
     rest: bool = False
-    smith: bool = False
+    # Share of this act's smith tier that counts; earlier tiers count in full. None: no smiths.
+    smith: float | None = None
     remove: bool = False
     shop: bool = False
     # Region name for explanations; checks built outside the region table may leave it empty.
@@ -87,12 +90,15 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
             minimum_cards=self.minimum_cards,
             rest_level=check.rest_tier if options.campfire_sanity else 0,
             smith_level=check.smith_tiers if options.campfire_sanity else 0,
+            smith_share=float(self.smith or 0),
             remove_level=check.removal_tiers if options.shop_sanity and options.shop_remove_slots else 0,
             act=self.act,
             neow_sanity=bool(options.neow_sanity),
             ancient_anytime=bool(options.ancient_relic_location),
             shop_sanity=bool(options.shop_sanity),
-            shop_scale=check.shop_scale if options.shop_sanity else 0,
+            gold_sanity=bool(options.gold_sanity),
+            # With Gold Sanity, shops need gold that AP items provide, even without Shop Sanity.
+            shop_scale=check.shop_scale if options.shop_sanity or options.gold_sanity else 0,
             shuffled_shop_slots=(options.shop_card_slots.value, options.shop_neutral_card_slots.value,
                                  options.shop_relic_slots.value, options.shop_potion_slots.value),
             starter_card_power=card_power if config.progressive_starter_card else (0, 0),
@@ -112,11 +118,13 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
         minimum_cards: float
         rest_level: int
         smith_level: int
+        smith_share: float
         remove_level: int
         act: int
         neow_sanity: bool
         ancient_anytime: bool
         shop_sanity: bool
+        gold_sanity: bool
         shop_scale: float
         shuffled_shop_slots: tuple[int, int, int, int]
         starter_card_power: tuple[float, float]
@@ -180,16 +188,32 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
                 adjustments["Missing starter card/relic synergy"] = self.starter_pair_power
 
             if self.rest_level and self.count(state, "Progressive Rest") < self.rest_level:
-                adjustments[f"Missing Rest tier {self.rest_level}"] = REST_POWER_BY_ACT[self.act - 1]
+                # A rest site offers one action; with this act's smith tier the run smiths there instead.
+                label = f"Missing Rest tier {self.rest_level}"
+                rest_power = REST_POWER_BY_ACT[self.act - 1]
+                if self.count(state, "Progressive Smith") >= self.rest_level:
+                    label += " (smithing instead)"
+                    rest_power *= REST_SHARE_WHILE_SMITHING
+                adjustments[label] = rest_power
 
-            for item, level, weights in (
-                ("Progressive Smith", self.smith_level, SMITH_POWER_BY_TIER),
-                ("Progressive Shop Remove", self.remove_level, SHOP_REMOVE_POWER_BY_TIER),
-            ):
-                received = self.count(state, item)
-                missing = sum(weights[received:level])
-                if missing:
-                    adjustments[f"Missing {item} {tier_range(received + 1, level)}"] = missing
+            # Upgrades add up as a run passes rest sites: this act's smith tier counts for the share of
+            # the act's rest sites passed by this region, earlier tiers in full.
+            smiths = self.count(state, "Progressive Smith")
+            missing = sum(SMITH_POWER_BY_TIER[tier] * (self.smith_share if tier + 1 == self.act else 1)
+                          for tier in range(smiths, self.smith_level))
+            if missing:
+                # An Early region counts none of its own act's tier, so leave that tier out of the label.
+                last = self.smith_level if self.smith_share else self.smith_level - 1
+                label = f"Missing Progressive Smith {tier_range(smiths + 1, last)}"
+                if 0 < self.smith_share < 1:
+                    own = "" if smiths + 1 == last else f"tier {last} "
+                    label += f" ({own}x{self.smith_share:g}: share of Act {self.act}'s rest sites passed)"
+                adjustments[label] = missing
+
+            removals = self.count(state, "Progressive Shop Remove")
+            missing = sum(SHOP_REMOVE_POWER_BY_TIER[removals:self.remove_level])
+            if missing:
+                adjustments[f"Missing Progressive Shop Remove {tier_range(removals + 1, self.remove_level)}"] = missing
 
             # Anytime can provide later rewards early; Start of Act cannot.
             # Missing rewards need replacement power wherever no hard gate applies.
@@ -199,15 +223,28 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
             if ancient_adjustment:
                 mode = "Anytime" if self.ancient_anytime else "Start of Act"
                 adjustments[f"Ancient support ({mode})"] = ancient_adjustment
-            shop_penalty = self.shop_penalty(state)
-            if shop_penalty:
-                adjustments["Missing shop choices"] = shop_penalty
+            adjustments.update(self.shop_adjustments(state))
             return adjustments
 
         def shop_penalty(self, state: CollectionState) -> float:
+            return sum(self.shop_adjustments(state).values())
+
+        def shop_adjustments(self, state: CollectionState) -> dict[str, float]:
+            """Missing shop choices, then the missing gold to buy the choices a shop does offer."""
             if not self.shop_scale:
-                return 0
-            return self.missing_shop_value(state) * self.shop_scale
+                return {}
+            adjustments = {}
+            missing = self.missing_shop_value(state)
+            if missing:
+                adjustments["Missing shop choices"] = missing * self.shop_scale
+            if self.gold_sanity:
+                gold = gold_sanity_run_gold(self.act, self.count(state, "Elite Gold"), self.count(state, "Boss Gold"))
+                needed = normal_run_gold(self.act)
+                if gold < needed:
+                    offered = FULL_SHOP_PAGE_VALUE - missing
+                    adjustments[f"Missing shop gold ({gold} of {needed})"] = \
+                        offered * self.shop_scale * (1 - gold / needed)
+            return adjustments
 
         def missing_shop_value(self, state: CollectionState) -> float:
             if not self.shop_sanity:
@@ -254,14 +291,15 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
             if self.starter_card_power[0] or self.starter_relic_power[0]:
                 support.append("starters")
             if self.rest_level:
-                support.append(f"Rest tier {self.rest_level}")
+                support.append(f"Rest tier {self.rest_level} (x{REST_SHARE_WHILE_SMITHING:g} while smithing works)")
             if self.smith_level:
-                support.append(f"Smith {tier_range(1, self.smith_level)}")
+                support.append(f"Smith {tier_range(1, self.smith_level)} (tier {self.act} x{self.smith_share:g}: "
+                               f"share of Act {self.act}'s rest sites passed)")
             if self.remove_level:
                 support.append(f"Shop Remove {tier_range(1, self.remove_level)}")
             support.append(f"Ancient {tier_range(1, self.act)}")
             if self.shop_scale:
-                support.append("shop choices")
+                support.append("shop choices and gold" if self.gold_sanity else "shop choices")
             table = self.card_rewards_table
             strengths = " / ".join(f"{strength:g}" for strength in table)
             later_step = card_reward_strength(table, len(table)) - table[-1]
@@ -370,8 +408,6 @@ def _set_rules(world: 'SlayTheSpire2World', config: CharacterConfig) -> None:
         for region in (f"Act {act} Chest", f"Act {act} Elite 1"):
             region_rules[region] &= CanReachRegion(f"{prefix} {last_elite(act - 1)}")
     # Item gates that extra power cannot replace.
-    region_rules["Act 1 Boss Arena"] &= Has(f"{prefix} Progressive Smith",
-                                            options=[OptionFilter(CampfireSanity, 1)], filtered_resolution=True)
     for act in (2, 3):
         region_rules[f"Early Act {act}"] &= Has(f"{prefix} Progressive Ancient", count=act - 1 + neow_tier,
                                                 **ancient_filter)

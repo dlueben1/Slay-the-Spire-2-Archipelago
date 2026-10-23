@@ -30,7 +30,9 @@ class PowerCheck:
     # Card strength needed however many relics the run has.
     minimum_cards: float
     rest: bool = False    # this act's rest tier
-    smith: bool = False   # every smith tier up to this act
+    # Smith tiers up to this act count, this act's own for this share of its value (one of the
+    # SMITHS_* shares below); None when smiths do not count yet.
+    smith: float | None = None
     remove: bool = False  # this act's card removal; without it, only earlier acts' removals
     shop: bool = False    # this act's shop choices
     # Power with Seeded Run, where every run replays the same map, when it differs.
@@ -50,7 +52,7 @@ class PowerCheck:
 
     @property
     def smith_tiers(self) -> int:
-        return self.act if self.smith else 0
+        return self.act if self.smith is not None else 0
 
     @property
     def removal_tiers(self) -> int:
@@ -72,38 +74,48 @@ class PowerCheck:
 # before, so relic counts add up across a run.
 #
 # Budget roughly seven combat card rewards per act: three before Mid, five before Late and
-# seven before the boss. Later acts expect this act's smiths from entry and its rest from Mid.
-# Act 1 waits until the boss for smiths so the sparse floorless opening stays loose. Early Act 1
+# seven before the boss. Each act expects its rest from Mid and its smiths as its rest sites pass
+# (the SMITHS_* shares below), and earlier acts' smiths in full. Early Act 1
 # needs only the character: Act 1 opens with three weak hallway fights. The Act 1 Hallway, between
 # Early and Mid, holds the checks of the fourth fight, the first from the normal pool. It asks only
 # for a normal start (starter card, starter relic and Neow), so a run without one needs power to
-# make up for it. Elite track rows copy their act's Late row apart from power: chests take Mid
-# power, and elites climb from about Mid power to Late power. The Act 2 boss and Early Act 3 split
+# make up for it. Elite track rows copy their act's Late row apart from power and smith share:
+# chests take Mid power, and elites climb from about Mid power to Late power. The Act 2 boss and Early Act 3 split
 # the climb to Act 3, where Early Act 3 also expects the third Ancient.
+# Share of an act's rest sites a run has passed by each stage, from a port of the game's map
+# generator: a path that seeks rest sites passes none before Mid, about two or three before the
+# all-rest row in front of the boss, and that row. Upgrades add up only as a run passes rest sites,
+# so an act's smith tier counts for this share of its value.
+SMITHS_EARLY = 0.0
+SMITHS_MID = 0.25
+SMITHS_FIRST_ELITE = 0.4
+SMITHS_LATE = 0.6
+SMITHS_BOSS = 1.0
+
 REGIONS: dict[str, PowerCheck] = {
     #                        act  power  card rewards  min cards
     "Act 1 Hallway":    PowerCheck(1,  0.0,   3,  0.0),
     # Seeded Run replays one map, which may force an elite, so it keeps elite-inclusive power.
-    "Mid Act 1":        PowerCheck(1,  3.0,   3,  1.0, rest=True, seeded_power=4.0),
-    "Late Act 1":       PowerCheck(1,  7.0,   5,  1.0, rest=True, shop=True, seeded_power=10.0),
-    "Act 1 Elite 1":    PowerCheck(1,  4.5,   5,  1.0, rest=True, shop=True),
-    "Act 1 Elite 2":    PowerCheck(1,  6.5,   5,  1.0, rest=True, shop=True),
-    "Act 1 Boss Arena": PowerCheck(1, 11.5,   7,  3.0, rest=True, smith=True, remove=True, shop=True),
-    "Early Act 2":      PowerCheck(2, 12.0,   7,  3.0, smith=True, shop=True),
-    "Mid Act 2":        PowerCheck(2, 14.0,  10,  3.0, rest=True, smith=True, shop=True),
-    "Late Act 2":       PowerCheck(2, 18.0,  12,  3.0, rest=True, smith=True, shop=True),
-    "Act 2 Chest":      PowerCheck(2, 14.0,  12,  3.0, rest=True, smith=True, shop=True),
-    "Act 2 Elite 1":    PowerCheck(2, 15.5,  12,  3.0, rest=True, smith=True, shop=True),
-    "Act 2 Elite 2":    PowerCheck(2, 17.0,  12,  3.0, rest=True, smith=True, shop=True),
-    "Act 2 Boss Arena": PowerCheck(2, 22.0,  14,  4.0, rest=True, smith=True, remove=True, shop=True),
-    "Early Act 3":      PowerCheck(3, 23.0,  14,  5.0, smith=True, shop=True),
-    "Mid Act 3":        PowerCheck(3, 25.5,  17,  5.0, rest=True, smith=True, shop=True),
-    "Late Act 3":       PowerCheck(3, 27.0,  19,  5.0, rest=True, smith=True, shop=True),
-    "Act 3 Chest":      PowerCheck(3, 25.5,  19,  5.0, rest=True, smith=True, shop=True),
-    "Act 3 Elite 1":    PowerCheck(3, 26.0,  19,  5.0, rest=True, smith=True, shop=True),
-    "Act 3 Elite 2":    PowerCheck(3, 26.5,  19,  5.0, rest=True, smith=True, shop=True),
-    "Act 3 Elite 3":    PowerCheck(3, 27.0,  19,  5.0, rest=True, smith=True, shop=True),
-    "Act 3 Boss Arena": PowerCheck(3, 30.0,  21,  7.0, rest=True, smith=True, remove=True, shop=True),
+    "Mid Act 1":        PowerCheck(1,  2.5,   3,  1.0, rest=True, smith=SMITHS_MID, seeded_power=4.0),
+    "Late Act 1":       PowerCheck(1,  7.0,   5,  1.0, rest=True, smith=SMITHS_LATE, shop=True, seeded_power=10.0),
+    "Act 1 Elite 1":    PowerCheck(1,  4.5,   5,  1.0, rest=True, smith=SMITHS_FIRST_ELITE, shop=True),
+    "Act 1 Elite 2":    PowerCheck(1,  6.5,   5,  1.0, rest=True, smith=SMITHS_LATE, shop=True),
+    "Act 1 Boss Arena": PowerCheck(1, 11.5,   7,  3.0, rest=True, smith=SMITHS_BOSS, remove=True, shop=True),
+    "Early Act 2":      PowerCheck(2, 12.0,   7,  3.0, smith=SMITHS_EARLY, shop=True),
+    "Mid Act 2":        PowerCheck(2, 14.0,  10,  3.0, rest=True, smith=SMITHS_MID, shop=True),
+    "Late Act 2":       PowerCheck(2, 18.0,  12,  3.0, rest=True, smith=SMITHS_LATE, shop=True),
+    "Act 2 Chest":      PowerCheck(2, 14.0,  12,  3.0, rest=True, smith=SMITHS_MID, shop=True),
+    "Act 2 Elite 1":    PowerCheck(2, 15.5,  12,  3.0, rest=True, smith=SMITHS_FIRST_ELITE, shop=True),
+    "Act 2 Elite 2":    PowerCheck(2, 17.0,  12,  3.0, rest=True, smith=SMITHS_LATE, shop=True),
+    "Act 2 Boss Arena": PowerCheck(2, 22.0,  14,  4.0, rest=True, smith=SMITHS_BOSS, remove=True, shop=True),
+    "Early Act 3":      PowerCheck(3, 23.0,  14,  5.0, smith=SMITHS_EARLY, shop=True),
+    "Mid Act 3":        PowerCheck(3, 25.5,  17,  5.0, rest=True, smith=SMITHS_MID, shop=True),
+    "Late Act 3":       PowerCheck(3, 27.0,  19,  5.0, rest=True, smith=SMITHS_LATE, shop=True),
+    "Act 3 Chest":      PowerCheck(3, 25.5,  19,  5.0, rest=True, smith=SMITHS_MID, shop=True),
+    "Act 3 Elite 1":    PowerCheck(3, 26.0,  19,  5.0, rest=True, smith=SMITHS_FIRST_ELITE, shop=True),
+    "Act 3 Elite 2":    PowerCheck(3, 26.5,  19,  5.0, rest=True, smith=SMITHS_LATE, shop=True),
+    "Act 3 Elite 3":    PowerCheck(3, 27.0,  19,  5.0, rest=True, smith=SMITHS_LATE, shop=True),
+    "Act 3 Boss Arena": PowerCheck(3, 30.0,  21,  7.0, rest=True, smith=SMITHS_BOSS, remove=True, shop=True),
 }
 
 # Relic N is the run's Nth elite, chest or Black Star reward. Relic 1 is the Act 1 chest on the
@@ -196,7 +208,13 @@ def card_rewards_needed(table: tuple[float, ...], strength: float) -> int:
 # --- Missing support: requirement added until AP items restore it ----------------------------
 
 REST_POWER_BY_ACT = (3.0, 3.5, 4.0)    # this act's rest tier
-SMITH_POWER_BY_TIER = (3.5, 3.0, 1.5)  # early smiths matter most
+# A rest site offers one action. A run that can smith but not rest in this act smiths at each rest
+# site instead, so its missing rest tier costs only this share. Missing smiths keep their full
+# value: upgrades last the whole run, while the extra heals are rarely needed.
+REST_SHARE_WHILE_SMITHING = 0.5
+# About one power per upgrade: a run that seeks rest sites upgrades two or three times an act.
+# Act 3 upgrades matter less, because the best cards are already upgraded by then.
+SMITH_POWER_BY_TIER = (2.5, 2.5, 1.25)
 # Removal matters more as the deck grows. These values are a rough estimate.
 SHOP_REMOVE_POWER_BY_TIER = (1.0, 1.5, 2.0)
 # Neow, then the Act 2 and Act 3 Ancients.
@@ -211,8 +229,11 @@ SHOP_SLOT_VALUES = (
     ("Shop Relic Slot", (0.75, 0.5, 0.25)),
     ("Shop Potion Slot", (0.5, 0.375, 0.125)),
 )
-# Missing shop choices count less in later acts.
-SHOP_SCALE_BY_ACT = (2 / 3, 1 / 3, 1 / 6)
+# Missing shop choices count for more in each act, because purchases stay for the run: about 330
+# vanilla gold per act buys roughly two items besides a card removal, and removals add up the same
+# way. A page missing every slot costs 1.5, 3 and 4.5.
+SHOP_SCALE_BY_ACT = (1 / 3, 2 / 3, 1)
+FULL_SHOP_PAGE_VALUE = sum(sum(values) for _, values in SHOP_SLOT_VALUES)
 
 
 # --- Shop gold (Gold Sanity with Shop Sanity) ------------------------------------------------
@@ -269,3 +290,26 @@ def shop_gold_needed(page: list[str], act: int, cost_mode: int) -> int:
     prices = sorted((shop_check_price(category, cost_mode) for category in listed), reverse=True)
     dearest = sum(prices[:SHOP_CHECKS_PER_VISIT[cost_mode]])
     return max(0, dearest - STARTING_GOLD - CHEST_GOLD * (act - 1))
+
+
+# --- Gold for shop choices (Gold Sanity) -----------------------------------------------------
+
+# A shop turns gold into power. With Gold Sanity, whose checks replace vanilla fight gold, shop
+# choices count only as far as a run's gold reaches a normal run's by that act's Late region,
+# walking around elites. A run counts its starting and chest gold, Elite and Boss Gold, and every
+# Combat Gold: those are small and plentiful, and counting them would make 13 more items per
+# character progression.
+COMBAT_GOLD = 11        # a vanilla fight's gold or a Combat Gold item, with the Poverty allowance
+COMBAT_GOLD_ITEMS = 13  # in a Gold Sanity item pool
+
+
+def normal_run_gold(act: int) -> int:
+    """Gold a normal run has by an act's Late region, walking around elites."""
+    fights = REGIONS[f"Late Act {act}"].card_rewards
+    return STARTING_GOLD + COMBAT_GOLD * fights + CHEST_GOLD * act + BOSS_GOLD * (act - 1)
+
+
+def gold_sanity_run_gold(act: int, elite_gold_items: int, boss_gold_items: int) -> int:
+    """Gold a Gold Sanity run has for an act's shops, with every Combat Gold assumed held."""
+    return (STARTING_GOLD + CHEST_GOLD * act + COMBAT_GOLD * COMBAT_GOLD_ITEMS
+            + ELITE_GOLD * elite_gold_items + BOSS_GOLD * boss_gold_items)

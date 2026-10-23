@@ -118,6 +118,13 @@ class TestCharacterRegistry(unittest.TestCase):
         self.assertTrue(all(definition.starter_power is not None for definition in VANILLA_CHARACTERS),
                         "Every vanilla character must choose reviewed starter power or DEFAULT_STARTER_POWER")
         self.assertTrue(all(definition.starter_power is None for definition in PREDEFINED_CHARACTERS))
+        reviewed = [definition.starter_power for definition in VANILLA_CHARACTERS
+                    if definition.starter_power is not DEFAULT_STARTER_POWER]
+        for kind in ("card", "relic"):
+            for index in range(2):
+                average = sum(getattr(power, kind)[index] for power in reviewed) / len(reviewed)
+                self.assertLessEqual(abs(average - getattr(DEFAULT_STARTER_POWER, kind)[index]), 0.5,
+                                     f"DEFAULT_STARTER_POWER.{kind} must stay near the vanilla average")
         full_roster = len(character_list) + len(PREDEFINED_CHARACTERS) + NUM_CUSTOM
         self.assertEqual(full_roster, GoalNumChar.range_end)
         self.assertEqual(full_roster, PickNumberCharacters.range_end)
@@ -331,23 +338,24 @@ class TestCharacterRosters(unittest.TestCase):
                 self.assertNotIn(location.address, restored.location_id_to_alias)
                 self.assertEqual("Watcher", first.name)
 
-    def test_default_starter_profile_restores_baseline_then_adds_four_power(self):
+    def test_default_starter_profile_restores_baseline_then_adds_upgrade_power(self):
         # Missing reviewed data uses the explicit fallback; coverage tests above still fail
         # if a real registered vanilla character has not chosen a profile.
         with patch.dict(STARTER_CARD_POWER, {}, clear=True), patch.dict(STARTER_RELIC_POWER, {}, clear=True):
             world = self.generate(characters=["Ironclad"], progressive_starter_card=True,
                                   progressive_starter_relic=True)
             rule = SpireHasPower(world.characters[0].char_offset, 9).resolve(world)
-        for kind, penalty in (("Card", 1.0), ("Relic", 2.5)):
+        for kind, (penalty, upgrade) in (("Card", DEFAULT_STARTER_POWER.card),
+                                         ("Relic", DEFAULT_STARTER_POWER.relic)):
             state = CollectionState(world.multiworld)
             before = rule.strength(state)
             state.collect(world.create_item(f"Ironclad Progressive Starter {kind}"), prevent_sweep=True)
             first = rule.strength(state)
-            self.assertEqual(penalty, before[2] - first[2])
+            self.assertAlmostEqual(penalty, before[2] - first[2])
             self.assertEqual(before[:2], first[:2])
             state.collect(world.create_item(f"Ironclad Progressive Starter {kind}"), prevent_sweep=True)
             second = rule.strength(state)
-            self.assertEqual(4.0, second[1] - first[1])
+            self.assertAlmostEqual(upgrade, second[1] - first[1])
             self.assertEqual(first[2], second[2])
             state.collect(world.create_item(f"Ironclad Progressive Starter {kind}"), prevent_sweep=True)
             self.assertEqual(second, rule.strength(state))

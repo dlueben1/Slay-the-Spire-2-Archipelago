@@ -8,14 +8,17 @@ from .constants import (NUM_CUSTOM, VANILLA_CHARACTER_BLOCKS, GENERIC_CHARACTER_
 @dataclass(frozen=True)
 class StarterPower:
     # Missing-starter penalty, then second-receipt bonus above the normal loadout.
-    card: tuple[float, float] = (1.0, 4.0)
-    relic: tuple[float, float] = (2.5, 4.0)
+    card: tuple[float, float]
+    relic: tuple[float, float]
     # Extra penalty, charged once, while either starter is missing. For a starter card and relic
     # that work as a pair, restoring both should match leaving the starters unshuffled.
     missing_pair: float = 0.0
 
 
-DEFAULT_STARTER_POWER = StarterPower()
+# Close to the average of the reviewed vanilla characters below (card 1.2 / 3.9, relic 2.3 / 3.3);
+# a registry test keeps it within half a point. It leaves out missing_pair, which only fits a known
+# card and relic pair.
+DEFAULT_STARTER_POWER = StarterPower(card=(1.0, 4.0), relic=(2.0, 3.5))
 
 
 @dataclass(frozen=True)

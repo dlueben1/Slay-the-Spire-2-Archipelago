@@ -11,10 +11,9 @@ from Options import OptionError
 from worlds.AutoWorld import World
 from .regions import create_regions
 from .rules import FALLBACK_REASON, is_sparse, select_logic, set_rules
-from .rules_new import shop_gold_by_act
 from . import rules_old
-from .logic_table import (PATH_RELIC_REWARDS, REGIONS, RELIC_POWER, card_reward_strength, card_reward_table,
-                          card_rewards_needed)
+from .logic_table import (COMBAT_GOLD_ITEMS, PATH_RELIC_REWARDS, REGIONS, RELIC_POWER, SMITH_POWER_BY_TIER,
+                          card_reward_strength, card_reward_table, card_rewards_needed)
 from .web_world import SlayTheSpire2Web
 from .characters import (CharacterConfig, character_list, vanilla_character_ids, character_registry,
                          registered_character_blocks, unique_character_ids, character_identity,
@@ -25,7 +24,7 @@ from .items import (item_table, chars_to_items, bonus_item_table, ItemType, base
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
 from .options import Spire2Options
 
-COMBAT_GOLD_ITEM_COUNT = 13
+COMBAT_GOLD_ITEM_COUNT = COMBAT_GOLD_ITEMS
 ELITE_GOLD_ITEM_COUNT = 7
 BOSS_GOLD_ITEM_COUNT = 2
 
@@ -155,6 +154,9 @@ class SlayTheSpire2World(World):
             else:
                 mid_act_1 = REGIONS["Mid Act 1"]
                 power = mid_act_1.power_for(bool(self.options.seeded))
+                if self.options.campfire_sanity:
+                    # The opening holds a Rest but no Smith, so Mid Act 1 charges its smith share.
+                    power += SMITH_POWER_BY_TIER[0] * mid_act_1.smith
                 vanilla_cards = 0 if self.options.shuffle_all_cards else mid_act_1.vanilla_card_strength
                 table = card_reward_table(bool(self.options.shuffle_all_cards))
                 cards = card_rewards_needed(table, mid_act_1.minimum_cards - vanilla_cards)
@@ -426,10 +428,9 @@ class SlayTheSpire2World(World):
         data = item_table[name]
         item_id = data.code
         classification = data.classification
-        if (self.effective_logic == 'new' and name.endswith((' Elite Gold', ' Boss Gold'))
-                and not any(shop_gold_by_act(self.options))):
-            # New logic needs gold only where a shop's dearest checks cost more than a run's
-            # guaranteed gold; legacy boss gates still need it.
+        if self.effective_logic == 'new' and name.endswith((' Elite Gold', ' Boss Gold')) and not self.options.gold_sanity:
+            # New logic counts Elite and Boss Gold only with Gold Sanity, for shop choices and a shop's
+            # dearest checks; legacy boss gates still need it.
             classification = ItemClassification.useful
         return SlayTheSpire2Item(data, name, classification, item_id, self.player)
 

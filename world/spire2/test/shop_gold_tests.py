@@ -95,17 +95,18 @@ class ShopGoldTests(unittest.TestCase):
         self.assertEqual((0, 0, 0), shop_gold_by_act(world.options))
         self.assertEqual([0, 0, 0], self.shop_gold(world))
 
-    def test_gold_items_are_progression_only_when_a_shop_needs_gold(self):
-        for cost_mode, progression in ((FIXED, False), (SUPER_DISCOUNT, False), (TIERED, True)):
+    def test_elite_and_boss_gold_are_progression_with_any_shop_prices(self):
+        # Shop choices need gold with Gold Sanity, even when the checks themselves are cheap.
+        for cost_mode in (FIXED, SUPER_DISCOUNT, TIERED):
             world = self.make_world(shop_sanity_costs=cost_mode)
             for name in ("Silent Elite Gold", "Silent Boss Gold"):
                 with self.subTest(cost_mode=cost_mode, item=name):
                     items = [item for item in world.multiworld.itempool if item.name == name]
                     self.assertTrue(items)
-                    for item in items:
-                        self.assertEqual(progression, item.advancement)
-                        if not progression:
-                            self.assertEqual(ItemClassification.useful, item.classification)
+                    self.assertTrue(all(item.advancement for item in items))
+            combat = [item for item in world.multiworld.itempool if item.name == "Silent Combat Gold"]
+            self.assertTrue(combat)
+            self.assertTrue(all(item.classification == ItemClassification.useful for item in combat))
 
     def test_tracker_regeneration_keeps_shop_gold(self):
         for cost_mode in (DISCOUNT, TIERED):
