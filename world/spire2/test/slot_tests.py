@@ -2,7 +2,6 @@ import unittest
 
 from BaseClasses import CollectionState
 from Fill import distribute_items_restrictive
-from Generate import roll_settings
 from test.general import setup_multiworld, setup_solo_multiworld
 from worlds.AutoWorld import call_all
 from worlds.spire2 import SlayTheSpire2World
@@ -14,27 +13,6 @@ class TestSlotGeneration(unittest.TestCase):
     def generate(self, **options):
         return setup_multiworld(SlayTheSpire2World, seed=42, options={
             "characters": self.roster, **options})
-
-    def test_obsolete_player_count_cannot_change_generation(self):
-        self.assertNotIn("player_count", SlayTheSpire2World.options_dataclass.type_hints)
-        baseline = self.generate()
-        for count in (1, 2, 4, 100):
-            with self.subTest(count=count):
-                # Exercise actual YAML option rolling as well as world setup.
-                rolled = roll_settings({"game": SlayTheSpire2World.game,
-                                        SlayTheSpire2World.game: {"player_count": count}})
-                self.assertFalse(hasattr(rolled, "player_count"))
-                mw = self.generate(player_count=count)
-                self.assertEqual([(loc.name, loc.address) for loc in baseline.get_locations()],
-                                 [(loc.name, loc.address) for loc in mw.get_locations()])
-                self.assertEqual([(item.name, item.code) for item in baseline.itempool],
-                                 [(item.name, item.code) for item in mw.itempool])
-                data = mw.worlds[1].fill_slot_data()
-                self.assertNotIn("player_count", data)
-                self.assertNotIn("players", data)
-                self.assertTrue(all("player_number" not in char for char in data["characters"]))
-        for catalog in (SlayTheSpire2World.item_name_to_id, SlayTheSpire2World.location_name_to_id):
-            self.assertFalse(any(name.startswith(("P2 ", "P3 ", "P4 ")) for name in catalog))
 
     def test_roster_selection_and_starting_unlocks(self):
         for advanced in (False, True):

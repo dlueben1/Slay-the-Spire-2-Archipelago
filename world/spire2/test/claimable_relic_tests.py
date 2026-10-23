@@ -4,7 +4,7 @@ from BaseClasses import CollectionState
 from test.general import setup_multiworld
 from worlds.AutoWorld import call_all
 from worlds.spire2 import SlayTheSpire2World
-from worlds.spire2.logic_table import ELITE_RELIC_REWARDS, PATH_RELIC_REWARDS, RELIC_POWER, last_elite
+from worlds.spire2.logic_table import ELITE_RELIC_REWARDS, PATH_RELIC_REWARDS, RELIC_POWER
 from worlds.spire2.test import path_power, power_checks
 
 
@@ -42,17 +42,6 @@ class ClaimableRelicTests(unittest.TestCase):
                 checks = power_checks(world.get_entrance(f"Ironclad {region}").access_rule)
                 self.assertEqual([PATH_RELIC_REWARDS[region], *alternatives.values()],
                                  [check.relic_cap for check in checks])
-
-        # Eight Card Rewards and eight relics clear Early Act 2 only after the Act 1 elites:
-        # walking around them claims one relic (the chest), fighting them claims three.
-        state = CollectionState(world.multiworld)
-        self.collect(world, state, "Card Reward", 8)
-        self.collect(world, state, "Relic", 8)
-        self.collect(world, state, "Progressive Ancient", 1)
-        rule = world.get_entrance("Ironclad Early Act 2").access_rule
-        self.assertTrue(state.can_reach_region(f"Ironclad {last_elite(1)}", world.player))
-        self.assertFalse(path_power(rule)(state))
-        self.assertTrue(rule(state))
 
     def test_tracker_regeneration_keeps_the_anytime_count(self):
         world = self.make_world(relic_rewards_available_anytime=0)

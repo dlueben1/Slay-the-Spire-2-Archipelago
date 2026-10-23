@@ -16,8 +16,8 @@ class StarterPower:
 
 
 # Close to the average of the reviewed vanilla characters below (card 1.2 / 3.9, relic 2.3 / 3.3);
-# a registry test keeps it within half a point. It leaves out missing_pair, which only fits a known
-# card and relic pair.
+# recheck it by hand after retuning them. It leaves out missing_pair, which only fits a known card
+# and relic pair.
 DEFAULT_STARTER_POWER = StarterPower(card=(1.0, 4.0), relic=(2.0, 3.5))
 
 

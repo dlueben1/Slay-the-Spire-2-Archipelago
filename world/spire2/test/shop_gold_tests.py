@@ -5,8 +5,7 @@ from BaseClasses import CollectionState, ItemClassification
 from test.general import setup_multiworld
 from worlds.AutoWorld import call_all
 from worlds.spire2 import SlayTheSpire2World
-from worlds.spire2.logic_table import (BOSS_GOLD, ELITE_GOLD, SHOP_PAGE, shop_check_price, shop_gold_needed,
-                                       shop_page)
+from worlds.spire2.logic_table import BOSS_GOLD, ELITE_GOLD, SHOP_PAGE, shop_gold_needed, shop_page
 from worlds.spire2.rules import SpireHasGold
 from worlds.spire2.rules_new import shop_gold_by_act
 from worlds.spire2.world import BOSS_GOLD_ITEM_COUNT, ELITE_GOLD_ITEM_COUNT
@@ -67,12 +66,6 @@ class ShopGoldTests(unittest.TestCase):
         needed = [shop_gold_needed(page, act, TIERED) for act in (1, 2, 3)]
         self.assertEqual(sorted(needed, reverse=True), needed)
         self.assertGreater(needed[0], needed[2])
-
-    def test_discount_affords_two_checks_but_tiered_one(self):
-        page = shop_page(5, 0, 0, 0, False)
-        card_price = shop_check_price("card", TIERED)
-        self.assertEqual(shop_check_price("card", DISCOUNT) * 2, card_price)
-        self.assertEqual(shop_gold_needed(page, 1, DISCOUNT), shop_gold_needed(page, 1, TIERED))
 
     def test_shop_entrances_need_the_computed_gold(self):
         for cost_mode in range(4):

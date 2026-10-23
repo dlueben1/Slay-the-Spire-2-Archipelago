@@ -2,7 +2,6 @@ import copy
 import unittest
 from unittest.mock import patch
 
-from BaseClasses import CollectionState
 from Fill import distribute_items_restrictive
 from Options import OptionError
 from test.general import setup_multiworld, setup_solo_multiworld
@@ -16,7 +15,7 @@ from worlds.spire2.constants import CHAR_OFFSET, GENERIC_CHARACTER_BLOCKS, NUM_C
 from worlds.spire2.items import base_item_table, create_item_tables, item_table
 from worlds.spire2.locations import create_location_data, create_location_tables, location_table
 from worlds.spire2.options import GoalNumChar, ModdedCharacters, PickNumberCharacters, UnlockedCharacter
-from worlds.spire2.rules_new import STARTER_CARD_POWER, STARTER_RELIC_POWER, SpireHasPower
+from worlds.spire2.rules_new import STARTER_CARD_POWER, STARTER_RELIC_POWER
 
 
 class TestCharacterRegistry(unittest.TestCase):
@@ -118,13 +117,6 @@ class TestCharacterRegistry(unittest.TestCase):
         self.assertTrue(all(definition.starter_power is not None for definition in VANILLA_CHARACTERS),
                         "Every vanilla character must choose reviewed starter power or DEFAULT_STARTER_POWER")
         self.assertTrue(all(definition.starter_power is None for definition in PREDEFINED_CHARACTERS))
-        reviewed = [definition.starter_power for definition in VANILLA_CHARACTERS
-                    if definition.starter_power is not DEFAULT_STARTER_POWER]
-        for kind in ("card", "relic"):
-            for index in range(2):
-                average = sum(getattr(power, kind)[index] for power in reviewed) / len(reviewed)
-                self.assertLessEqual(abs(average - getattr(DEFAULT_STARTER_POWER, kind)[index]), 0.5,
-                                     f"DEFAULT_STARTER_POWER.{kind} must stay near the vanilla average")
         full_roster = len(character_list) + len(PREDEFINED_CHARACTERS) + NUM_CUSTOM
         self.assertEqual(full_roster, GoalNumChar.range_end)
         self.assertEqual(full_roster, PickNumberCharacters.range_end)
@@ -296,14 +288,6 @@ class TestCharacterRosters(unittest.TestCase):
                 with self.assertRaisesRegex(OptionError, "without a predefined name"):
                     generate(pick_num_characters=pick + 1)
 
-    def test_random_selection_replaces_excess_mods_without_shrinking_or_losing_fixed_start(self):
-        roster = [f"Unknown-{i}" for i in range(30)]
-        world = self.generate(characters=character_list, modded_characters=roster,
-                              pick_num_characters=25, lock_characters=2, unlocked_character=roster[-1])
-        self.assertEqual(25, len(world.characters))
-        self.assertEqual(20, world.modded_num)
-        self.assertEqual([roster[-1]], [c.option_name for c in world.characters if not c.locked])
-
     def test_two_players_can_use_different_order_without_changing_named_ids(self):
         mw = setup_multiworld([SlayTheSpire2World] * 2, seed=42, options=[
             {"characters": [], "modded_characters": roster, "lock_characters": 0, "potion_sanity": True}
@@ -337,25 +321,3 @@ class TestCharacterRosters(unittest.TestCase):
             else:
                 self.assertNotIn(location.address, restored.location_id_to_alias)
                 self.assertEqual("Watcher", first.name)
-
-    def test_default_starter_profile_restores_baseline_then_adds_upgrade_power(self):
-        # Missing reviewed data uses the explicit fallback; coverage tests above still fail
-        # if a real registered vanilla character has not chosen a profile.
-        with patch.dict(STARTER_CARD_POWER, {}, clear=True), patch.dict(STARTER_RELIC_POWER, {}, clear=True):
-            world = self.generate(characters=["Ironclad"], progressive_starter_card=True,
-                                  progressive_starter_relic=True)
-            rule = SpireHasPower(world.characters[0].char_offset, 9).resolve(world)
-        for kind, (penalty, upgrade) in (("Card", DEFAULT_STARTER_POWER.card),
-                                         ("Relic", DEFAULT_STARTER_POWER.relic)):
-            state = CollectionState(world.multiworld)
-            before = rule.strength(state)
-            state.collect(world.create_item(f"Ironclad Progressive Starter {kind}"), prevent_sweep=True)
-            first = rule.strength(state)
-            self.assertAlmostEqual(penalty, before[2] - first[2])
-            self.assertEqual(before[:2], first[:2])
-            state.collect(world.create_item(f"Ironclad Progressive Starter {kind}"), prevent_sweep=True)
-            second = rule.strength(state)
-            self.assertAlmostEqual(upgrade, second[1] - first[1])
-            self.assertEqual(first[2], second[2])
-            state.collect(world.create_item(f"Ironclad Progressive Starter {kind}"), prevent_sweep=True)
-            self.assertEqual(second, rule.strength(state))

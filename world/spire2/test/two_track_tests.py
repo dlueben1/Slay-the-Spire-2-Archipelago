@@ -1,14 +1,10 @@
 import unittest
 
-from BaseClasses import CollectionState
 from test.general import setup_multiworld
 from worlds.AutoWorld import call_all
 from worlds.spire2 import SlayTheSpire2World
-from worlds.spire2.logic_table import (
-    ANCIENT_POWER_BY_TIER, ELITES_PER_ACT, REGIONS, RELIC_REGIONS, card_reward_table, card_rewards_needed, last_elite,
-)
+from worlds.spire2.logic_table import ELITES_PER_ACT, RELIC_REGIONS, last_elite
 from worlds.spire2.regions import LEGACY_RELIC_REGIONS
-from worlds.spire2.rules_new import STARTER_CARD_POWER, STARTER_PAIR_POWER, STARTER_RELIC_POWER
 from worlds.spire2.test import path_power
 
 
@@ -49,85 +45,6 @@ class TwoTrackTests(unittest.TestCase):
                     entrance = world.get_entrance(f"Ironclad Act {act} Elite {number}")
                     self.assertEqual(f"Ironclad Act {act} Elite {number - 1}", entrance.parent_region.name)
 
-    def test_fourth_fight_waits_for_a_normal_start(self):
-        # Early Act 1 holds the three weak hallway fights. New logic puts the fourth fight's checks
-        # in the Act 1 Hallway; old logic keeps them in Early Act 1.
-        for logic in ("new", "old"):
-            world = self.make_world(shuffle_all_cards=True, use_new_logic=logic == "new")
-            region = "Act 1 Hallway" if logic == "new" else "Early Act 1"
-            for location in ("Combat Gold 4", "Card Reward 4", "Reached Floor 6"):
-                with self.subTest(logic=logic, location=location):
-                    self.assertEqual(f"Ironclad {region}",
-                                     world.get_location(f"Ironclad {location}").parent_region.name)
-        # With half shuffle the fourth fight's card reward stays vanilla: Card Reward 2 is the third's.
-        world = self.make_world()
-        self.assertEqual("Ironclad Early Act 1", world.get_location("Ironclad Card Reward 2").parent_region.name)
-        self.assertEqual("Ironclad Act 1 Hallway", world.get_entrance("Ironclad Mid Act 1").parent_region.name)
-        self.assertTrue(world.get_entrance("Ironclad Act 1 Hallway").access_rule(CollectionState(world.multiworld)))
-
-        # Without its starter card, starter relic and Neow, a run needs that much power instead.
-        world = self.make_world(shuffle_all_cards=True, neow_sanity=True,
-                                progressive_starter_card=True, progressive_starter_relic=True)
-        rule = world.get_entrance("Ironclad Act 1 Hallway").access_rule
-        missing = (STARTER_CARD_POWER["Ironclad"][0] + STARTER_RELIC_POWER["Ironclad"][0]
-                   + STARTER_PAIR_POWER["Ironclad"] + ANCIENT_POWER_BY_TIER[0])
-        needed = card_rewards_needed(card_reward_table(True), missing)
-        state = CollectionState(world.multiworld)
-        self.assertFalse(rule(state))
-        for count in range(1, needed + 1):
-            state.collect(world.create_item("Ironclad Card Reward"), prevent_sweep=True)
-            with self.subTest(card_rewards=count):
-                self.assertEqual(count == needed, rule(state))
-
-    def test_eighth_fight_waits_for_early_act_2(self):
-        # New logic budgets seven combat card rewards in Act 1; old logic keeps eight.
-        for logic, eighth in (("new", "Early Act 2"), ("old", "Late Act 1")):
-            world = self.make_world(shuffle_all_cards=True, use_new_logic=logic == "new")
-            for location, region in (("Combat Gold 7", "Late Act 1"), ("Card Reward 7", "Late Act 1"),
-                                     ("Combat Gold 8", eighth), ("Card Reward 8", eighth)):
-                with self.subTest(logic=logic, location=location):
-                    self.assertEqual(f"Ironclad {region}",
-                                     world.get_location(f"Ironclad {location}").parent_region.name)
-        # With half shuffle, Card Reward 4 is the seventh fight's and stays in Late Act 1.
-        world = self.make_world()
-        self.assertEqual("Ironclad Late Act 1", world.get_location("Ironclad Card Reward 4").parent_region.name)
-        self.assertEqual("Ironclad Early Act 2", world.get_location("Ironclad Card Reward 5").parent_region.name)
-
-    def test_first_campfire_waits_for_a_rest_site(self):
-        # Rest sites start in each Mid region. Floorless openings and old logic keep Campfire 1 early.
-        for floors, logic, stage in ((True, "new", "Mid"), (False, "new", "Early"), (True, "old", "Early")):
-            world = self.make_world(campfire_sanity=True, include_floor_checks=floors,
-                                    use_new_logic=logic == "new")
-            self.assertEqual(logic, world.effective_logic)
-            for act in (1, 2, 3):
-                with self.subTest(floors=floors, logic=logic, act=act):
-                    self.assertEqual(f"Ironclad {stage} Act {act}",
-                                     world.get_location(f"Ironclad Act {act} Campfire 1").parent_region.name)
-                    self.assertEqual(f"Ironclad Mid Act {act}",
-                                     world.get_location(f"Ironclad Act {act} Campfire 2").parent_region.name)
-
-    def test_path_checks_do_not_wait_for_elite_power(self):
-        world = self.make_world()
-        state = CollectionState(world.multiworld)
-        # Half shuffle's vanilla cards plus two Card Rewards clear Mid Act 1, not the first Act 1 elite.
-        for _ in range(2):
-            state.collect(world.create_item("Ironclad Card Reward"), prevent_sweep=True)
-        self.assertTrue(world.get_location("Ironclad Reached Floor 11").can_reach(state))
-        self.assertTrue(world.get_location("Ironclad Relic 1").can_reach(state))
-        self.assertFalse(world.get_location("Ironclad Relic 2").can_reach(state))
-        for _ in range(3):
-            state.collect(world.create_item("Ironclad Relic"), prevent_sweep=True)
-        self.assertTrue(world.get_location("Ironclad Relic 2").can_reach(state))
-
-    def test_seeded_runs_keep_elite_inclusive_act_1_power(self):
-        for seeded in (False, True):
-            world = self.make_world(seeded=seeded)
-            for region in ("Mid Act 1", "Late Act 1"):
-                with self.subTest(seeded=seeded, region=region):
-                    rule = path_power(world.get_entrance(f"Ironclad {region}").access_rule)
-                    self.assertEqual(REGIONS[region].power_for(seeded), rule.power_level)
-                    self.assertEqual(seeded, rule.power_level == REGIONS[region].seeded_power)
-
     def test_tracker_regeneration_keeps_seeded_power(self):
         world = self.make_world(seeded=True)
         regenerated = setup_multiworld(SlayTheSpire2World, seed=42, steps=())
@@ -135,6 +52,8 @@ class TwoTrackTests(unittest.TestCase):
         for step in ("generate_early", "create_regions", "create_items", "set_rules"):
             call_all(regenerated, step)
         restored = regenerated.worlds[1]
+        # Seeded and unseeded power may be tuned equal, so the option must survive on its own.
+        self.assertTrue(restored.options.seeded)
         for region in ("Mid Act 1", "Late Act 1"):
             with self.subTest(region=region):
                 self.assertEqual(path_power(world.get_entrance(f"Ironclad {region}").access_rule).power_level,

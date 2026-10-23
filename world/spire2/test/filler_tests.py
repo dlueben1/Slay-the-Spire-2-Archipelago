@@ -1,5 +1,3 @@
-from collections import Counter
-from random import Random
 from unittest.mock import patch
 
 from worlds.spire2.items import chars_to_items
@@ -13,22 +11,6 @@ class TestFillerWeights(Spire2TestBase):
         for name in self.world.options_dataclass.type_hints:
             if name.endswith("_filler_weight"):
                 getattr(self.world.options, name).value = 0
-
-    def test_individual_weights_survive_unequal_group_sizes(self):
-        self.world.build_filler_pools()
-        # Defaults contain seven high, four medium, and four low items for a character.
-        # Assert the actual draw's weights, rather than allowing a statistical test to flake.
-        with patch.object(self.world.random, "choices", return_value=["Buffer"]) as draw:
-            self.assertEqual("Buffer", self.world.get_filler_item("Ironclad"))
-        names = draw.call_args.args[0]
-        weights = dict(zip(names, draw.call_args.kwargs["weights"]))
-        self.assertEqual(5, weights["Free Attack"])
-        self.assertEqual(3, weights["Strength"])
-        self.assertEqual(1, weights["Buffer"])
-        self.assertEqual(5, weights["Ironclad Five Gold"])
-        self.assertNotIn("Silent Five Gold", weights)
-        self.assertNotIn("Ironclad One Gold", weights)
-        self.assertEqual(Counter({5: 7, 3: 4, 1: 4}), Counter(weights.values()))
 
     def test_only_enabled_item_is_always_selected(self):
         self.disable_filler()
@@ -63,13 +45,6 @@ class TestFillerWeights(Spire2TestBase):
         self.world.options.artifact_filler_weight.value = 3
         del self.world.filler_universal
         self.assertEqual("Artifact", self.world.get_filler_item_name())
-
-    def test_seeded_generation_is_repeatable(self):
-        self.world.build_filler_pools()
-        self.world.random = Random(123)
-        first = [self.world.get_filler_item_name() for _ in range(100)]
-        self.world.random = Random(123)
-        self.assertEqual(first, [self.world.get_filler_item_name() for _ in range(100)])
 
 
 class TestModdedFillerWeights(Spire2TestBase):

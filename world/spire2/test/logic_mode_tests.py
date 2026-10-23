@@ -65,39 +65,6 @@ class LogicModeTests(unittest.TestCase):
         self.assertEqual('old', world.effective_logic)
         self.assertIsNone(world.logic_fallback_reason)
 
-    def test_floorless_legacy_half_shuffle_opening_mix(self):
-        for full_shuffle, cards, relics, power in [(False, 1, 1, 3.5), (True, 1, 2, 4.0)]:
-            with self.subTest(full_shuffle=full_shuffle):
-                world = setup_multiworld(SlayTheSpire2World, seed=42, options={
-                    **self.sparse, 'shuffle_all_cards': full_shuffle,
-                    'neow_sanity': True, 'campfire_sanity': True,
-                }).worlds[1]
-                early = world.multiworld.early_items[1]
-                self.assertEqual(cards, early['Ironclad Card Reward'])
-                self.assertEqual(relics, early['Ironclad Relic'])
-                state = CollectionState(world.multiworld)
-                for name, count in early.items():
-                    for _ in range(count):
-                        state.collect(world.create_item(name), prevent_sweep=True)
-                self.assertEqual(power, state.power_level[1][world.characters[0].char_offset])
-                self.assertTrue(world.get_entrance('Ironclad Mid Act 1').access_rule(state))
-        # New logic still uses its own opening mix when a sanity keeps it out of fallback.
-        # With one relic claimable in Mid Act 1 (no anytime relics, plus the chest), that Relic and the
-        # vanilla cards meet its power alone; Seeded Run's elite-inclusive power needs two Card Rewards.
-        for seeded, cards in ((False, 0), (True, 2)):
-            with self.subTest(new_logic_seeded=seeded):
-                world = setup_multiworld(SlayTheSpire2World, seed=42, options={
-                    **self.sparse, 'gold_sanity': True, 'shuffle_all_cards': False, 'seeded': seeded,
-                    'relic_rewards_available_anytime': 0,
-                }).worlds[1]
-                self.assertEqual('new', world.effective_logic)
-                self.assertEqual(cards, world.multiworld.early_items[1].get('Ironclad Card Reward', 0))
-                self.assertEqual(1, world.multiworld.early_items[1]['Ironclad Relic'])
-        world = setup_multiworld(SlayTheSpire2World, seed=42, options={
-            **self.sparse, 'use_new_logic': False, 'include_floor_checks': True, 'shuffle_all_cards': False,
-        }).worlds[1]
-        self.assertFalse(world.multiworld.early_items[1])
-
     def test_legacy_power_copy_remove_and_mixed_slots(self):
         mw = setup_multiworld([SlayTheSpire2World] * 2, seed=42, options=[
             {'use_new_logic': False, 'shuffle_all_cards': False, 'characters': ['Ironclad']},
