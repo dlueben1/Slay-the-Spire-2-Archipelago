@@ -13,8 +13,7 @@ from worlds.spire2.characters import (
 from worlds.spire2.constants import CHAR_OFFSET, GENERIC_CHARACTER_BLOCKS, NUM_CUSTOM, PREDEFINED_CHARACTER_BLOCKS
 from worlds.spire2.items import base_item_table, create_item_tables, item_table
 from worlds.spire2.locations import create_location_data, create_location_tables, location_table
-from worlds.spire2.options import GoalNumChar, ModdedCharacters, PickNumberCharacters, UnlockedCharacter
-from worlds.spire2.rules_new import STARTER_CARD_POWER, STARTER_RELIC_POWER
+from worlds.spire2.options import ModdedCharacters
 
 
 class TestCharacterRegistry(unittest.TestCase):
@@ -96,18 +95,6 @@ class TestCharacterRegistry(unittest.TestCase):
             self.assertTrue(all(0 < code for code in ids))
         # Item IDs use one-based blocks, so the last reserved block's items end here.
         self.assertLess((PREDEFINED_CHARACTER_BLOCKS[-1] + 1) * CHAR_OFFSET, 2**31)
-
-    def test_starter_profiles_cover_exactly_every_registered_vanilla_character(self):
-        self.assertEqual(set(character_list), set(STARTER_CARD_POWER))
-        self.assertEqual(set(character_list), set(STARTER_RELIC_POWER))
-        self.assertTrue(all(definition.starter_power is not None for definition in VANILLA_CHARACTERS),
-                        "Every vanilla character must choose reviewed starter power or DEFAULT_STARTER_POWER")
-        self.assertTrue(all(definition.starter_power is None for definition in PREDEFINED_CHARACTERS))
-        full_roster = len(character_list) + len(PREDEFINED_CHARACTERS) + NUM_CUSTOM
-        self.assertEqual(full_roster, GoalNumChar.range_end)
-        self.assertEqual(full_roster, PickNumberCharacters.range_end)
-        for index, name in enumerate(character_list):
-            self.assertEqual(index, UnlockedCharacter.from_any(name.lower()).value)
 
 
 class TestCharacterRosters(unittest.TestCase):

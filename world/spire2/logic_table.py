@@ -86,6 +86,8 @@ class PowerCheck:
 # generator: a path that seeks rest sites passes none before Mid, about two or three before the
 # all-rest row in front of the boss, and that row. Upgrades add up only as a run passes rest sites,
 # so an act's smith tier counts for this share of its value.
+
+# These are values from 0 to 1, tweak as you see fit.
 SMITHS_EARLY = 0.0
 SMITHS_MID = 0.25
 SMITHS_FIRST_ELITE = 0.4
@@ -94,7 +96,11 @@ SMITHS_BOSS = 1.0
 
 REGIONS: dict[str, PowerCheck] = {
     #                        act  power  card rewards  min cards
+    # This is the 1st 'hard' combat in act 1 and having an entry here makes it have requirements
+    # That you need power equivalent to neow's bonus and all starter relics. Otherwise a full
+    # sanities run is too difficult with literally 0 support or you get very lucky with events
     "Act 1 Hallway":    PowerCheck(1,  0.0,   3,  0.0),
+    #                        act  power  card rewards  min cards
     # Seeded Run replays one map, which may force an elite, so it keeps elite-inclusive power.
     "Mid Act 1":        PowerCheck(1,  2.5,   3,  1.0, rest=True, smith=SMITHS_MID, seeded_power=4.0),
     "Late Act 1":       PowerCheck(1,  7.0,   5,  1.0, rest=True, smith=SMITHS_LATE, shop=True, seeded_power=10.0),
@@ -121,7 +127,14 @@ REGIONS: dict[str, PowerCheck] = {
 # Relic N is the run's Nth elite, chest or Black Star reward. Relic 1 is the Act 1 chest on the
 # path. Elite-ready runs are expected to fight two elites in Acts 1 and 2 and three in Act 3:
 # two Act 1 elites give relics 2-3, Act 2's chest and elites give 4-6, and Act 3's give 7-10.
+# Perhaps this can be adjusted in the future to account for player preferences
+# Just a rough guess but act 1 is probably the time people fight the most elites in AP's
 ELITES_PER_ACT = (2, 2, 3)
+
+# The main goal of RELIC Regions is so you can have '2 tracks' where you can dodge elites i.e
+# get a lot of floor checks
+# until you get strong enough to where you can fight elites. In practice this has worked pretty well
+# especially with relic 2 and relic 3 which felt too hard at times to logically get
 RELIC_REGIONS = {
     1: "Mid Act 1",
     2: "Act 1 Elite 1", 3: "Act 1 Elite 2",
@@ -136,15 +149,8 @@ def last_elite(act: int) -> str:
 
 # --- Claimable relics ------------------------------------------------------------------------
 
-# A run claims AP Relics past Relic Rewards Available Anytime only by taking elite, chest or Black
-# Star rewards, one claim per reward. A power check counts at most anytime + the relic rewards a
-# run has taken by then: by walking around elites, or, when an earlier act's last elite is
-# reachable, by fighting the elites up to it too. Boss checks assume elite relics, so chests
-# alone would leave a low anytime count unable to reach the Act 3 boss.
-#
-# Relic rewards taken by each path region while walking around elites: the chests passed,
-# including the chest on a fixed row inside each Mid region. Each elite track region counts the
-# rewards before its relic: one fewer than its relic number.
+# Relics logically gotten from just the mid act chest. Doesn't take into account the small
+# chance to get chests from events.
 PATH_RELIC_REWARDS = {
     "Act 1 Hallway": 0, "Mid Act 1": 1, "Late Act 1": 1, "Act 1 Boss Arena": 1,
     "Early Act 2": 1, "Mid Act 2": 2, "Late Act 2": 2, "Act 2 Boss Arena": 2,
@@ -152,6 +158,7 @@ PATH_RELIC_REWARDS = {
     **{region: number - 1 for number, region in RELIC_REGIONS.items() if number > 1},
 }
 # Relic rewards taken by a region after also fighting every elite up to an act's last elite.
+# Helper table to better handle relics available anytime.
 ELITE_RELIC_REWARDS = {
     "Late Act 1": {last_elite(1): 3},
     "Act 1 Boss Arena": {last_elite(1): 3},
@@ -174,6 +181,7 @@ ELITE_RELIC_REWARDS = {
 # (see docs/contributing/apworld-logic.md). Half shuffle reaches that point sooner because its
 # vanilla card rewards also add cards. Keep a full pool's total (8.5 and 17.3) unless the region
 # power is retuned too. Past the end of a table, each extra reward adds the table's last step.
+# Basically have diminishing returns on card rewards. Tweak as you see fit
 CARD_REWARD_STRENGTH = (0, 1, 2, 3, 4, 5, 5.9, 6.7, 7.4, 8.0, 8.5)
 CARD_REWARD_STRENGTH_ALL_SHUFFLED = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
                                      11, 11.95, 12.85, 13.65, 14.4, 15.1, 15.75, 16.3, 16.8, 17.3)
@@ -183,6 +191,7 @@ RELIC_POWER = 1.5
 VANILLA_CARD_REWARD_SHARE = 0.5
 # Card strength of each vanilla card reward. Vanilla rewards arrive one at a time, so early ones
 # are often survival picks; every AP Card Reward can be compared at the start of a run.
+# note worthy that its less than a normal card reward since once its skipped: its skipped forever
 VANILLA_CARD_POWER = 0.85
 
 
@@ -208,9 +217,11 @@ def card_rewards_needed(table: tuple[float, ...], strength: float) -> int:
 # --- Missing support: requirement added until AP items restore it ----------------------------
 
 REST_POWER_BY_ACT = (3.0, 3.5, 4.0)    # this act's rest tier
+
 # A rest site offers one action. A run that can smith but not rest in this act smiths at each rest
 # site instead, so its missing rest tier costs only this share. Missing smiths keep their full
 # value: upgrades last the whole run, while the extra heals are rarely needed.
+# Basically if you have both options, rests are only currently half as effective
 REST_SHARE_WHILE_SMITHING = 0.5
 # About one power per upgrade: a run that seeks rest sites upgrades two or three times an act.
 # Act 3 upgrades matter less, because the best cards are already upgraded by then.

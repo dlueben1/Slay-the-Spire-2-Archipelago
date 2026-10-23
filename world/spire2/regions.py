@@ -32,22 +32,22 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
     every_other = not world.options.shuffle_all_cards
     ascension_mod = 1 if 'DoubleBoss'.lower() in config.ascension and 'DoubleBoss'.lower() not in config.ascension_down else 0
     # Old logic has no elite track, so it keeps the relic checks in their original path regions.
-    two_tracks = world.effective_logic == "new"
-    relic_regions = RELIC_REGIONS if two_tracks else LEGACY_RELIC_REGIONS
+    is_new_logic = world.effective_logic == "new"
+    relic_regions = RELIC_REGIONS if is_new_logic else LEGACY_RELIC_REGIONS
 
     def relics(region: str) -> List[str]:
         return [f"Relic {number}" for number, name in relic_regions.items() if name == region]
 
     def elite_track_entrances(act: int) -> List[str]:
         """Elite track regions entered from an act's Mid region: its chest and its first elite."""
-        if not two_tracks:
+        if not is_new_logic:
             return []
         return ([f"Act {act} Chest"] if act > 1 else []) + [f"Act {act} Elite 1"]
 
     def create_elite_track(act: int) -> None:
         """One region per relic: the act's chest after the previous act's elites, then each elite in
         turn, entered from the one before."""
-        if not two_tracks:
+        if not is_new_logic:
             return
         if act > 1:
             chest = f"Act {act} Chest"
@@ -64,15 +64,17 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
     # also reduce singleplayer and prevent one generated slot from supporting either play mode.
     # New logic ends Early Act 1 after the three weak hallway fights: the fourth fight's checks,
     # including the floor after it, are in the Act 1 Hallway.
-    early_fights = 3 if two_tracks else 4
+    early_fights = 3 if is_new_logic else 4
     # New logic budgets seven combat card rewards per act (logic_table.REGIONS), so the eighth
     # fight's checks wait for Early Act 2.
-    act_1_fights = 7 if two_tracks else 8
+    act_1_fights = 7 if is_new_logic else 8
     # A rest site offers every unchecked campfire check of its act and earlier acts, and rest
-    # sites start on each act's first Mid floor, so an act's first campfire check opens with its
-    # Mid region. Floorless openings have few other locations, and fill needs Campfire 1 there:
+    # sites start on each act's first Mid floor ie roughly floor 7 which is clearly not in the
+    # Early region so move it to Mid Act so people aren't forced to go out of logic, so an act's
+    # first campfire check opens with its Mid region. Floorless openings have few other
+    # locations, and fill needs Campfire 1 there:
     # in Mid Act 1 it failed many more sparse seeds.
-    first_campfire_stage = "Mid" if two_tracks and world.options.include_floor_checks else "Early"
+    first_campfire_stage = "Mid" if is_new_logic and world.options.include_floor_checks else "Early"
 
     def first_campfire(act: int, stage: str) -> List[str]:
         return [f"Act {act} Campfire 1"] if stage == first_campfire_stage else []
@@ -87,7 +89,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                 *_create_combat_check(1, early_fights),
                                                 *_create_card_rewards(1, early_fights, every_other)
                                             ],
-                                            ["Act 1 Hallway" if two_tracks else "Mid Act 1", "Act 1 Shop"])
+                                            ["Act 1 Hallway" if is_new_logic else "Mid Act 1", "Act 1 Shop"])
 
     neow.connect(first_char_region, first_char_region.name)
     multiworld.regions.append(first_char_region)
@@ -95,7 +97,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
     multiworld.regions.append(world.create_region(player, prefix, "Act 1 Shop", config,
                                                   [f"Shop Slot {i}" for i in range(1,6)]))
 
-    if two_tracks:
+    if is_new_logic:
         multiworld.regions.append(world.create_region(player, prefix, "Act 1 Hallway", config,
                                                       [
                                                           *_create_floor_check(6, 6),

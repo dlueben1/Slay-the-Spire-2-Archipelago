@@ -25,9 +25,8 @@ DEFAULT_STARTER_POWER = StarterPower(card=(1.0, 4.0), relic=(2.0, 3.5))
 class CharacterDefinition:
     name: str
     internal_id: str | None
-    # Vanilla entries explicitly choose reviewed values or DEFAULT_STARTER_POWER.
-    # Modded entries use DEFAULT_STARTER_POWER: they are assumed to define Archaic Tooth and Touch
-    # of Orobas mappings.
+    # Reviewed starter values; None uses DEFAULT_STARTER_POWER. Modded characters are assumed to
+    # define Archaic Tooth and Touch of Orobas mappings, so the defaults fit them until reviewed.
     starter_power: StarterPower | None = None
 
 

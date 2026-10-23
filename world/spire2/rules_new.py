@@ -6,7 +6,7 @@ from BaseClasses import CollectionState
 from NetUtils import JSONMessagePart
 from rule_builder.options import OptionFilter
 from rule_builder.rules import Rule, True_, CanReachRegion, Has, HasFromListUnique
-from .characters import CharacterConfig, VANILLA_CHARACTERS, DEFAULT_STARTER_POWER
+from .characters import CharacterConfig, DEFAULT_STARTER_POWER, character_registry
 from .logic_table import (
     ANCIENT_POWER_BY_TIER, BOSS_GOLD, ELITE_GOLD, ELITE_RELIC_REWARDS, FULL_SHOP_PAGE_VALUE, PATH_RELIC_REWARDS,
     RARE_CARD_POWER, REGIONS, RELIC_POWER, REST_POWER_BY_ACT, REST_SHARE_WHILE_SMITHING,
@@ -19,16 +19,6 @@ from .options import AncientRelicLocation
 if TYPE_CHECKING:
     from .options import Spire2Options
     from .world import SlayTheSpire2World
-
-
-# Reviewed values live with character registration. New vanilla definitions explicitly
-# select DEFAULT_STARTER_POWER until their starting loadout has been assessed.
-STARTER_CARD_POWER = {definition.name: definition.starter_power.card
-                      for definition in VANILLA_CHARACTERS if definition.starter_power is not None}
-STARTER_RELIC_POWER = {definition.name: definition.starter_power.relic
-                       for definition in VANILLA_CHARACTERS if definition.starter_power is not None}
-STARTER_PAIR_POWER = {definition.name: definition.starter_power.missing_pair
-                      for definition in VANILLA_CHARACTERS if definition.starter_power is not None}
 
 
 class LedgerEntry(NamedTuple):
@@ -72,16 +62,8 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
         options = world.options
         check = PowerCheck(self.act, self.power_level, self.card_rewards, self.minimum_cards,
                            rest=self.rest, smith=self.smith, remove=self.remove, shop=self.shop)
-        if config.mod_num:
-            # Modded characters are assumed to define Archaic Tooth and Touch of Orobas mappings,
-            # as every predefined one does, so their starters use the default values.
-            card_power = DEFAULT_STARTER_POWER.card
-            relic_power = DEFAULT_STARTER_POWER.relic
-            pair_power = DEFAULT_STARTER_POWER.missing_pair
-        else:
-            card_power = STARTER_CARD_POWER.get(config.name, DEFAULT_STARTER_POWER.card)
-            relic_power = STARTER_RELIC_POWER.get(config.name, DEFAULT_STARTER_POWER.relic)
-            pair_power = STARTER_PAIR_POWER.get(config.name, DEFAULT_STARTER_POWER.missing_pair)
+        definition = character_registry.get(config.char_offset)
+        starter = (definition and definition.starter_power) or DEFAULT_STARTER_POWER
         return self.Resolved(
             char=config.name,
             power_level=self.power_level,
@@ -101,9 +83,9 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
             shop_scale=check.shop_scale if options.shop_sanity or options.gold_sanity else 0,
             shuffled_shop_slots=(options.shop_card_slots.value, options.shop_neutral_card_slots.value,
                                  options.shop_relic_slots.value, options.shop_potion_slots.value),
-            starter_card_power=card_power if config.progressive_starter_card else (0, 0),
-            starter_relic_power=relic_power if config.progressive_starter_relic else (0, 0),
-            starter_pair_power=pair_power,
+            starter_card_power=starter.card if config.progressive_starter_card else (0, 0),
+            starter_relic_power=starter.relic if config.progressive_starter_relic else (0, 0),
+            starter_pair_power=starter.missing_pair,
             region=self.region or f"Act {self.act}",
             relic_cap=None if self.relic_rewards is None
                       else options.relic_rewards_available_anytime.value + self.relic_rewards,
