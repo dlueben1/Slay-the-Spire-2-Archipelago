@@ -85,6 +85,7 @@ base_item_table.update({
 })
 
 # Items in this table are character-agnostic, and can be claimed by any of them
+# 500-599 is Filler Items - Buffs
 universal_items: Dict[str, ItemData] = {
     # Filler / Junk
     'Free Attack': ItemData(500, ItemType.BUFF, ItemClassification.filler),
@@ -104,6 +105,14 @@ universal_items: Dict[str, ItemData] = {
     #'Single Colorless Card': ItemData(508, ItemType.FILLER_CARD_REWARD, ItemClassification.filler),
 }
 
+# `bonus_item_table` is keyed by the configuration selector: "WAX_RELIC". This is what the YAML option uses.
+bonus_item_table: Dict[str, BonusItemData] = {
+    'WAX_RELIC': BonusItemData(
+        'Bonus Wax Relic',
+        ItemData(600, ItemType.BONUS_WAX_RELIC, ItemClassification.useful),
+    ),
+}
+
 # Universal trap IDs are shared with the client and never receive character offsets.
 trap_item_table: Dict[str, ItemData] = {
     "Weak Trap": ItemData(700, ItemType.TRAP, ItemClassification.trap),
@@ -117,13 +126,7 @@ trap_item_table: Dict[str, ItemData] = {
     "Dazed Trap": ItemData(708, ItemType.TRAP, ItemClassification.trap),
 }
 
-# `bonus_item_table` is keyed by the configuration selector: "WAX_RELIC". This is what the YAML option uses.
-bonus_item_table: Dict[str, BonusItemData] = {
-    'WAX_RELIC': BonusItemData(
-        'Bonus Wax Relic',
-        ItemData(600, ItemType.BONUS_WAX_RELIC, ItemClassification.useful),
-    ),
-}
+
 
 # `universal_bonus_items` is keyed by the actual Archipelago item name (like "Bonus Wax Relic").
 # This matches item_table and create_item() lookups.

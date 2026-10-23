@@ -33,6 +33,13 @@ VANILLA_CHARACTERS = (
     CharacterDefinition("Necrobinder", "Necrobinder", StarterPower((1.0, 2.5), (4.0, 5.0))),
 )
 
+# Fill these in with their known starter power once people know them better
+# These currently take up an entire block of locationIDs which bloat up the datapackage
+# For now I've added popular character mods but this isn't something to add willy nilly
+# It's a way of making it easier to add modded characters to YAML's and also better location names
+# And thus easier to hint, read, etc
+# In the future when dynamic datapackages come out, this like definition of characters is still
+# Very useful.
 PREDEFINED_CHARACTERS = (
     CharacterDefinition("Tectonic", "INTOTHESPIREVERSE-SHADOW_IRONCLAD"),
     CharacterDefinition("Captain", "INTOTHESPIREVERSE-SHADOW_REGENT"),
@@ -128,7 +135,9 @@ def needs_generic_block(value: str) -> bool:
 
 
 def unique_character_ids(values: Sequence[str]) -> list[str]:
-    """Keep the first occurrence of each character, resolving aliases before deduplication."""
+    """Keep the first occurrence of each character, resolving aliases before deduplication.
+    In the future I could see us removing this function to allow multiple of the same character
+    The blocker is figuring out how to handle this in the client and be ergonomic"""
     result = []
     seen = set()
     for value in values:

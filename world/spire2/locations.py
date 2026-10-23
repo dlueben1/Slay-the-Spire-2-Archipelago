@@ -103,3 +103,11 @@ def create_location_tables(registry: dict[int, CharacterDefinition]) -> tuple[
 
 
 location_table, characters_to_locs, loc_ids_to_data = create_location_tables(character_registry)
+
+# There used to be location groups here but for the most part: the location groups that existed
+# were nonsensical such as entire Act's as locations which make no sense to prioritise or exclude
+# I think the only one's that sort of make sense are late combat, late relics which would exclude
+# for all characters all at once, like say combat 18 - 20 which are easy to miss or relic 9 or 10
+# which people also miss. Though imo at that point people usually goal rather than directly go for
+# these. Location groups just bloat up the datapackage even further and takes up roughly 1/3 to 1/2
+# of the size when done poorly like before.
