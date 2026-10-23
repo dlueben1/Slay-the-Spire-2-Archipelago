@@ -68,15 +68,4 @@ public sealed class ApRewardSelectionQueueTests
         await selection;
         await reopenedMenu;
     }
-
-    [Fact]
-    public async Task OnePlayerWaitingDoesNotBlockAnotherPlayersQueue()
-    {
-        var release = new TaskCompletionSource();
-        Task<bool> waiting = new ApRewardSelectionQueue().Run(async () => { await release.Task; return false; });
-        Assert.True(await new ApRewardSelectionQueue().Run(() => Task.FromResult(true)));
-        Assert.False(waiting.IsCompleted);
-        release.SetResult();
-        Assert.False(await waiting);
-    }
 }

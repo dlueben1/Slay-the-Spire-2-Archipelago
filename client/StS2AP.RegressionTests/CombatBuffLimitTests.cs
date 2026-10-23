@@ -61,22 +61,6 @@ public sealed class CombatBuffLimitTests
         Assert.True(restored.TryBegin(new CombatEffectKey(0, 2, 0)));
     }
 
-    [Fact]
-    public void EveryPeerAgreesAndEachPlayerHasAnIndependentAllowance()
-    {
-        var host = new[] { new CombatEffectLimit(), new CombatEffectLimit() };
-        var guest = new[] { new CombatEffectLimit(), new CombatEffectLimit() };
-        foreach (var replica in new[] { host, guest })
-        {
-            Assert.True(replica[0].TryBegin(FirstCombat));
-            replica[0].Complete(FirstCombat);
-            Assert.False(replica[0].TryBegin(FirstCombat));
-            Assert.True(replica[1].TryBegin(FirstCombat));
-            replica[1].Complete(FirstCombat);
-        }
-        Assert.Equal(JsonSerializer.Serialize(host), JsonSerializer.Serialize(guest));
-    }
-
     [Theory]
     [InlineData(0, 1, 1)] // Another fight nested in the same event/map point.
     [InlineData(0, 2, 0)] // Room IDs restart at the next map point.

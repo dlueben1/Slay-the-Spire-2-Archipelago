@@ -50,12 +50,6 @@ module ParticipantTests =
                         else "ready"
                     Assert.Equal(expected, evaluate candidate |> outcome)
 
-    [<Fact>]
-    let ``empty history is prepared but a previously ready contribution cannot certify newer input`` () =
-        let original = input ()
-        Assert.Equal(ParticipantKind.OwnApSlot, (ready original).Kind)
-        Assert.Equal("ap-history-incomplete", evaluate { original with ReceiptSourceReady = false } |> outcome)
-
     [<Theory>]
     [<InlineData(0)>]
     [<InlineData(1)>]

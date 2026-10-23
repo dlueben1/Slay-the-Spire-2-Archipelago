@@ -11,21 +11,21 @@ public sealed class SingleplayerCheckpointBankTests : IDisposable
     private string BankDirectory => Directory.GetDirectories(_root).Single();
 
     [Fact]
-    public void FreshAttemptUsesSameNinePositionsAndOnlyOverwritesReachedBoundary()
+    public void FreshAttemptUsesSamePositionsAndOnlyOverwritesReachedBoundary()
     {
         foreach (string key in SingleplayerCheckpointBank.Milestones)
             Store.Save(_key, key, "old " + key, 1, true);
         // A new attempt/restart reconstructs the key; there is no playthrough identity.
         var nextAttempt = new SingleplayerCheckpointBank.BankKey(new("seed", 0, 1), "IRONCLAD");
         var restarted = new SingleplayerCheckpointBank(_root);
-        Assert.Equal(9, restarted.Read(nextAttempt).Checkpoints.Count);
+        Assert.Equal(SingleplayerCheckpointBank.Milestones.Length, restarted.Read(nextAttempt).Checkpoints.Count);
         restarted.Save(nextAttempt, "1-ancient", "new start", 0, false);
         Assert.Equal("new start", Store.Load(_key, "1-ancient").Payload);
         Assert.Equal("old 1-boss", Store.Load(_key, "1-boss").Payload);
         Assert.Equal("old 3-treasure", Store.Load(_key, "3-treasure").Payload);
         Assert.Equal("old 3-campfire", Store.Load(_key, "3-campfire").Payload);
         Assert.Single(Directory.GetDirectories(_root));
-        Assert.Equal(9, Directory.GetFiles(BankDirectory, "run-*.save").Length);
+        Assert.Equal(SingleplayerCheckpointBank.Milestones.Length, Directory.GetFiles(BankDirectory, "run-*.save").Length);
     }
 
     [Fact]

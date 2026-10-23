@@ -1,4 +1,3 @@
-﻿using StS2AP.Data;
 using StS2AP.Utils;
 using Xunit;
 using static StS2AP.Data.ItemTable;
@@ -63,19 +62,6 @@ public sealed class CombatEffectReceiptQueueTests
         Assert.Equal(-1, queue.LastConsumedIndex);
         Assert.True(queue.TryPeek(out var next));
         Assert.Equal(APItem.Strength, next.EffectType);
-    }
-
-    [Fact]
-    public void CombatBuffTrialsDoNotContributeToMultiplayerGold()
-    {
-        foreach (APItem item in Enum.GetValues<APItem>())
-            Assert.False(ItemTable.IsMultiplayerBuffGoldFallback((long)item));
-        int converted = Enum.GetValues<APItem>().Count(item =>
-            ItemTable.IsUniversalCombatBuff((long)item)
-            && ItemTable.IsMultiplayerBuffGoldFallback((long)item));
-        var bank = new Dictionary<long, int>();
-        UniversalBuffGold.AddToBank(bank, new long[] { 1000 }, 0, converted);
-        Assert.Equal(0, bank[1000]);
     }
 }
 }

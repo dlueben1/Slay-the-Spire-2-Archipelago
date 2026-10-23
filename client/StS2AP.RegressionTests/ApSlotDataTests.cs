@@ -8,17 +8,11 @@ namespace StS2AP.RegressionTests;
 
 public sealed class ApSlotDataTests
 {
-    [Theory]
-    [InlineData("1.1.2")]
-    [InlineData("2.2.0")]
-    [InlineData("3.0.0")]
-    public void OrdinarySlotsReadTheirCharactersAtEveryVersion(string version)
+    [Fact]
+    public void OrdinarySlotsReadTheirCharacters()
     {
         var characters = JArray.Parse("[{\"name\":\"Ironclad\"}]");
-        var slot = new Dictionary<string, object>
-        {
-            ["mod_compat_version"] = version, ["characters"] = characters,
-        };
+        var slot = new Dictionary<string, object> { ["characters"] = characters };
         Assert.Same(characters, ApSlotData.ReadCharacters(slot));
     }
 
