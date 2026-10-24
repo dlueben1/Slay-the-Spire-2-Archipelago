@@ -33,10 +33,18 @@ VANILLA_CHARACTERS = (
     CharacterDefinition("Necrobinder", "Necrobinder", StarterPower((1.0, 2.5), (4.0, 5.0))),
 )
 
+# Fill these in with their known starter power once people know them better
+# These currently take up an entire block of locationIDs which bloat up the datapackage
+# For now I've added popular character mods but this isn't something to add willy nilly
+# It's a way of making it easier to add modded characters to YAML's and also better location names
+# And thus easier to hint, read, etc
+# In the future when dynamic datapackages come out, this like definition of characters is still
+# Very useful.
 PREDEFINED_CHARACTERS = (
     CharacterDefinition("Tectonic", "INTOTHESPIREVERSE-SHADOW_IRONCLAD"),
     CharacterDefinition("Captain", "INTOTHESPIREVERSE-SHADOW_REGENT"),
     CharacterDefinition("Acolyte", "INTOTHESPIREVERSE-SHADOW_SILENT"),
+    # Downfall - Classic Characters
     CharacterDefinition("Slime Boss", "SLIMEBOSS-SLIME_BOSS"),
     CharacterDefinition("Guardian", "GUARDIAN-GUARDIAN"),
     CharacterDefinition("Hexaghost", "HEXAGHOST-HEXAGHOST"),
@@ -45,7 +53,21 @@ PREDEFINED_CHARACTERS = (
     CharacterDefinition("Snecko", "SNECKO-SNECKO"),
     CharacterDefinition("Hermit", "HERMIT-HERMIT"),
     CharacterDefinition("Awakened One", "AWAKENED-AWAKENED"),
+    # Watcher by Lamali
     CharacterDefinition("Watcher", "WATCHER-WATCHER"),
+    CharacterDefinition("Hornet", "HORNET_MOD_CHARACTER_HORNET_MOD_CHARACTER"),
+    # Slugcat the Spirell
+    CharacterDefinition("Slugcat Survivor", "SLUGCAT_THE_SPIRE_II_CHARACTER_RAINWORLD_LIVER"),
+    CharacterDefinition("Slugcat Hunter", "SLUGCAT_THE_SPIRE_II_CHARACTER_RAINWORLD_REDCAT"),
+    CharacterDefinition("Slugcat Rivulet", "SLUGCAT_THE_SPIRE_II_CHARACTER_RAINWORLD_RIVER"),
+    # IDs from each mod's beta-branch Workshop edition; main-branch editions are separate items.
+    CharacterDefinition("Alchemist", "ALCHEMIST-ALCHEMIST"),
+    CharacterDefinition("Runesmith", "RUNESMITH2-RUNESMITH2"),
+    CharacterDefinition("Witch", "THEWITCH-WITCH"),
+    CharacterDefinition("Tailor", "THETAILOR-THE_TAILOR"),
+    CharacterDefinition("Engineer", "THEENGINEER-THE_ENGINEER"),
+    CharacterDefinition("Kakarot", "KAKAROTMOD-KAKAROT"),
+    CharacterDefinition("Fae Sorceress", "FAESORCERESS-FAE_SORCERESS"),
 )
 
 
@@ -107,8 +129,15 @@ def character_identity(value: str) -> str:
     return key
 
 
+def needs_generic_block(value: str) -> bool:
+    """Whether a character has no vanilla or predefined block and must take a Custom Character slot."""
+    return value.strip().casefold() not in registered_character_blocks
+
+
 def unique_character_ids(values: Sequence[str]) -> list[str]:
-    """Keep the first occurrence of each character, resolving aliases before deduplication."""
+    """Keep the first occurrence of each character, resolving aliases before deduplication.
+    In the future I could see us removing this function to allow multiple of the same character
+    The blocker is figuring out how to handle this in the client and be ergonomic"""
     result = []
     seen = set()
     for value in values:

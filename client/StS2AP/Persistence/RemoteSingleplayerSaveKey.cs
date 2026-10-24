@@ -1,17 +1,17 @@
 namespace StS2AP.Persistence;
 
-/// <summary>Names the one remote save owned by an AP slot participant and character.</summary>
+/// <summary>Names the one remote save owned by an AP slot and character.</summary>
 internal static class RemoteSingleplayerSaveKey
 {
-    private const string Prefix = "StS2AP_RemoteSingleplayerSave_v1";
+    // "_P1" is the player segment from the removed shared-slot co-op. Every slot is now that
+    // player, and keeping the segment keeps saves already stored on AP servers loadable.
+    private const string Prefix = "StS2AP_RemoteSingleplayerSave_v1_P1";
 
-    internal static string For(string character, int playerNumber)
+    internal static string For(string character)
     {
         if (string.IsNullOrWhiteSpace(character))
             throw new ArgumentException("The remote-save character is required.", nameof(character));
-        if (playerNumber is < 1 or > 4)
-            throw new ArgumentOutOfRangeException(nameof(playerNumber));
 
-        return $"{Prefix}_P{playerNumber}_{character}";
+        return $"{Prefix}_{character}";
     }
 }

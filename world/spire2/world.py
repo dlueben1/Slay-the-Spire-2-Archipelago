@@ -14,10 +14,11 @@ from .rules import FALLBACK_REASON, MID_ACT_1_POWER, select_logic, set_rules
 from . import rules_old
 from .web_world import SlayTheSpire2Web
 from .characters import (CharacterConfig, character_list, vanilla_character_ids, character_registry,
-                         registered_character_blocks, unique_character_ids, character_identity)
+                         registered_character_blocks, unique_character_ids, character_identity,
+                         needs_generic_block)
 from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET, GENERIC_CHARACTER_BLOCKS
 from .items import item_table, chars_to_items, bonus_item_table, ItemType, base_event_item_pairs, ItemData, item_groups
-from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType, location_groups
+from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
 from .options import Spire2Options
 
 COMBAT_GOLD_ITEM_COUNT = 13
@@ -42,8 +43,8 @@ class SlayTheSpire2World(World):
     web = SlayTheSpire2Web()
     options_dataclass = Spire2Options
     options: Spire2Options
-    # Named modded characters use independent ID blocks and APWorld-supplied names.
-    compat_flag = 2
+    # Named modded characters use ID blocks from 200, so IDs can reach 1,000,000 and above.
+    compat_flag = 3
     origin_region_name = "Neow's Room"
 
     # Build the final Item Table
@@ -55,7 +56,8 @@ class SlayTheSpire2World(World):
     ut_can_gen_without_yaml = True
 
     location_name_to_id = location_table
-    location_name_groups = location_groups
+    # No location groups beyond Archipelago's built-in "Everywhere". Act groups had to leave out numbered card
+    # rewards, whose act depends on options, yet they still made up most of the data package.
 
     filler_universal: dict[str, int]
     filler_characters: dict[str, dict[str, int]]
@@ -95,10 +97,11 @@ class SlayTheSpire2World(World):
             raise OptionError(f"Found duplicate characters: {[c.official_name for c in self.characters]}")
         if not any(not config.locked for config in self.characters):
             raise OptionError("No character started unlocked!")
-        if len(self.modded_chars) > NUM_CUSTOM:
+        generic_chars = [config for config in self.characters if config.char_offset in GENERIC_CHARACTER_BLOCKS]
+        if len(generic_chars) > NUM_CUSTOM:
             raise OptionError(
-                f"StS 2 only supports {NUM_CUSTOM} modded characters; "
-                f"got {len(self.modded_chars)}: {[c.option_name for c in self.modded_chars]}"
+                f"StS 2 only supports {NUM_CUSTOM} characters without a predefined name; "
+                f"got {len(generic_chars)}: {[c.option_name for c in generic_chars]}"
             )
         self.total_shop_items = (self.options.shop_card_slots.value + self.options.shop_neutral_card_slots.value +
                                  self.options.shop_relic_slots.value + self.options.shop_potion_slots.value)
@@ -177,17 +180,18 @@ class SlayTheSpire2World(World):
             else:
                 selected_chars = self.random.sample(remaining, k=num_rand_chars)
 
-        modded_chars = [char for char in selected_chars if char.casefold() not in vanilla_character_ids]
-        excess = len(modded_chars) - NUM_CUSTOM
+        # Only characters without a vanilla or predefined block use the limited generic blocks.
+        generic_chars = [char for char in selected_chars if needs_generic_block(char)]
+        excess = len(generic_chars) - NUM_CUSTOM
         if excess > 0:
             supported_chars = [char for char in char_options
-                               if char.casefold() in vanilla_character_ids and char not in selected_chars]
-            # A random subset may substitute unselected vanilla characters to meet the cap.
+                               if not needs_generic_block(char) and char not in selected_chars]
+            # A random subset may substitute unselected vanilla or predefined characters to meet the cap.
             # Never silently reduce the requested roster or remove its fixed unlocked character.
             if num_rand_chars == 0 or len(supported_chars) < excess:
-                raise OptionError(f"StS 2 supports at most {NUM_CUSTOM} selected modded characters; "
-                                  "reduce the roster or Pick Number of Characters")
-            candidates = [char for char in modded_chars if char != unlocked_char]
+                raise OptionError(f"StS 2 supports at most {NUM_CUSTOM} selected characters without a "
+                                  "predefined name; reduce the roster or Pick Number of Characters")
+            candidates = [char for char in generic_chars if char != unlocked_char]
             for char in self.random.sample(candidates, k=excess):
                 selected_chars.remove(char)
             selected_chars.extend(self.random.sample(supported_chars, k=excess))

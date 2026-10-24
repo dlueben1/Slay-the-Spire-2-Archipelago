@@ -7,27 +7,18 @@ internal static class ApSlotData
     internal static Dictionary<string, object> Normalize(IReadOnlyDictionary<string, object> slotData) =>
         slotData.ToDictionary(pair => pair.Key, pair => NormalizeValue(pair.Value));
 
-    // Ordinary slots use characters at every APWorld version. Shared-slot worlds
-    // may still provide the numbered-player fields; require both if either is present.
-    internal static (int Count, int Number, JArray Characters) ReadPlayer(
-        IReadOnlyDictionary<string, object> slotData, int selectedPlayer)
+    // Ordinary slots use characters at every APWorld version. The removed shared-slot co-op
+    // gave players 2-4 extra 1,000,000-ID partitions; this client reads those IDs as
+    // character blocks, so reject such slots instead of misreading their items and checks.
+    internal static JArray ReadCharacters(IReadOnlyDictionary<string, object> slotData)
     {
-        bool hasCount = slotData.TryGetValue("player_count", out object? countValue);
-        bool hasPlayers = slotData.TryGetValue("players", out object? playersValue);
-        if (hasCount != hasPlayers)
-            throw new InvalidDataException("The AP slot is missing player_count or players.");
+        if (slotData.TryGetValue("player_count", out object? countValue) && Convert.ToInt32(countValue) != 1)
+            throw new InvalidDataException(
+                $"This AP slot was generated for shared-slot co-op (player_count={countValue}), "
+                + "which this mod version no longer supports. Give each player their own AP slot.");
 
-        int count = hasCount ? Convert.ToInt32(countValue) : 1;
-        int number = hasPlayers ? selectedPlayer : 1;
-        if (!CoopPlayerSelection.IsValid(count, number))
-            throw new InvalidDataException($"Player {number} is outside this slot's player_count={count}. Change Shared-slot player number in Custom APWorld settings before connecting.");
-
-        JArray? characters = hasPlayers
-            ? (playersValue as JObject)?[number.ToString()] as JArray
-            : slotData.GetValueOrDefault("characters") as JArray;
-        if (characters == null)
-            throw new InvalidDataException("The AP slot is missing the selected player's character configuration.");
-        return (count, number, characters);
+        return slotData.GetValueOrDefault("characters") as JArray
+            ?? throw new InvalidDataException("The AP slot is missing its character configuration.");
     }
 
     private static object NormalizeValue(object value)

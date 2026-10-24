@@ -11,21 +11,21 @@ public sealed class SingleplayerCheckpointBankTests : IDisposable
     private string BankDirectory => Directory.GetDirectories(_root).Single();
 
     [Fact]
-    public void FreshAttemptUsesSameNinePositionsAndOnlyOverwritesReachedBoundary()
+    public void FreshAttemptUsesSamePositionsAndOnlyOverwritesReachedBoundary()
     {
         foreach (string key in SingleplayerCheckpointBank.Milestones)
             Store.Save(_key, key, "old " + key, 1, true);
         // A new attempt/restart reconstructs the key; there is no playthrough identity.
         var nextAttempt = new SingleplayerCheckpointBank.BankKey(new("seed", 0, 1), "IRONCLAD");
         var restarted = new SingleplayerCheckpointBank(_root);
-        Assert.Equal(9, restarted.Read(nextAttempt).Checkpoints.Count);
+        Assert.Equal(SingleplayerCheckpointBank.Milestones.Length, restarted.Read(nextAttempt).Checkpoints.Count);
         restarted.Save(nextAttempt, "1-ancient", "new start", 0, false);
         Assert.Equal("new start", Store.Load(_key, "1-ancient").Payload);
         Assert.Equal("old 1-boss", Store.Load(_key, "1-boss").Payload);
         Assert.Equal("old 3-treasure", Store.Load(_key, "3-treasure").Payload);
         Assert.Equal("old 3-campfire", Store.Load(_key, "3-campfire").Payload);
         Assert.Single(Directory.GetDirectories(_root));
-        Assert.Equal(9, Directory.GetFiles(BankDirectory, "run-*.save").Length);
+        Assert.Equal(SingleplayerCheckpointBank.Milestones.Length, Directory.GetFiles(BankDirectory, "run-*.save").Length);
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public sealed class SingleplayerCheckpointBankTests : IDisposable
     }
 
     [Fact]
-    public void SeedTeamSlotPlayerAndCharacterEachHaveIndependentBanks()
+    public void SeedTeamSlotAndCharacterEachHaveIndependentBanks()
     {
         Store.Save(_key, "1-boss", "original", 17, true);
         var others = new[]
@@ -63,7 +63,6 @@ public sealed class SingleplayerCheckpointBankTests : IDisposable
             _key with { Owner = _key.Owner with { Team = 1 } },
             _key with { Owner = _key.Owner with { Slot = 2 } },
             _key with { Character = "SILENT" },
-            _key with { Owner = _key.Owner with { PlayerNumber = 2 } },
         };
         foreach (var other in others)
         {
@@ -71,33 +70,34 @@ public sealed class SingleplayerCheckpointBankTests : IDisposable
             Assert.Throws<InvalidDataException>(() => Store.Load(other, "1-boss"));
             Store.Save(other, "1-boss", "other", 17, false);
         }
-        Assert.Equal(6, Directory.GetDirectories(_root).Length);
+        Assert.Equal(5, Directory.GetDirectories(_root).Length);
         Assert.Equal("original", Store.Load(_key, "1-boss").Payload);
     }
 
     [Fact]
-    public void PlayerOneCanReadCheckpointMetadataWrittenBeforeNumberedPlayers()
+    public void ExistingCheckpointBanksKeepTheirDirectoryAndLoad()
     {
         Store.Save(_key, "1-boss", "existing checkpoint", 17, true);
-        // The old bank hash used precisely this shape, without PlayerNumber.
+        // Existing bank directories are named by the hash of precisely this shape.
         var oldKey = new { Owner = new { Seed = "seed", Team = 0, Slot = 1 }, Character = "IRONCLAD" };
         string oldDirectory = Path.Combine(_root, Convert.ToHexString(
             System.Security.Cryptography.SHA256.HashData(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(oldKey))));
         Assert.Equal(oldDirectory, BankDirectory);
+        // Metadata from the removed shared-slot co-op also recorded the (always 1) player number.
         string manifest = Path.Combine(oldDirectory, "metadata.json");
         var json = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(manifest))!;
-        json["Identity"]!["Owner"]!.AsObject().Remove("PlayerNumber");
+        json["Identity"]!["Owner"]!["PlayerNumber"] = 1;
         File.WriteAllText(manifest, json.ToJsonString());
         Assert.Equal("existing checkpoint", new SingleplayerCheckpointBank(_root).Load(_key, "1-boss").Payload);
-        Assert.Empty(Store.Read(_key with { Owner = _key.Owner with { PlayerNumber = 2 } }).Checkpoints);
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(5)]
-    public void InvalidPlayerNumberCannotCreateCheckpoint(int number)
+    [InlineData(" ", 0, 1)]
+    [InlineData("seed", -1, 1)]
+    [InlineData("seed", 0, -1)]
+    public void InvalidIdentityCannotCreateCheckpoint(string seed, int team, int slot)
     {
-        var invalid = _key with { Owner = _key.Owner with { PlayerNumber = number } };
+        var invalid = new SingleplayerCheckpointBank.BankKey(new(seed, team, slot), "IRONCLAD");
         Assert.Throws<InvalidDataException>(() => Store.Save(invalid, "1-boss", "invalid", 17, true));
         Assert.False(Directory.Exists(_root));
     }

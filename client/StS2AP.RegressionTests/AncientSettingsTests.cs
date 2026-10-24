@@ -7,26 +7,6 @@ namespace StS2AP.RegressionTests;
 public sealed class AncientSettingsTests
 {
     [Fact]
-    public void EachOverrideIsIndependentAndLeavesSlotDefaultsUntouched()
-    {
-        foreach (var mode in Enum.GetValues<AncientRelicLocation>())
-        foreach (var pool in Enum.GetValues<AncientRelicPoolMode>())
-        foreach (var modeOverride in new AncientRelicLocation?[] { null, AncientRelicLocation.StartOfAct, AncientRelicLocation.Anytime })
-        foreach (var poolOverride in new AncientRelicPoolMode?[] { null, AncientRelicPoolMode.Balanced, AncientRelicPoolMode.Chaos, AncientRelicPoolMode.TrueChaos })
-        {
-            var slot = new AncientRewardSettings(mode, pool);
-            var effective = slot.WithOverrides(new ClientSettings
-            {
-                AncientRelicLocationOverride = modeOverride,
-                AncientRelicPoolOverride = poolOverride,
-            });
-            Assert.Equal(modeOverride ?? mode, effective.Location);
-            Assert.Equal(poolOverride ?? pool, effective.Pool);
-            Assert.Equal(new AncientRewardSettings(mode, pool), slot);
-        }
-    }
-
-    [Fact]
     public void ContinueRetainsPolicyAndAssignmentsWhileNextRunUsesNewPreferences()
     {
         var defaults = new AncientRewardSettings(AncientRelicLocation.StartOfAct, AncientRelicPoolMode.Balanced);

@@ -153,18 +153,6 @@ public sealed class ReceivedItemLedgerTests
         Assert.Equal(2, ledger.Received[0].Index);
     }
 
-    [Fact]
-    public void PlayersSharingAnApReceiptHaveIndependentRunConsumption()
-    {
-        var first = new ApReceivedItemLedger();
-        var second = new ApReceivedItemLedger();
-        first.RegisterReceived(Receipt(1));
-        second.RegisterReceived(Receipt(1));
-        first.MarkUsed(1);
-        Assert.True(first.IsUsed(1));
-        Assert.False(second.IsUsed(1));
-    }
-
     private static IEnumerable<IndexedItemInfo> InterruptedHistory()
     {
         yield return Receipt(2);

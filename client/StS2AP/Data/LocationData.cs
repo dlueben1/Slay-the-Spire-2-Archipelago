@@ -40,7 +40,7 @@ namespace StS2AP.Data
                 return -1;
             }
 
-            return CoopSlot.Location(combinedLocationId);
+            return combinedLocationId;
         }
 
         /// <summary>
@@ -73,10 +73,10 @@ namespace StS2AP.Data
         {
             long? characterNumber = player.GetAPCharacterNumber();
             if (baseId < 0 || !characterNumber.HasValue
-                || !ApPlayerContextResolver.TryGetRewardSettings(player, out ArchipelagoSettings settings)
+                || !ApPlayerContextResolver.TryGetRewardSettings(player, out _)
                 || !ArchipelagoIdCodec.TryComposeLocationId(baseId, characterNumber.Value, out long id))
                 return -1;
-            return ArchipelagoIdCodec.ForPlayer(id, settings.PlayerNumber);
+            return id;
         }
 
         internal static long GetRelicLocation(Player player, int rewardNumber) =>
@@ -226,7 +226,7 @@ namespace StS2AP.Data
                 {
                     try
                     {
-                        var id = session.Locations.GetLocationIdFromName("Slay the Spire II", CoopSlot.Name($"{character.APName()} Act {a} Campfire {c}"));
+                        var id = session.Locations.GetLocationIdFromName("Slay the Spire II", $"{character.APName()} Act {a} Campfire {c}");
                         ids.Add(id);
                     } 
                     catch 
@@ -293,7 +293,7 @@ namespace StS2AP.Data
             }
             for(int i = start; i <= count; i++)
             {
-                string locationName = CoopSlot.Name(pattern.Replace("#", i.ToString()));
+                string locationName = pattern.Replace("#", i.ToString());
                 long id = session.Locations.GetLocationIdFromName(
                     "Slay the Spire II",
                     locationName

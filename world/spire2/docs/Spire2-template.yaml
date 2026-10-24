@@ -26,15 +26,16 @@ Slay the Spire II:
     - "Silent"
     - "Necrobinder"
 
-  # Up to 20 extra modded characters, by predefined display name (e.g. Watcher) or full internal ID.
+  # Extra modded characters, by predefined display name (e.g. Watcher) or full internal ID.
+  # Any number of predefined characters; at most 20 characters without a predefined name.
   # The mod must be installed; installed IDs are listed in-game under Archipelago Settings.
-  # Some example modded characters and their mods will probably have a list somewhere pinned on discord
+  # Predefined characters, their internal IDs and their mods: https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/predefined-characters.md
   modded_characters: []
 
-  # Randomly pick this many characters from the lists above. 0-25; 0 uses all of them.
+  # Randomly pick this many characters from the lists above. 0-37; 0 uses all of them.
   pick_num_characters: 0
 
-  # Number of characters you must win with to goal. 0-25; 0 means every character.
+  # Number of characters you must win with to goal. 0-37; 0 means every character.
   num_chars_goal: 0
 
   # Whether characters must be unlocked by "Unlock <Character>" items.

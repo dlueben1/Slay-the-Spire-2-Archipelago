@@ -1,6 +1,5 @@
 using Archipelago.MultiClient.Net.Helpers;
 using Archipelago.MultiClient.Net.Models;
-using StS2AP.Data;
 using Xunit;
 
 namespace StS2AP.RegressionTests
@@ -10,13 +9,12 @@ namespace StS2AP.RegressionTests
         [Fact]
         public void MixedReceiptsDecodeUniversalItemsWithoutLoggingErrors()
         {
-            foreach (int player in new[] { 1, 2, 3, 4 })
-            {
-                foreach (long id in new[] { 500L, 600L })
-                    Assert.Equal(0L, Receipt(ArchipelagoIdCodec.ForPlayer(id, player)).GetAPCharacterNumber());
-                Assert.Equal(1L, Receipt(ArchipelagoIdCodec.ForPlayer(10018, player)).GetAPCharacterNumber());
-                Assert.Equal(2L, Receipt(ArchipelagoIdCodec.ForPlayer(20003, player)).GetAPCharacterNumber());
-            }
+            foreach (long id in new[] { 500L, 600L })
+                Assert.Equal(0L, Receipt(id).GetAPCharacterNumber());
+            Assert.Equal(1L, Receipt(10018).GetAPCharacterNumber());
+            Assert.Equal(2L, Receipt(20003).GetAPCharacterNumber());
+            // Predefined modded characters start at block 200, above 1,000,000.
+            Assert.Equal(211L, Receipt(2110004).GetAPCharacterNumber());
             Assert.Throws<InvalidOperationException>(() => Receipt(-1).GetAPCharacterNumber());
             Assert.Throws<InvalidOperationException>(() => ItemInfoExtensions.GetAPCharacterNumber(null!));
         }

@@ -23,8 +23,8 @@ public sealed class ParticipantInteropTests
         var input = new ParticipantContributionInput
         {
             SchemaVersion = 9,
-            Participation = new ParticipationInput { Kind = 1, PlayerNumber = 1, RoomSeed = "seed", ApTeamId = 0 },
-            HasSettings = true, PlayerCount = 1, ReceiptSourceReady = true,
+            Participation = new ParticipationInput { Kind = 1, RoomSeed = "seed", ApTeamId = 0 },
+            HasSettings = true, ReceiptSourceReady = true,
             RelicReceipts = new Dictionary<long, IReadOnlyList<int>>(),
             ProgressiveAncients = new Dictionary<long, int>(),
         };
@@ -36,11 +36,11 @@ public sealed class ParticipantInteropTests
     [Fact]
     public void ReadyIdentityDoesNotRetainMutableCSharpInputObjects()
     {
-        var identity = new ParticipationInput { Kind = 1, PlayerNumber = 1, RoomSeed = "seed", ApTeamId = 0, ApSlotId = 1 };
+        var identity = new ParticipationInput { Kind = 1, RoomSeed = "seed", ApTeamId = 0, ApSlotId = 1 };
         var input = new ParticipantContributionInput
         {
             SchemaVersion = 9, Participation = identity,
-            HasSettings = true, PlayerCount = 1, ReceiptSourceReady = true,
+            HasSettings = true, ReceiptSourceReady = true,
             RelicReceipts = new Dictionary<long, IReadOnlyList<int>>(),
             ProgressiveAncients = new Dictionary<long, int>(),
         };

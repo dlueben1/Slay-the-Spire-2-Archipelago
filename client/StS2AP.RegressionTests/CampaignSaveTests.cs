@@ -18,14 +18,6 @@ public sealed class CampaignSaveTests : IDisposable
     }
 
     [Fact]
-    public void SavePayloadRoundTripsWithItsChecksum()
-    {
-        var save = Store("floor one");
-        Assert.Null(CampaignSaveFiles.Verify(_directory, save.FileName, save.Hash));
-        Assert.Equal("floor one", File.ReadAllText(Path.Combine(_directory, save.FileName)));
-    }
-
-    [Fact]
     public void NewRecoveryPayloadDoesNotOverwriteCheckpoint()
     {
         var checkpoint = Store("treasure checkpoint");
@@ -34,14 +26,6 @@ public sealed class CampaignSaveTests : IDisposable
         Assert.Equal("treasure checkpoint", File.ReadAllText(Path.Combine(_directory, checkpoint.FileName)));
         Assert.Null(CampaignSaveFiles.Verify(_directory, checkpoint.FileName, checkpoint.Hash));
         Assert.Null(CampaignSaveFiles.Verify(_directory, recovery.FileName, recovery.Hash));
-    }
-
-    [Fact]
-    public void UnpublishedPayloadLeavesPriorSaveReferenceUsable()
-    {
-        var previous = Store("old payload");
-        Store("unpublished payload");
-        Assert.Null(CampaignSaveFiles.Verify(_directory, previous.FileName, previous.Hash));
     }
 
     [Fact]

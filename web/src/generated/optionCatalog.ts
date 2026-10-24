@@ -43,9 +43,23 @@ export interface GeneratedOption {
   group?: string;
 }
 
+export interface PredefinedCharacter {
+  name: string;
+  internal_id: string;
+}
+
+/** Character registry facts the APWorld uses to limit generated rosters. */
+export interface CharacterRegistry {
+  /** Maximum selected characters without a predefined name (generic Custom Character slots). */
+  generic_character_limit: number;
+  /** Modded characters with their own ID blocks; they do not use a generic slot. */
+  predefined: PredefinedCharacter[];
+}
+
 export interface OptionCatalog {
   schema_version: number;
   game: string;
+  characters: CharacterRegistry;
   option_order: string[];
   options: Record<string, GeneratedOption>;
 }

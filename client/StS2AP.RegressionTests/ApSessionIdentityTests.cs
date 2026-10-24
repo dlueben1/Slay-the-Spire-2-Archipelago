@@ -27,39 +27,6 @@ public sealed class ApSessionIdentityTests
     }
 
     [Fact]
-    public void NumberedPlayersHaveDistinctDurableIdentitiesThatSurviveJson()
-    {
-        var first = ApSessionIdentity.Create("ap.example:38281", "seed", 0, 1, 1);
-        for (int number = 2; number <= 4; number++)
-        {
-            var other = ApSessionIdentity.Create("ap.example:38281", "seed", 0, 1, number);
-            Assert.NotEqual(first, other);
-            Assert.NotEqual(first.Slot, other.Slot);
-            Assert.NotEqual(first.GetFileKey(), other.GetFileKey());
-            var outbox = PendingCheckOutbox.Create(other);
-            outbox.LocationIds.Add((number - 1) * 1000000L + 123);
-            var restored = JsonSerializer.Deserialize<PendingCheckOutbox>(JsonSerializer.Serialize(outbox))!;
-            Assert.Equal(other, restored.Identity);
-            Assert.Equal(number, restored.Identity.PlayerNumber);
-            Assert.Equal(other.GetFileKey(), restored.Identity.GetFileKey());
-        }
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(5)]
-    [InlineData(-1)]
-    public void InvalidPlayerNumbersCannotEnterLiveOrPersistedIdentities(int number)
-    {
-        Assert.Throws<ArgumentException>(() => ApSessionIdentity.Create("ap.example", "seed", 0, 1, number));
-        var data = JsonNode.Parse(PersistedIdentity)!;
-        data["player_number"] = number;
-        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<ApSessionIdentity>(data.ToJsonString()));
-        data["player_number"] = null;
-        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<ApSessionIdentity>(data.ToJsonString()));
-    }
-
-    [Fact]
     public void EquivalentAddressAndPersistedIdentityRemainEqual()
     {
         var expected = ApSessionIdentity.Create("ap.example:38281", "seed", 0, 1);

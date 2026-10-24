@@ -130,7 +130,6 @@ public static class ModSettingsRegistration
                     .AddSection("ancient_rewards", ConfigureAncientRewardsSection)
                     .AddSection("deathlink", ConfigureDeathLinkSection)
                     .AddSection("bug_reports", ConfigureBugReportsSection)
-                    .AddSection("custom_apworld", ConfigureCustomApWorldSection)
         );
         RegisterHotkeys();
     }
@@ -139,6 +138,14 @@ public static class ModSettingsRegistration
     {
         section.WithTitle(ModSettingsText.Literal("Installed Characters"))
                 .WithDescription(ModSettingsText.Literal("Internal Names of Installed Modded Characters"))
+                // The info card cannot scroll or select text, so long rosters need the copy button.
+                .AddButton("copy_modded_character_ids", ModSettingsText.Literal("Copy character IDs"),
+                    ModSettingsText.Literal("Copy"), host =>
+                    {
+                        InstalledCharacterIds.TryCopyToClipboard(out _);
+                        host.RequestRefresh();
+                    }, description: ModSettingsText.Dynamic(() =>
+                        InstalledCharacterIds.Status + " You can also type ap characters in the console."))
                 .AddInfoCard("ap-modded-chars", ModSettingsText.Literal("Character Names"), ModSettingsText.Dynamic(GetModdedNames));
 
     }
@@ -157,31 +164,8 @@ public static class ModSettingsRegistration
                 ModSettingsText.Dynamic(() => ApBugReport.Status));
     }
 
-    private static string GetModdedNames()
-    {
-        StringWriter sw =  new StringWriter();
-        var moddedChars = ModelDb.AllCharacters.Where(c => {
-            if(!c.IsPlayable)
-            {
-                return false;
-            }
-            switch(c.Id.Entry)
-            {
-                case "IRONCLAD":
-                case "SILENT":
-                case "REGENT":
-                case "DEFECT":
-                case "NECROBINDER":
-                    return false;
-            }
-            return true;
-        });
-        foreach(var c in moddedChars)
-        {
-            sw.WriteLine(c.Id.Entry);
-        }
-        return sw.ToString();
-    }
+    private static string GetModdedNames() =>
+        string.Join(System.Environment.NewLine, InstalledCharacterIds.GetModdedIds());
 
     /// <summary>
     /// Composes the Keybinds settings section
@@ -381,32 +365,6 @@ public static class ModSettingsRegistration
                     "Balanced uses the run's Ancient; Chaos uses the act's pool; True Chaos combines Acts 2 and 3. Neow remains Neow-only."));
     }
 
-    private static void ConfigureCustomApWorldSection(ModSettingsSectionBuilder section)
-    {
-        const string key = "multiplayer_player_number";
-        section.WithTitle(ModSettingsText.Literal("Custom APWorld"))
-            .WithDescription(ModSettingsText.Literal(
-                "Each player normally connects to their own YAML/AP slot; no player number is needed. "
-                + "This setting only applies to custom APWorlds with numbered players sharing one slot. "
-                + "For those worlds, select your player number before connecting."))
-            .AddIntSlider(key, ModSettingsText.Literal("Shared-slot player number"),
-                CreateBinding(static settings => settings.MultiplayerPlayerNumber,
-                    static (settings, value) =>
-                    {
-                        if (CanChangePlayerNumber())
-                        {
-                            settings.MultiplayerPlayerNumber = value;
-                            LogUtility.Info($"[AP Settings] Player Number set to {value}");
-                        }
-                    }),
-                minValue: 1, maxValue: 4, step: 1,
-                valueFormatter: static value => $"Player {value}",
-                description: ModSettingsText.Dynamic(() => GetPlayerNumberLockReason()
-                    ?? "Only used by custom shared-slot APWorlds. Ordinary slots always use Player 1."))
-            .ConfigureEntryMenu(key, ModSettingsMenuCapabilities.None)
-            .WithEntryEnabledWhen(key, CanChangePlayerNumber);
-    }
-
     private static void ConfigureCloudSavesSection(ModSettingsSectionBuilder section)
     {
         section.WithTitle(ModSettingsText.Literal("Cloud Saves"))
@@ -455,18 +413,6 @@ public static class ModSettingsRegistration
                     "Deletes every active, completed, and archived local AP multiplayer campaign for this profile. Non-AP multiplayer saves are preserved."))
             .ConfigureEntryMenu(LocalSaves_DeleteMultiplayerId, ModSettingsMenuCapabilities.None)
             .WithEntryEnabledWhen(LocalSaves_DeleteMultiplayerId, LocalSaveManagement.CanDelete);
-    }
-
-    private static bool CanChangePlayerNumber() => GetPlayerNumberLockReason() == null;
-
-    private static string? GetPlayerNumberLockReason()
-    {
-        if (GameUtility.IsInRun || MultiplayerSupport.IsMultiplayerScope)
-            return "Locked while in a run or multiplayer menu/lobby. Return to the main menu first.";
-        if (ArchipelagoClient.HasSlotConnection)
-            return "Locked to the selected AP slot. Use Disconnect from Archipelago (or Cancel Connection/Reconnect) "
-                + "on the main menu, then reopen these settings.";
-        return null;
     }
 
     private static void ConfigureRelicRewardsSection(ModSettingsSectionBuilder section)

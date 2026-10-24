@@ -24,7 +24,7 @@ public static class ApGrantDispatcher
         int buffCount = 0;
         foreach (ItemInfo item in receivedItems)
         {
-            if (!CoopSlot.Owns(item.ItemId))
+            if (ArchipelagoIdCodec.IsArchipelagoReservedId(item.ItemId))
                 continue;
             if (ArchipelagoIdCodec.IsUniversalItemId(item.ItemId))
             {

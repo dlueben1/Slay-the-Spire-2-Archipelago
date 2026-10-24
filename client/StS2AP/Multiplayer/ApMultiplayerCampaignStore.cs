@@ -69,7 +69,6 @@ public static class ApMultiplayerCampaignStore
         public string ApRoomSeed { get; set; } = string.Empty;
         public int ApTeamId { get; set; }
         public int ApSlotId { get; set; }
-        public int PlayerNumber { get; set; } = 1;
         public string ApSlotName { get; set; } = string.Empty;
         public string HostCharacterId { get; set; } = string.Empty;
         public long? HostCharacterOffset { get; set; }
@@ -92,7 +91,6 @@ public static class ApMultiplayerCampaignStore
         public string? ApRoomSeed { get; set; }
         public int? ApTeamId { get; set; }
         public int? ApSlotId { get; set; }
-        public int PlayerNumber { get; set; } = 1;
     }
 
     internal sealed record CampaignEntry(
@@ -148,8 +146,7 @@ public static class ApMultiplayerCampaignStore
         TryGetCurrentIdentity(out string roomSeed, out int teamId, out int slotId)
         && string.Equals(metadata.ApRoomSeed, roomSeed, StringComparison.Ordinal)
         && metadata.ApTeamId == teamId
-        && metadata.ApSlotId == slotId
-        && metadata.PlayerNumber == CoopSlot.PlayerNumber;
+        && metadata.ApSlotId == slotId;
 
     internal static bool TryGetActiveCampaignForRoster(
         StartRunLobby lobby,
@@ -315,7 +312,6 @@ public static class ApMultiplayerCampaignStore
                     : string.Equals(metadata.ApRoomSeed, roomSeed, StringComparison.Ordinal)
                         && metadata.ApTeamId == teamId
                         && metadata.ApSlotId == slotId
-                        && metadata.PlayerNumber == (hostState.SlotSettings?.PlayerNumber ?? 1)
                         && HasSameRoster(metadata.Roster, importedRoster));
         if (existing != null)
         {
@@ -336,7 +332,6 @@ public static class ApMultiplayerCampaignStore
             ApRoomSeed = roomSeed,
             ApTeamId = teamId,
             ApSlotId = slotId,
-            PlayerNumber = hostState.SlotSettings?.PlayerNumber ?? 1,
             ApSlotName = TryGetCurrentIdentity(
                     out string currentRoomSeed,
                     out int currentTeamId,
@@ -487,7 +482,6 @@ public static class ApMultiplayerCampaignStore
             ApRoomSeed = roomSeed,
             ApTeamId = teamId,
             ApSlotId = slotId,
-            PlayerNumber = CoopSlot.PlayerNumber,
             ApSlotName = ArchipelagoClient.PlayerName ?? string.Empty,
             HostCharacterId = characterId,
             HostCharacterOffset = GameUtility.CurrentConfig?.CharOffset ?? TryGetAPCharacterNumber(characterId),
@@ -509,8 +503,7 @@ public static class ApMultiplayerCampaignStore
         {
             if (previous.RunId != metadata.RunId
                 || previous.ApRoomSeed != metadata.ApRoomSeed
-                || previous.ApTeamId != metadata.ApTeamId || previous.ApSlotId != metadata.ApSlotId
-                || previous.PlayerNumber != metadata.PlayerNumber)
+                || previous.ApTeamId != metadata.ApTeamId || previous.ApSlotId != metadata.ApSlotId)
                 throw new InvalidDataException("The saved campaign identity changed during the native save.");
             // An asynchronous save completing after run cleanup must not reactivate history.
             if (previous.Status != CampaignStatus.Active)
@@ -537,7 +530,6 @@ public static class ApMultiplayerCampaignStore
                 && other.CampaignId != campaignId
                 && other.ApRoomSeed == metadata.ApRoomSeed
                 && other.ApTeamId == metadata.ApTeamId && other.ApSlotId == metadata.ApSlotId
-                && other.PlayerNumber == metadata.PlayerNumber
                 && HasSameRoster(other.Roster, metadata.Roster)))
         {
             conflict.Status = CampaignStatus.Archived;
@@ -570,7 +562,6 @@ public static class ApMultiplayerCampaignStore
                 ApRoomSeed = playerState?.ApRoomSeed,
                 ApTeamId = playerState?.ApTeamId,
                 ApSlotId = playerState?.ApSlotId,
-                PlayerNumber = playerState?.SlotSettings?.PlayerNumber ?? 1,
             });
         }
         return roster;
@@ -620,7 +611,6 @@ public static class ApMultiplayerCampaignStore
                 ApRoomSeed = state?.ApRoomSeed,
                 ApTeamId = state?.ApTeamId,
                 ApSlotId = state?.ApSlotId,
-                PlayerNumber = state?.SlotSettings?.PlayerNumber ?? 1,
             });
         }
         return roster;

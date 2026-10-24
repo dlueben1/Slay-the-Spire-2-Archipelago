@@ -1,6 +1,9 @@
 # Finding a modded character ID
 
-Predefined characters accept their display names as YAML aliases: **Tectonic, Captain, Acolyte, Slime Boss, Guardian, Hexaghost, Champ, Automaton, Snecko, Hermit, Awakened One, and Watcher**. Names are case-insensitive; full internal IDs still work. Use these aliases in `modded_characters`, as `advanced_characters` keys, or in `unlocked_character`.
+Predefined characters accept their display names, such as Watcher, Guardian or Tectonic, as YAML aliases. [Predefined modded characters](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/predefined-characters.md) lists each one with its internal ID, its mod and the mod's Steam Workshop page. Names are case-insensitive; full internal IDs still work. Use these aliases in `modded_characters`, as `advanced_characters` keys, or in `unlocked_character`.
+
+> [!NOTE]
+> Alchemist, Runesmith, Witch, Tailor and Engineer use the IDs from those mods' beta-branch Workshop editions. If you play the main-branch edition and connecting reports that the character is not loaded, use the internal ID shown in-game instead of the name.
 
 ```yaml
 modded_characters:
@@ -26,4 +29,4 @@ Other characters need their **internal ID**, which is **very likely to be differ
 >
 > Please use them at your own risk, and if you're playing with friends, run a test game with your modded characters before you get started to ensure the mod doesn't crash!
 
-Up to 20 modded characters can be selected for a generated roster. You can enter more candidates when using random character selection. Known characters use their display names in Archipelago items and hints. Other selected characters become Custom Character 1, 2, and so on in their YAML order; named characters do not consume these numbers.
+A generated roster can include every predefined character, but at most 20 characters without a predefined name. You can enter more candidates when using random character selection. Known characters use their display names in Archipelago items and hints. Other selected characters become Custom Character 1, 2, and so on in their YAML order; named characters do not consume these numbers.

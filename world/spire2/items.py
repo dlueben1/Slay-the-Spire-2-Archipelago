@@ -85,6 +85,7 @@ base_item_table.update({
 })
 
 # Items in this table are character-agnostic, and can be claimed by any of them
+# 500-599 is Filler Items - Buffs
 universal_items: Dict[str, ItemData] = {
     # Filler / Junk
     'Free Attack': ItemData(500, ItemType.BUFF, ItemClassification.filler),
@@ -104,6 +105,14 @@ universal_items: Dict[str, ItemData] = {
     #'Single Colorless Card': ItemData(508, ItemType.FILLER_CARD_REWARD, ItemClassification.filler),
 }
 
+# `bonus_item_table` is keyed by the configuration selector: "WAX_RELIC". This is what the YAML option uses.
+bonus_item_table: Dict[str, BonusItemData] = {
+    'WAX_RELIC': BonusItemData(
+        'Bonus Wax Relic',
+        ItemData(600, ItemType.BONUS_WAX_RELIC, ItemClassification.useful),
+    ),
+}
+
 # Universal trap IDs are shared with the client and never receive character offsets.
 trap_item_table: Dict[str, ItemData] = {
     "Weak Trap": ItemData(700, ItemType.TRAP, ItemClassification.trap),
@@ -117,13 +126,7 @@ trap_item_table: Dict[str, ItemData] = {
     "Dazed Trap": ItemData(708, ItemType.TRAP, ItemClassification.trap),
 }
 
-# `bonus_item_table` is keyed by the configuration selector: "WAX_RELIC". This is what the YAML option uses.
-bonus_item_table: Dict[str, BonusItemData] = {
-    'WAX_RELIC': BonusItemData(
-        'Bonus Wax Relic',
-        ItemData(600, ItemType.BONUS_WAX_RELIC, ItemClassification.useful),
-    ),
-}
+
 
 # `universal_bonus_items` is keyed by the actual Archipelago item name (like "Bonus Wax Relic").
 # This matches item_table and create_item() lookups.
@@ -156,10 +159,9 @@ def create_item_tables(registry: dict[int, CharacterDefinition]) -> tuple[
 item_table, chars_to_items, event_item_pairs = create_item_tables(character_registry)
 
 
-def create_item_groups(
-        items: dict[str, ItemData],
-        characters_to_items: dict[str, dict[str, ItemData]],
-) -> dict[str, typing.Set[str]]:
+# Groups span every character on purpose. Each character block adds to the data package that servers keep in
+# memory, and per-character groups would add another copy of that character's names to it.
+def create_item_groups(items: dict[str, ItemData]) -> dict[str, typing.Set[str]]:
     groups: dict[str, typing.Set[str]] = {
         "Gold": set(),
         "Campfire Upgrades": set(),
@@ -216,32 +218,7 @@ def create_item_groups(
         elif item_name in universal_bonus_items:
             groups["Bonus Items"].add(item_name)
 
-    for character_name, character_items in characters_to_items.items():
-        character_groups = {
-            ItemType.GOLD: groups.setdefault(f"{character_name} Gold", set()),
-            ItemType.CAMPFIRE: groups.setdefault(f"{character_name} Campfire Upgrades", set()),
-        }
-        character_shop_group = groups.setdefault(f"{character_name} Shop Slots", set())
-        character_starter_group = groups.setdefault(f"{character_name} Starter", set())
-
-        for item_name, item_data in character_items.items():
-            if item_data.type in character_groups:
-                character_groups[item_data.type].add(item_name)
-            elif item_data.type in {
-                ItemType.SHOP_CARD,
-                ItemType.SHOP_NEUTRAL,
-                ItemType.SHOP_RELIC,
-                ItemType.SHOP_POTION,
-                ItemType.SHOP_REMOVE,
-            }:
-                character_shop_group.add(item_name)
-            elif item_data.type in {
-                ItemType.PROGRESSIVE_STARTER_CARD,
-                ItemType.PROGRESSIVE_STARTER_RELIC
-            }:
-                character_starter_group.add(item_name)
-
     return groups
 
 
-item_groups = create_item_groups(item_table, chars_to_items)
+item_groups = create_item_groups(item_table)

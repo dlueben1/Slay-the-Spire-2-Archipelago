@@ -837,8 +837,6 @@ public static class ApRunData
         && (left.SlotSettings == null) == (right.SlotSettings == null)
         && left.SlotSettings?.AncientRelicLocation == right.SlotSettings?.AncientRelicLocation
         && left.SlotSettings?.AncientRelicPool == right.SlotSettings?.AncientRelicPool
-        && left.SlotSettings?.PlayerNumber == right.SlotSettings?.PlayerNumber
-        && left.SlotSettings?.PlayerCount == right.SlotSettings?.PlayerCount
         && RelicReceiptMapsEqual(
             left.InitialRelicReceiptIndexesByCharacter,
             right.InitialRelicReceiptIndexesByCharacter)

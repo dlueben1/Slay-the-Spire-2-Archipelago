@@ -147,7 +147,7 @@
         };
 
         public static bool IsUniversalTrap(long itemId) =>
-            (APItem)ArchipelagoIdCodec.WithoutPlayer(itemId) is
+            (APItem)itemId is
                 APItem.WeakTrap or APItem.FrailTrap or APItem.VulnerableTrap or APItem.NoDrawTrap
                 or APItem.TangledTrap or APItem.VakuuTrap or APItem.ConfusedTrap or APItem.SlothTrap
                 or APItem.DazedTrap;
@@ -155,7 +155,7 @@
         /// <summary>Whether an item ID is one of the universal ephemeral combat buffs.</summary>
         public static bool IsUniversalCombatBuff(long itemId)
         {
-            return (APItem)ArchipelagoIdCodec.WithoutPlayer(itemId) switch
+            return (APItem)itemId switch
             {
                 APItem.FreeAttack or APItem.FreePower or APItem.FreeSkill
                     or APItem.Dexterity or APItem.Strength or APItem.Plating
@@ -179,7 +179,7 @@
         };
 
         public static bool IsMultiplayerBuffGoldFallback(long itemId) =>
-            MultiplayerBuffGoldFallbacks.Contains((APItem)ArchipelagoIdCodec.WithoutPlayer(itemId));
+            MultiplayerBuffGoldFallbacks.Contains((APItem)itemId);
 
         public static bool CanBePickedUp(this APItem item)
         {

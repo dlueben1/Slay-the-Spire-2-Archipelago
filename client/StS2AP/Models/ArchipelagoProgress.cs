@@ -758,18 +758,13 @@ namespace StS2AP.Models
             using var runJson = JsonDocument.Parse(JsonSerializationUtility.ToJson(run));
             return new SerializableAP
             {
-                PlayerNumber = CoopSlot.PlayerNumber,
                 Progress = ToRunProgressState(),
                 SaveData = runJson.RootElement.Clone(),
             };
         }
 
-        public static ArchipelagoProgress FromSerializable(SerializableAP saveData, Player player)
-        {
-            if (saveData.PlayerNumber != CoopSlot.PlayerNumber)
-                throw new InvalidDataException($"This save belongs to Player {saveData.PlayerNumber}, not Player {CoopSlot.PlayerNumber}.");
-            return FromRunProgressState(saveData.Progress, player);
-        }
+        public static ArchipelagoProgress FromSerializable(SerializableAP saveData, Player player) =>
+            FromRunProgressState(saveData.Progress, player);
 
         public static ArchipelagoProgress FromRunProgressState(
             ApRunProgressState saveData,

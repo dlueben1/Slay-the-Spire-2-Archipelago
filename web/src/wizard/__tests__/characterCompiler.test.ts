@@ -355,7 +355,7 @@ function rejectsInvalidModdedAndAscensionAnswers(): void {
 
   expect(compileOrphanedAscensionDown).toThrow("requires Ascension A1");
 
-  // A generated roster supports at most twenty modded characters.
+  // A generated roster supports at most twenty characters without a predefined name.
   answers.characters.sharedAscensions = {
     enabled: [1],
     ascensionDownsEnabled: false,
@@ -380,7 +380,9 @@ function rejectsInvalidModdedAndAscensionAnswers(): void {
     compileWizardAnswers(answers, optionCatalog);
   }
 
-  expect(compileTooManyModdedCharacters).toThrow("no more than 20");
+  expect(compileTooManyModdedCharacters).toThrow(
+    "no more than 20 characters without a predefined name",
+  );
 }
 
 /**
@@ -720,5 +722,51 @@ describe("expanded modded rosters", () => {
     expect(
       compileWizardAnswers(answers, optionCatalog).pick_num_characters,
     ).toBe(21);
+  });
+
+  it("does not count predefined characters against the generic limit", () => {
+    const { generic_character_limit: limit, predefined } =
+      optionCatalog.characters;
+    // Mix display names and internal IDs; both spellings resolve to a predefined block.
+    const predefinedNames = predefined.map((character, i) =>
+      i % 2 === 0 ? character.name : character.internal_id.toLowerCase(),
+    );
+    const unknownNames = Array.from({ length: limit }, (_, i) => `Mod-${i}`);
+    const answers = createTestAnswers(["Ironclad"]);
+    answers.characters.selectedCharacters = [];
+    answers.characters.startingCharacter = null;
+    answers.characters.availability = "all";
+    answers.characters.selectionMode = "all";
+    answers.characters.goal = "all";
+    answers.characters.moddedCharacters = [
+      ...predefinedNames,
+      ...unknownNames,
+    ].map((name) => ({
+      name,
+      ascensions: { enabled: [1], ascensionDownsEnabled: false, downs: [] },
+    }));
+    expect(predefinedNames.length).toBeGreaterThan(0);
+    expect(
+      compileWizardAnswers(answers, optionCatalog).modded_characters,
+    ).toHaveLength(predefinedNames.length + limit);
+
+    answers.characters.moddedCharacters.push({
+      name: "Mod-Overflow",
+      ascensions: { enabled: [1], ascensionDownsEnabled: false, downs: [] },
+    });
+    expect(() => compileWizardAnswers(answers, optionCatalog)).toThrow(
+      `no more than ${limit} characters without a predefined name`,
+    );
+
+    // Random selection can replace excess generic characters with predefined ones.
+    answers.characters.selectionMode = "random";
+    answers.characters.randomCharacterCount = predefinedNames.length + limit;
+    expect(
+      compileWizardAnswers(answers, optionCatalog).pick_num_characters,
+    ).toBe(predefinedNames.length + limit);
+    answers.characters.randomCharacterCount += 1;
+    expect(() => compileWizardAnswers(answers, optionCatalog)).toThrow(
+      `no more than ${limit} characters without a predefined name`,
+    );
   });
 });

@@ -8,7 +8,7 @@ namespace StS2AP.Persistence;
 internal sealed class SingleplayerCheckpointBank(string root)
 {
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
-    internal sealed record Identity(string Seed, int Team, int Slot, int PlayerNumber = 1);
+    internal sealed record Identity(string Seed, int Team, int Slot);
     internal sealed record BankKey(Identity Owner, string Character);
     internal sealed record Snapshot(string Key, string FileName, string Hash, DateTimeOffset SavedAt,
         int Floor, bool StartOfAct);
@@ -27,21 +27,15 @@ internal sealed class SingleplayerCheckpointBank(string root)
 
     // Hash the full identity rather than sanitizing names: different slots/characters must
     // never alias, and AP-provided names must never become filesystem paths.
-    private string DirectoryFor(BankKey key)
-    {
-        // Preserve existing Player 1 bank paths and metadata from before shared slots.
-        object identity = key.Owner.PlayerNumber == 1
-            ? new { Owner = new { key.Owner.Seed, key.Owner.Team, key.Owner.Slot }, key.Character }
-            : key;
-        return Path.Combine(root,
-            Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(identity))));
-    }
+    // Existing bank directories are named by this exact JSON shape; a test pins it.
+    private string DirectoryFor(BankKey key) => Path.Combine(root,
+        Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(key))));
     private string Manifest(BankKey key) => Path.Combine(DirectoryFor(key), "metadata.json");
 
     public Bank Read(BankKey key)
     {
         if (key.Owner == null || string.IsNullOrWhiteSpace(key.Owner.Seed)
-            || key.Owner.Team < 0 || key.Owner.Slot < 0 || key.Owner.PlayerNumber is < 1 or > 4
+            || key.Owner.Team < 0 || key.Owner.Slot < 0
             || string.IsNullOrWhiteSpace(key.Character))
             throw new InvalidDataException("Invalid AP checkpoint bank identity.");
         if (!File.Exists(Manifest(key))) return new() { Identity = key };

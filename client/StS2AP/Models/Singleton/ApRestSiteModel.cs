@@ -63,8 +63,7 @@ public sealed class ApRestSiteModel : HookedSingletonModel
             string characterName = config.Name;
             var availableChecks = policy.GetAvailableChecks(
                 checkedLocations,
-                (act, campfire) => ArchipelagoIdCodec.ForPlayer(
-                    LocationData.GetCampfireLocationId(config.CharOffset, act, campfire), settings.PlayerNumber))
+                (act, campfire) => LocationData.GetCampfireLocationId(config.CharOffset, act, campfire))
                 .ToArray();
             foreach (var (act, campfire, locationId) in availableChecks)
             {

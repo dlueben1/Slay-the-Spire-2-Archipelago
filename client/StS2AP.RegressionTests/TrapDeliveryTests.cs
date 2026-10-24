@@ -44,9 +44,8 @@ public sealed class TrapDeliveryTests
             APItem.TangledTrap, APItem.VakuuTrap, APItem.ConfusedTrap, APItem.SlothTrap, APItem.DazedTrap };
         Assert.Equal(Enumerable.Range(700, 9), types.Select(t => (int)t));
         foreach (var type in types)
-        for (int player = 1; player <= 4; player++)
         {
-            var id = ArchipelagoIdCodec.ForPlayer((long)type, player);
+            var id = (long)type;
             Assert.True(ArchipelagoIdCodec.IsUniversalItemId(id));
             Assert.True(IsUniversalTrap(id));
             Assert.False(IsUniversalCombatBuff(id));

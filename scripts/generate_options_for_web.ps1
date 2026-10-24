@@ -142,8 +142,8 @@ def load_module_as(name: str, path: Path):
 
 
 # options.py uses relative imports, so load its local dependencies first.
-load_module_as("worlds.spire2.constants", world_dir / "constants.py")
-load_module_as("worlds.spire2.characters", world_dir / "characters.py")
+constants_module = load_module_as("worlds.spire2.constants", world_dir / "constants.py")
+characters_module = load_module_as("worlds.spire2.characters", world_dir / "characters.py")
 options_module = load_module_as("worlds.spire2.options", options_path)
 web_world_module = load_module_as("worlds.spire2.web_world", web_world_path)
 
@@ -533,6 +533,15 @@ compiled = {
             "path": "world/spire2/web_world.py",
             "sha256": file_sha256(web_world_path),
         },
+    },
+    # Only characters without a predefined name use the limited generic Custom Character slots,
+    # so the wizard needs the predefined roster to apply the same per-roster limit as the APWorld.
+    "characters": {
+        "generic_character_limit": constants_module.NUM_CUSTOM,
+        "predefined": [
+            {"name": definition.name, "internal_id": definition.internal_id}
+            for definition in characters_module.PREDEFINED_CHARACTERS
+        ],
     },
     "option_order": option_order,
     "groups": compiled_groups,

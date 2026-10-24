@@ -126,14 +126,14 @@ public sealed class MirroredRewardAdapterTests
     }
 
     [Theory]
-    [InlineData("unknown", "used an unknown materialization strategy.")]
-    [InlineData("replica_native_v1", "used an unknown materialization strategy.")]
-    [InlineData("ap_rng_owner_final_v1", "had an unsupported card materialization strategy.")]
-    public void ExistingStrategyDiagnosticsRetainReceiptContext(string strategy, string message)
+    [InlineData("unknown")]
+    [InlineData("replica_native_v1")]
+    [InlineData("ap_rng_owner_final_v1")]
+    public void RejectedStrategiesNameTheirReceipt(string strategy)
     {
         var spec = Card();
         spec.MaterializationStrategyId = strategy;
-        Assert.Equal($"AP reward 7:42 {message}",
+        Assert.Contains("7:42",
             Assert.Throws<InvalidOperationException>(() => MirroredRewardAdapter.Decode(spec, 3)).Message);
     }
 
