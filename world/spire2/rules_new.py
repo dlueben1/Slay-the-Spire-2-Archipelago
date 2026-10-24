@@ -26,6 +26,40 @@ class LedgerEntry(NamedTuple):
     amount: float
 
 
+@dataclasses.dataclass
+class PowerLedger:
+    """Each contribution to a power check, labelled for Universal Tracker's explanation."""
+    cards: List[LedgerEntry] = dataclasses.field(default_factory=list)
+    relics: List[LedgerEntry] = dataclasses.field(default_factory=list)
+    # Missing support, in the order it is added to the requirement; shop entries also go in shop.
+    adjustments: dict[str, float] = dataclasses.field(default_factory=dict)
+    shop: dict[str, float] = dataclasses.field(default_factory=dict)
+
+
+class PowerItems(NamedTuple):
+    """The names of a character's items that its power checks count."""
+    card_reward: str
+    rare_card_reward: str
+    starter_card: str
+    starter_relic: str
+    relic: str
+    rest: str
+    smith: str
+    shop_remove: str
+    ancient: str
+    shop_slots: tuple[str, ...]  # in SHOP_SLOT_VALUES order
+    elite_gold: str
+    boss_gold: str
+
+    @classmethod
+    def of(cls, char: str) -> 'PowerItems':
+        singles = ("Card Reward", "Rare Card Reward", "Progressive Starter Card", "Progressive Starter Relic",
+                   "Relic", "Progressive Rest", "Progressive Smith", "Progressive Shop Remove", "Progressive Ancient")
+        return cls(*(f"{char} {item}" for item in singles),
+                   tuple(f"{char} {item}" for item, _ in SHOP_SLOT_VALUES),
+                   f"{char} Elite Gold", f"{char} Boss Gold")
+
+
 def tier_range(first: int, last: int) -> str:
     return f"tier {first}" if first == last else f"tiers {first}-{last}"
 
@@ -115,132 +149,176 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
         region: str
         relic_cap: int | None
 
-        def count(self, state: CollectionState, item: str) -> int:
-            return state.count(f"{self.char} {item}", self.player)
+        def __post_init__(self) -> None:
+            super().__post_init__()
+            # Fill evaluates power checks millions of times, so what depends only on the rule is worked
+            # out once here: item names, and each kind of missing support by how many items are held.
+            # Upgrades add up as a run passes rest sites: this act's smith tier counts for the share of
+            # the act's rest sites passed by this region, earlier tiers in full.
+            missing_smiths = tuple(
+                sum(SMITH_POWER_BY_TIER[tier] * (self.smith_share if tier + 1 == self.act else 1)
+                    for tier in range(smiths, self.smith_level))
+                for smiths in range(self.smith_level + 1))
+            missing_removals = tuple(sum(SHOP_REMOVE_POWER_BY_TIER[removals:self.remove_level])
+                                     for removals in range(self.remove_level + 1))
+            # Anytime can provide later rewards early; Start of Act cannot.
+            missing_ancients = tuple(sum(ANCIENT_POWER_BY_TIER[:self.act]) - sum(ANCIENT_POWER_BY_TIER[:claimable])
+                                     for claimable in range((3 if self.ancient_anytime else self.act) + 1))
+            # By shop slot item: how many slots are shuffled, and the value missing by slots restored.
+            missing_shop_slots = tuple(
+                (shuffled, tuple(sum(values[len(values) - shuffled + restored:]) for restored in range(shuffled + 1)))
+                for (_, values), shuffled in zip(SHOP_SLOT_VALUES, self.shuffled_shop_slots))
+            for name, value in (("items", PowerItems.of(self.char)), ("missing_smiths", missing_smiths),
+                                ("missing_removals", missing_removals), ("missing_ancients", missing_ancients),
+                                ("missing_shop_slots", missing_shop_slots)):
+                object.__setattr__(self, name, value)
+
+        def tally(self, state: CollectionState, ledger: PowerLedger | None = None) -> tuple[float, float, float]:
+            """Card strength, power and requirement. With a ledger, also records each contribution
+            under its explanation label. Labels are built only then, and logic and Universal
+            Tracker's explanation share this one calculation, so they cannot drift apart."""
+            items: PowerItems = self.items
+            held = state.prog_items[self.player]
+
+            # Card strength.
+            received = held[items.card_reward]
+            table = self.card_rewards_table
+            card_rewards = table[received] if received < len(table) else card_reward_strength(table, received)
+            rares = held[items.rare_card_reward]
+            cards = card_rewards + RARE_CARD_POWER * rares
+            if ledger is not None:
+                ledger.cards += [LedgerEntry(f"Card Rewards ({received} received)", card_rewards),
+                                 LedgerEntry(f"Rare Card Rewards ({rares} received)", RARE_CARD_POWER * rares)]
+            if self.vanilla_cards:
+                cards += self.vanilla_cards
+                if ledger is not None:
+                    ledger.cards.append(LedgerEntry("Vanilla card rewards", self.vanilla_cards))
+            # The first receipt restores the normal loadout; only the second adds power above it.
+            starter_cards = held[items.starter_card]
+            if starter_cards >= 2:
+                cards += self.starter_card_power[1]
+                if ledger is not None:
+                    ledger.cards.append(LedgerEntry("Upgraded starter card", self.starter_card_power[1]))
+
+            # Power: relics past the anytime claims are claimable only after relic rewards in the run.
+            relics = held[items.relic]
+            claimable_relics = relics if self.relic_cap is None else min(relics, self.relic_cap)
+            power = cards + RELIC_POWER * claimable_relics
+            if ledger is not None:
+                label = (f"Relics ({relics} received)" if claimable_relics == relics
+                         else f"Relics ({relics} received, {self.relic_cap} claimable)")
+                ledger.relics.append(LedgerEntry(label, RELIC_POWER * claimable_relics))
+            starter_relics = held[items.starter_relic]
+            if starter_relics >= 2:
+                power += self.starter_relic_power[1]
+                if ledger is not None:
+                    ledger.relics.append(LedgerEntry("Upgraded starter relic", self.starter_relic_power[1]))
+
+            # Requirement: base power plus missing support, added in the order the explanation lists it.
+            required = self.power_level
+            adjustments = ledger.adjustments if ledger is not None else None
+            missing_starter = False
+            for kind, weights, held_starters in (("Card", self.starter_card_power, starter_cards),
+                                                 ("Relic", self.starter_relic_power, starter_relics)):
+                if weights[0] and not held_starters:
+                    required += weights[0]
+                    missing_starter = True
+                    if adjustments is not None:
+                        adjustments[f"Missing Starter {kind}"] = weights[0]
+            if self.starter_pair_power and missing_starter:
+                required += self.starter_pair_power
+                if adjustments is not None:
+                    adjustments["Missing starter card/relic synergy"] = self.starter_pair_power
+
+            smiths = held[items.smith]
+            if self.rest_level and held[items.rest] < self.rest_level:
+                # A rest site offers one action; with this act's smith tier the run smiths there instead.
+                rest_power = REST_POWER_BY_ACT[self.act - 1]
+                smithing_instead = smiths >= self.rest_level
+                if smithing_instead:
+                    rest_power *= REST_SHARE_WHILE_SMITHING
+                required += rest_power
+                if adjustments is not None:
+                    label = f"Missing Rest tier {self.rest_level}"
+                    adjustments[label + " (smithing instead)" if smithing_instead else label] = rest_power
+
+            missing = self.missing_smiths[min(smiths, self.smith_level)]
+            if missing:
+                required += missing
+                if adjustments is not None:
+                    # An Early region counts none of its own act's tier, so leave that tier out of the label.
+                    last = self.smith_level if self.smith_share else self.smith_level - 1
+                    label = f"Missing Progressive Smith {tier_range(smiths + 1, last)}"
+                    if 0 < self.smith_share < 1:
+                        own = "" if smiths + 1 == last else f"tier {last} "
+                        label += f" ({own}x{self.smith_share:g}: share of Act {self.act}'s rest sites passed)"
+                    adjustments[label] = missing
+
+            removals = held[items.shop_remove]
+            missing = self.missing_removals[min(removals, self.remove_level)]
+            if missing:
+                required += missing
+                if adjustments is not None:
+                    adjustments[f"Missing Progressive Shop Remove {tier_range(removals + 1, self.remove_level)}"] = \
+                        missing
+
+            # Missing rewards need replacement power wherever no hard gate applies.
+            ancients = held[items.ancient] + int(not self.neow_sanity)
+            missing = self.missing_ancients[min(len(self.missing_ancients) - 1, ancients)]
+            if missing:
+                required += missing
+                if adjustments is not None:
+                    adjustments[f"Ancient support ({'Anytime' if self.ancient_anytime else 'Start of Act'})"] = missing
+
+            if self.shop_scale:
+                # Missing shop choices, then the missing gold to buy the choices a shop does offer.
+                missing_choices = 0.0
+                if self.shop_sanity:
+                    for (shuffled, missing_by_restored), item in zip(self.missing_shop_slots, items.shop_slots):
+                        missing_choices += missing_by_restored[min(held[item], shuffled)]
+                if missing_choices:
+                    missing = missing_choices * self.shop_scale
+                    required += missing
+                    if ledger is not None:
+                        ledger.adjustments["Missing shop choices"] = ledger.shop["Missing shop choices"] = missing
+                if self.gold_sanity:
+                    gold = gold_sanity_run_gold(self.act, held[items.elite_gold], held[items.boss_gold])
+                    needed = normal_run_gold(self.act)
+                    if gold < needed:
+                        offered = FULL_SHOP_PAGE_VALUE - missing_choices
+                        missing = offered * self.shop_scale * (1 - gold / needed)
+                        required += missing
+                        if ledger is not None:
+                            label = f"Missing shop gold ({gold} of {needed})"
+                            ledger.adjustments[label] = ledger.shop[label] = missing
+            return cards, power, required
+
+        def ledger(self, state: CollectionState) -> PowerLedger:
+            ledger = PowerLedger()
+            self.tally(state, ledger)
+            return ledger
 
         def card_entries(self, state: CollectionState) -> List[LedgerEntry]:
             """Contributions to card strength, in the order they are added up."""
-            received = self.count(state, "Card Reward")
-            entries = [
-                LedgerEntry(f"Card Rewards ({received} received)",
-                            card_reward_strength(self.card_rewards_table, received)),
-                LedgerEntry(f"Rare Card Rewards ({self.count(state, 'Rare Card Reward')} received)",
-                            RARE_CARD_POWER * self.count(state, "Rare Card Reward")),
-            ]
-            if self.vanilla_cards:
-                entries.append(LedgerEntry("Vanilla card rewards", self.vanilla_cards))
-            # The first receipt restores the normal loadout; only the second adds power above it.
-            if self.count(state, "Progressive Starter Card") >= 2:
-                entries.append(LedgerEntry("Upgraded starter card", self.starter_card_power[1]))
-            return entries
+            return self.ledger(state).cards
 
         def relic_entries(self, state: CollectionState) -> List[LedgerEntry]:
             """Contributions to power beyond card strength, in the order they are added up."""
-            # Relics past the anytime claims are claimable only after relic rewards in the run.
-            relics = self.count(state, "Relic")
-            label = f"Relics ({relics} received)"
-            if self.relic_cap is not None and relics > self.relic_cap:
-                label = f"Relics ({relics} received, {self.relic_cap} claimable)"
-                relics = self.relic_cap
-            entries = [LedgerEntry(label, RELIC_POWER * relics)]
-            if self.count(state, "Progressive Starter Relic") >= 2:
-                entries.append(LedgerEntry("Upgraded starter relic", self.starter_relic_power[1]))
-            return entries
+            return self.ledger(state).relics
 
         def strength(self, state: CollectionState) -> tuple[float, float, float]:
-            cards = 0.0
-            for entry in self.card_entries(state):
-                cards += entry.amount
-            power = cards
-            for entry in self.relic_entries(state):
-                power += entry.amount
-            required = self.power_level
-            for adjustment in self.power_adjustments(state).values():
-                required += adjustment
-            return cards, power, required
+            return self.tally(state)
 
         def power_adjustments(self, state: CollectionState) -> dict[str, float]:
             """Missing support, in the order it is added to the requirement."""
-            # Share the actual adjustments with UT's explanation so it cannot drift from logic.
-            adjustments = {}
-            for kind, weights in (("Card", self.starter_card_power), ("Relic", self.starter_relic_power)):
-                if weights[0] and not self.count(state, f"Progressive Starter {kind}"):
-                    adjustments[f"Missing Starter {kind}"] = weights[0]
-            if self.starter_pair_power and adjustments:
-                adjustments["Missing starter card/relic synergy"] = self.starter_pair_power
-
-            if self.rest_level and self.count(state, "Progressive Rest") < self.rest_level:
-                # A rest site offers one action; with this act's smith tier the run smiths there instead.
-                label = f"Missing Rest tier {self.rest_level}"
-                rest_power = REST_POWER_BY_ACT[self.act - 1]
-                if self.count(state, "Progressive Smith") >= self.rest_level:
-                    label += " (smithing instead)"
-                    rest_power *= REST_SHARE_WHILE_SMITHING
-                adjustments[label] = rest_power
-
-            # Upgrades add up as a run passes rest sites: this act's smith tier counts for the share of
-            # the act's rest sites passed by this region, earlier tiers in full.
-            smiths = self.count(state, "Progressive Smith")
-            missing = sum(SMITH_POWER_BY_TIER[tier] * (self.smith_share if tier + 1 == self.act else 1)
-                          for tier in range(smiths, self.smith_level))
-            if missing:
-                # An Early region counts none of its own act's tier, so leave that tier out of the label.
-                last = self.smith_level if self.smith_share else self.smith_level - 1
-                label = f"Missing Progressive Smith {tier_range(smiths + 1, last)}"
-                if 0 < self.smith_share < 1:
-                    own = "" if smiths + 1 == last else f"tier {last} "
-                    label += f" ({own}x{self.smith_share:g}: share of Act {self.act}'s rest sites passed)"
-                adjustments[label] = missing
-
-            removals = self.count(state, "Progressive Shop Remove")
-            missing = sum(SHOP_REMOVE_POWER_BY_TIER[removals:self.remove_level])
-            if missing:
-                adjustments[f"Missing Progressive Shop Remove {tier_range(removals + 1, self.remove_level)}"] = missing
-
-            # Anytime can provide later rewards early; Start of Act cannot.
-            # Missing rewards need replacement power wherever no hard gate applies.
-            received = self.count(state, "Progressive Ancient") + int(not self.neow_sanity)
-            claimable = min(3 if self.ancient_anytime else self.act, received)
-            ancient_adjustment = sum(ANCIENT_POWER_BY_TIER[:self.act]) - sum(ANCIENT_POWER_BY_TIER[:claimable])
-            if ancient_adjustment:
-                mode = "Anytime" if self.ancient_anytime else "Start of Act"
-                adjustments[f"Ancient support ({mode})"] = ancient_adjustment
-            adjustments.update(self.shop_adjustments(state))
-            return adjustments
+            return self.ledger(state).adjustments
 
         def shop_penalty(self, state: CollectionState) -> float:
-            return sum(self.shop_adjustments(state).values())
-
-        def shop_adjustments(self, state: CollectionState) -> dict[str, float]:
-            """Missing shop choices, then the missing gold to buy the choices a shop does offer."""
-            if not self.shop_scale:
-                return {}
-            adjustments = {}
-            missing = self.missing_shop_value(state)
-            if missing:
-                adjustments["Missing shop choices"] = missing * self.shop_scale
-            if self.gold_sanity:
-                gold = gold_sanity_run_gold(self.act, self.count(state, "Elite Gold"), self.count(state, "Boss Gold"))
-                needed = normal_run_gold(self.act)
-                if gold < needed:
-                    offered = FULL_SHOP_PAGE_VALUE - missing
-                    adjustments[f"Missing shop gold ({gold} of {needed})"] = \
-                        offered * self.shop_scale * (1 - gold / needed)
-            return adjustments
-
-        def missing_shop_value(self, state: CollectionState) -> float:
-            if not self.shop_sanity:
-                return 0.0
-            missing = 0.0
-            for (item, values), shuffled in zip(SHOP_SLOT_VALUES, self.shuffled_shop_slots):
-                restored = min(self.count(state, item), shuffled)
-                available = len(values) - shuffled + restored
-                missing += sum(values[available:])
-            return missing
+            return sum(self.ledger(state).shop.values())
 
         @override
         def _evaluate(self, state: CollectionState) -> bool:
-            cards, power, required = self.strength(state)
+            cards, power, required = self.tally(state)
             return cards >= self.minimum_cards and power >= required
 
         @override
@@ -252,17 +330,18 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
             return [{"type": "text", "text": "\n".join(lines) + "\n"}]
 
         def ledger_lines(self, state: CollectionState) -> List[str]:
-            cards, power, required = self.strength(state)
+            ledger = PowerLedger()
+            cards, power, required = self.tally(state, ledger)
             lines = [
                 f"{self.char} {self.region} power check: {'met' if self._evaluate(state) else 'not met'}",
                 f"  Card strength {cards:g} of {self.minimum_cards:g} needed",
-                *(f"    {entry.label}: {entry.amount:g}" for entry in self.card_entries(state)),
+                *(f"    {entry.label}: {entry.amount:g}" for entry in ledger.cards),
                 f"  Power {power:g} of {required:g} needed",
                 f"    Card strength: {cards:g}",
-                *(f"    {entry.label}: {entry.amount:g}" for entry in self.relic_entries(state)),
+                *(f"    {entry.label}: {entry.amount:g}" for entry in ledger.relics),
                 f"  Requirement {required:g}",
                 f"    Base: {self.power_level:g}",
-                *(f"    {label}: {adjustment:+g}" for label, adjustment in self.power_adjustments(state).items()),
+                *(f"    {label}: {adjustment:+g}" for label, adjustment in ledger.adjustments.items()),
                 "  Missing support raises the requirement; extra power can make up for it.",
                 "  Separate item gates still apply.",
             ]
