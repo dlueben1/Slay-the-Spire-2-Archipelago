@@ -119,10 +119,14 @@ namespace StS2AP.Patches
             }
             var item = indexedInfo.Item;
             var index = indexedInfo.Index;
-            // Log the item
-            LogUtility.Success(
-                $"Received: {item.ItemName} from {item.Player.Name} (ID: {item.ItemId} / LocID: {item.LocationId} / Index: {index})"
-            );
+            // Checkpoint loads replay the whole AP history, which was already logged as it
+            // arrived, so those repeats go to the debug log only.
+            string receivedMessage =
+                $"Received: {item.ItemName} from {item.Player.Name} (ID: {item.ItemId} / LocID: {item.LocationId} / Index: {index})";
+            if (liveDelivery)
+                LogUtility.Success(receivedMessage);
+            else
+                LogUtility.Debug(receivedMessage);
 
             /// Universal items (IDs < 10000) are character-agnostic and handled separately.
             /// The 10k ID gap ensures universal IDs never collide with character-specific IDs,
@@ -528,6 +532,7 @@ namespace StS2AP.Patches
                     ProcessItem(new IndexedItemInfo(info, i + 1), false);
                     LastIndexHandled = i + 1;
                 }
+                LogUtility.Info($"Rebuilt AP progress from {LastIndexHandled} received item(s)");
             }
             finally
             {
