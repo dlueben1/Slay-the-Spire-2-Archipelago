@@ -80,7 +80,9 @@ class PowerCheck:
 # Early and Mid, holds the checks of the fourth fight, the first from the normal pool. It asks only
 # for a normal start (starter card, starter relic and Neow), so a run without one needs power to
 # make up for it. Elite track rows copy their act's Late row apart from power and smith share:
-# chests take Mid power, and elites climb from about Mid power to Late power. The Act 2 boss and Early Act 3 split
+# chests take Mid power, and elites climb from about Mid power to Late power. Act 1's second elite
+# asks for more than Late Act 1: two Act 1 elites take a stronger deck than walking around them
+# to the boss. The Act 2 boss and Early Act 3 split
 # the climb to Act 3, where Early Act 3 also expects the third Ancient.
 # Share of an act's rest sites a run has passed by each stage, from a port of the game's map
 # generator: a path that seeks rest sites passes none before Mid, about two or three before the
@@ -104,8 +106,8 @@ REGIONS: dict[str, PowerCheck] = {
     # Seeded Run replays one map, which may force an elite, so it keeps elite-inclusive power.
     "Mid Act 1":        PowerCheck(1,  2.5,   3,  1.0, rest=True, smith=SMITHS_MID, seeded_power=4.0),
     "Late Act 1":       PowerCheck(1,  7.0,   5,  1.0, rest=True, smith=SMITHS_LATE, shop=True, seeded_power=10.0),
-    "Act 1 Elite 1":    PowerCheck(1,  4.5,   5,  1.0, rest=True, smith=SMITHS_FIRST_ELITE, shop=True),
-    "Act 1 Elite 2":    PowerCheck(1,  6.5,   5,  1.0, rest=True, smith=SMITHS_LATE, shop=True),
+    "Act 1 Elite 1":    PowerCheck(1,  5.0,   5,  1.0, rest=True, smith=SMITHS_FIRST_ELITE, shop=True),
+    "Act 1 Elite 2":    PowerCheck(1,  8.0,   5,  1.0, rest=True, smith=SMITHS_LATE, shop=True),
     "Act 1 Boss Arena": PowerCheck(1, 11.5,   7,  3.0, rest=True, smith=SMITHS_BOSS, remove=True, shop=True),
     "Early Act 2":      PowerCheck(2, 12.0,   7,  3.0, smith=SMITHS_EARLY, shop=True),
     "Mid Act 2":        PowerCheck(2, 14.0,  10,  3.0, rest=True, smith=SMITHS_MID, shop=True),
