@@ -1,4 +1,5 @@
 import dataclasses
+from types import EllipsisType
 from typing import TYPE_CHECKING, List, NamedTuple
 from typing_extensions import override
 
@@ -81,14 +82,17 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
     # Relic rewards the run has taken by this region, which with the anytime claims limit the
     # relics that count. None counts every received relic.
     relic_rewards: int | None = None
+    # Larger relic reward counts, each for a run that can reach the given elite track region.
+    elite_relic_rewards: tuple[tuple[str, int], ...] = ()
 
     @classmethod
-    def for_region(cls, char_offset: int, region: str, seeded: bool,
-                   relic_rewards: int | None = None) -> 'SpireHasPower':
+    def for_region(cls, char_offset: int, region: str, seeded: bool, relic_rewards: int | None = None,
+                   elite_relic_rewards: tuple[tuple[str, int], ...] = ()) -> 'SpireHasPower':
         check = REGIONS[region]
         return cls(char_offset, check.power_for(seeded), card_rewards=check.card_rewards, act=check.act,
                    minimum_cards=check.minimum_cards, rest=check.rest, smith=check.smith,
-                   remove=check.remove, shop=check.shop, region=region, relic_rewards=relic_rewards)
+                   remove=check.remove, shop=check.shop, region=region, relic_rewards=relic_rewards,
+                   elite_relic_rewards=elite_relic_rewards)
 
     @override
     def _instantiate(self, world: 'SlayTheSpire2World') -> Rule.Resolved:
@@ -98,6 +102,7 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
                            rest=self.rest, smith=self.smith, remove=self.remove, shop=self.shop)
         definition = character_registry.get(config.char_offset)
         starter = (definition and definition.starter_power) or DEFAULT_STARTER_POWER
+        anytime = options.relic_rewards_available_anytime.value
         return self.Resolved(
             char=config.name,
             power_level=self.power_level,
@@ -121,8 +126,9 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
             starter_relic_power=starter.relic if config.progressive_starter_relic else (0, 0),
             starter_pair_power=starter.missing_pair,
             region=self.region or f"Act {self.act}",
-            relic_cap=None if self.relic_rewards is None
-                      else options.relic_rewards_available_anytime.value + self.relic_rewards,
+            relic_cap=None if self.relic_rewards is None else anytime + self.relic_rewards,
+            elite_relic_caps=tuple(sorted(((region, anytime + rewards) for region, rewards in self.elite_relic_rewards),
+                                          key=lambda alternative: -alternative[1])),
             player=world.player,
         )
 
@@ -148,6 +154,8 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
         starter_pair_power: float
         region: str
         relic_cap: int | None
+        # Elite track regions, each with the relics claimable once a run can reach it, most first.
+        elite_relic_caps: tuple[tuple[str, int], ...]
 
         def __post_init__(self) -> None:
             super().__post_init__()
@@ -173,10 +181,33 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
                                 ("missing_shop_slots", missing_shop_slots)):
                 object.__setattr__(self, name, value)
 
-        def tally(self, state: CollectionState, ledger: PowerLedger | None = None) -> tuple[float, float, float]:
-            """Card strength, power and requirement. With a ledger, also records each contribution
-            under its explanation label. Labels are built only then, and logic and Universal
-            Tracker's explanation share this one calculation, so they cannot drift apart."""
+        @override
+        def region_dependencies(self) -> dict[str, set[int]]:
+            # Reaching an elite track region can let this check count more relics, so the entrance
+            # must be checked again then.
+            return {region: {id(self)} for region, _ in self.elite_relic_caps}
+
+        def claimable_relic_cap(self, state: CollectionState) -> int | None:
+            """The most relics a run can claim by this region: after the furthest elite track region
+            it can reach, or else the anytime claims and the chests on the path. Power only grows
+            with the cap, so this one check equals an either/or of checks, one per cap."""
+            if (self.elite_relic_caps and self.relic_cap is not None
+                    and state.prog_items[self.player][self.items.relic] > self.relic_cap):
+                for region, cap in self.elite_relic_caps:
+                    if cap <= self.relic_cap:
+                        break
+                    if state.can_reach_region(region, self.player):
+                        return cap
+            return self.relic_cap
+
+        def tally(self, state: CollectionState, ledger: PowerLedger | None = None,
+                  relic_cap: int | None | EllipsisType = ...) -> tuple[float, float, float]:
+            """Card strength, power and requirement, counting at most relic_cap relics: by default
+            the most this run can claim here. With a ledger, also records each contribution under its
+            explanation label. Labels are built only then, and logic and Universal Tracker's
+            explanation share this one calculation, so they cannot drift apart."""
+            if relic_cap is ...:
+                relic_cap = self.claimable_relic_cap(state)
             items: PowerItems = self.items
             held = state.prog_items[self.player]
 
@@ -202,11 +233,11 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
 
             # Power: relics past the anytime claims are claimable only after relic rewards in the run.
             relics = held[items.relic]
-            claimable_relics = relics if self.relic_cap is None else min(relics, self.relic_cap)
+            claimable_relics = relics if relic_cap is None else min(relics, relic_cap)
             power = cards + RELIC_POWER * claimable_relics
             if ledger is not None:
                 label = (f"Relics ({relics} received)" if claimable_relics == relics
-                         else f"Relics ({relics} received, {self.relic_cap} claimable)")
+                         else f"Relics ({relics} received, {relic_cap} claimable)")
                 ledger.relics.append(LedgerEntry(label, RELIC_POWER * claimable_relics))
             starter_relics = held[items.starter_relic]
             if starter_relics >= 2:
@@ -293,9 +324,9 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
                             ledger.adjustments[label] = ledger.shop[label] = missing
             return cards, power, required
 
-        def ledger(self, state: CollectionState) -> PowerLedger:
+        def ledger(self, state: CollectionState, relic_cap: int | None | EllipsisType = ...) -> PowerLedger:
             ledger = PowerLedger()
-            self.tally(state, ledger)
+            self.tally(state, ledger, relic_cap)
             return ledger
 
         def card_entries(self, state: CollectionState) -> List[LedgerEntry]:
@@ -339,6 +370,9 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
                 f"  Power {power:g} of {required:g} needed",
                 f"    Card strength: {cards:g}",
                 *(f"    {entry.label}: {entry.amount:g}" for entry in ledger.relics),
+                *(f"    At most {cap} claimable once {region} is reachable"
+                  f" ({'reached' if state.can_reach_region(region, self.player) else 'not reached'})"
+                  for region, cap in reversed(self.elite_relic_caps)),
                 f"  Requirement {required:g}",
                 f"    Base: {self.power_level:g}",
                 *(f"    {label}: {adjustment:+g}" for label, adjustment in ledger.adjustments.items()),
@@ -372,6 +406,8 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
             ]
             if self.relic_cap is not None:
                 lines.append(f"  At most {self.relic_cap} relics count: the anytime claims and relic rewards so far.")
+            for region, cap in reversed(self.elite_relic_caps):
+                lines.append(f"  Or at most {cap} once {region} is reachable.")
             if self.vanilla_cards:
                 lines.append(f"  Vanilla card rewards add {self.vanilla_cards:g} card strength.")
             lines.extend((
@@ -436,12 +472,12 @@ def shop_gold_by_act(options: 'Spire2Options') -> tuple[int, int, int]:
 
 def region_power(offset: int, prefix: str, region: str, seeded: bool) -> Rule:
     """The region's power check, counting the relics a run can claim by then: walking around
-    elites, or after fighting every elite up to an earlier act's last elite when it is reachable."""
-    rule: Rule = SpireHasPower.for_region(offset, region, seeded, relic_rewards=PATH_RELIC_REWARDS[region])
-    for elites, rewards in ELITE_RELIC_REWARDS.get(region, {}).items():
-        rule |= (SpireHasPower.for_region(offset, region, seeded, relic_rewards=rewards)
-                 & CanReachRegion(f"{prefix} {elites}"))
-    return rule
+    elites, or after an earlier act's elites when their elite track region is reachable. One check
+    counts the run's items once for all of these."""
+    elite_relic_rewards = tuple((f"{prefix} {elite}", rewards)
+                                for elite, rewards in ELITE_RELIC_REWARDS.get(region, {}).items())
+    return SpireHasPower.for_region(offset, region, seeded, relic_rewards=PATH_RELIC_REWARDS[region],
+                                    elite_relic_rewards=elite_relic_rewards)
 
 
 def set_rules(world: 'SlayTheSpire2World') -> None:
