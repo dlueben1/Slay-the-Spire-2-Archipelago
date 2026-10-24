@@ -98,7 +98,7 @@ def format_tables(table: ModuleType) -> str:
 
 
 def format_claimable_relics(table: ModuleType) -> list[str]:
-    rows = [("Region", "Walking around elites", "After an earlier act's last elite")]
+    rows = [("Region", "Walking around elites", "After an earlier act's elites")]
     for region in table.REGIONS:
         alternatives = table.ELITE_RELIC_REWARDS.get(region, {})
         rows.append((region, str(table.PATH_RELIC_REWARDS[region]),

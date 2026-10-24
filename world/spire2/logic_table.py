@@ -82,7 +82,8 @@ class PowerCheck:
 # make up for it. Elite track rows copy their act's Late row apart from power and smith share:
 # chests take Mid power, and elites climb from about Mid power to Late power. Act 1's second elite
 # asks for more than Late Act 1: two Act 1 elites take a stronger deck than walking around them
-# to the boss. The Act 2 boss and Early Act 3 split
+# to the boss. Its third asks for Mid Act 2's power: a run that strong takes extra Act 1 elites
+# easily. The Act 2 boss and Early Act 3 split
 # the climb to Act 3, where Early Act 3 also expects the third Ancient.
 # Share of an act's rest sites a run has passed by each stage, from a port of the game's map
 # generator: a path that seeks rest sites passes none before Mid, about two or three before the
@@ -108,6 +109,7 @@ REGIONS: dict[str, PowerCheck] = {
     "Late Act 1":       PowerCheck(1,  7.0,   5,  1.0, rest=True, smith=SMITHS_LATE, shop=True, seeded_power=10.0),
     "Act 1 Elite 1":    PowerCheck(1,  5.0,   5,  1.0, rest=True, smith=SMITHS_FIRST_ELITE, shop=True),
     "Act 1 Elite 2":    PowerCheck(1,  8.0,   5,  1.0, rest=True, smith=SMITHS_LATE, shop=True),
+    "Act 1 Elite 3":    PowerCheck(1, 14.0,   5,  1.0, rest=True, smith=SMITHS_LATE, shop=True),
     "Act 1 Boss Arena": PowerCheck(1, 11.5,   7,  3.0, rest=True, smith=SMITHS_BOSS, remove=True, shop=True),
     "Early Act 2":      PowerCheck(2, 12.0,   7,  3.0, smith=SMITHS_EARLY, shop=True),
     "Mid Act 2":        PowerCheck(2, 14.0,  10,  3.0, rest=True, smith=SMITHS_MID, shop=True),
@@ -121,28 +123,40 @@ REGIONS: dict[str, PowerCheck] = {
     "Late Act 3":       PowerCheck(3, 27.0,  19,  5.0, rest=True, smith=SMITHS_LATE, shop=True),
     "Act 3 Chest":      PowerCheck(3, 25.5,  19,  5.0, rest=True, smith=SMITHS_MID, shop=True),
     "Act 3 Elite 1":    PowerCheck(3, 26.0,  19,  5.0, rest=True, smith=SMITHS_FIRST_ELITE, shop=True),
-    "Act 3 Elite 2":    PowerCheck(3, 26.5,  19,  5.0, rest=True, smith=SMITHS_LATE, shop=True),
-    "Act 3 Elite 3":    PowerCheck(3, 27.0,  19,  5.0, rest=True, smith=SMITHS_LATE, shop=True),
+    "Act 3 Elite 2":    PowerCheck(3, 27.0,  19,  5.0, rest=True, smith=SMITHS_LATE, shop=True),
     "Act 3 Boss Arena": PowerCheck(3, 30.0,  21,  7.0, rest=True, smith=SMITHS_BOSS, remove=True, shop=True),
 }
 
 # Relic N is the run's Nth elite, chest or Black Star reward. Relic 1 is the Act 1 chest on the
-# path. Elite-ready runs are expected to fight two elites in Acts 1 and 2 and three in Act 3:
-# two Act 1 elites give relics 2-3, Act 2's chest and elites give 4-6, and Act 3's give 7-10.
-# Perhaps this can be adjusted in the future to account for player preferences
-# Just a rough guess but act 1 is probably the time people fight the most elites in AP's
-ELITES_PER_ACT = (2, 2, 3)
+# path. Elite-ready runs are expected to fight three elites in Act 1 and two in Acts 2 and 3:
+# Act 1's elites give relics 2-4, Act 2's chest and elites give 5-7, and Act 3's give 8-10.
+# A strong run takes extra Act 1 elites easily, while Act 3 is the final act, where losing costs
+# the whole run, so runs tend to dodge its elites. A port of the game's map generator, with the
+# Swarming Elites that the relic checks assume, finds a path past three elites in 98%, 96% and
+# 90% of Act 1, 2 and 3 maps, but past four in only 34%, 17% and 15%.
+# Each act's elite rows in REGIONS must match these counts.
+ELITES_PER_ACT = (3, 2, 2)
 
 # The main goal of RELIC Regions is so you can have '2 tracks' where you can dodge elites i.e
 # get a lot of floor checks
 # until you get strong enough to where you can fight elites. In practice this has worked pretty well
 # especially with relic 2 and relic 3 which felt too hard at times to logically get
-RELIC_REGIONS = {
-    1: "Mid Act 1",
-    2: "Act 1 Elite 1", 3: "Act 1 Elite 2",
-    4: "Act 2 Chest", 5: "Act 2 Elite 1", 6: "Act 2 Elite 2",
-    7: "Act 3 Chest", 8: "Act 3 Elite 1", 9: "Act 3 Elite 2", 10: "Act 3 Elite 3",
-}
+def _relic_regions() -> dict[int, str]:
+    """Each Relic N's region: Act 1's chest, then each act's elites, after the Act 2 and 3 chests."""
+    regions = ["Mid Act 1"]
+    for act, elites in enumerate(ELITES_PER_ACT, start=1):
+        if act > 1:
+            regions.append(f"Act {act} Chest")
+        regions += [f"Act {act} Elite {number}" for number in range(1, elites + 1)]
+    return dict(enumerate(regions, start=1))
+
+
+RELIC_REGIONS = _relic_regions()
+RELIC_NUMBERS = {region: number for number, region in RELIC_REGIONS.items()}
+assert len(RELIC_REGIONS) == 10, "the client counts ten relic rewards"
+assert ({region for region in REGIONS if " Elite " in region}
+        == {region for region in RELIC_REGIONS.values() if " Elite " in region}), \
+    "REGIONS needs exactly one elite row per elite in ELITES_PER_ACT"
 
 
 def last_elite(act: int) -> str:
@@ -159,20 +173,35 @@ PATH_RELIC_REWARDS = {
     "Early Act 3": 2, "Mid Act 3": 3, "Late Act 3": 3, "Act 3 Boss Arena": 3,
     **{region: number - 1 for number, region in RELIC_REGIONS.items() if number > 1},
 }
-# Relic rewards taken by a region after also fighting every elite up to an act's last elite.
-# Helper table to better handle relics available anytime.
-ELITE_RELIC_REWARDS = {
-    "Late Act 1": {last_elite(1): 3},
-    "Act 1 Boss Arena": {last_elite(1): 3},
-    "Early Act 2": {last_elite(1): 3},
-    "Mid Act 2": {last_elite(1): 4},
-    "Late Act 2": {last_elite(1): 4, last_elite(2): 6},
-    "Act 2 Boss Arena": {last_elite(1): 4, last_elite(2): 6},
-    "Early Act 3": {last_elite(1): 4, last_elite(2): 6},
-    "Mid Act 3": {last_elite(1): 5, last_elite(2): 7},
-    "Late Act 3": {last_elite(1): 5, last_elite(2): 7, last_elite(3): 10},
-    "Act 3 Boss Arena": {last_elite(1): 5, last_elite(2): 7, last_elite(3): 10},
-}
+# Relic rewards taken by a region after also fighting an earlier act's elites, up to its second
+# elite or a later one. Helper table to better handle relics available anytime. Two elites an act
+# is what an elite-ready run takes; Act 1's third asks for far more power, so a run that can
+# fight only two Act 1 elites still claims their relics.
+FIRST_CREDITED_ELITE = 2
+
+
+def _elite_relic_rewards() -> dict[str, dict[str, int]]:
+    """For each path region, the relic rewards a run has taken after each credited elite of an
+    earlier act (or of its own act, from Late on): that elite's relic number plus the chests
+    passed since."""
+    rewards = {}
+    for act in (1, 2, 3):
+        for stage, passed_own_chest in (("Early", False), ("Mid", True), ("Late", True), ("Boss", True)):
+            region = f"Act {act} Boss Arena" if stage == "Boss" else f"{stage} Act {act}"
+            last_elite_act = act if stage in ("Late", "Boss") else act - 1
+            alternatives = {}
+            for elite_act in range(1, last_elite_act + 1):
+                chests_since = act - elite_act - 1 + passed_own_chest if act > elite_act else 0
+                elites = ELITES_PER_ACT[elite_act - 1]
+                for number in range(min(FIRST_CREDITED_ELITE, elites), elites + 1):
+                    elite = f"Act {elite_act} Elite {number}"
+                    alternatives[elite] = RELIC_NUMBERS[elite] + chests_since
+            if alternatives:
+                rewards[region] = alternatives
+    return rewards
+
+
+ELITE_RELIC_REWARDS = _elite_relic_rewards()
 
 
 # --- Card strength and power from AP items ---------------------------------------------------
