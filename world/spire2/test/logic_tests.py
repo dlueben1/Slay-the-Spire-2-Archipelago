@@ -1,11 +1,13 @@
 import itertools
+import random
 import unittest
 
 from BaseClasses import CollectionState
 from test.general import setup_multiworld
 from worlds.spire2 import SlayTheSpire2World
 from worlds.spire2.characters import character_list
-from worlds.spire2.logic_table import BOSS_GOLD, ELITE_GOLD, shop_gold_needed, shop_page
+from worlds.spire2.logic_table import (BOSS_GOLD, ELITE_GOLD, PATH_RELIC_REWARDS, REGIONS, SHOP_SLOT_VALUES,
+                                       shop_gold_needed, shop_page)
 from worlds.spire2.rules import SpireHasPower
 from worlds.spire2.world import BOSS_GOLD_ITEM_COUNT, ELITE_GOLD_ITEM_COUNT
 
@@ -126,6 +128,52 @@ class LogicTests(unittest.TestCase):
             for cost_mode, act in itertools.product(range(4), (1, 2, 3)):
                 with self.subTest(slots=slots, cost_mode=cost_mode, act=act):
                     self.assertLessEqual(shop_gold_needed(page, act, cost_mode), supply)
+
+    def test_receiving_any_item_never_weakens_a_power_check(self):
+        # Archipelago assumes logic is monotonic: collecting an item must never close a location.
+        # Hand-tuned values can break that unnoticed, for example a rest penalty that grows once
+        # smithing works, so that Rest and Smith together count for less than Rest alone, or a
+        # card strength table that dips. Check every region row with every kind of support
+        # shuffled, at every Rest and Smith count, adding one item at a time.
+        items = (("Card Reward", 25), ("Rare Card Reward", 4), ("Relic", 13),
+                 ("Progressive Starter Card", 3), ("Progressive Starter Relic", 3),
+                 ("Progressive Rest", 4), ("Progressive Smith", 4), ("Progressive Shop Remove", 4),
+                 ("Progressive Ancient", 4), ("Elite Gold", 8), ("Boss Gold", 3),
+                 *((item, len(values) + 1) for item, values in SHOP_SLOT_VALUES))
+        rng = random.Random(2026)
+        failures = []
+        for full_shuffle, ancients, neow in itertools.product((False, True), ("start_of_act", "anytime"),
+                                                              (False, True)):
+            # Necrobinder's starters also carry the missing card/relic synergy charge.
+            world = self.make_world(characters=["Necrobinder"], shuffle_all_cards=full_shuffle,
+                                    ancient_relic_location=ancients, neow_sanity=neow, gold_sanity=True,
+                                    progressive_starter_card=True, progressive_starter_relic=True)
+            name = world.characters[0].name
+            offset = world.characters[0].char_offset
+            rules = [SpireHasPower.for_region(offset, region, seeded=False, relic_rewards=relic_rewards).resolve(world)
+                     for region in REGIONS for relic_rewards in (None, PATH_RELIC_REWARDS[region])]
+            state = CollectionState(world.multiworld)
+            counts = state.prog_items[world.player]
+            for rests, smiths in itertools.product(range(5), repeat=2):
+                for item, most in items:
+                    counts[f"{name} {item}"] = rng.randint(0, most)
+                counts[f"{name} Progressive Rest"] = rests
+                counts[f"{name} Progressive Smith"] = smiths
+                inventory = {item: counts[f"{name} {item}"] for item, _ in items}
+                for rule in rules:
+                    cards, power, required = rule.strength(state)
+                    for item, _ in items:
+                        counts[f"{name} {item}"] += 1
+                        more_cards, more_power, more_required = rule.strength(state)
+                        counts[f"{name} {item}"] -= 1
+                        if (more_cards < cards - 1e-9
+                                or more_power - more_required < power - required - 1e-9):
+                            failures.append(
+                                f"{rule.region} (relic cap {rule.relic_cap}), shuffle_all_cards={full_shuffle}, "
+                                f"{ancients}, neow={neow}: one more {item} changed card strength "
+                                f"{cards:g} -> {more_cards:g} and power margin {power - required:g} -> "
+                                f"{more_power - more_required:g}; inventory {inventory}")
+        self.assertFalse(failures, "\n".join(failures[:10]))
 
     def test_smith_and_removal_tiers_only_help_from_their_act(self):
         world = self.make_world()
