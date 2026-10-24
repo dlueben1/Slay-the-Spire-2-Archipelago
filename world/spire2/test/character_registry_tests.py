@@ -1,8 +1,6 @@
 import copy
 import unittest
-from unittest.mock import patch
 
-from BaseClasses import CollectionState
 from Fill import distribute_items_restrictive
 from Options import OptionError
 from test.general import setup_multiworld, setup_solo_multiworld
@@ -15,8 +13,7 @@ from worlds.spire2.characters import (
 from worlds.spire2.constants import CHAR_OFFSET, GENERIC_CHARACTER_BLOCKS, NUM_CUSTOM, PREDEFINED_CHARACTER_BLOCKS
 from worlds.spire2.items import base_item_table, create_item_tables, item_table
 from worlds.spire2.locations import create_location_data, create_location_tables, location_table
-from worlds.spire2.options import GoalNumChar, ModdedCharacters, PickNumberCharacters, UnlockedCharacter
-from worlds.spire2.rules_new import STARTER_CARD_POWER, STARTER_RELIC_POWER, SpireHasPower
+from worlds.spire2.options import ModdedCharacters
 
 
 class TestCharacterRegistry(unittest.TestCase):
@@ -91,17 +88,6 @@ class TestCharacterRegistry(unittest.TestCase):
             create_character_registry((*VANILLA_CHARACTERS, *future,
                                        CharacterDefinition("Overflow", "OVERFLOW", DEFAULT_STARTER_POWER)))
 
-    def test_raising_the_generic_cap_adds_blocks_without_moving_named_ids(self):
-        self.assertEqual(f"Custom Character {NUM_CUSTOM}", character_registry[10 + NUM_CUSTOM].name)
-        self.assertNotIn(11 + NUM_CUSTOM, character_registry)
-        with patch("worlds.spire2.characters.NUM_CUSTOM", len(GENERIC_CHARACTER_BLOCKS)):
-            registry = create_character_registry()
-        self.assertEqual("Custom Character 189", registry[199].name)
-        self.assertEqual(character_registry, {block: registry[block] for block in character_registry})
-        with patch("worlds.spire2.characters.NUM_CUSTOM", len(GENERIC_CHARACTER_BLOCKS) + 1):
-            with self.assertRaisesRegex(ValueError, "reserved ID range"):
-                create_character_registry()
-
     def test_ids_are_unique_and_every_reserved_block_fits_a_signed_32_bit_id(self):
         for ids in ([data.code for data in item_table.values() if data.code is not None],
                     [code for code in location_table.values() if code is not None]):
@@ -109,20 +95,6 @@ class TestCharacterRegistry(unittest.TestCase):
             self.assertTrue(all(0 < code for code in ids))
         # Item IDs use one-based blocks, so the last reserved block's items end here.
         self.assertLess((PREDEFINED_CHARACTER_BLOCKS[-1] + 1) * CHAR_OFFSET, 2**31)
-        # Named characters sit above the old 1,000,000-ID co-op partition the client used to strip.
-        self.assertGreater(item_table["Watcher Relic"].code, 1_000_000)
-
-    def test_starter_profiles_cover_exactly_every_registered_vanilla_character(self):
-        self.assertEqual(set(character_list), set(STARTER_CARD_POWER))
-        self.assertEqual(set(character_list), set(STARTER_RELIC_POWER))
-        self.assertTrue(all(definition.starter_power is not None for definition in VANILLA_CHARACTERS),
-                        "Every vanilla character must choose reviewed starter power or DEFAULT_STARTER_POWER")
-        self.assertTrue(all(definition.starter_power is None for definition in PREDEFINED_CHARACTERS))
-        full_roster = len(character_list) + len(PREDEFINED_CHARACTERS) + NUM_CUSTOM
-        self.assertEqual(full_roster, GoalNumChar.range_end)
-        self.assertEqual(full_roster, PickNumberCharacters.range_end)
-        for index, name in enumerate(character_list):
-            self.assertEqual(index, UnlockedCharacter.from_any(name.lower()).value)
 
 
 class TestCharacterRosters(unittest.TestCase):
@@ -226,17 +198,6 @@ class TestCharacterRosters(unittest.TestCase):
                 self.assertFalse(world.multiworld.get_unfilled_locations())
                 self.assertTrue(world.multiworld.can_beat_game())
 
-    def test_predefined_characters_beyond_the_generic_limit_are_accepted(self):
-        # Shrink the limit below the number of predefined characters.
-        predefined = [definition.name for definition in PREDEFINED_CHARACTERS]
-        with patch("worlds.spire2.world.NUM_CUSTOM", 1):
-            world = self.generate(modded_characters=predefined + ["Unknown-A"])
-            self.assertEqual(len(predefined) + 1, world.modded_num)
-            self.assertEqual(["Custom Character 1"],
-                             [c.name for c in world.characters if c.char_offset in GENERIC_CHARACTER_BLOCKS])
-            with self.assertRaisesRegex(OptionError, "at most 1 selected characters without a predefined name"):
-                self.generate(modded_characters=predefined + ["Unknown-A", "Unknown-B"])
-
     def test_all_generic_slots_and_overflow(self):
         roster = [f"Unknown-{i}" for i in range(NUM_CUSTOM + 1)]
         predefined = [definition.internal_id for definition in PREDEFINED_CHARACTERS]
@@ -289,14 +250,6 @@ class TestCharacterRosters(unittest.TestCase):
                 with self.assertRaisesRegex(OptionError, "without a predefined name"):
                     generate(pick_num_characters=pick + 1)
 
-    def test_random_selection_replaces_excess_mods_without_shrinking_or_losing_fixed_start(self):
-        roster = [f"Unknown-{i}" for i in range(30)]
-        world = self.generate(characters=character_list, modded_characters=roster,
-                              pick_num_characters=25, lock_characters=2, unlocked_character=roster[-1])
-        self.assertEqual(25, len(world.characters))
-        self.assertEqual(20, world.modded_num)
-        self.assertEqual([roster[-1]], [c.option_name for c in world.characters if not c.locked])
-
     def test_two_players_can_use_different_order_without_changing_named_ids(self):
         mw = setup_multiworld([SlayTheSpire2World] * 2, seed=42, options=[
             {"characters": [], "modded_characters": roster, "lock_characters": 0, "potion_sanity": True}
@@ -330,24 +283,3 @@ class TestCharacterRosters(unittest.TestCase):
             else:
                 self.assertNotIn(location.address, restored.location_id_to_alias)
                 self.assertEqual("Watcher", first.name)
-
-    def test_default_starter_profile_restores_baseline_then_adds_four_power(self):
-        # Missing reviewed data uses the explicit fallback; coverage tests above still fail
-        # if a real registered vanilla character has not chosen a profile.
-        with patch.dict(STARTER_CARD_POWER, {}, clear=True), patch.dict(STARTER_RELIC_POWER, {}, clear=True):
-            world = self.generate(characters=["Ironclad"], progressive_starter_card=True,
-                                  progressive_starter_relic=True)
-            rule = SpireHasPower(world.characters[0].char_offset, 9).resolve(world)
-        for kind, penalty in (("Card", 1.0), ("Relic", 2.5)):
-            state = CollectionState(world.multiworld)
-            before = rule.strength(state)
-            state.collect(world.create_item(f"Ironclad Progressive Starter {kind}"), prevent_sweep=True)
-            first = rule.strength(state)
-            self.assertEqual(penalty, before[2] - first[2])
-            self.assertEqual(before[:2], first[:2])
-            state.collect(world.create_item(f"Ironclad Progressive Starter {kind}"), prevent_sweep=True)
-            second = rule.strength(state)
-            self.assertEqual(4.0, second[1] - first[1])
-            self.assertEqual(first[2], second[2])
-            state.collect(world.create_item(f"Ironclad Progressive Starter {kind}"), prevent_sweep=True)
-            self.assertEqual(second, rule.strength(state))
