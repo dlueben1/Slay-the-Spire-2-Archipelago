@@ -111,7 +111,11 @@ public static class ApMultiplayerCampaignStore
 
     public static void CancelPendingNewCampaign() => IsStartingNewCampaign = false;
 
-    internal static IReadOnlyList<CampaignEntry> ListCampaigns()
+    /// <param name="verifyPayloads">
+    /// Whether to read and checksum every active campaign's save files. Callers that only need
+    /// identity metadata pass false and verify the few entries they act on.
+    /// </param>
+    internal static IReadOnlyList<CampaignEntry> ListCampaigns(bool verifyPayloads = true)
     {
         var result = new List<CampaignEntry>();
         string root = GetCampaignRoot();
@@ -127,7 +131,10 @@ public static class ApMultiplayerCampaignStore
             try
             {
                 CampaignMetadata metadata = ReadMetadata(campaignId);
-                string? error = ValidateStoredCampaign(metadata, requirePayload: metadata.Status == CampaignStatus.Active);
+                string? error = ValidateStoredCampaign(
+                    metadata,
+                    requirePayload: verifyPayloads && metadata.Status == CampaignStatus.Active
+                );
                 result.Add(new CampaignEntry(campaignId, metadata, error));
             }
             catch (Exception ex) when (ex is IOException or JsonException or InvalidDataException)
@@ -523,14 +530,17 @@ public static class ApMultiplayerCampaignStore
         WriteMetadata(metadata);
         DeleteSupersededSnapshot(metadata, previousRecovery);
         DeleteSupersededSnapshot(metadata, previousCheckpoint);
-        foreach (CampaignMetadata conflict in ListCampaigns()
+        // This runs on every floor save. Match identities from metadata first, then verify
+        // only the matching campaigns' save files instead of checksumming every campaign.
+        foreach (CampaignMetadata conflict in ListCampaigns(verifyPayloads: false)
             .Where(entry => entry.IsUsable && entry.Metadata != null)
             .Select(entry => entry.Metadata!)
             .Where(other => other.Status == CampaignStatus.Active
                 && other.CampaignId != campaignId
                 && other.ApRoomSeed == metadata.ApRoomSeed
                 && other.ApTeamId == metadata.ApTeamId && other.ApSlotId == metadata.ApSlotId
-                && HasSameRoster(other.Roster, metadata.Roster)))
+                && HasSameRoster(other.Roster, metadata.Roster)
+                && ValidateStoredCampaign(other, requirePayload: true) == null))
         {
             conflict.Status = CampaignStatus.Archived;
             WriteMetadata(conflict);
