@@ -160,11 +160,7 @@ namespace StS2AP.Utils
             if (recognized.Count == 0)
                 return;
 
-            foreach (long locationId in recognized)
-            {
-                if (!ArchipelagoClient.CheckedLocations.Contains(locationId))
-                    ArchipelagoClient.CheckedLocations.Add(locationId);
-            }
+            ArchipelagoClient.CheckedLocations.UnionWith(recognized);
 
             LogUtility.Info(
                 $"Replaying {recognized.Count} pending location check(s) after reconnecting"
@@ -220,11 +216,7 @@ namespace StS2AP.Utils
             if (recognized.Count == 0)
                 return;
 
-            foreach (long locationId in recognized)
-            {
-                if (!ArchipelagoClient.CheckedLocations.Contains(locationId))
-                    ArchipelagoClient.CheckedLocations.Add(locationId);
-            }
+            ArchipelagoClient.CheckedLocations.UnionWith(recognized);
             LogUtility.Info($"Replaying {recognized.Count} pending multiplayer check(s)");
             _ = SendAsync(bound, recognized.ToArray(), replaying: true);
         }
