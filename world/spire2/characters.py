@@ -51,15 +51,19 @@ PREDEFINED_CHARACTERS = (
     CharacterDefinition("Tectonic", "INTOTHESPIREVERSE-SHADOW_IRONCLAD"),
     CharacterDefinition("Captain", "INTOTHESPIREVERSE-SHADOW_REGENT"),
     CharacterDefinition("Acolyte", "INTOTHESPIREVERSE-SHADOW_SILENT"),
-    # Downfall - Classic Characters
-    CharacterDefinition("Slime Boss", "SLIMEBOSS-SLIME_BOSS"),
-    CharacterDefinition("Guardian", "GUARDIAN-GUARDIAN"),
-    CharacterDefinition("Hexaghost", "HEXAGHOST-HEXAGHOST"),
-    CharacterDefinition("Champ", "CHAMP-CHAMP"),
-    CharacterDefinition("Automaton", "AUTOMATON-AUTOMATON"),
-    CharacterDefinition("Snecko", "SNECKO-SNECKO"),
-    CharacterDefinition("Hermit", "HERMIT-HERMIT"),
-    CharacterDefinition("Awakened One", "AWAKENED-AWAKENED"),
+    # Downfall - Classic Characters. Starter power read from Downfall 0.1.23's Orobas mappings,
+    # not yet playtested.
+    # Archaic Tooth turns Tackle into a placeholder card weaker than Tackle, and an AP item can't
+    # lower power, so its upgrade adds nothing.
+    CharacterDefinition("Slime Boss", "SLIMEBOSS-SLIME_BOSS", StarterPower((1.5, 0.0), (2.5, 2.5))),
+    CharacterDefinition("Guardian", "GUARDIAN-GUARDIAN", StarterPower((1.0, 4.5), (1.5, 3.0))),
+    CharacterDefinition("Hexaghost", "HEXAGHOST-HEXAGHOST", StarterPower((1.0, 4.5), (1.5, 2.5))),
+    # Execute is the only Finisher in Champ's starting deck.
+    CharacterDefinition("Champ", "CHAMP-CHAMP", StarterPower((1.5, 4.0), (2.0, 4.0))),
+    CharacterDefinition("Automaton", "AUTOMATON-AUTOMATON", StarterPower((1.0, 3.5), (2.0, 4.5))),
+    CharacterDefinition("Snecko", "SNECKO-SNECKO", StarterPower((1.0, 2.5), (1.0, 2.0))),
+    CharacterDefinition("Hermit", "HERMIT-HERMIT", StarterPower((1.0, 3.0), (1.0, 4.0))),
+    CharacterDefinition("Awakened One", "AWAKENED-AWAKENED", StarterPower((1.0, 3.5), (1.5, 5.0))),
     # Watcher by Lamali
     CharacterDefinition("Watcher", "WATCHER-WATCHER"),
     CharacterDefinition("Hornet", "HORNET_MOD_CHARACTER_HORNET_MOD_CHARACTER"),
