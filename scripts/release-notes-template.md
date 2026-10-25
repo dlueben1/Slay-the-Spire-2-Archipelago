@@ -6,7 +6,7 @@
 For installation, YAML configuration, generation and connection instructions, see
 [the Slay the Spire II setup guide](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/world/spire2/docs/setup_en.md).
 
-Archipelago **Launcher v0.6.7+** is required for generation. Install **STS2-RitsuLib 0.6.0+** separately.
+Archipelago **Launcher v0.6.7+** is required for generation. Install **STS2-RitsuLib 0.6.10+** separately.
 
 # Version Information
 
