@@ -197,16 +197,26 @@ class TestRemoveOPRelicsConfigured(Spire2TestBase):
 
 class TestRunModifiersDefault(Spire2TestBase):
     def test_no_modifiers_are_sent_by_default(self):
-        self.assertEqual([], self.world.fill_slot_data()["run_modifiers"])
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual([], slot_data["run_modifiers"])
+        self.assertEqual(100, slot_data["enemy_hp_percent"])
+        self.assertEqual(100, slot_data["enemy_damage_percent"])
 
 
 class TestRunModifiersConfigured(Spire2TestBase):
     options = {
         "run_modifiers": ["DeadlyEvents", "EliteStrength"],
+        "enemy_hp_percent": 125,
+        "enemy_damage_percent": 150,
     }
 
     def test_modifier_names_are_sent_sorted_in_slot_data(self):
         self.assertEqual(["DeadlyEvents", "EliteStrength"], self.world.fill_slot_data()["run_modifiers"])
+
+    def test_enemy_percentages_are_sent_in_slot_data(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(125, slot_data["enemy_hp_percent"])
+        self.assertEqual(150, slot_data["enemy_damage_percent"])
 
 
 class TestAscensionDowns(Spire2TestBase):

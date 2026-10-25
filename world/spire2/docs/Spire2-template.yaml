@@ -70,6 +70,11 @@ Slay the Spire II:
   # In multiplayer, the host's modifiers apply to the whole run.
   run_modifiers: []
 
+  # Every enemy's max HP and the damage enemies deal, as a percentage of normal (100-150).
+  # Logic ignores them. In multiplayer, the host's values apply to the whole run.
+  enemy_hp_percent: 100
+  enemy_damage_percent: 100
+
   ################
   # Game Options #
   ################

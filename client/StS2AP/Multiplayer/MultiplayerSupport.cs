@@ -875,6 +875,8 @@ public static class MultiplayerSupport
             GoldSanity = source.GoldSanity,
             BonusItems = source.BonusItems.ToArray(),
             RunModifiers = source.RunModifiers.ToList(),
+            EnemyHpPercent = source.EnemyHpPercent,
+            EnemyDamagePercent = source.EnemyDamagePercent,
             PotionSanity = source.PotionSanity,
             Floorsanity = source.Floorsanity,
             ProgressiveStarterCard = source.ProgressiveStarterCard,

@@ -105,6 +105,12 @@ namespace StS2AP.Models
         /// </summary>
         public List<string> RunModifiers { get; set; } = new();
 
+        /// <summary>Every enemy's max HP as a percentage of normal (100-150).</summary>
+        public int EnemyHpPercent { get; set; } = 100;
+
+        /// <summary>Damage enemies deal as a percentage of normal (100-150).</summary>
+        public int EnemyDamagePercent { get; set; } = 100;
+
         public bool CampfireSanity { get; set; }
         public bool GoldSanity { get; set; }
         public bool PotionSanity { get; set; }

@@ -39,26 +39,35 @@ public static class ApRunModifiers
     /// </summary>
     public static void AddToNewRun(RunState runState, ArchipelagoSettings? settings)
     {
-        if (settings == null
-            || settings.RunModifiers.Count == 0
-            || runState.GameMode != GameMode.Standard)
-        {
+        if (settings == null || runState.GameMode != GameMode.Standard)
             return;
-        }
 
         var added = new List<ModifierModel>();
         foreach (string optionName in settings.RunModifiers)
         {
-            if (!CanonicalByOptionName.TryGetValue(optionName, out Func<ModifierModel>? canonical))
-            {
+            if (CanonicalByOptionName.TryGetValue(optionName, out Func<ModifierModel>? canonical))
+                added.Add(canonical().ToMutable());
+            else
                 LogUtility.Warn($"Ignoring unknown run modifier '{optionName}' from slot data.");
-                continue;
-            }
-            ModifierModel modifier = canonical();
-            if (runState.Modifiers.Concat(added).Any(existing => existing.GetType() == modifier.GetType()))
-                continue;
-            added.Add(modifier.ToMutable());
         }
+        if (settings.EnemyHpPercent > 100)
+        {
+            var enemyHp = (ApEnemyHp)ModelDb.Modifier<ApEnemyHp>().ToMutable();
+            enemyHp.HpPercent = settings.EnemyHpPercent;
+            added.Add(enemyHp);
+        }
+        if (settings.EnemyDamagePercent > 100)
+        {
+            var enemyDamage = (ApEnemyDamage)ModelDb.Modifier<ApEnemyDamage>().ToMutable();
+            enemyDamage.DamagePercent = settings.EnemyDamagePercent;
+            added.Add(enemyDamage);
+        }
+
+        // Keep one of each type, including any the run already has.
+        added = added
+            .Where(modifier => runState.Modifiers.All(existing => existing.GetType() != modifier.GetType()))
+            .DistinctBy(modifier => modifier.GetType())
+            .ToList();
         if (added.Count == 0)
             return;
 

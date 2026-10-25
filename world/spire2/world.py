@@ -658,6 +658,8 @@ class SlayTheSpire2World(World):
             "lock_characters",
             "seeded",
             "run_modifiers",
+            "enemy_hp_percent",
+            "enemy_damage_percent",
             "num_chars_goal",
             "shuffle_all_cards",
             "include_floor_checks",

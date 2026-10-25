@@ -514,6 +514,24 @@ class RunModifiers(OptionSet):
     }
     default = frozenset()
 
+
+class EnemyHpPercent(Range):
+    """Every enemy's max HP as a percentage of normal, on top of Ascension. Logic does not account
+    for it. In multiplayer, the host's value applies to the whole run."""
+    display_name = "Enemy Max HP Percent"
+    range_start = 100
+    range_end = 150
+    default = 100
+
+
+class EnemyDamagePercent(Range):
+    """Damage enemies deal as a percentage of normal, on top of Ascension. Logic does not account
+    for it. In multiplayer, the host's value applies to the whole run."""
+    display_name = "Enemy Damage Percent"
+    range_start = 100
+    range_end = 150
+    default = 100
+
 # Death Link Options
 
 class DeathLink(ArchipelagoDeathLink):
@@ -778,6 +796,8 @@ class Spire2Options(PerGameCommonOptions):
     ascension: Ascension
     ascension_down: AscensionDown
     run_modifiers: RunModifiers
+    enemy_hp_percent: EnemyHpPercent
+    enemy_damage_percent: EnemyDamagePercent
 
     # Main game flow
     use_new_logic: UseNewLogic

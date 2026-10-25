@@ -802,6 +802,8 @@ public static class ApRunData
             && existing.HostSettings?.AncientRelicPool == hostSettings?.AncientRelicPool
             && (existing.HostSettings?.RunModifiers ?? []).SequenceEqual(
                 hostSettings?.RunModifiers ?? [])
+            && existing.HostSettings?.EnemyHpPercent == hostSettings?.EnemyHpPercent
+            && existing.HostSettings?.EnemyDamagePercent == hostSettings?.EnemyDamagePercent
             && existing.AscensionStateInitialized == ascensionStateInitialized
             && existing.HostCharacterOffset == (ascensionStateInitialized
                 ? hostCharacterOffset

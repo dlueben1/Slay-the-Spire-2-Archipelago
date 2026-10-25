@@ -10,5 +10,9 @@
   "AP_FRAIL_START.title": "Frail Start",
   "AP_FRAIL_START.description": "Start the run with 10% less Max HP.",
   "AP_EXTRA_ASCENDERS_BANE.title": "Extra Ascender's Bane",
-  "AP_EXTRA_ASCENDERS_BANE.description": "Start the run with an extra [gold]Ascender's Bane[/gold]."
+  "AP_EXTRA_ASCENDERS_BANE.description": "Start the run with an extra [gold]Ascender's Bane[/gold].",
+  "AP_ENEMY_HP.title": "Enemy Max HP",
+  "AP_ENEMY_HP.description": "Enemies have {HpPercent}% of their normal Max HP.",
+  "AP_ENEMY_DAMAGE.title": "Enemy Damage",
+  "AP_ENEMY_DAMAGE.description": "Enemies deal {DamagePercent}% of their normal damage."
 }
