@@ -22,6 +22,7 @@ public static class ApRunModifiers
             ["ExtraAscendersBane"] = ModelDb.Modifier<ApExtraAscendersBane>,
             ["CursedRun"] = ModelDb.Modifier<ApCursedRun>,
             ["DeadlyEvents"] = ModelDb.Modifier<ApDeadlyEvents>,
+            ["DangerousUnknowns"] = ModelDb.Modifier<ApDangerousUnknowns>,
         };
 
     /// <summary>Whether this modifier came from the Run Modifiers option.</summary>

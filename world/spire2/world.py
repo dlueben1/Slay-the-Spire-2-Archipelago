@@ -84,6 +84,9 @@ class SlayTheSpire2World(World):
 
         if not self.characters:
             raise OptionError("At least one character must be configured")
+        if {"DeadlyEvents", "DangerousUnknowns"} <= self.options.run_modifiers.value:
+            # Both set the starting elite chance for ? rooms, so whichever ran last would win.
+            raise OptionError("Run Modifiers cannot combine DeadlyEvents with DangerousUnknowns")
         if self.options.include_floor_checks.value == 0:
             # Progressive starter items replace floor-check filler. Without those locations there
             # is no filler budget for them, so disable global and per-character settings.

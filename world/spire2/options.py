@@ -499,7 +499,12 @@ class RunModifiers(OptionSet):
     - 'ExtraAscendersBane': Start each run with an extra Ascender's Bane.
     - 'CursedRun': Gain a random curse at the start of each act (the base game's Cursed Run).
     - 'DeadlyEvents': ? rooms can hold elites, and treasure appears more often (the base game's
-      Deadly Events). Its extra elites and chests make relic checks easier to reach than logic expects."""
+      Deadly Events). Its extra elites and chests make relic checks easier to reach than logic expects.
+    - 'DangerousUnknowns': ? rooms lean towards fights. Combat starts at 20% and rises 15% each
+      time a ? room is not a fight; elites start at 0% and rise 4%; chests start and rise at 1%.
+      Shops are unchanged. The chances reset each act, with no cap. Cannot be combined with
+      'DeadlyEvents'. The extra fights and elites reach combat and relic checks sooner than logic
+      expects."""
     display_name = "Run Modifiers"
     valid_keys_casefold = False
     valid_keys = {
@@ -511,6 +516,7 @@ class RunModifiers(OptionSet):
         "ExtraAscendersBane",
         "CursedRun",
         "DeadlyEvents",
+        "DangerousUnknowns",
     }
     default = frozenset()
 

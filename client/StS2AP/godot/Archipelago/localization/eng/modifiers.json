@@ -14,5 +14,7 @@
   "AP_ENEMY_HP.title": "Enemy Max HP",
   "AP_ENEMY_HP.description": "Enemies have {HpPercent}% of their normal Max HP.",
   "AP_ENEMY_DAMAGE.title": "Enemy Damage",
-  "AP_ENEMY_DAMAGE.description": "Enemies deal {DamagePercent}% of their normal damage."
+  "AP_ENEMY_DAMAGE.description": "Enemies deal {DamagePercent}% of their normal damage.",
+  "AP_DANGEROUS_UNKNOWNS.title": "Dangerous Unknowns",
+  "AP_DANGEROUS_UNKNOWNS.description": "? rooms lean towards fights. Combat starts at 20% and rises 15% each time a ? room is not a fight. [gold]Elites[/gold] start at 0% and rise 4%. Chests start and rise at 1%."
 }

@@ -2,6 +2,7 @@ import json
 from importlib.resources import files
 import unittest
 
+from Options import OptionError
 from Utils import restricted_dumps
 from test.general import setup_multiworld, setup_solo_multiworld
 from worlds.AutoWorld import call_all
@@ -217,6 +218,13 @@ class TestRunModifiersConfigured(Spire2TestBase):
         slot_data = self.world.fill_slot_data()
         self.assertEqual(125, slot_data["enemy_hp_percent"])
         self.assertEqual(150, slot_data["enemy_damage_percent"])
+
+
+class TestRunModifierConflicts(unittest.TestCase):
+    def test_deadly_events_and_dangerous_unknowns_are_rejected_together(self):
+        with self.assertRaisesRegex(OptionError, "DeadlyEvents with DangerousUnknowns"):
+            setup_multiworld(SlayTheSpire2World, seed=42, options={
+                "run_modifiers": ["DeadlyEvents", "DangerousUnknowns"]})
 
 
 class TestAscensionDowns(Spire2TestBase):

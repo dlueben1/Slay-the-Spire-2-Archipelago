@@ -67,6 +67,8 @@ Slay the Spire II:
   #   ExtraAscendersBane - start each run with an extra Ascender's Bane
   #   CursedRun          - gain a random curse at the start of each act
   #   DeadlyEvents       - ? rooms can hold elites and treasure is more common (easier relic checks)
+  #   DangerousUnknowns  - ? rooms lean towards fights: combat 20% (+15%), elites 0% (+4%), chests 1% (+1%);
+  #                        not with DeadlyEvents
   # In multiplayer, the host's modifiers apply to the whole run.
   run_modifiers: []
 
