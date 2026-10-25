@@ -485,6 +485,35 @@ class AscensionDown(OptionSet):
     valid_keys = { *[str(i) for i in range(1,11)], *ASCENSIONS.keys() }
     default = list()
 
+
+class RunModifiers(OptionSet):
+    """Extra difficulty modifiers for every run, on top of Ascension. Logic does not account for them.
+    Names are case-sensitive. In multiplayer, the host's modifiers apply to the whole run.
+
+    - 'EliteStrength': Elites and bosses start each combat with 1 Strength.
+    - 'RandomEnemyBuffs': Every enemy starts combat with one random buff: 1 Strength, 4 Plating,
+      2 Thorns, 1 Artifact, 3 Regen, 4 Curl Up, 4 Vigor or 1 Slippery.
+    - 'WeakerRests': Resting heals 25% of max HP instead of 30%.
+    - 'SlowStart': Draw 1 fewer card on the first turn of each combat.
+    - 'FrailStart': Start each run with 10% less max HP.
+    - 'ExtraAscendersBane': Start each run with an extra Ascender's Bane.
+    - 'CursedRun': Gain a random curse at the start of each act (the base game's Cursed Run).
+    - 'DeadlyEvents': ? rooms can hold elites, and treasure appears more often (the base game's
+      Deadly Events). Its extra elites and chests make relic checks easier to reach than logic expects."""
+    display_name = "Run Modifiers"
+    valid_keys_casefold = False
+    valid_keys = {
+        "EliteStrength",
+        "RandomEnemyBuffs",
+        "WeakerRests",
+        "SlowStart",
+        "FrailStart",
+        "ExtraAscendersBane",
+        "CursedRun",
+        "DeadlyEvents",
+    }
+    default = frozenset()
+
 # Death Link Options
 
 class DeathLink(ArchipelagoDeathLink):
@@ -748,6 +777,7 @@ class Spire2Options(PerGameCommonOptions):
     # final_act: FinalAct
     ascension: Ascension
     ascension_down: AscensionDown
+    run_modifiers: RunModifiers
 
     # Main game flow
     use_new_logic: UseNewLogic

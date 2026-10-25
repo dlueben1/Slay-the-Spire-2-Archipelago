@@ -58,6 +58,18 @@ Slay the Spire II:
   # A single number N removes your highest N Ascensions; otherwise list numbers or names as above.
   ascension_down: []
 
+  # Extra difficulty modifiers for every run, on top of Ascension; logic ignores them. Names (case-sensitive):
+  #   EliteStrength      - elites and bosses start each combat with 1 Strength
+  #   RandomEnemyBuffs   - every enemy starts combat with one random small buff
+  #   WeakerRests        - resting heals 25% of max HP instead of 30%
+  #   SlowStart          - draw 1 fewer card on the first turn of each combat
+  #   FrailStart         - start each run with 10% less max HP
+  #   ExtraAscendersBane - start each run with an extra Ascender's Bane
+  #   CursedRun          - gain a random curse at the start of each act
+  #   DeadlyEvents       - ? rooms can hold elites and treasure is more common (easier relic checks)
+  # In multiplayer, the host's modifiers apply to the whole run.
+  run_modifiers: []
+
   ################
   # Game Options #
   ################

@@ -4,7 +4,7 @@ from Options import Accessibility, OptionGroup, ProgressionBalancing
 from .options import (
     TrapChance, WeakTrapWeight, FrailTrapWeight, VulnerableTrapWeight, NoDrawTrapWeight, TangledTrapWeight, VakuuTrapWeight, ConfusedTrapWeight, SlothTrapWeight, DazedTrapWeight,
     UseNewLogic, Characters, ModdedCharacters, DeathLink, DeathLinkDamagePercent, EnableDeathFragments, PickNumberCharacters, GoalNumChar,
-    LockCharacters, UnlockedCharacter, Ascension, AscensionDown, AdvancedChar, CharacterOptions,
+    LockCharacters, UnlockedCharacter, Ascension, AscensionDown, RunModifiers, AdvancedChar, CharacterOptions,
     IncludeFloorChecks, NeowSanity, CampfireSanity, GoldSanity, PotionSanity,
     ShopSanity, ShopCardSlots, ShopNeutralSlots, ShopRelicSlots, ShopPotionSlots, ShopRemoveSlots, ShopSanityCosts,
     AncientRelicLocation, AncientRelicPool, RelicRewardsAvailableAnytime, RemoveOPRelics, ReleaseOnVictory,
@@ -39,6 +39,7 @@ class SlayTheSpire2Web(WebWorld):
             UnlockedCharacter,
             Ascension,
             AscensionDown,
+            RunModifiers,
         ]),
         OptionGroup("Game Options", [
             UseNewLogic,
