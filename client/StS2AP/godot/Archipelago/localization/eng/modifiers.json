@@ -1,0 +1,14 @@
+{
+  "AP_ELITE_STRENGTH.title": "Elite Strength",
+  "AP_ELITE_STRENGTH.description": "Elites and bosses start each combat with 1 [gold]Strength[/gold].",
+  "AP_RANDOM_ENEMY_BUFFS.title": "Random Enemy Buffs",
+  "AP_RANDOM_ENEMY_BUFFS.description": "Every enemy starts combat with one random buff: 1 [gold]Strength[/gold], 4 [gold]Plating[/gold], 2 [gold]Thorns[/gold], 1 [gold]Artifact[/gold], 3 [gold]Regen[/gold], 4 [gold]Curl Up[/gold], 4 [gold]Vigor[/gold] or 1 [gold]Slippery[/gold].",
+  "AP_WEAKER_RESTS.title": "Weaker Rests",
+  "AP_WEAKER_RESTS.description": "Resting heals 25% of your Max HP instead of 30%.",
+  "AP_SLOW_START.title": "Slow Start",
+  "AP_SLOW_START.description": "Draw 1 fewer card on the first turn of each combat.",
+  "AP_FRAIL_START.title": "Frail Start",
+  "AP_FRAIL_START.description": "Start the run with 10% less Max HP.",
+  "AP_EXTRA_ASCENDERS_BANE.title": "Extra Ascender's Bane",
+  "AP_EXTRA_ASCENDERS_BANE.description": "Start the run with an extra [gold]Ascender's Bane[/gold]."
+}

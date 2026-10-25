@@ -800,6 +800,8 @@ public static class ApRunData
                 : existing.HostSettings == null)
             && existing.HostSettings?.AncientRelicLocation == hostSettings?.AncientRelicLocation
             && existing.HostSettings?.AncientRelicPool == hostSettings?.AncientRelicPool
+            && (existing.HostSettings?.RunModifiers ?? []).SequenceEqual(
+                hostSettings?.RunModifiers ?? [])
             && existing.AscensionStateInitialized == ascensionStateInitialized
             && existing.HostCharacterOffset == (ascensionStateInitialized
                 ? hostCharacterOffset
@@ -904,6 +906,17 @@ public static class ApRunData
                     state.RunId = Guid.NewGuid();
             });
         }
+
+        // This event fires before the base game initializes the run's modifiers. Multiplayer
+        // peers all read the host's frozen settings so they build the same run.
+        ArchipelagoSettings? modifierSettings = ArchipelagoClient.Settings;
+        if (evt.IsMultiplayer)
+        {
+            modifierSettings = _sharedRun.TryGet(evt.RunState, out ApRunSharedState shared)
+                ? shared.HostSettings
+                : null;
+        }
+        ApRunModifiers.AddToNewRun(evt.RunState, modifierSettings);
 
         if (evt.IsMultiplayer
             && !AscensionMultiplayer.PrepareRunConstruction(

@@ -874,6 +874,7 @@ public static class MultiplayerSupport
             CampfireSanity = source.CampfireSanity,
             GoldSanity = source.GoldSanity,
             BonusItems = source.BonusItems.ToArray(),
+            RunModifiers = source.RunModifiers.ToList(),
             PotionSanity = source.PotionSanity,
             Floorsanity = source.Floorsanity,
             ProgressiveStarterCard = source.ProgressiveStarterCard,

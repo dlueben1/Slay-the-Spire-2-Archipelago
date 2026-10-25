@@ -99,6 +99,12 @@ namespace StS2AP.Models
                 ? definitions
                 : Array.Empty<BonusItemDefinition>();
 
+        /// <summary>
+        /// Run Modifiers names from the YAML (for example "EliteStrength"). A new run adds the
+        /// matching AP modifiers; see <see cref="ApRunModifiers"/>.
+        /// </summary>
+        public List<string> RunModifiers { get; set; } = new();
+
         public bool CampfireSanity { get; set; }
         public bool GoldSanity { get; set; }
         public bool PotionSanity { get; set; }
