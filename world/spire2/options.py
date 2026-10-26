@@ -488,55 +488,52 @@ class AscensionDown(OptionSet):
 
 class RunModifiers(OptionSet):
     """Extra difficulty modifiers for every run, on top of Ascension. Logic does not account for them.
-    Names are case-sensitive. In multiplayer, the host's modifiers apply to the whole run.
+    Most leave Act 1 as it is and grow harder in Acts 2 and 3. Names are case-sensitive. In
+    multiplayer, the host's modifiers apply to the whole run.
 
-    - 'EliteStrength': Elites and bosses start each combat with 1 Strength.
-    - 'RandomEnemyBuffs': Every enemy starts combat with one random buff: 1 Strength, 4 Plating,
-      2 Thorns, 1 Artifact, 3 Regen, 4 Curl Up, 4 Vigor or 1 Slippery.
-    - 'WeakerRests': Resting heals 25% of max HP instead of 30%.
-    - 'SlowStart': Draw 1 fewer card on the first turn of each combat.
+    - 'RisingStrength': Elites and bosses start each combat with 1 Strength in Act 2 and 2 in Act 3.
+    - 'EscalatingBuffs': Enemies start combat with one random buff in Act 2 and two different ones in
+      Act 3, from 1 Strength, 4 Plating, 2 Thorns, 1 Artifact, 3 Regen, 4 Curl Up, 4 Vigor and
+      1 Slippery.
+    - 'ShrinkingRests': Resting heals 25% of max HP in Act 2 and 20% in Act 3, instead of 30%.
+    - 'MountingCurses': Gain a random curse at the start of Act 2 and of Act 3.
+    - 'MountingBanes': Gain an Ascender's Bane, which cannot be removed, at the start of Act 2 and
+      of Act 3.
+    - 'CursedRun': Gain a random curse at the start of every act, including Act 1 (the base game's
+      Cursed Run). Stacks with 'MountingCurses'.
+    - 'ExtraAscendersBane': Start each run with an extra Ascender's Bane. Stacks with
+      'MountingBanes'.
+    - 'SlowStart': Draw 1 fewer card on the first turn of each combat, in every act.
     - 'FrailStart': Start each run with 10% less max HP.
-    - 'ExtraAscendersBane': Start each run with an extra Ascender's Bane.
-    - 'CursedRun': Gain a random curse at the start of each act (the base game's Cursed Run).
-    - 'DeadlyEvents': ? rooms can hold elites, and treasure appears more often (the base game's
-      Deadly Events). Its extra elites and chests make relic checks easier to reach than logic expects.
     - 'DangerousUnknowns': ? rooms lean towards fights. Combat starts at 20% and rises 15% each
       time a ? room is not a fight; elites start at 0% and rise 4%; chests start and rise at 1%.
-      Shops are unchanged. The chances reset each act, with no cap. Cannot be combined with
-      'DeadlyEvents'. The extra fights and elites reach combat and relic checks sooner than logic
-      expects."""
+      Shops are unchanged. The chances reset each act, with no cap. The extra fights and elites
+      reach combat and relic checks sooner than logic expects."""
     display_name = "Run Modifiers"
     valid_keys_casefold = False
     valid_keys = {
-        "EliteStrength",
-        "RandomEnemyBuffs",
-        "WeakerRests",
+        "RisingStrength",
+        "EscalatingBuffs",
+        "ShrinkingRests",
+        "MountingCurses",
+        "MountingBanes",
+        "CursedRun",
+        "ExtraAscendersBane",
         "SlowStart",
         "FrailStart",
-        "ExtraAscendersBane",
-        "CursedRun",
-        "DeadlyEvents",
         "DangerousUnknowns",
     }
     default = frozenset()
 
 
-class EnemyHpPercent(Range):
-    """Every enemy's max HP as a percentage of normal, on top of Ascension. Logic does not account
-    for it. In multiplayer, the host's value applies to the whole run."""
-    display_name = "Enemy Max HP Percent"
-    range_start = 100
-    range_end = 150
-    default = 100
-
-
-class EnemyDamagePercent(Range):
-    """Damage enemies deal as a percentage of normal, on top of Ascension. Logic does not account
-    for it. In multiplayer, the host's value applies to the whole run."""
-    display_name = "Enemy Damage Percent"
-    range_start = 100
-    range_end = 150
-    default = 100
+class ActScalingPercent(Range):
+    """Extra max HP and damage for every enemy after Act 1, as a percentage per act: enemies get this
+    much more in Act 2 and twice as much in Act 3. Act 1 is unchanged. Stacks with Ascension. Logic
+    does not account for it. In multiplayer, the host's value applies to the whole run."""
+    display_name = "Act Scaling Percent"
+    range_start = 0
+    range_end = 25
+    default = 0
 
 # Death Link Options
 
@@ -802,8 +799,7 @@ class Spire2Options(PerGameCommonOptions):
     ascension: Ascension
     ascension_down: AscensionDown
     run_modifiers: RunModifiers
-    enemy_hp_percent: EnemyHpPercent
-    enemy_damage_percent: EnemyDamagePercent
+    act_scaling_percent: ActScalingPercent
 
     # Main game flow
     use_new_logic: UseNewLogic

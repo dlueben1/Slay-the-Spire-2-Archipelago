@@ -6,11 +6,12 @@ using MegaCrit.Sts2.Core.Rooms;
 
 namespace StS2AP.Models;
 
-/// <summary>Elites and bosses start each combat with extra Strength.</summary>
-public sealed class ApEliteStrength : ApRunModifier
+/// <summary>
+/// Elites and bosses start each combat with 1 Strength in Act 2 and 2 in Act 3; Act 1 is
+/// unchanged.
+/// </summary>
+public sealed class ApRisingStrength : ApRunModifier
 {
-    private const int StrengthAmount = 1;
-
     protected override string IconModifierEntry => "big_game_hunter";
 
     // Monsters placed by the encounter join without the creature-added hook, so they are buffed
@@ -34,7 +35,12 @@ public sealed class ApEliteStrength : ApRunModifier
         return AddStrength(creature);
     }
 
-    private static Task AddStrength(Creature enemy) =>
-        PowerCmd.Apply<StrengthPower>(
-            new ThrowingPlayerChoiceContext(), enemy, StrengthAmount, null, null);
+    // One Strength for each act after Act 1.
+    private Task AddStrength(Creature enemy)
+    {
+        int strength = RunState.CurrentActIndex;
+        return strength > 0
+            ? PowerCmd.Apply<StrengthPower>(new ThrowingPlayerChoiceContext(), enemy, strength, null, null)
+            : Task.CompletedTask;
+    }
 }

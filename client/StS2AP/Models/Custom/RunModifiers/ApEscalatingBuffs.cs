@@ -8,8 +8,11 @@ using MegaCrit.Sts2.Core.Rooms;
 
 namespace StS2AP.Models;
 
-/// <summary>Every enemy starts combat with one small random buff.</summary>
-public sealed class ApRandomEnemyBuffs : ApRunModifier
+/// <summary>
+/// Enemies start combat with one small random buff in Act 2 and two different ones in Act 3;
+/// Act 1 is unchanged.
+/// </summary>
+public sealed class ApEscalatingBuffs : ApRunModifier
 {
     private static readonly Func<Creature, Task>[] Buffs =
     [
@@ -43,15 +46,26 @@ public sealed class ApRandomEnemyBuffs : ApRunModifier
     public override Task AfterCreatureAddedToCombat(Creature creature) =>
         IsEnemy(creature) ? BuffRandomly(creature) : Task.CompletedTask;
 
-    private Task BuffRandomly(Creature enemy)
+    private async Task BuffRandomly(Creature enemy)
     {
-        // Seed each pick from the run and the enemy's place in this combat, so every multiplayer
+        // One buff for each act after Act 1.
+        int buffCount = RunState.CurrentActIndex;
+        if (buffCount <= 0)
+            return;
+
+        // Seed the picks from the run and the enemy's place in this combat, so every multiplayer
         // peer and every reload of the same fight gives the same buffs.
         var rng = new Rng(
             RunState.Rng.Seed,
             $"ap_enemy_buff_{RunState.CurrentActIndex}_{RunState.ActFloor}_{_enemiesBuffed++}"
         );
-        return rng.NextItem(Buffs)!(enemy);
+        List<Func<Creature, Task>> remaining = Buffs.ToList();
+        for (int i = 0; i < buffCount && remaining.Count > 0; i++)
+        {
+            Func<Creature, Task> buff = rng.NextItem(remaining)!;
+            remaining.Remove(buff);
+            await buff(enemy);
+        }
     }
 
     private static Task Apply<TPower>(Creature enemy, int amount) where TPower : PowerModel =>

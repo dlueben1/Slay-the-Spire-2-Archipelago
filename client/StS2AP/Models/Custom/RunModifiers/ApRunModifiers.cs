@@ -14,14 +14,15 @@ public static class ApRunModifiers
     private static readonly IReadOnlyDictionary<string, Func<ModifierModel>> CanonicalByOptionName =
         new Dictionary<string, Func<ModifierModel>>(StringComparer.Ordinal)
         {
-            ["EliteStrength"] = ModelDb.Modifier<ApEliteStrength>,
-            ["RandomEnemyBuffs"] = ModelDb.Modifier<ApRandomEnemyBuffs>,
-            ["WeakerRests"] = ModelDb.Modifier<ApWeakerRests>,
+            ["RisingStrength"] = ModelDb.Modifier<ApRisingStrength>,
+            ["EscalatingBuffs"] = ModelDb.Modifier<ApEscalatingBuffs>,
+            ["ShrinkingRests"] = ModelDb.Modifier<ApShrinkingRests>,
+            ["MountingCurses"] = ModelDb.Modifier<ApMountingCurses>,
+            ["MountingBanes"] = ModelDb.Modifier<ApMountingBanes>,
+            ["CursedRun"] = ModelDb.Modifier<ApCursedRun>,
+            ["ExtraAscendersBane"] = ModelDb.Modifier<ApExtraAscendersBane>,
             ["SlowStart"] = ModelDb.Modifier<ApSlowStart>,
             ["FrailStart"] = ModelDb.Modifier<ApFrailStart>,
-            ["ExtraAscendersBane"] = ModelDb.Modifier<ApExtraAscendersBane>,
-            ["CursedRun"] = ModelDb.Modifier<ApCursedRun>,
-            ["DeadlyEvents"] = ModelDb.Modifier<ApDeadlyEvents>,
             ["DangerousUnknowns"] = ModelDb.Modifier<ApDangerousUnknowns>,
         };
 
@@ -51,17 +52,11 @@ public static class ApRunModifiers
             else
                 LogUtility.Warn($"Ignoring unknown run modifier '{optionName}' from slot data.");
         }
-        if (settings.EnemyHpPercent > 100)
+        if (settings.ActScalingPercent > 0)
         {
-            var enemyHp = (ApEnemyHp)ModelDb.Modifier<ApEnemyHp>().ToMutable();
-            enemyHp.HpPercent = settings.EnemyHpPercent;
-            added.Add(enemyHp);
-        }
-        if (settings.EnemyDamagePercent > 100)
-        {
-            var enemyDamage = (ApEnemyDamage)ModelDb.Modifier<ApEnemyDamage>().ToMutable();
-            enemyDamage.DamagePercent = settings.EnemyDamagePercent;
-            added.Add(enemyDamage);
+            var actScaling = (ApActScaling)ModelDb.Modifier<ApActScaling>().ToMutable();
+            actScaling.PercentPerAct = settings.ActScalingPercent;
+            added.Add(actScaling);
         }
 
         // Keep one of each type, including any the run already has.

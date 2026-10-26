@@ -2,7 +2,6 @@ import json
 from importlib.resources import files
 import unittest
 
-from Options import OptionError
 from Utils import restricted_dumps
 from test.general import setup_multiworld, setup_solo_multiworld
 from worlds.AutoWorld import call_all
@@ -200,31 +199,20 @@ class TestRunModifiersDefault(Spire2TestBase):
     def test_no_modifiers_are_sent_by_default(self):
         slot_data = self.world.fill_slot_data()
         self.assertEqual([], slot_data["run_modifiers"])
-        self.assertEqual(100, slot_data["enemy_hp_percent"])
-        self.assertEqual(100, slot_data["enemy_damage_percent"])
+        self.assertEqual(0, slot_data["act_scaling_percent"])
 
 
 class TestRunModifiersConfigured(Spire2TestBase):
     options = {
-        "run_modifiers": ["DeadlyEvents", "EliteStrength"],
-        "enemy_hp_percent": 125,
-        "enemy_damage_percent": 150,
+        "run_modifiers": ["RisingStrength", "DangerousUnknowns"],
+        "act_scaling_percent": 15,
     }
 
     def test_modifier_names_are_sent_sorted_in_slot_data(self):
-        self.assertEqual(["DeadlyEvents", "EliteStrength"], self.world.fill_slot_data()["run_modifiers"])
+        self.assertEqual(["DangerousUnknowns", "RisingStrength"], self.world.fill_slot_data()["run_modifiers"])
 
-    def test_enemy_percentages_are_sent_in_slot_data(self):
-        slot_data = self.world.fill_slot_data()
-        self.assertEqual(125, slot_data["enemy_hp_percent"])
-        self.assertEqual(150, slot_data["enemy_damage_percent"])
-
-
-class TestRunModifierConflicts(unittest.TestCase):
-    def test_deadly_events_and_dangerous_unknowns_are_rejected_together(self):
-        with self.assertRaisesRegex(OptionError, "DeadlyEvents with DangerousUnknowns"):
-            setup_multiworld(SlayTheSpire2World, seed=42, options={
-                "run_modifiers": ["DeadlyEvents", "DangerousUnknowns"]})
+    def test_act_scaling_is_sent_in_slot_data(self):
+        self.assertEqual(15, self.world.fill_slot_data()["act_scaling_percent"])
 
 
 class TestAscensionDowns(Spire2TestBase):

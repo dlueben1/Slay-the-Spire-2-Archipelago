@@ -58,24 +58,24 @@ Slay the Spire II:
   # A single number N removes your highest N Ascensions; otherwise list numbers or names as above.
   ascension_down: []
 
-  # Extra difficulty modifiers for every run, on top of Ascension; logic ignores them. Names (case-sensitive):
-  #   EliteStrength      - elites and bosses start each combat with 1 Strength
-  #   RandomEnemyBuffs   - every enemy starts combat with one random small buff
-  #   WeakerRests        - resting heals 25% of max HP instead of 30%
-  #   SlowStart          - draw 1 fewer card on the first turn of each combat
+  # Extra difficulty modifiers for every run, on top of Ascension; logic ignores them. Most leave Act 1
+  # as it is and grow harder in Acts 2 and 3. Names (case-sensitive):
+  #   RisingStrength     - elites and bosses start each combat with 1 Strength in Act 2, 2 in Act 3
+  #   EscalatingBuffs    - enemies start combat with 1 random buff in Act 2, 2 different ones in Act 3
+  #   ShrinkingRests     - resting heals 25% of max HP in Act 2 and 20% in Act 3 instead of 30%
+  #   MountingCurses     - gain a random curse at the start of Act 2 and of Act 3
+  #   MountingBanes      - gain an Ascender's Bane (cannot be removed) at the start of Act 2 and of Act 3
+  #   CursedRun          - gain a random curse at the start of every act, Act 1 included; stacks with MountingCurses
+  #   ExtraAscendersBane - start each run with an extra Ascender's Bane; stacks with MountingBanes
+  #   SlowStart          - draw 1 fewer card on the first turn of each combat, in every act
   #   FrailStart         - start each run with 10% less max HP
-  #   ExtraAscendersBane - start each run with an extra Ascender's Bane
-  #   CursedRun          - gain a random curse at the start of each act
-  #   DeadlyEvents       - ? rooms can hold elites and treasure is more common (easier relic checks)
-  #   DangerousUnknowns  - ? rooms lean towards fights: combat 20% (+15%), elites 0% (+4%), chests 1% (+1%);
-  #                        not with DeadlyEvents
+  #   DangerousUnknowns  - ? rooms lean towards fights: combat 20% (+15%), elites 0% (+4%), chests 1% (+1%)
   # In multiplayer, the host's modifiers apply to the whole run.
   run_modifiers: []
 
-  # Every enemy's max HP and the damage enemies deal, as a percentage of normal (100-150).
-  # Logic ignores them. In multiplayer, the host's values apply to the whole run.
-  enemy_hp_percent: 100
-  enemy_damage_percent: 100
+  # Extra enemy max HP and damage per act after Act 1 (0-25): 10 gives +10% in Act 2 and +20% in Act 3.
+  # Logic ignores it. In multiplayer, the host's value applies to the whole run.
+  act_scaling_percent: 0
 
   ################
   # Game Options #
