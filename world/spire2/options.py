@@ -340,6 +340,25 @@ class CardReward(Toggle):
     display_name = "Shuffle All Card Rewards"
     default = False
 
+class StrictCardRewards(Toggle):
+    """Harder: you can no longer look through every Card Reward in the AP Menu before picking.
+    Opening one reveals its cards and locks the other Card Rewards until you take a card or Discard it,
+    like a card reward after a fight. Skip, the map, the deck and closing the menu keep the revealed
+    reward for later. With Pael's Wing, its Sacrifice replaces Discard.
+    Does not change logic. The mod's settings can override this.
+    """
+    display_name = "Strict Card Rewards"
+    default = 0
+
+class HiddenIntents(Toggle):
+    """Harder: enemy intents are hidden, like Runic Dome in the first game, and so is the Intent Graph mod's overlay.
+    Adds two Progressive Intent Sight items to the item pool, which apply to every character. The first shows what
+    each enemy intends to do, without numbers. The second shows damage and other numbers, and the Intent Graph overlay.
+    Does not change logic.
+    """
+    display_name = "Hidden Intents"
+    default = 0
+
 class SeededRun(Toggle):
     """Whether each character should have a fixed seed to climb the spire with or not."""
     display_name = "Seeded Run"
@@ -826,6 +845,8 @@ class Spire2Options(PerGameCommonOptions):
     progressive_starter_card: ProgressiveStarterCard
     progressive_starter_relic: ProgressiveStarterRelic
     shuffle_all_cards: CardReward
+    strict_card_rewards: StrictCardRewards
+    hidden_intents: HiddenIntents
 
     # Bonus items
     bonus_items: BonusItems

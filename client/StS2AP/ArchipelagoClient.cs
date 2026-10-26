@@ -1708,6 +1708,12 @@ namespace StS2AP
                 settings.IsDeathLinkEnabled = Convert.ToBoolean(slotData["death_link"]);
             if (slotData.ContainsKey("shuffle_all_cards"))
                 settings.ShouldShuffleAllCards = Convert.ToBoolean(slotData["shuffle_all_cards"]);
+            // Older APWorlds omit this key; their slots keep free card reward browsing.
+            if (slotData.ContainsKey("strict_card_rewards"))
+                settings.StrictCardRewards = Convert.ToBoolean(slotData["strict_card_rewards"]);
+            // Older APWorlds omit this key; their slots show intents.
+            if (slotData.ContainsKey("hidden_intents"))
+                settings.HiddenIntents = Convert.ToBoolean(slotData["hidden_intents"]);
             if (slotData.ContainsKey("lock_characters"))
                 settings.NoCharactersLocked = Convert.ToInt32(slotData["lock_characters"]) == 0;
             if (slotData.ContainsKey("enable_death_fragments"))

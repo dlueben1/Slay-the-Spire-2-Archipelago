@@ -28,4 +28,7 @@ public enum MultiplayerFeature
     DeathFragments,
     SaveAndReconnect,
     UnknownReceivedItems,
+
+    // Display-only: each client shows intents from its own slot's Intent Sight receipts.
+    IntentSight,
 }

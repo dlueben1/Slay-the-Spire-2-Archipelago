@@ -44,6 +44,9 @@ public static class ArchipelagoRewardUI
         bool Synchronized,
         bool InitiallyEmpty);
 
+    // Locked card rows stay clickable so they can explain why they will not open.
+    private static readonly Color LockedCardRewardModulate = new(1f, 1f, 1f, 0.4f);
+
     private static readonly Dictionary<RewardsSet, NativeMenuSession> Sessions = new();
     private static readonly ApRewardTravelGuard Travel = new();
 
@@ -318,6 +321,26 @@ public static class ArchipelagoRewardUI
             && message.Contains("outside combat", StringComparison.OrdinalIgnoreCase);
         ShowBlockedMessage(message, blockedByCombat);
         return false;
+    }
+
+    /// <summary>
+    /// Ghosts the card rows that Strict Card Rewards locks behind a revealed card reward, so
+    /// the revealed one is the only card row at full colour.
+    /// </summary>
+    internal static void RefreshCardRewardLocks()
+    {
+        if (_screen == null || !GodotObject.IsInstanceValid(_screen))
+            return;
+        if (_screen.GetNodeOrNull<Control>("%RewardsContainer") is not { } container)
+            return;
+        foreach (NRewardButton button in container.GetChildren().OfType<NRewardButton>())
+            ApplyCardRewardLock(button);
+    }
+
+    internal static void ApplyCardRewardLock(NRewardButton button)
+    {
+        if (button.Reward is ApMirroredRewardDispatcher.ApNativeCardReward card)
+            button.Modulate = card.IsLockedByAnotherReveal() ? LockedCardRewardModulate : Colors.White;
     }
 
     private static bool TryBlockMultiplayerCombatOpen()

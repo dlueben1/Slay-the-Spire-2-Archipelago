@@ -27,6 +27,7 @@ class ItemType(Enum):
     PROGRESSIVE_STARTER_CARD = auto()
     PROGRESSIVE_STARTER_RELIC = auto()
     BONUS_WAX_RELIC = auto()
+    INTENT_SIGHT = auto()
     TRAP = auto()
     CAW_CAW = auto()
     BUFF = auto()
@@ -127,6 +128,12 @@ trap_item_table: Dict[str, ItemData] = {
 }
 
 
+# Universal items that undo a challenge option, one ID range for all of them: 800-899.
+# Each is added to the pool only when its option is on; logic never counts them.
+INTENT_SIGHT_COPIES = 2
+challenge_item_table: Dict[str, ItemData] = {
+    "Progressive Intent Sight": ItemData(800, ItemType.INTENT_SIGHT, ItemClassification.useful),
+}
 
 # `universal_bonus_items` is keyed by the actual Archipelago item name (like "Bonus Wax Relic").
 # This matches item_table and create_item() lookups.
@@ -142,7 +149,7 @@ base_event_item_pairs: Dict[str, str] = {
 
 def create_item_tables(registry: dict[int, CharacterDefinition]) -> tuple[
         dict[str, ItemData], dict[str, dict[str, ItemData]], dict[str, str]]:
-    item_name_to_data = universal_items | universal_bonus_items | trap_item_table
+    item_name_to_data = universal_items | universal_bonus_items | trap_item_table | challenge_item_table
     characters_to_items: dict[str, dict[str, ItemData]] = defaultdict(dict)
     character_event_pairs: dict[str, str] = {}
     for block, definition in registry.items():

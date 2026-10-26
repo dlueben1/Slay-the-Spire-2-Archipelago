@@ -127,6 +127,14 @@ Slay the Spire II:
   # true shuffles every card reward; false shuffles every other one.
   shuffle_all_cards: true
 
+  # Harder: opening a card reward in the AP menu locks the others until you take a card or
+  # Discard it, so you cannot look through every card reward first. The mod's settings can override it.
+  strict_card_rewards: false
+
+  # Harder: hides enemy intents and the Intent Graph mod's overlay. Adds two Progressive Intent
+  # Sight items for the whole slot: the first shows intents without numbers, the second shows them all.
+  hidden_intents: false
+
   ############
   # Sanities #
   ############

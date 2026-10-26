@@ -63,6 +63,11 @@
             /// IDs match universal_bonus_items in items.py.
             BonusWaxRelic = 600,
 
+            /// ── Challenge items (universal / character-agnostic) ───────────────────────
+            /// Undo a challenge option; each copy is a permanent unlock for every character.
+            /// IDs match challenge_item_table in items.py.
+            ProgressiveIntentSight = 800,
+
             // Universal traps; IDs match trap_item_table in the APWorld.
             WeakTrap = 700,
             FrailTrap = 701,
@@ -123,6 +128,7 @@
             { 512, "Thorns" },
             { 513, "Artifact" },
             { 600, "Bonus Wax Relic" },
+            { 800, "Progressive Intent Sight" },
             { 700, "Weak Trap" },
             { 701, "Frail Trap" },
             { 702, "Vulnerable Trap" },
