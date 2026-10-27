@@ -530,9 +530,7 @@ namespace StS2AP.Utils
                 or LocationCheckSendResult.DispatchStatus.Submitted)
             {
                 accepted = pending.Count;
-                foreach (long id in pending)
-                    if (!ArchipelagoClient.CheckedLocations.Contains(id))
-                        ArchipelagoClient.CheckedLocations.Add(id);
+                ArchipelagoClient.CheckedLocations.UnionWith(pending);
             }
             return new(dispatch, requested.Length, accepted, alreadyChecked, notInSlot);
         }

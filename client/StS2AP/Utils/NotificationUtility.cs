@@ -378,9 +378,11 @@ namespace StS2AP.Utils
             if (info.Player.Name == ArchipelagoClient.PlayerName)
                 return;
 
-            // Display the message
+            // Buffs wait in receipt order and only one applies per combat, so a new buff can
+            // sit behind others rather than arriving next turn or next combat.
             string message =
-                $"[color=magenta]{info.Player}[/color] provides you [sine][color=yellow]{info.ItemDisplayName}[/color][/sine] for your next turn!";
+                $"[color=magenta]{info.Player}[/color] provides you [sine][color=yellow]{info.ItemDisplayName}[/color][/sine]! "
+                    + "Buffs are queued and apply one per combat.";
             EnqueueNotification(message, NotificationType.ItemReceived);
         }
 

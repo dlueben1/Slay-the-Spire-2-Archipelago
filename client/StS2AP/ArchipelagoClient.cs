@@ -226,7 +226,7 @@ namespace StS2AP
         /// Archipelago Item Locations that we've already found so far, collected by their Location ID
         /// </summary>
         // The SDK may publish its initial checked locations before login preparation runs.
-        public static List<long> CheckedLocations { get; set; } = new();
+        public static HashSet<long> CheckedLocations { get; set; } = new();
 
         /// <summary>
         /// Location IDs belonging to the authenticated AP slot. Unlike scouting data, this
@@ -1022,7 +1022,7 @@ namespace StS2AP
             PendingCheckUtility.BindAuthenticatedSession(session, ServerAddress, Seed);
 
             // Restore checked locations from server so "Claimed" state survives restarts
-            CheckedLocations = session.Locations.AllLocationsChecked.ToList();
+            CheckedLocations = session.Locations.AllLocationsChecked.ToHashSet();
             LogUtility.Info(
                 $"Restored {CheckedLocations.Count} previously checked location(s) from server."
             );
@@ -1438,9 +1438,7 @@ namespace StS2AP
                 long[] ids = locations.ToArray();
                 RunForSession(_session, () =>
                 {
-                    foreach (long id in ids)
-                        if (!CheckedLocations.Contains(id))
-                            CheckedLocations.Add(id);
+                    CheckedLocations.UnionWith(ids);
                     // This SDK event also includes optimistic local checks. Do not use it
                     // to acknowledge durable outbox entries; fresh login still owns that.
                     int previousCampfireCount = Progress.CheckedCampfireLocationIds.Count;
