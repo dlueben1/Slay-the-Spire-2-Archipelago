@@ -6,5 +6,8 @@
   "INSTALL_APWORLD.header": "Install/Update APWorld?",
   "INSTALL_APWORLD.body": "The APWorld is [i]only necessary[/i] if you're [b]hosting the Archipelago yourself[/b], and to install it you must have the [b]Archipelago Launcher (v0.6.7 or later) installed[/b] for this to work.\n\nThis will install in the background and take a few moments, then please restart your launcher. Proceed?",
   "APWORLD_MISMATCH.header": "APWorld Compatibility Warning",
-  "APWORLD_MISMATCH.body": "The server uses APWorld {server}; this client bundles APWorld {bundled}.\n\nServer compatibility flag: {server_flag}. Client compatibility flag: {client_flag}.\n\nUpdating the APWorld or client is recommended.\n\nConnect anyway?"
+  "APWORLD_MISMATCH.body": "The server uses APWorld {server}; this client bundles APWorld {bundled}.\n\nServer compatibility flag: {server_flag}. Client compatibility flag: {client_flag}.\n\nUpdating the APWorld or client is recommended.\n\nConnect anyway?",
+  "MISSING_CHARACTERS.header": "Character Mods Missing",
+  "MISSING_CHARACTERS.body_borrowed": "This slot includes characters whose mods are not loaded: [b]{missing}[/b].\n\nEvery character's checks and victories will also count for them. [b]Defect[/b] will be playable too, using {borrowed}'s items.\n\nCheckpoints saved with a different set of mods may not load; start a new run if one fails.\n\nConnect anyway?",
+  "MISSING_CHARACTERS.body_own": "This slot includes characters whose mods are not loaded: [b]{missing}[/b].\n\nEvery character's checks and victories will also count for them, and [b]Defect[/b] will be playable.\n\nCheckpoints saved with a different set of mods may not load; start a new run if one fails.\n\nConnect anyway?"
 }

@@ -33,7 +33,7 @@ internal static class IntoTheSpireverseSelection
 
     private static List<CharacterModel> GetChoices(List<CharacterModel> family) =>
         MultiplayerSupport.IsLocalGuest ? family : family.Where(character =>
-            ArchipelagoClient.Settings!.Characters.ContainsKey(character.Id.Entry)).ToList();
+            ArchipelagoClient.Settings!.TryGetCharacterConfig(character.Id.Entry, out _)).ToList();
 
     private static bool IsUnlocked(CharacterModel character) =>
         MultiplayerSupport.IsLocalGuest || ArchipelagoClient.CanSelectCharacter(character, out _);

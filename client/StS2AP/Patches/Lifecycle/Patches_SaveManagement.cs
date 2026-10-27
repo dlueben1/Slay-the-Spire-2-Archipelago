@@ -251,7 +251,7 @@ namespace StS2AP.Patches
                 ?? throw new InvalidOperationException(
                     "Cannot continue the AP run because slot settings are unavailable"
                 );
-            if (!settings.Characters.TryGetValue(
+            if (!settings.TryGetCharacterConfig(
                     currentPlayer.getInternalName(),
                     out CharacterConfig? currentConfig))
             {

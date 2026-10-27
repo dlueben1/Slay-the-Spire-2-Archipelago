@@ -32,7 +32,7 @@ namespace StS2AP.Patches
                 var officialName = character.Id.Entry;
                 ArchipelagoSettings? settings = ArchipelagoClient.Settings;
                 if (settings == null
-                    || !settings.Characters.TryGetValue(officialName, out CharacterConfig? config))
+                    || !settings.TryGetCharacterConfig(officialName, out CharacterConfig? config))
                 {
                     string message = $"Cannot start the AP run because character settings for "
                         + $"'{officialName}' are unavailable.";
@@ -204,7 +204,7 @@ namespace StS2AP.Patches
                     MultiplayerSupport.InvalidateRunClaims(reason);
                     return;
                 }
-                if (!settings.Characters.TryGetValue(
+                if (!settings.TryGetCharacterConfig(
                     officialName,
                     out CharacterConfig? config
                 ))

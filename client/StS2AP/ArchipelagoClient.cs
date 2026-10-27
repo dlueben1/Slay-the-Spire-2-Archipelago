@@ -118,15 +118,14 @@ namespace StS2AP
             new(AncientRelicLocation.StartOfAct, AncientRelicPoolMode.Balanced);
 
         /// <summary>Restores the fixed host's frozen settings on its own process.</summary>
-        internal static bool TryUseMultiplayerHostSettings(
-            ArchipelagoSettings settings,
-            out string reason)
+        internal static void UseMultiplayerHostSettings(ArchipelagoSettings settings)
         {
             ArgumentNullException.ThrowIfNull(settings);
 
             // RitsuLib's JSON round-trip does not preserve the comparer from the initialized
             // ConcurrentDictionary. Native character IDs are upper-case while AP slot-data keys
             // use title case, so normalize the map again whenever frozen settings are installed.
+            // Missing character mods are not an error here: Defect stands in for them.
             settings.Characters = new System.Collections.Concurrent.ConcurrentDictionary<
                 string,
                 CharacterConfig
@@ -135,48 +134,32 @@ namespace StS2AP
                 StringComparer.InvariantCultureIgnoreCase
             );
 
-            if (!TryValidateConfiguredCharacters(settings, out reason))
-                return false;
-
             Settings = settings;
-            return true;
-        }
-
-        internal static bool TryValidateConfiguredCharacters(
-            ArchipelagoSettings settings,
-            out string reason)
-        {
-            var installedCharacterIds = ModelDb.AllCharacters
-                .Select(character => character.Id.Entry)
-                .ToHashSet(StringComparer.InvariantCultureIgnoreCase);
-            var missingCharacterIds = settings.Characters.Values
-                .Select(config => config.OfficialName)
-                .Where(characterId =>
-                    string.IsNullOrWhiteSpace(characterId)
-                    || !installedCharacterIds.Contains(characterId)
-                )
-                .Distinct(StringComparer.InvariantCultureIgnoreCase)
-                .Order(StringComparer.InvariantCultureIgnoreCase)
-                .ToArray();
-
-            if (missingCharacterIds.Length > 0)
-            {
-                reason = "The AP slot configures character model(s) that are not loaded: "
-                    + string.Join(", ", missingCharacterIds.Select(characterId =>
-                        string.IsNullOrWhiteSpace(characterId) ? "<missing id>" : characterId
-                    ))
-                    + ". Enable the matching character mod(s) and reconnect.";
-                return false;
-            }
-
-            reason = string.Empty;
-            return true;
         }
 
         internal static void RebuildUnlockedCharactersFromSettings()
         {
             Progress.UnlockedCharacters.Clear();
             SetupUnlockedCharacters();
+        }
+
+        /// <summary>
+        /// The characters unlocked for this slot: those from slot data and received Unlock items,
+        /// plus the stand-in for missing character mods. The stand-in is derived here instead of
+        /// stored in <see cref="Progress"/>, because Progress is replaced when a run starts and
+        /// only Unlock items are replayed into the new one.
+        /// </summary>
+        internal static IReadOnlyList<CharacterModel> UnlockedCharactersWithFallback
+        {
+            get
+            {
+                List<CharacterModel> unlocked = Progress.UnlockedCharacters;
+                if (Settings is not { } settings || !MissingCharacterFallback.GetPlan(settings).IsActive)
+                    return unlocked;
+
+                CharacterModel fallback = MissingCharacterFallback.FallbackCharacter;
+                return unlocked.Any(character => character.Id == fallback.Id) ? unlocked : [.. unlocked, fallback];
+            }
         }
 
         /// <summary>
@@ -191,13 +174,13 @@ namespace StS2AP
                 return false;
             }
 
-            if (!Settings.Characters.ContainsKey(character.Id.Entry))
+            if (!Settings.TryGetCharacterConfig(character.Id.Entry, out _))
             {
                 reason = $"Character {character.Id.Entry} is not configured for this AP slot.";
                 return false;
             }
 
-            if (!Progress.UnlockedCharacters.Any(unlocked => unlocked.Id == character.Id))
+            if (!UnlockedCharactersWithFallback.Any(unlocked => unlocked.Id == character.Id))
             {
                 reason = $"Character {character.Id.Entry} is not unlocked for this AP slot.";
                 return false;
@@ -375,10 +358,35 @@ namespace StS2AP
         #region Networking
 
         private static ReaderWriterLock ConnectionLock { get; } = new ReaderWriterLock();
-        private static TaskCompletionSource<bool>? _pendingCompatibilityConfirmation;
+        private static TaskCompletionSource<bool>? _pendingConnectionWarning;
         private static readonly object _connectionStateLock = new();
         private static bool _currentAttemptIsAutomaticReconnect;
         private static SessionCallbacks? _sessionCallbacks;
+
+        /// <summary>
+        /// Whether the room was generated in race mode, from the server's read-only
+        /// "_read_race_mode" key. Null until that read succeeds; cheat-like debug commands
+        /// treat an unknown room as a race.
+        /// </summary>
+        internal static bool? IsRaceMode { get; private set; }
+
+        private static async Task ReadRaceModeAsync(ArchipelagoSession session)
+        {
+            try
+            {
+                int? raceMode = await session.DataStorage["_read_race_mode"].GetAsync<int?>();
+                if (raceMode == null)
+                {
+                    LogUtility.Warn("The server did not report its race mode; AP debug commands stay disabled.");
+                    return;
+                }
+                RunForSession(session, () => IsRaceMode = raceMode != 0);
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Warn($"Could not read the room's race mode; AP debug commands stay disabled: {ex.Message}");
+            }
+        }
 
         /// <summary>Runs session callbacks on Godot's thread only while their owner is current.</summary>
         internal static void RunForSession(ArchipelagoSession session, Action action) =>
@@ -446,6 +454,7 @@ namespace StS2AP
                 Progress = new ArchipelagoProgress();
             }
             Settings = null;
+            IsRaceMode = null;
             SlotData = new();
             CheckedLocations = new();
             SlotLocationIds = new HashSet<long>();
@@ -696,11 +705,6 @@ namespace StS2AP
                     RejectIncompatibleConnection($"Invalid AP player settings: {ex.Message}", wasAutomaticReconnect);
                     return;
                 }
-                if (!TryValidateConfiguredCharacters(preparedSettings, out string characterError))
-                {
-                    RejectIncompatibleConnection(characterError, wasAutomaticReconnect);
-                    return;
-                }
 
                 // These metadata fields cannot predict whether this client understands every
                 // enabled item and location. Treat discrepancies as visible diagnostics and let
@@ -727,35 +731,50 @@ namespace StS2AP
                         warningBody.Add("bundled", $"v{bundledApWorldVersion}");
                         warningBody.Add("server_flag", apWorldCompatFlag?.ToString() ?? "unavailable");
                         warningBody.Add("client_flag", SupportedCompatFlag.ToString());
-                        var confirmation = new TaskCompletionSource<bool>(
-                            TaskCreationOptions.RunContinuationsAsynchronously
+                        bool? continueConnecting = await ConfirmConnectionWarningAsync(
+                            connectionSession,
+                            new LocString("main_menu_ui", "APWORLD_MISMATCH.header"),
+                            warningBody
                         );
-                        _pendingCompatibilityConfirmation = confirmation;
-                        var popup = new ConfirmPopup
-                        {
-                            Header = new LocString("main_menu_ui", "APWORLD_MISMATCH.header"),
-                            Body = warningBody,
-                            ButtonPressed = accepted => confirmation.TrySetResult(accepted),
-                        };
-
-                        ArchipelagoConnectionUI.Hide();
-                        popup.Show();
-                        bool continueConnecting = await confirmation.Task;
-                        if (ReferenceEquals(_pendingCompatibilityConfirmation, confirmation))
-                            _pendingCompatibilityConfirmation = null;
-                        // A popup can outlive its socket or a deliberate session change.
-                        if (!ReferenceEquals(Session, connectionSession) || !IsConnected)
+                        if (continueConnecting == null)
                             return;
-                        if (!continueConnecting)
+                        if (continueConnecting == false)
                         {
-                            ApReconnectController.Stop("APWorld compatibility warning declined");
-                            Disconnect(showMultiplayerNotice: false);
-                            ArchipelagoConnectionUI.Show();
-                            ArchipelagoConnectionUI.SetConnectButtonEnabled(true);
-                            ArchipelagoConnectionUI.SetCloseButtonEnabled(CanLeaveSlot);
-                            ArchipelagoConnectionUI.SetStatus("Connection cancelled. Update the APWorld or client before trying again.");
+                            CancelConnectionAfterWarning(
+                                "APWorld compatibility warning declined",
+                                "Connection cancelled. Update the APWorld or client before trying again."
+                            );
                             return;
                         }
+                    }
+                }
+
+                // Missing character mods no longer block the slot: Defect stands in for them.
+                MissingCharacterFallbackPlan fallbackPlan = MissingCharacterFallback.GetPlan(preparedSettings);
+                if (fallbackPlan.IsActive && !wasAutomaticReconnect)
+                {
+                    var warningBody = new LocString(
+                        "main_menu_ui",
+                        fallbackPlan.BorrowedCharacter == null
+                            ? "MISSING_CHARACTERS.body_own"
+                            : "MISSING_CHARACTERS.body_borrowed"
+                    );
+                    warningBody.Add("missing", MissingCharacterFallback.DescribeMissingCharacters(preparedSettings));
+                    warningBody.Add("borrowed", MissingCharacterFallback.DescribeBorrowedCharacter(preparedSettings));
+                    bool? continueConnecting = await ConfirmConnectionWarningAsync(
+                        connectionSession,
+                        new LocString("main_menu_ui", "MISSING_CHARACTERS.header"),
+                        warningBody
+                    );
+                    if (continueConnecting == null)
+                        return;
+                    if (continueConnecting == false)
+                    {
+                        CancelConnectionAfterWarning(
+                            "Missing character mods warning declined",
+                            "Connection cancelled. Enable the missing character mods, or connect again and play Defect in their place."
+                        );
+                        return;
                     }
                 }
 
@@ -778,6 +797,47 @@ namespace StS2AP
                 if (wasAutomaticReconnect)
                     ApReconnectController.OnAttemptFailed();
             }
+        }
+
+        /// <summary>
+        /// Shows a connect-anyway warning while login waits. Returns null when the session ended
+        /// or changed while the popup was open, in which case the caller must stop quietly.
+        /// </summary>
+        private static async Task<bool?> ConfirmConnectionWarningAsync(
+            ArchipelagoSession connectionSession,
+            LocString header,
+            LocString body)
+        {
+            var confirmation = new TaskCompletionSource<bool>(
+                TaskCreationOptions.RunContinuationsAsynchronously
+            );
+            _pendingConnectionWarning = confirmation;
+            var popup = new ConfirmPopup
+            {
+                Header = header,
+                Body = body,
+                ButtonPressed = accepted => confirmation.TrySetResult(accepted),
+            };
+
+            ArchipelagoConnectionUI.Hide();
+            popup.Show();
+            bool continueConnecting = await confirmation.Task;
+            if (ReferenceEquals(_pendingConnectionWarning, confirmation))
+                _pendingConnectionWarning = null;
+            // A popup can outlive its socket or a deliberate session change.
+            if (!ReferenceEquals(Session, connectionSession) || !IsConnected)
+                return null;
+            return continueConnecting;
+        }
+
+        private static void CancelConnectionAfterWarning(string reconnectStopReason, string status)
+        {
+            ApReconnectController.Stop(reconnectStopReason);
+            Disconnect(showMultiplayerNotice: false);
+            ArchipelagoConnectionUI.Show();
+            ArchipelagoConnectionUI.SetConnectButtonEnabled(true);
+            ArchipelagoConnectionUI.SetCloseButtonEnabled(CanLeaveSlot);
+            ArchipelagoConnectionUI.SetStatus(status);
         }
 
         private static bool TryReadApWorldCompatibility(
@@ -959,7 +1019,10 @@ namespace StS2AP
                 LogUtility.Info($"Unlocking starting character {model.Id.Entry} from slot data");
             }
 
-            bool someoneUnlocked = characters.Keys.Any(ids.Contains);
+            // While any character mod is missing, the stand-in is always selectable; see
+            // UnlockedCharactersWithFallback.
+            bool someoneUnlocked = MissingCharacterFallback.GetPlan(settings).IsActive
+                || ids.Any(id => settings.TryGetCharacterConfig(id, out _));
             if (!someoneUnlocked)
             {
                 // A configured starting character could not be resolved, most likely
@@ -1099,6 +1162,8 @@ namespace StS2AP
             // Restore goaled characters from DataStorage so cross-session goal tracking works
             _ = GameUtility.RestoreGoaledCharsFromStorage();
 
+            _ = ReadRaceModeAsync(session);
+
             // Load the set of already-consumed buff indices from DataStorage before item processing begins.
             _ = BuffUtility.LoadFromStorageAsync();
 
@@ -1224,8 +1289,8 @@ namespace StS2AP
                 _currentAttemptIsAutomaticReconnect = false;
             }
 
-            _pendingCompatibilityConfirmation?.TrySetResult(false);
-            _pendingCompatibilityConfirmation = null;
+            _pendingConnectionWarning?.TrySetResult(false);
+            _pendingConnectionWarning = null;
 
             if (session != null)
             {

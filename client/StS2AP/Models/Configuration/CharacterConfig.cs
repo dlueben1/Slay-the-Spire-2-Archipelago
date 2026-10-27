@@ -12,6 +12,20 @@ namespace StS2AP.Models
 
         public CharacterConfig() {  }
 
+        public CharacterConfig Clone() => new()
+        {
+            Name = Name,
+            OptionName = OptionName,
+            CharOffset = CharOffset,
+            OfficialName = OfficialName,
+            Seed = Seed,
+            Locked = Locked,
+            ModNum = ModNum,
+            ProgressiveStarterCard = ProgressiveStarterCard,
+            ProgressiveStarterRelic = ProgressiveStarterRelic,
+            Ascension = new HashSet<string>(Ascension, StringComparer.Ordinal),
+        };
+
         public static CharacterConfig? fromJObject(JObject charObj, Version apworldVersion)
         {
 

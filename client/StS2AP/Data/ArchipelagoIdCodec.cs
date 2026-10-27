@@ -35,20 +35,25 @@ namespace StS2AP.Data
             return itemId / BlockSize;
         }
 
-        public static long GetBaseLocationId(long locationId)
+        public static long GetLocationIdOffset(long locationId)
         {
             return locationId % BlockSize;
         }
 
+        public static long GetAPCharacterNumberFromLocationId(long locationId)
+        {
+            return (locationId / BlockSize) + 1;
+        }
+
         public static bool TryComposeLocationId(
-            long baseLocationId,
+            long locationIdOffset,
             long apCharacterNumber,
             out long locationId
         )
         {
             if (
-                baseLocationId < 0
-                || baseLocationId >= BlockSize
+                locationIdOffset < 0
+                || locationIdOffset >= BlockSize
                 || apCharacterNumber < 1
             )
             {
@@ -56,7 +61,7 @@ namespace StS2AP.Data
                 return false;
             }
 
-            locationId = ((apCharacterNumber - 1) * BlockSize) + baseLocationId;
+            locationId = ((apCharacterNumber - 1) * BlockSize) + locationIdOffset;
             return true;
         }
     }

@@ -54,7 +54,7 @@ namespace StS2AP.Patches
                     LogUtility.Error("Cannot update checked-location UI without AP slot settings.");
                     return;
                 }
-                if(!settings.Characters.ContainsKey(character.Id.Entry))
+                if(!settings.TryGetCharacterConfig(character.Id.Entry, out _))
                 {
                     return;
                 }
@@ -160,7 +160,7 @@ namespace StS2AP.Patches
                     LogUtility.Error("Cannot update received-item UI without AP slot settings.");
                     return;
                 }
-                if(!settings.Characters.ContainsKey(characterModel.Id.Entry))
+                if(!settings.TryGetCharacterConfig(characterModel.Id.Entry, out _))
                 {
                     // Not sure how this is getting called with something that doesn't belong, but just in case.
                     return;

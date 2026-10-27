@@ -23,7 +23,7 @@ public sealed class ArchipelagoIdCodecTests
         Assert.Equal(3, ArchipelagoIdCodec.GetCharacterItemTypeId(relic));
         Assert.True(ArchipelagoIdCodec.TryComposeLocationId(88, block, out long location));
         Assert.Equal((block - 1) * ArchipelagoIdCodec.BlockSize + 88, location);
-        Assert.Equal(88, ArchipelagoIdCodec.GetBaseLocationId(location));
+        Assert.Equal(88, ArchipelagoIdCodec.GetLocationIdOffset(location));
     }
 
     [Fact]

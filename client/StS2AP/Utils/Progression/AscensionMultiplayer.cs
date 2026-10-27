@@ -75,7 +75,7 @@ public static class AscensionMultiplayer
         handledReceiptIndexes = new List<int>();
 
         var character = BetaMainCompatibility.GetLocalCharacter(lobby);
-        if (!hostSettings.Characters.TryGetValue(
+        if (!hostSettings.TryGetCharacterConfig(
                 character.Id.Entry,
                 out CharacterConfig? config))
         {

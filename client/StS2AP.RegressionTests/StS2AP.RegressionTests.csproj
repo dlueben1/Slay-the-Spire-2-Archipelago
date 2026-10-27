@@ -13,6 +13,7 @@
     <Compile Include="../StS2AP/Extensions/ItemInfoExtensions.cs" Link="Extensions/ItemInfoExtensions.cs" />
     <Compile Include="..\StS2AP\Data\ArchipelagoIdCodec.cs" Link="Data\ArchipelagoIdCodec.cs" />
     <Compile Include="..\StS2AP\Utils\SlotGoalPolicy.cs" Link="Utils\SlotGoalPolicy.cs" />
+    <Compile Include="..\StS2AP\Utils\MissingCharacterFallbackPlan.cs" Link="Utils\MissingCharacterFallbackPlan.cs" />
     <Compile Include="..\StS2AP\Utils\CoopPlayerSelection.cs" Link="Utils\CoopPlayerSelection.cs" />
     <Compile Include="../StS2AP/Utils/SharedCharacterSelectionPolicy.cs" Link="Utils/SharedCharacterSelectionPolicy.cs" />
     <Compile Include="..\StS2AP\Utils\Progression\AscensionBanner.cs" Link="Utils\AscensionBanner.cs" />

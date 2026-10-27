@@ -25,7 +25,7 @@ public abstract class ProgressiveCampfireTopBarHandler(bool smith) : IModTopBarB
         ArchipelagoSettings? settings = ArchipelagoClient.Settings;
         if (settings == null)
             return false;
-        if (!settings.Characters.TryGetValue(ctx.Player.Character.Id.Entry, out var character))
+        if (!settings.TryGetCharacterConfig(ctx.Player.Character.Id.Entry, out var character))
             return false;
 
         // Rest/Smith access treats any Act after Act 3 as Act 3, matching the rest-site patch.

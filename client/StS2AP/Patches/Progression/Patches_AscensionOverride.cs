@@ -230,7 +230,7 @@ namespace StS2AP.Patches
             ArchipelagoSettings? settings = ArchipelagoClient.Settings;
             if (characterButton?.IsLocked == true
                 || settings == null
-                || !settings.Characters.TryGetValue(
+                || !settings.TryGetCharacterConfig(
                     character.Id.Entry,
                     out var config
                 ))

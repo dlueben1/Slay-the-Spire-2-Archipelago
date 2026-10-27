@@ -413,8 +413,14 @@ namespace StS2AP.Utils
                 const string storageKey = "StS2AP_GoaledChars";
                 LogUtility.Debug($"TrySetGoalAchieved: charName - {charName}");
 
+                // Any win also completes the goals of characters whose mods are not loaded.
+                IReadOnlyList<string> goalCharacterIds = MissingCharacterFallback
+                    .GetPlan(settings)
+                    .GoalCharacterIds(charName);
+
                 // Add to local cache HashSet.Add returns false if already present
-                bool wasNew = _goaledCharacters.Add(charName);
+                string[] newGoals = goalCharacterIds.Where(_goaledCharacters.Add).ToArray();
+                bool wasNew = newGoals.Length > 0;
                 LogUtility.Debug($"TrySetGoalAchieved: wasNew - {wasNew.ToString()}");
 
                 if (wasNew)
@@ -426,13 +432,13 @@ namespace StS2AP.Utils
                         Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
                         .Initialize(new Newtonsoft.Json.Linq.JObject());
 
-                    var updateDict = new Dictionary<string, bool> { { charName, true } };
+                    var updateDict = newGoals.ToDictionary(goalCharacterId => goalCharacterId, _ => true);
  
                     session.DataStorage[
                         Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
                         += Operation.Update(updateDict);
 
-                    LogUtility.Success($"TrySetGoalAchieved: Recorded goal for '{charName}'. Total goaled: {_goaledCharacters.Count}");
+                    LogUtility.Success($"TrySetGoalAchieved: Recorded goal for '{string.Join("', '", newGoals)}'. Total goaled: {_goaledCharacters.Count}");
 
                     // Goal progress is independent from whether victory releases this character's checks.
                     if (settings.ReleaseOnVictory)
@@ -502,6 +508,16 @@ namespace StS2AP.Utils
             QueueChecks(new[] { locationId });
 
         internal static LocationCheckSendResult QueueChecks(IEnumerable<long> locationIds)
+        {
+            // Every check also counts for characters whose mods are not loaded.
+            MissingCharacterFallbackPlan fallbackPlan = ArchipelagoClient.Settings is { } settings
+                ? MissingCharacterFallback.GetPlan(settings)
+                : MissingCharacterFallbackPlan.None;
+            return QueueExactChecks(fallbackPlan.WithMirroredLocations(locationIds));
+        }
+
+        /// <summary>Queues exactly these locations, without mirroring them to missing characters.</summary>
+        internal static LocationCheckSendResult QueueExactChecks(IEnumerable<long> locationIds)
         {
             long[] requested = locationIds.Distinct().ToArray();
             if (!ArchipelagoClient.HasAuthenticatedSlot

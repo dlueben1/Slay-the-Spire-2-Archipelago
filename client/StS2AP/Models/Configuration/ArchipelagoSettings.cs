@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using StS2AP.Utils;
 
 namespace StS2AP.Models
 {
@@ -105,13 +106,28 @@ namespace StS2AP.Models
         public bool ProgressiveStarterCard { get; set; }
         public bool ProgressiveStarterRelic { get; set; }
 
+        /// <summary>
+        /// Looks up the slot configuration a game character plays with. Besides the slot's own
+        /// characters, Defect can answer with a configuration borrowed from a slot character whose
+        /// mod is not loaded; see <see cref="MissingCharacterFallback"/>.
+        /// </summary>
+        public bool TryGetCharacterConfig(string characterId, out CharacterConfig config)
+        {
+            if (Characters.TryGetValue(characterId, out CharacterConfig? configured))
+            {
+                config = configured;
+                return true;
+            }
+            return MissingCharacterFallback.TryGetBorrowedConfig(this, characterId, out config);
+        }
+
         public bool IsProgressiveStarterCardEnabled(string characterId) =>
-            Floorsanity && (Characters.TryGetValue(characterId, out var config)
+            Floorsanity && (TryGetCharacterConfig(characterId, out var config)
                 ? config.ProgressiveStarterCard ?? ProgressiveStarterCard
                 : ProgressiveStarterCard);
 
         public bool IsProgressiveStarterRelicEnabled(string characterId) =>
-            Floorsanity && (Characters.TryGetValue(characterId, out var config)
+            Floorsanity && (TryGetCharacterConfig(characterId, out var config)
                 ? config.ProgressiveStarterRelic ?? ProgressiveStarterRelic
                 : ProgressiveStarterRelic);
 
