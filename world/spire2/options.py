@@ -21,7 +21,6 @@ class UseNewLogic(DefaultOnToggle):
 
     Old logic is used automatically (regardless of this option) when floor, gold, and potion checks
     are all disabled and this is the only world in the generation, to reduce failed generations.
-    The spoiler log records which logic a world used.
     """
     display_name = "Use New Logic"
 
@@ -186,10 +185,6 @@ class RelicRewardsAvailableAnytime(Range):
     i.e. A value of 2 here and receiving 3 relics from AP means you get 2 relics in your AP menu and the 3rd 
     requires beating one elite or visiting one chest. 
     tldr; fight elites and go to chests to get more relics. Lower value = elites matter more so don't skip them
-
-    Logic only counts the relics a run can claim: these, plus one per chest and elite on the way. With a lower
-    value, logic expects more Card Rewards or elite fights before later checks. Setting a lower value in the
-    mod's settings than in this YAML can put checks in logic that your relics cannot reach yet.
     """
     display_name = "Relic Rewards Available Anytime"
     range_start = 0
@@ -321,8 +316,7 @@ class ShopSanityCosts(Choice):
     Discount Tiered: 50 percent of the calculated baseline.
     Tiered: the full calculated baseline.
 
-    With Gold Sanity, logic expects enough Elite and Boss Gold, on top of starting and chest gold,
-    to buy the two most expensive checks a shop can list (one with Tiered prices)."""
+    Somewhat accounted for in logic."""
     display_name = "Shop Sanity Costs"
     option_Fixed = 0
     option_Super_Discount_Tiered = 1
@@ -332,7 +326,7 @@ class ShopSanityCosts(Choice):
 
 class GoldSanity(Toggle):
     """Whether to replace combat, elite, and boss gold rewards with AP locations. Adds 22 locations per character.
-    New logic then expects Elite and Boss Gold before shopping in Acts 2 and 3, because shops need gold."""
+    """
     display_name = "Gold Sanity"
     default = 0
 
