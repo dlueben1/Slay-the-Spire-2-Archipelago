@@ -63,12 +63,6 @@
             /// IDs match universal_bonus_items in items.py.
             BonusWaxRelic = 600,
 
-            /// ── Challenge items (universal / character-agnostic) ───────────────────────
-            /// Undo a challenge option; each copy is a permanent unlock for every character.
-            /// IDs match challenge_item_table in items.py.
-            ProgressiveIntentSight = 800,
-            ProgressiveHealthSight = 801,
-
             // Universal traps; IDs match trap_item_table in the APWorld.
             WeakTrap = 700,
             FrailTrap = 701,
@@ -79,6 +73,12 @@
             ConfusedTrap = 706,
             SlothTrap = 707,
             DazedTrap = 708,
+            
+            /// ── Challenge items (universal / character-agnostic) ───────────────────────
+            /// Undo a challenge option; each copy is a permanent unlock for every character.
+            /// IDs match challenge_item_table in items.py.
+            ProgressiveIntentSight = 800,
+            ProgressiveHealthSight = 801,
         }
 
         public static Dictionary<int, string> Items = new Dictionary<int, string>
@@ -129,8 +129,6 @@
             { 512, "Thorns" },
             { 513, "Artifact" },
             { 600, "Bonus Wax Relic" },
-            { 800, "Progressive Intent Sight" },
-            { 801, "Progressive Health Sight" },
             { 700, "Weak Trap" },
             { 701, "Frail Trap" },
             { 702, "Vulnerable Trap" },
@@ -140,6 +138,8 @@
             { 706, "Confused Trap" },
             { 707, "Sloth Trap" },
             { 708, "Dazed Trap" },
+            { 800, "Progressive Intent Sight" },
+            { 801, "Progressive Health Sight" },
         };
 
         /// <summary>

@@ -71,22 +71,7 @@ public static class Patches_HiddenIntents
         }
     }
 
-    /// <summary>
-    /// Go for the Eyes glows when any enemy intends to attack, which would reveal that intent.
-    /// Runic Dome had the same quirk; the card's effect itself is unchanged.
-    /// </summary>
-    // The getter is a protected override, which the publicized references do not expose.
-    [HarmonyPatch(typeof(GoForTheEyes), "ShouldGlowGoldInternal", MethodType.Getter)]
-    public static class HideGoForTheEyesGlow
-    {
-        [HarmonyPostfix]
-        public static void Postfix(ref bool __result)
-        {
-            if (IntentSight.Detail == IntentDetail.None)
-                __result = false;
-        }
-    }
-
+    // INTENT_GRAPH: remidner for myself that this is a mod 'dependency' part
     /// <summary>
     /// The optional Intent Graph mod opens its overlay from an NCreature.OnFocus postfix. Skip its
     /// IntentGraphHost.Create until full sight; its Bestiary view is left alone.

@@ -4,7 +4,7 @@ using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using StS2AP.Data;
 
-namespace StS2AP.Utils;
+namespace StS2AP.Utils.Combat;
 
 /// <summary>How much health the local player may see.</summary>
 internal enum HealthDetail
@@ -41,8 +41,10 @@ internal static class HealthSight
             return;
         foreach (NCreature creature in room.CreatureNodes)
         {
-            if (creature._stateDisplay._healthBar is { } bar && bar._creature != null)
-                bar.RefreshValues();
+            // A newly added creature can be listed before its deferred _Ready sets up the bar.
+            if (!creature.IsNodeReady())
+                continue;
+            creature._stateDisplay._healthBar.RefreshValues();
         }
     }
 }

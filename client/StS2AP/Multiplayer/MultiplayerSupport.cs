@@ -254,15 +254,7 @@ public static class MultiplayerSupport
     {
         var item = indexedItem.Item;
         if (ArchipelagoIdCodec.IsUniversalItemId(item.ItemId))
-            return item.GetUniversalItemId() is APItem.ProgressiveIntentSight or APItem.ProgressiveHealthSight
-                ? MultiplayerFeature.ChallengeSight
-                : item.GetUniversalItemId() == APItem.BonusWaxRelic
-                ? (ShouldRunReplicatedConstruction(MultiplayerFeature.BonusItems)
-                    ? MultiplayerFeature.BonusItems : MultiplayerFeature.GoldRewards)
-                : (IsUniversalCombatBuff(item.ItemId) || IsUniversalTrap(item.ItemId))
-                ? (IsMultiplayerBuffGoldFallback(item.ItemId)
-                    ? MultiplayerFeature.GoldRewards : MultiplayerFeature.CombatEffects)
-                : MultiplayerFeature.UnknownReceivedItems;
+            return GetFeatureForUniversalItem(item);
 
         return item.GetCharacterItemType() switch
         {
@@ -285,6 +277,31 @@ public static class MultiplayerSupport
                 or APItem.DoubleBoss => MultiplayerFeature.AscensionEffects,
             _ => MultiplayerFeature.UnknownReceivedItems,
         };
+    }
+
+    private static MultiplayerFeature GetFeatureForUniversalItem(ItemInfo item)
+    {
+        APItem universalItem = item.GetUniversalItemId();
+        if (universalItem is APItem.ProgressiveIntentSight or APItem.ProgressiveHealthSight)
+            return MultiplayerFeature.ChallengeSight;
+
+        // In multiplayer, Bonus Wax Relics arrive as gold unless the experimental Bonus Items
+        // feature is enabled (see BonusRewardUtility.ConvertToGold).
+        if (universalItem == APItem.BonusWaxRelic)
+        {
+            return ShouldRunReplicatedConstruction(MultiplayerFeature.BonusItems)
+                ? MultiplayerFeature.BonusItems
+                : MultiplayerFeature.GoldRewards;
+        }
+
+        if (IsUniversalCombatBuff(item.ItemId) || IsUniversalTrap(item.ItemId))
+        {
+            return IsMultiplayerBuffGoldFallback(item.ItemId)
+                ? MultiplayerFeature.GoldRewards
+                : MultiplayerFeature.CombatEffects;
+        }
+
+        return MultiplayerFeature.UnknownReceivedItems;
     }
 
     // AP_MP: Unsupported receipt types are held here instead of mutating replicated state.

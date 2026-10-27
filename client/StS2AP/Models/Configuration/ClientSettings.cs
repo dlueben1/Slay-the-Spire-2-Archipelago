@@ -72,6 +72,8 @@
 
         #region Card Rewards
 
+        // Side note: this is more of a setting I used to make it easier to test but this is also
+        // quite cool to have in general. So keep it
         /// <summary>Whether the local Strict Card Rewards value replaces the AP slot setting.</summary>
         public bool OverrideStrictCardRewards { get; set; } = false;
 

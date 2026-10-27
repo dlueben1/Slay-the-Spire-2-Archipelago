@@ -3,6 +3,7 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.sts2.Core.Nodes.TopBar;
 using StS2AP.Utils;
+using StS2AP.Utils.Combat;
 
 namespace StS2AP.Patches;
 

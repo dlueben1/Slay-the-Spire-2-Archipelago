@@ -3,6 +3,7 @@ using StS2AP.Models;
 
 namespace StS2AP.Utils;
 
+// Maybe in the future this would be suited to F# given the different states represented
 /// <summary>
 /// Shared rules for the challenge options that hide information until progressive Sight items
 /// arrive. They are display-only, so each client follows its own slot and multiplayer peers

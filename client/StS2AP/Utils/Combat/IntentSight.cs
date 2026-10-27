@@ -35,11 +35,11 @@ internal static class IntentSight
             return;
         foreach (NCreature creature in room.CreatureNodes)
         {
+            // A newly added creature can be listed before its deferred _Ready sets IntentContainer.
+            if (!creature.IsNodeReady())
+                continue;
             foreach (NIntent intent in creature.IntentContainer.GetChildren().OfType<NIntent>())
-            {
-                if (intent._intent != null)
-                    intent.UpdateVisuals();
-            }
+                intent.UpdateVisuals();
         }
     }
 }

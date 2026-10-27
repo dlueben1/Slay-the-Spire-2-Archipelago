@@ -10,6 +10,7 @@ using StS2AP.Data;
 using StS2AP.Utils;
 using System.Collections.Concurrent;
 using StS2AP.Extensions;
+using StS2AP.Utils.Combat;
 using static StS2AP.Data.ItemTable;
 
 namespace StS2AP.Patches 
