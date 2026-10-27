@@ -4,19 +4,19 @@
   "sources": {
     "characters": {
       "path": "world/spire2/characters.py",
-      "sha256": "63329a600216b1c76af0fe48028cc1c4a2765b343c5997c865dd8c3cf3e28e8b"
+      "sha256": "596e22b811de233f0ec3f2a62dc6ad691f70d82872dc6a2f47ea72bb762437bb"
     },
     "constants": {
       "path": "world/spire2/constants.py",
-      "sha256": "d72ba9e7d126b9553812f17d97649f5fe3a4bd2d21a903388e4b403914bd3723"
+      "sha256": "157cfe23568604a27a8b3ee11a9f38c5dbaa373c86faa3e112d23e0745355f5f"
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "89dccb9779e7ea89d6b4376d6556ae3a4944db8c39feecebb21f80e3bb794c73"
+      "sha256": "71045b1839c20b8ed27bf045db6c85b0d88c46bfa11e419056a756aeb3d82347"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "787ecb32efed12fde3e3c1fd466dd46f008297a2d1293129861362847012190c"
+      "sha256": "e6f136967483f5731f668c297cbe287fd15843fcdaaeae3e27dd7c6d352178d9"
     }
   },
   "characters": {
@@ -136,6 +136,8 @@
     "unlocked_character",
     "ascension",
     "ascension_down",
+    "run_modifiers",
+    "act_scaling_percent",
     "use_new_logic",
     "ancient_relic_location",
     "ancient_relic_pool",
@@ -144,6 +146,9 @@
     "progressive_starter_card",
     "progressive_starter_relic",
     "shuffle_all_cards",
+    "strict_card_rewards",
+    "hidden_intents",
+    "hidden_health",
     "bonus_items",
     "include_floor_checks",
     "neow_sanity",
@@ -203,6 +208,18 @@
         "unlocked_character",
         "ascension",
         "ascension_down"
+      ],
+      "start_collapsed": false,
+      "source": "web_world"
+    },
+    {
+      "name": "Challenges",
+      "option_keys": [
+        "strict_card_rewards",
+        "hidden_intents",
+        "hidden_health",
+        "run_modifiers",
+        "act_scaling_percent"
       ],
       "start_collapsed": false,
       "source": "web_world"
@@ -950,13 +967,77 @@
       "supports_weighting": false,
       "group": "Character Options"
     },
+    "run_modifiers": {
+      "key": "run_modifiers",
+      "class_name": "RunModifiers",
+      "module": "worlds.spire2.options",
+      "kind": "set",
+      "display_name": "Run Modifiers",
+      "description": "Extra difficulty modifiers for every run, on top of Ascension. Logic does not account for them.\nMost leave Act 1 as it is and grow harder in Acts 2 and 3. Names are case-sensitive. In\nmultiplayer, the host's modifiers apply to the whole run.\n\n- 'RisingStrength': Elites and bosses start each combat with 1 Strength in Act 2 and 2 in Act 3.\n- 'EscalatingBuffs': Enemies start combat with one random buff in Act 2 and two different ones in\n  Act 3, from 1 Strength, 4 Plating, 2 Thorns, 1 Artifact, 3 Regen, 4 Curl Up, 4 Vigor and\n  1 Slippery.\n- 'ShrinkingRests': Resting heals 25% of max HP in Act 2 and 20% in Act 3, instead of 30%.\n- 'MountingCurses': Gain a random curse at the start of Act 2 and of Act 3.\n- 'MountingBanes': Gain an Ascender's Bane, which cannot be removed, at the start of Act 2 and\n  of Act 3.\n- 'CursedRun': Gain a random curse at the start of every act, including Act 1 (the base game's\n  Cursed Run). Stacks with 'MountingCurses'.\n- 'ExtraAscendersBane': Start each run with an extra Ascender's Bane. Stacks with\n  'MountingBanes'.\n- 'SlowStart': Draw 1 fewer card on the first turn of each combat, in every act.\n- 'FrailStart': Start each run with 10% less max HP.\n- 'DangerousUnknowns': ? rooms lean towards fights. Combat starts at 20% and rises 15% each\n  time a ? room is not a fight; elites start at 0% and rise 4%; chests start and rise at 1%.\n  Shops are unchanged. The chances reset each act, with no cap. The extra fights and elites\n  reach combat and relic checks sooner than logic expects.",
+      "default": [],
+      "raw_default": [],
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "valid_keys": [
+        "CursedRun",
+        "DangerousUnknowns",
+        "EscalatingBuffs",
+        "ExtraAscendersBane",
+        "FrailStart",
+        "MountingBanes",
+        "MountingCurses",
+        "RisingStrength",
+        "ShrinkingRests",
+        "SlowStart"
+      ],
+      "valid_keys_casefold": false,
+      "allow_custom_values": false,
+      "supports_weighting": false,
+      "group": "Challenges"
+    },
+    "act_scaling_percent": {
+      "key": "act_scaling_percent",
+      "class_name": "ActScalingPercent",
+      "module": "worlds.spire2.options",
+      "kind": "range",
+      "display_name": "Act Scaling Percent",
+      "description": "Extra max HP and damage for every enemy after Act 1, as a percentage per act: enemies get this\nmuch more in Act 2 and twice as much in Act 3. Act 1 is unchanged. Stacks with Ascension. Logic\ndoes not account for it. In multiplayer, the host's value applies to the whole run.",
+      "default": 0,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "minimum": 0,
+      "maximum": 25,
+      "supports_weighting": true,
+      "group": "Challenges"
+    },
     "use_new_logic": {
       "key": "use_new_logic",
       "class_name": "UseNewLogic",
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Use New Logic",
-      "description": "Use the new logic. Disable to use the previous 1.1.X and below logic.\nNew logic allows more random item order—for example, Extra relics and cards can help supplement missing ancients or rests.\nOne example is that old logic required your progressive starter card+relic to beat your 1st elite but new logic\nno longer requires this as 'Power' can be made up with extra cards/relics. Similar cases for ancients/smiths/rests.\n\nOld logic is used automatically (regardless of this option) when floor, gold, and potion checks\n are all disabled to reduce failed generations.",
+      "description": "Use the new logic. Disable to use the previous 1.1.X and below logic.\nNew logic allows more random item order—for example, Extra relics and cards can help supplement missing ancients or rests.\nOne example is that old logic required your progressive starter card+relic to beat your 1st elite but new logic\nno longer requires this as 'Power' can be made up with extra cards/relics. Similar cases for ancients/smiths/rests.\n\nOld logic is used automatically (regardless of this option) when floor, gold, and potion checks\nare all disabled and this is the only world in the generation, to reduce failed generations.",
       "default": true,
       "raw_default": 1,
       "visibility": {
@@ -1227,6 +1308,114 @@
       "supports_weighting": true,
       "group": "Game Options"
     },
+    "strict_card_rewards": {
+      "key": "strict_card_rewards",
+      "class_name": "StrictCardRewards",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Strict Card Rewards",
+      "description": "Harder: you can no longer look through every Card Reward in the AP Menu before picking.\nOpening one reveals its cards and locks the other Card Rewards until you take a card or Discard it,\nlike a card reward after a fight. Skip, the map, the deck and closing the menu keep the revealed\nreward for later. With Pael's Wing, its Sacrifice replaces Discard.\nDoes not change logic. The mod's settings can override this.",
+      "default": false,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Challenges"
+    },
+    "hidden_intents": {
+      "key": "hidden_intents",
+      "class_name": "HiddenIntents",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Hidden Intents",
+      "description": "Harder: enemy intents are hidden, like Runic Dome in the first game, and so is the Intent Graph mod's overlay.\nAdds two Progressive Intent Sight items to the item pool, which apply to every character. The first shows what\neach enemy intends to do, without numbers. The second shows damage and other numbers, and the Intent Graph overlay.\nDoes not change logic.",
+      "default": false,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Challenges"
+    },
+    "hidden_health": {
+      "key": "hidden_health",
+      "class_name": "HiddenHealth",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Hidden Health",
+      "description": "Harder: health is hidden. Health bars stay full and show no numbers, the top bar shows no HP, and the\npoison and doom previews on health bars are hidden. Block is still shown. Adds two Progressive Health Sight\nitems to the item pool, which apply to every character. The first shows your own side's health, the second\nshows enemy health too. Does not change logic.",
+      "default": false,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Challenges"
+    },
     "bonus_items": {
       "key": "bonus_items",
       "class_name": "BonusItems",
@@ -1363,7 +1552,7 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Gold Sanity",
-      "description": "Whether to replace combat, elite, and boss gold rewards with AP locations. Adds 22 locations per character.",
+      "description": "Whether to replace combat, elite, and boss gold rewards with AP locations. Adds 22 locations per character.\n    ",
       "default": false,
       "raw_default": 0,
       "visibility": {
@@ -1611,7 +1800,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Shop Sanity Costs",
-      "description": "Controls the price paid for location checks on the AP shop page. Normal shop-item prices are\nunaffected. Tiered modes first calculate a vanilla-style baseline for the AP card, relic, or potion.\n\nFixed: 15 gold per AP check.\nSuper Discount Tiered: 20 percent of the calculated baseline.\nDiscount Tiered: 50 percent of the calculated baseline.\nTiered: the full calculated baseline.\n\nGeneration logic does not account for these prices.",
+      "description": "Controls the price paid for location checks on the AP shop page. Normal shop-item prices are\nunaffected. Tiered modes first calculate a vanilla-style baseline for the AP card, relic, or potion.\n\nFixed: 15 gold per AP check.\nSuper Discount Tiered: 20 percent of the calculated baseline.\nDiscount Tiered: 50 percent of the calculated baseline.\nTiered: the full calculated baseline.\n\nSomewhat accounted for in logic.",
       "default": "Discount_Tiered",
       "raw_default": 2,
       "visibility": {
