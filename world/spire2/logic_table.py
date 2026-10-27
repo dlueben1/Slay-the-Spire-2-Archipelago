@@ -13,8 +13,6 @@ support, its value raises the requirement, so extra power can make up for it. Su
 options leave unshuffled is never missing.
 
 Each character's starter card and relic values live with its registration in characters.py.
-scripts/print_logic_table.py prints these tables. Keep this module free of Archipelago imports
-so that script can load it on its own.
 """
 from dataclasses import dataclass
 from math import ceil

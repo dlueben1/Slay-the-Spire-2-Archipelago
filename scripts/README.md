@@ -14,12 +14,6 @@ Remove `BuildMode=CompileOnly` and any staging `ModsOutputDir` override from
 The APWorld is copied from `dist/spire2.apworld` when present; build it on Linux/WSL
 with `.venv/bin/python scripts/build_apworld_local.py`.
 
-# APWorld power-logic tables
-
-Every number used by the APWorld's power logic lives in `world/spire2/logic_table.py`.
-`python scripts/print_logic_table.py` prints those tables as plain text, without needing an
-Archipelago checkout. Per-character starter values stay in `world/spire2/characters.py`.
-
 # Release preparation
 
 See [the release guide](../docs/releasing.md) for the supported manual workflow.
