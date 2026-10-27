@@ -319,7 +319,11 @@ public static class ArchipelagoRewardUI
             : reason;
         bool blockedByCombat = MultiplayerSupport.IsSynchronizedCombatActive
             && message.Contains("outside combat", StringComparison.OrdinalIgnoreCase);
-        ShowBlockedMessage(message, blockedByCombat);
+        // Strict Card Rewards' lock is a rule players run into, not a rare failure, so make it
+        // stand out over other AP notifications.
+        bool lockedByStrictCardRewards = reward is ApMirroredRewardDispatcher.ApNativeCardReward card
+            && card.IsLockedByAnotherReveal();
+        ShowBlockedMessage(message, blockedByCombat, emphasized: lockedByStrictCardRewards);
         return false;
     }
 
