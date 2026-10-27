@@ -7,8 +7,7 @@ using MegaCrit.Sts2.Core.Models.Cards;
 namespace StS2AP.Models;
 
 /// <summary>
-/// An Ascender's Bane at the start of Act 2 and of Act 3. The card is Eternal, so unlike Mounting
-/// Curses no card removal can undo it.
+/// An Ascender's Bane at the start of Act 2 and of Act 3. 
 /// </summary>
 public sealed class ApMountingBanes : ApRunModifier
 {

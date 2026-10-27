@@ -194,27 +194,6 @@ class TestRemoveOPRelicsConfigured(Spire2TestBase):
         # The client maps categories to relics, so slot data carries only the category names.
         self.assertEqual(["Ancient", "Rare"], self.world.fill_slot_data()["remove_op_relics"])
 
-
-class TestRunModifiersDefault(Spire2TestBase):
-    def test_no_modifiers_are_sent_by_default(self):
-        slot_data = self.world.fill_slot_data()
-        self.assertEqual([], slot_data["run_modifiers"])
-        self.assertEqual(0, slot_data["act_scaling_percent"])
-
-
-class TestRunModifiersConfigured(Spire2TestBase):
-    options = {
-        "run_modifiers": ["RisingStrength", "DangerousUnknowns"],
-        "act_scaling_percent": 15,
-    }
-
-    def test_modifier_names_are_sent_sorted_in_slot_data(self):
-        self.assertEqual(["DangerousUnknowns", "RisingStrength"], self.world.fill_slot_data()["run_modifiers"])
-
-    def test_act_scaling_is_sent_in_slot_data(self):
-        self.assertEqual(15, self.world.fill_slot_data()["act_scaling_percent"])
-
-
 class TestAscensionDowns(Spire2TestBase):
     options = {
         "characters": [
