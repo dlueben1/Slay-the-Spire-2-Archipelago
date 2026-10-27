@@ -50,7 +50,7 @@ public static class MultiplayerSupport
         MultiplayerFeature.CombatEffects,
         MultiplayerFeature.DeathLink,
         MultiplayerFeature.SaveAndReconnect,
-        MultiplayerFeature.IntentSight,
+        MultiplayerFeature.ChallengeSight,
     };
 
     internal static bool IsSynchronizedCombatActive =>
@@ -254,8 +254,8 @@ public static class MultiplayerSupport
     {
         var item = indexedItem.Item;
         if (ArchipelagoIdCodec.IsUniversalItemId(item.ItemId))
-            return item.GetUniversalItemId() == APItem.ProgressiveIntentSight
-                ? MultiplayerFeature.IntentSight
+            return item.GetUniversalItemId() is APItem.ProgressiveIntentSight or APItem.ProgressiveHealthSight
+                ? MultiplayerFeature.ChallengeSight
                 : item.GetUniversalItemId() == APItem.BonusWaxRelic
                 ? (ShouldRunReplicatedConstruction(MultiplayerFeature.BonusItems)
                     ? MultiplayerFeature.BonusItems : MultiplayerFeature.GoldRewards)
@@ -876,6 +876,7 @@ public static class MultiplayerSupport
                 ? local.StrictCardRewards
                 : source.StrictCardRewards,
             HiddenIntents = source.HiddenIntents,
+            HiddenHealth = source.HiddenHealth,
             ReleaseOnVictory = source.ReleaseOnVictory,
             RemovedOpRelics = source.RemovedOpRelics,
             CampfireSanity = source.CampfireSanity,

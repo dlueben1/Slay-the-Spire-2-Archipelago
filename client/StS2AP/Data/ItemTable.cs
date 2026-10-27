@@ -67,6 +67,7 @@
             /// Undo a challenge option; each copy is a permanent unlock for every character.
             /// IDs match challenge_item_table in items.py.
             ProgressiveIntentSight = 800,
+            ProgressiveHealthSight = 801,
 
             // Universal traps; IDs match trap_item_table in the APWorld.
             WeakTrap = 700,
@@ -129,6 +130,7 @@
             { 513, "Artifact" },
             { 600, "Bonus Wax Relic" },
             { 800, "Progressive Intent Sight" },
+            { 801, "Progressive Health Sight" },
             { 700, "Weak Trap" },
             { 701, "Frail Trap" },
             { 702, "Vulnerable Trap" },

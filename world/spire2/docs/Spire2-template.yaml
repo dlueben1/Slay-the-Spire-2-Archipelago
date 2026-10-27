@@ -58,6 +58,24 @@ Slay the Spire II:
   # A single number N removes your highest N Ascensions; otherwise list numbers or names as above.
   ascension_down: []
 
+  ##############
+  # Challenges #
+  ##############
+
+  # Optional ways to make every run harder. Logic ignores all of them.
+
+  # Harder: opening a card reward in the AP menu locks the others until you take a card or
+  # Discard it, so you cannot look through every card reward first. The mod's settings can override it.
+  strict_card_rewards: false
+
+  # Harder: hides enemy intents and the Intent Graph mod's overlay. Adds two Progressive Intent
+  # Sight items for the whole slot: the first shows intents without numbers, the second shows them all.
+  hidden_intents: false
+
+  # Harder: hides health. Bars stay full and show "?" instead of numbers; block still shows. Adds two
+  # Progressive Health Sight items for the whole slot: the first shows your own side's health, the second enemies'.
+  hidden_health: false
+
   # Extra difficulty modifiers for every run, on top of Ascension; logic ignores them. Most leave Act 1
   # as it is and grow harder in Acts 2 and 3. Names (case-sensitive):
   #   RisingStrength     - elites and bosses start each combat with 1 Strength in Act 2, 2 in Act 3
@@ -126,14 +144,6 @@ Slay the Spire II:
 
   # true shuffles every card reward; false shuffles every other one.
   shuffle_all_cards: true
-
-  # Harder: opening a card reward in the AP menu locks the others until you take a card or
-  # Discard it, so you cannot look through every card reward first. The mod's settings can override it.
-  strict_card_rewards: false
-
-  # Harder: hides enemy intents and the Intent Graph mod's overlay. Adds two Progressive Intent
-  # Sight items for the whole slot: the first shows intents without numbers, the second shows them all.
-  hidden_intents: false
 
   ############
   # Sanities #

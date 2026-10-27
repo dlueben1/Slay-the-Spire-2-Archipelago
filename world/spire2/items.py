@@ -28,6 +28,7 @@ class ItemType(Enum):
     PROGRESSIVE_STARTER_RELIC = auto()
     BONUS_WAX_RELIC = auto()
     INTENT_SIGHT = auto()
+    HEALTH_SIGHT = auto()
     TRAP = auto()
     CAW_CAW = auto()
     BUFF = auto()
@@ -131,8 +132,10 @@ trap_item_table: Dict[str, ItemData] = {
 # Universal items that undo a challenge option, one ID range for all of them: 800-899.
 # Each is added to the pool only when its option is on; logic never counts them.
 INTENT_SIGHT_COPIES = 2
+HEALTH_SIGHT_COPIES = 2
 challenge_item_table: Dict[str, ItemData] = {
     "Progressive Intent Sight": ItemData(800, ItemType.INTENT_SIGHT, ItemClassification.useful),
+    "Progressive Health Sight": ItemData(801, ItemType.HEALTH_SIGHT, ItemClassification.useful),
 }
 
 # `universal_bonus_items` is keyed by the actual Archipelago item name (like "Bonus Wax Relic").

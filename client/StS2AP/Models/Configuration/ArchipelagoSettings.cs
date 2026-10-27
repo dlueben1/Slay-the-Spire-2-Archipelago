@@ -79,6 +79,11 @@ namespace StS2AP.Models
         /// </summary>
         public bool HiddenIntents { get; set; }
 
+        /// <summary>
+        /// Whether health stays hidden until Progressive Health Sight items are received.
+        /// </summary>
+        public bool HiddenHealth { get; set; }
+
         /// <summary>Whether a victory releases the winning character's remaining checks.</summary>
         public bool ReleaseOnVictory { get; set; } = true;
 

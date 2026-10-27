@@ -359,6 +359,15 @@ class HiddenIntents(Toggle):
     display_name = "Hidden Intents"
     default = 0
 
+class HiddenHealth(Toggle):
+    """Harder: health is hidden. Health bars stay full and show no numbers, the top bar shows no HP, and the
+    poison and doom previews on health bars are hidden. Block is still shown. Adds two Progressive Health Sight
+    items to the item pool, which apply to every character. The first shows your own side's health, the second
+    shows enemy health too. Does not change logic.
+    """
+    display_name = "Hidden Health"
+    default = 0
+
 class SeededRun(Toggle):
     """Whether each character should have a fixed seed to climb the spire with or not."""
     display_name = "Seeded Run"
@@ -847,6 +856,7 @@ class Spire2Options(PerGameCommonOptions):
     shuffle_all_cards: CardReward
     strict_card_rewards: StrictCardRewards
     hidden_intents: HiddenIntents
+    hidden_health: HiddenHealth
 
     # Bonus items
     bonus_items: BonusItems

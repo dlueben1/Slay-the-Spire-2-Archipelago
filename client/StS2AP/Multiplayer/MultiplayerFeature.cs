@@ -29,6 +29,6 @@ public enum MultiplayerFeature
     SaveAndReconnect,
     UnknownReceivedItems,
 
-    // Display-only: each client shows intents from its own slot's Intent Sight receipts.
-    IntentSight,
+    // Display-only: each client shows intents and health from its own slot's Sight receipts.
+    ChallengeSight,
 }

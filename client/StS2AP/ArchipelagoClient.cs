@@ -1714,6 +1714,8 @@ namespace StS2AP
             // Older APWorlds omit this key; their slots show intents.
             if (slotData.ContainsKey("hidden_intents"))
                 settings.HiddenIntents = Convert.ToBoolean(slotData["hidden_intents"]);
+            if (slotData.ContainsKey("hidden_health"))
+                settings.HiddenHealth = Convert.ToBoolean(slotData["hidden_health"]);
             if (slotData.ContainsKey("lock_characters"))
                 settings.NoCharactersLocked = Convert.ToInt32(slotData["lock_characters"]) == 0;
             if (slotData.ContainsKey("enable_death_fragments"))
