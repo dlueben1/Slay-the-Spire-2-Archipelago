@@ -345,6 +345,8 @@ class StrictCardRewards(Toggle):
     Opening one reveals its cards and locks the other Card Rewards until you take a card or Discard it,
     like a card reward after a fight. Skip, the map, the deck and closing the menu keep the revealed
     reward for later. With Pael's Wing, its Sacrifice replaces Discard.
+    In singleplayer, a Card Reward you have not opened yet depends on what you took from the ones before it,
+    so loading a checkpoint and picking differently changes it.
     Does not change logic. The mod's settings can override this.
     """
     display_name = "Strict Card Rewards"

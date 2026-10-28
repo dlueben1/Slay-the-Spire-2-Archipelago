@@ -600,9 +600,8 @@ public static class ApMirroredRewardDispatcher
     private static Rng CreateApRewardRng(
         ApMirroredRewardSpec spec,
         Player player,
-        string domain)
-    {
-        string seedMaterial = string.Join(
+        string domain) =>
+        CreateRngFromSeedMaterial(string.Join(
             "|",
             "sts2ap-reward-rng-v1",
             domain,
@@ -611,7 +610,22 @@ public static class ApMirroredRewardDispatcher
             player.RunState.GetPlayerSlotIndex(player),
             player.GetAPCharacterNumber(),
             spec.ReceivedItemIndex
-        );
+        ));
+
+    private static Rng CreateStrictCardRng(ApMirroredRewardSpec spec, Player player) =>
+        CreateRngFromSeedMaterial(StrictCardChain.SeedMaterial(
+            player.RunState.Rng.StringSeed,
+            spec.ApSlotId,
+            player.RunState.GetPlayerSlotIndex(player),
+            player.GetAPCharacterNumber(),
+            ArchipelagoClient.Progress.StrictCardRevealCount,
+            spec.IsRareCardReward,
+            spec.CardRewardActIndex,
+            ArchipelagoClient.Progress.StrictCardPickHistory
+        ));
+
+    private static Rng CreateRngFromSeedMaterial(string seedMaterial)
+    {
         byte[] digest = SHA256.HashData(Encoding.UTF8.GetBytes(seedMaterial));
         // The public build accepts a 32-bit seed while the beta build widens the same value.
         // Using the shared 32-bit seed keeps materialization deterministic across both variants.
@@ -620,12 +634,15 @@ public static class ApMirroredRewardDispatcher
 
     private static async Task<List<CardCreationResult>> GenerateCardChoices(
         ApMirroredRewardSpec spec,
-        Player player)
+        Player player,
+        bool strictChain)
     {
         if (player.RunState is not RunState runState)
             throw new InvalidOperationException("AP reward generation requires a native run state.");
         CardRewardConfiguration configuration = MirroredRewardAdapter.CardConfiguration(spec);
-        Rng rng = CreateApRewardRng(spec, player, "card");
+        Rng rng = strictChain
+            ? CreateStrictCardRng(spec, player)
+            : CreateApRewardRng(spec, player, "card");
         CardCreationOptions options = CreateCardOptions(player, configuration.Recipe.IsRareReward)
             .WithFlags(CardCreationFlags.IsCardReward)
             .WithRngOverride(rng);
@@ -1055,6 +1072,11 @@ public static class ApMirroredRewardDispatcher
         /// </summary>
         internal bool OffersDiscard => RequiresCommitment && CanOfferDiscard;
 
+        // Singleplayer only. Multiplayer replicas generate each offer independently, so the
+        // chain would have to reach every replica before each reveal.
+        private bool UsesStrictCardChain =>
+            RequiresCommitment && !MultiplayerSupport.IsRealMultiplayerRun && LocalContext.IsMe(Player);
+
         // A reroll (Driftwood) takes the picker's second alternative slot, and the alternatives
         // must not change when a reroll regenerates them. A rerollable reward therefore offers no
         // Discard, and since it cannot be discarded it never locks the other card rewards.
@@ -1145,11 +1167,14 @@ public static class ApMirroredRewardDispatcher
                 bool multiplayer = MultiplayerSupport.IsRealMultiplayerRun;
                 uint verificationChoice = multiplayer ? synchronizer.ReserveChoiceId(Player) : 0;
                 _firstPickerChoice = multiplayer ? synchronizer.ReserveChoiceId(Player) : null;
+                bool strictChain = !hasAssignment && UsesStrictCardChain;
                 List<CardCreationResult> preparedCards = hasAssignment
                     ? RefreshCardChoices(this)
-                    : await GenerateCardChoices(spec, Player);
+                    : await GenerateCardChoices(spec, Player, strictChain);
                 if (RunManager.Instance.DebugOnlyGetState() != run)
                     throw new OperationCanceledException("Run changed during AP card reveal.");
+                if (strictChain)
+                    ArchipelagoClient.Progress.StrictCardRevealCount++;
                 spec.CardHasBeenRevealed = true;
                 spec.SerializedModels = preparedCards.Select(result => SerializeCard(result.Card)).ToList();
                 if (multiplayer)
@@ -1248,10 +1273,16 @@ public static class ApMirroredRewardDispatcher
             if (!LocalContext.IsMe(Player))
                 return true;
 
-            foreach (CardModel selected in Player.Deck.Cards
-                         .Where(card => deckBefore != null && !deckBefore.Contains(card)))
-            {
+            List<CardModel> taken = Player.Deck.Cards
+                .Where(card => deckBefore != null && !deckBefore.Contains(card))
+                .ToList();
+            foreach (CardModel selected in taken)
                 await GameUtility.AddCardRewardToCombatDrawPile(selected, Player);
+            // Only rewards resolved while Strict is on extend the chain.
+            if (UsesStrictCardChain)
+            {
+                ArchipelagoClient.Progress.StrictCardPickHistory.Add(StrictCardChain.PickEntry(
+                    taken.Select(card => (card.Id.ToString(), card.CurrentUpgradeLevel))));
             }
             CommitDiscreteReward(_itemIndex, ApMirroredRewardKind.Card);
             return true;
