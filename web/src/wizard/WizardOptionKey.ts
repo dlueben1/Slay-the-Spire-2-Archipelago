@@ -24,7 +24,7 @@ export const CHARACTER_OPTION_KEYS = {
   ascensionDown: "ascension_down",
 } as const;
 
-/** Generated option keys owned by the Gameplay Modifiers compiler. */
+/** Generated option keys owned by the Run Settings compiler. */
 export const RUN_OPTION_KEYS = {
   relicRewardsAvailableAnytime: "relic_rewards_available_anytime",
   removeOpRelics: "remove_op_relics",
@@ -32,10 +32,20 @@ export const RUN_OPTION_KEYS = {
   seeded: "seeded",
 } as const;
 
-/** Generated `remove_op_relics` category names keyed by their Gameplay Modifiers answer field. */
+/** Generated `remove_op_relics` category names keyed by their Run Settings answer field. */
 export const OP_RELIC_CATEGORY_KEYS = {
   ancient: "Ancient",
   rare: "Rare",
+} as const;
+
+/** Generated option keys owned by the Challenges compiler. */
+export const CHALLENGE_OPTION_KEYS = {
+  runModifiers: "run_modifiers",
+  enemyHpScaling: "enemy_hp_scaling",
+  enemyDamageScaling: "enemy_damage_scaling",
+  hiddenIntents: "hidden_intents",
+  hiddenHealth: "hidden_health",
+  strictCardRewards: "strict_card_rewards",
 } as const;
 
 /** Generated option keys owned by Checks & Rewards' Starting Equipment subsection. */

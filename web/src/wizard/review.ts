@@ -11,6 +11,7 @@ import type {
   AscensionConfigurationAnswers,
   AncientAnswers,
   BonusItemAnswer,
+  ChallengeAnswers,
   CharacterAnswers,
   CharacterStarterOverrides,
   CheckAnswers,
@@ -20,6 +21,7 @@ import type {
   ProgressionAnswers,
   RunAnswers,
   ShopAnswers,
+  SightCopies,
   StartingEquipmentAnswers,
   WizardAnswers,
 } from "./WizardAnswers";
@@ -28,12 +30,15 @@ import {
   type BonusItemDisplayRow,
 } from "./BonusItemDisplay";
 import { getConfiguredCharacterNames } from "./CharacterRoster";
+import { RUN_MODIFIERS } from "./RunModifier";
 
 export interface WizardReviewSection {
   title: string;
   summary: string;
   /** Optional structured rows rendered beneath the prose summary (Bonus Items). */
   items?: BonusItemDisplayRow[];
+  /** Optional caution shown with the summary, such as challenges logic ignores. */
+  warning?: string;
 }
 
 /**
@@ -275,9 +280,9 @@ export function summarizeFillerAnswers(answers: FillerAnswers): string {
 }
 
 /**
- * Summarizes the gameplay modifiers that affect an individual climb.
+ * Summarizes the run settings that affect an individual climb.
  *
- * @param answers - Valid current Gameplay Modifiers answers.
+ * @param answers - Valid current Run Settings answers.
  * @returns A compact paragraph describing Relic availability and removal, victory, and seeds.
  */
 export function summarizeRunAnswers(answers: RunAnswers): string {
@@ -307,6 +312,89 @@ export function summarizeRunAnswers(answers: RunAnswers): string {
     : "Runs are not assigned fixed seeds.";
 
   return `${immediateRelics} ${opRelics} ${victoryRelease} ${seeded}`;
+}
+
+/**
+ * Checks whether any challenge is turned on.
+ *
+ * @param answers - Current Challenges answers.
+ * @returns Whether the player opted in and chose anything that makes runs harder.
+ */
+export function hasActiveChallenges(answers: ChallengeAnswers): boolean {
+  return (
+    answers.enabled &&
+    (answers.runModifiers.length > 0 ||
+      answers.enemyHpScaling > 0 ||
+      answers.enemyDamageScaling > 0 ||
+      answers.hiddenIntents !== "off" ||
+      answers.hiddenHealth !== "off" ||
+      answers.strictCardRewards)
+  );
+}
+
+/**
+ * Names the Sight items a hidden-information challenge waits for.
+ *
+ * @param copies - Selected Sight item count other than `off`.
+ * @param itemName - Display name of the Sight item.
+ * @returns A phrase such as "Intent Sight" or "either of two Intent Sights".
+ */
+function describeSightItems(
+  copies: Exclude<SightCopies, "off">,
+  itemName: string,
+): string {
+  return copies === "one" ? itemName : `either of two ${itemName}s`;
+}
+
+/**
+ * Summarizes the selected challenges.
+ *
+ * @param answers - Valid current Challenges answers.
+ * @returns A sentence per active challenge, or a note that none are on.
+ */
+export function summarizeChallengeAnswers(answers: ChallengeAnswers): string {
+  if (!hasActiveChallenges(answers)) {
+    return "No challenges are on.";
+  }
+
+  const sentences: string[] = [];
+
+  if (answers.runModifiers.length) {
+    const names = RUN_MODIFIERS.filter((modifier) =>
+      answers.runModifiers.includes(modifier.optionName),
+    ).map((modifier) => modifier.name);
+    sentences.push(`Run Modifiers: ${joinNames(names)}.`);
+  }
+
+  if (answers.enemyHpScaling > 0) {
+    sentences.push(
+      `Enemies have ${answers.enemyHpScaling}% more max HP in Acts 2 and 3.`,
+    );
+  }
+
+  if (answers.enemyDamageScaling > 0) {
+    sentences.push(
+      `Enemies deal ${answers.enemyDamageScaling}% more damage in Acts 2 and 3.`,
+    );
+  }
+
+  if (answers.hiddenIntents !== "off") {
+    sentences.push(
+      `Enemy intents are hidden until ${describeSightItems(answers.hiddenIntents, "Intent Sight")} is found.`,
+    );
+  }
+
+  if (answers.hiddenHealth !== "off") {
+    sentences.push(
+      `Health is hidden until ${describeSightItems(answers.hiddenHealth, "Health Sight")} is found.`,
+    );
+  }
+
+  if (answers.strictCardRewards) {
+    sentences.push("Card Rewards in the AP Menu are picked one at a time.");
+  }
+
+  return sentences.join(" ");
 }
 
 /**
@@ -573,7 +661,7 @@ export function buildWizardReviewSections(
         answers.checksAndRewards.checks.includeFloorChecks,
       ),
     },
-    { title: "Gameplay Modifiers", summary: summarizeRunAnswers(answers.run) },
+    { title: "Run Settings", summary: summarizeRunAnswers(answers.run) },
     {
       title: "Checks & Rewards",
       summary: summarizeChecksAndRewardsAnswers(answers.checksAndRewards),
@@ -582,6 +670,13 @@ export function buildWizardReviewSections(
     {
       title: "Death Link",
       summary: summarizeDeathLinkAnswers(answers.deathLink),
+    },
+    {
+      title: "Challenges",
+      summary: summarizeChallengeAnswers(answers.challenges),
+      warning: hasActiveChallenges(answers.challenges)
+        ? "Challenges are on. Logic doesn't account for them, so a seed can get stuck if runs become too hard to win."
+        : undefined,
     },
     {
       title: "Progression",

@@ -11,6 +11,7 @@ import type { OptionValue } from "../generated/optionCatalog";
 import { TRAP_ITEM_DEFINITIONS } from "./TrapItem";
 import { FILLER_ITEM_DEFINITIONS } from "./FillerItem";
 import {
+  CHALLENGE_OPTION_KEYS,
   CHARACTER_OPTION_KEYS,
   ANCIENT_OPTION_KEYS,
   BONUS_ITEM_OPTION_KEY,
@@ -65,6 +66,9 @@ export function getGuidedOptionKeys(): string[] {
 
   // Death Link follows the combined Checks & Rewards ownership group.
   optionKeys.push(...Object.values(DEATH_LINK_OPTION_KEYS));
+
+  // Challenges come last in the YAML, matching the APWorld's option groups.
+  optionKeys.push(...Object.values(CHALLENGE_OPTION_KEYS));
 
   // Common Archipelago settings close the dedicated Progression step.
   optionKeys.push(...Object.values(PROGRESSION_OPTION_KEYS));
