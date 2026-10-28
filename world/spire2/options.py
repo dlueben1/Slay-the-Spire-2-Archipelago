@@ -854,9 +854,6 @@ class Spire2Options(PerGameCommonOptions):
     # final_act: FinalAct
     ascension: Ascension
     ascension_down: AscensionDown
-    run_modifiers: RunModifiers
-    enemy_hp_scaling: EnemyHpScaling
-    enemy_damage_scaling: EnemyDamageScaling
 
     # Main game flow
     use_new_logic: UseNewLogic
@@ -867,9 +864,6 @@ class Spire2Options(PerGameCommonOptions):
     progressive_starter_card: ProgressiveStarterCard
     progressive_starter_relic: ProgressiveStarterRelic
     shuffle_all_cards: CardReward
-    strict_card_rewards: StrictCardRewards
-    hidden_intents: HiddenIntents
-    hidden_health: HiddenHealth
 
     # Bonus items
     bonus_items: BonusItems
@@ -928,3 +922,11 @@ class Spire2Options(PerGameCommonOptions):
     confused_trap_weight: ConfusedTrapWeight
     sloth_trap_weight: SlothTrapWeight
     dazed_trap_weight: DazedTrapWeight
+
+    # Challenges
+    run_modifiers: RunModifiers
+    enemy_hp_scaling: EnemyHpScaling
+    enemy_damage_scaling: EnemyDamageScaling
+    hidden_intents: HiddenIntents
+    hidden_health: HiddenHealth
+    strict_card_rewards: StrictCardRewards
