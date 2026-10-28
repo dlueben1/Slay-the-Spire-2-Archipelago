@@ -30,10 +30,18 @@ class LogicModeTests(unittest.TestCase):
                 mw = setup_multiworld(SlayTheSpire2World, seed=42,
                                       options={'characters': ['Ironclad'], **options})
                 world = mw.worlds[1]
-                # New logic counts Elite and Boss Gold toward shop power whenever Gold Sanity is on.
-                useful_gold = world.effective_logic == 'new' and not world.options.gold_sanity
-                for suffix, legacy in legacy_flags.items():
-                    expected = ItemClassification.useful if useful_gold else legacy
+                # New logic counts Elite and Boss Gold toward shop power whenever Gold Sanity is on,
+                # and Combat Gold toward each act's shop gold with Shop Sanity too.
+                new_logic = world.effective_logic == 'new'
+                useful_gold = new_logic and not world.options.gold_sanity
+                counted_combat_gold = new_logic and world.options.gold_sanity and world.options.shop_sanity
+                expected_flags = {
+                    **{suffix: ItemClassification.useful if useful_gold else legacy
+                       for suffix, legacy in legacy_flags.items()},
+                    'Combat Gold': (ItemClassification.progression_deprioritized_skip_balancing
+                                    if counted_combat_gold else ItemClassification.useful),
+                }
+                for suffix, expected in expected_flags.items():
                     # Includes names used for modded characters and explicit item creation.
                     for character in ('Ironclad', 'Custom Character 1'):
                         self.assertEqual(expected, world.create_item(f'{character} {suffix}').classification)

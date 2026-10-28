@@ -6,10 +6,10 @@ from BaseClasses import CollectionState
 from test.general import setup_multiworld
 from worlds.spire2 import SlayTheSpire2World
 from worlds.spire2.characters import character_list
-from worlds.spire2.logic_table import (BOSS_GOLD, ELITE_GOLD, PATH_RELIC_REWARDS, REGIONS, SHOP_SLOT_VALUES,
-                                       shop_gold_needed, shop_page)
+from worlds.spire2.logic_table import (BOSS_GOLD, COMBAT_GOLD, ELITE_GOLD, PATH_RELIC_REWARDS, REGIONS,
+                                       SHOP_GOLD_BY_COST_MODE, SHOP_SLOT_VALUES)
 from worlds.spire2.rules import SpireHasPower
-from worlds.spire2.world import BOSS_GOLD_ITEM_COUNT, ELITE_GOLD_ITEM_COUNT
+from worlds.spire2.world import BOSS_GOLD_ITEM_COUNT, COMBAT_GOLD_ITEM_COUNT, ELITE_GOLD_ITEM_COUNT
 
 
 class LogicTests(unittest.TestCase):
@@ -121,13 +121,12 @@ class LogicTests(unittest.TestCase):
                     penalties = updated
         self.assertEqual([0, 0, 0], penalties)
 
-    def test_gold_items_cover_every_shop_in_every_configuration(self):
-        supply = ELITE_GOLD_ITEM_COUNT * ELITE_GOLD + BOSS_GOLD_ITEM_COUNT * BOSS_GOLD
-        for slots in itertools.product(range(6), range(3), range(4), range(4), (False, True)):
-            page = shop_page(*slots)
-            for cost_mode, act in itertools.product(range(4), (1, 2, 3)):
-                with self.subTest(slots=slots, cost_mode=cost_mode, act=act):
-                    self.assertLessEqual(shop_gold_needed(page, act, cost_mode), supply)
+    def test_gold_items_cover_every_shop(self):
+        supply = (COMBAT_GOLD_ITEM_COUNT * COMBAT_GOLD + ELITE_GOLD_ITEM_COUNT * ELITE_GOLD
+                  + BOSS_GOLD_ITEM_COUNT * BOSS_GOLD)
+        for cost_mode, needed in enumerate(SHOP_GOLD_BY_COST_MODE):
+            with self.subTest(cost_mode=cost_mode):
+                self.assertLessEqual(max(needed), supply)
 
     def test_receiving_any_item_never_weakens_a_power_check(self):
         # Archipelago assumes logic is monotonic: collecting an item must never close a location.

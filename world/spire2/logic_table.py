@@ -15,7 +15,6 @@ options leave unshuffled is never missing.
 Each character's starter card and relic values live with its registration in characters.py.
 """
 from dataclasses import dataclass
-from math import ceil
 
 
 @dataclass(frozen=True)
@@ -278,58 +277,26 @@ FULL_SHOP_PAGE_VALUE = sum(sum(values) for _, values in SHOP_SLOT_VALUES)
 
 # --- Shop gold (Gold Sanity with Shop Sanity) ------------------------------------------------
 
-# Shop checks persist between runs, and every shop visit lists the unchecked Shop Slot checks in
-# slot order, up to the act's ceiling. A run needs gold for the dearest checks its shop can list:
-# two per visit, so clearing a shop takes fewer restarts, but one with Tiered prices, where two
-# would need almost every gold item and a shop takes several runs to clear anyway.
+# Each act's shop asks for gold from Combat, Elite and Boss Gold items, and the amount grows by act
+# because a run spends its gold at earlier shops. Only Act 1 can lean on starting gold (99): it
+# covers several Fixed or Super Discount checks, so those shops ask for nothing in Act 1. With
+# Discount prices the amounts buy about two checks at every act's shop in one run; with Tiered
+# prices, about one. Act 3's 375 is about 75% of the gold pool (503).
 #
-# Only Elite and Boss Gold count; combat gold stays useful. Gold amounts keep a conservative
-# allowance for Poverty (x0.75). Each act's chest is on every path and gives 42-52 gold.
+# Gold amounts keep a conservative allowance for Poverty (x0.75). Each act's chest is on every
+# path and gives 42-52 gold.
+COMBAT_GOLD = 11        # a vanilla fight's gold or a Combat Gold item, with the Poverty allowance
 ELITE_GOLD = 30
 BOSS_GOLD = 75
 STARTING_GOLD = 99
 CHEST_GOLD = 31
-SHOP_CHECKS_LISTED_BY_ACT = (5, 10, 16)
-# AP page positions in the order shop checks fill them, up to each category's vanilla count.
-# The card-removal checks take otherwise unused positions in the same order.
-SHOP_PAGE = (("card", 5), ("neutral", 2), ("relic", 3), ("potion", 3))
-SHOP_REMOVE_CHECKS = 3
-# Dearest Tiered price of a check in each position: cards cost as rare cards (the price for a
-# progression item), relics as shop relics and potions as common potions, at the top of the
-# shop's random price range.
-SHOP_TIERED_PRICES = {"card": 158, "neutral": 158, "relic": 230, "potion": 53}
-FIXED_SHOP_PRICE = 15
-# By Shop Sanity Costs: the share of the Tiered price (Fixed charges FIXED_SHOP_PRICE instead),
-# and how many checks one shop visit should afford.
-SHOP_PRICE_SHARE = (None, 0.2, 0.5, 1.0)
-SHOP_CHECKS_PER_VISIT = (2, 2, 2, 1)
-
-
-def shop_page(card_slots: int, neutral_slots: int, relic_slots: int, potion_slots: int,
-              remove_slots: bool) -> list[str]:
-    """The category of each AP page position that shop checks fill, in fill order."""
-    spare = SHOP_REMOVE_CHECKS if remove_slots else 0
-    page = []
-    for (category, limit), configured in zip(SHOP_PAGE, (card_slots, neutral_slots, relic_slots, potion_slots)):
-        borrowed = min(limit - configured, spare)
-        spare -= borrowed
-        page += [category] * (configured + borrowed)
-    return page
-
-
-def shop_check_price(category: str, cost_mode: int) -> int:
-    share = SHOP_PRICE_SHARE[cost_mode]
-    if share is None:
-        return FIXED_SHOP_PRICE
-    return ceil(SHOP_TIERED_PRICES[category] * share)
-
-
-def shop_gold_needed(page: list[str], act: int, cost_mode: int) -> int:
-    """Gold from Elite and Boss Gold that a run needs for the dearest checks this act's shop lists."""
-    listed = page[:SHOP_CHECKS_LISTED_BY_ACT[act - 1]]
-    prices = sorted((shop_check_price(category, cost_mode) for category in listed), reverse=True)
-    dearest = sum(prices[:SHOP_CHECKS_PER_VISIT[cost_mode]])
-    return max(0, dearest - STARTING_GOLD - CHEST_GOLD * (act - 1))
+# Gold from gold items each act's shop needs, by Shop Sanity Costs.
+SHOP_GOLD_BY_COST_MODE = (
+    (0, 30, 60),        # Fixed: 15 per check
+    (0, 50, 100),       # Super Discount Tiered
+    (100, 225, 375),    # Discount Tiered
+    (100, 225, 375),    # Tiered
+)
 
 
 # --- Gold for shop choices (Gold Sanity) -----------------------------------------------------
@@ -338,8 +305,7 @@ def shop_gold_needed(page: list[str], act: int, cost_mode: int) -> int:
 # choices count only as far as a run's gold reaches a normal run's by that act's Late region,
 # walking around elites. A run counts its starting and chest gold, Elite and Boss Gold, and every
 # Combat Gold: those are small and plentiful, and counting them would make 13 more items per
-# character progression.
-COMBAT_GOLD = 11        # a vanilla fight's gold or a Combat Gold item, with the Poverty allowance
+# character progression in worlds without Shop Sanity.
 COMBAT_GOLD_ITEMS = 13  # in a Gold Sanity item pool
 
 

@@ -9,11 +9,10 @@ from rule_builder.options import OptionFilter
 from rule_builder.rules import Rule, True_, CanReachRegion, Has, HasFromListUnique
 from .characters import CharacterConfig, DEFAULT_STARTER_POWER, character_registry
 from .logic_table import (
-    ANCIENT_POWER_BY_TIER, BOSS_GOLD, ELITE_GOLD, ELITE_RELIC_REWARDS, FULL_SHOP_PAGE_VALUE, PATH_RELIC_REWARDS,
-    RARE_CARD_POWER, REGIONS, RELIC_POWER, REST_POWER_BY_ACT, REST_SHARE_WHILE_SMITHING,
-    SHOP_REMOVE_POWER_BY_TIER, SHOP_SLOT_VALUES, SMITH_POWER_BY_TIER,
+    ANCIENT_POWER_BY_TIER, BOSS_GOLD, COMBAT_GOLD, ELITE_GOLD, ELITE_RELIC_REWARDS, FULL_SHOP_PAGE_VALUE,
+    PATH_RELIC_REWARDS, RARE_CARD_POWER, REGIONS, RELIC_POWER, REST_POWER_BY_ACT, REST_SHARE_WHILE_SMITHING,
+    SHOP_GOLD_BY_COST_MODE, SHOP_REMOVE_POWER_BY_TIER, SHOP_SLOT_VALUES, SMITH_POWER_BY_TIER,
     PowerCheck, card_reward_strength, card_reward_table, gold_sanity_run_gold, last_elite, normal_run_gold,
-    shop_gold_needed, shop_page,
 )
 from .options import AncientRelicLocation
 
@@ -417,6 +416,9 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
             return lines
 
 
+GOLD_ITEMS = (("Combat Gold", COMBAT_GOLD), ("Elite Gold", ELITE_GOLD), ("Boss Gold", BOSS_GOLD))
+
+
 @dataclasses.dataclass()
 class SpireHasGold(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
     char: str
@@ -434,7 +436,7 @@ class SpireHasGold(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
 
         def gold_entries(self, state: CollectionState) -> List[LedgerEntry]:
             entries = []
-            for item, amount in (("Elite Gold", ELITE_GOLD), ("Boss Gold", BOSS_GOLD)):
+            for item, amount in GOLD_ITEMS:
                 received = state.count(f"{self.char} {item}", self.player)
                 entries.append(LedgerEntry(f"{item} ({received} received)", received * amount))
             return entries
@@ -446,28 +448,23 @@ class SpireHasGold(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
         @override
         def explain_json(self, state: CollectionState | None = None) -> List[JSONMessagePart]:
             if state is None:
-                lines = [f"{self.char} shop gold: {self.gold:g} from Elite Gold ({ELITE_GOLD:g} each) "
-                         f"and Boss Gold ({BOSS_GOLD:g} each)"]
+                each = ", ".join(f"{item} {amount:g}" for item, amount in GOLD_ITEMS)
+                lines = [f"{self.char} shop gold: {self.gold:g} from gold items ({each} each)"]
             else:
                 entries = self.gold_entries(state)
                 lines = [f"{self.char} shop gold: {sum(entry.amount for entry in entries):g} "
                          f"of {self.gold:g} needed",
                          *(f"  {entry.label}: {entry.amount:g}" for entry in entries)]
-            lines.append("  Starting gold and chest gold are already counted.")
+            lines.append("  Later acts ask for more, because a run spends gold at earlier shops.")
             return [{"type": "text", "text": "\n".join(lines) + "\n"}]
 
 
 def shop_gold_by_act(options: 'Spire2Options') -> tuple[int, int, int]:
-    """Gold from Elite and Boss Gold that each act's shop needs. Without Gold Sanity, vanilla
-    gold rewards pay for shops, and logic does not count them."""
+    """Gold from gold items that each act's shop needs. Without Gold Sanity, vanilla gold rewards
+    pay for shops, and logic does not count them."""
     if not (options.shop_sanity and options.gold_sanity):
         return 0, 0, 0
-    page = shop_page(options.shop_card_slots.value, options.shop_neutral_card_slots.value,
-                     options.shop_relic_slots.value, options.shop_potion_slots.value,
-                     bool(options.shop_remove_slots))
-    cost_mode = options.shop_sanity_costs.value
-    return (shop_gold_needed(page, 1, cost_mode), shop_gold_needed(page, 2, cost_mode),
-            shop_gold_needed(page, 3, cost_mode))
+    return SHOP_GOLD_BY_COST_MODE[options.shop_sanity_costs.value]
 
 
 def region_power(offset: int, prefix: str, region: str, seeded: bool) -> Rule:

@@ -429,9 +429,14 @@ class SlayTheSpire2World(World):
         item_id = data.code
         classification = data.classification
         if self.effective_logic == 'new' and name.endswith((' Elite Gold', ' Boss Gold')) and not self.options.gold_sanity:
-            # New logic counts Elite and Boss Gold only with Gold Sanity, for shop choices and a shop's
-            # dearest checks; legacy boss gates still need it.
+            # New logic counts Elite and Boss Gold only with Gold Sanity, for shop choices and each
+            # act's shop gold; legacy boss gates still need it.
             classification = ItemClassification.useful
+        elif (self.effective_logic == 'new' and name.endswith(' Combat Gold')
+              and self.options.gold_sanity and self.options.shop_sanity):
+            # Each act's shop gold counts Combat Gold too. Many small items can meet it, so none
+            # needs balancing or a priority location.
+            classification = ItemClassification.progression_deprioritized_skip_balancing
         return SlayTheSpire2Item(data, name, classification, item_id, self.player)
 
     def build_filler_pools(self) -> None:
