@@ -39,9 +39,19 @@ internal static class StrictCardChain
             string.Join(";", pickHistory)
         );
 
-    internal static string PickEntry(IEnumerable<(string CardId, int UpgradeLevel)> takenCards)
+    /// <summary>
+    /// One resolved reward: what was taken, then the offered cards that were not, in picker
+    /// order. Recording the offer keeps the same pick from rewards that showed different cards
+    /// from looking alike, e.g. "CARD.INFLAME@0&lt;CARD.ANGER@0,CARD.CLASH@1".
+    /// </summary>
+    internal static string PickEntry(
+        IEnumerable<(string CardId, int UpgradeLevel)> takenCards,
+        IEnumerable<(string CardId, int UpgradeLevel)> cardsNotTaken)
     {
-        string[] cards = takenCards.Select(card => $"{card.CardId}@{card.UpgradeLevel}").ToArray();
-        return cards.Length == 0 ? NoCardTaken : string.Join("+", cards);
+        string taken = string.Join("+", takenCards.Select(Describe));
+        return $"{(taken.Length == 0 ? NoCardTaken : taken)}<{string.Join(",", cardsNotTaken.Select(Describe))}";
     }
+
+    private static string Describe((string CardId, int UpgradeLevel) card) =>
+        $"{card.CardId}@{card.UpgradeLevel}";
 }

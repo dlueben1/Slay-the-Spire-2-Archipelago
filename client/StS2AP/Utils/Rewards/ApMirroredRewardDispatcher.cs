@@ -1278,11 +1278,13 @@ public static class ApMirroredRewardDispatcher
                 .ToList();
             foreach (CardModel selected in taken)
                 await GameUtility.AddCardRewardToCombatDrawPile(selected, Player);
-            // Only rewards resolved while Strict is on extend the chain.
+            // Only rewards resolved while Strict is on extend the chain. The native pick has
+            // already removed the taken card, so Cards holds the rest of the offer.
             if (UsesStrictCardChain)
             {
                 ArchipelagoClient.Progress.StrictCardPickHistory.Add(StrictCardChain.PickEntry(
-                    taken.Select(card => (card.Id.ToString(), card.CurrentUpgradeLevel))));
+                    taken.Select(card => (card.Id.ToString(), card.CurrentUpgradeLevel)),
+                    Cards.Select(card => (card.Id.ToString(), card.CurrentUpgradeLevel))));
             }
             CommitDiscreteReward(_itemIndex, ApMirroredRewardKind.Card);
             return true;

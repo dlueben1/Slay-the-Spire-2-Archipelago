@@ -39,11 +39,22 @@ public sealed class StrictCardChainTests
     }
 
     [Fact]
-    public void PickEntryRecordsTakenCardsOrNone()
+    public void PickEntryRecordsTheTakenCardsAndTheRestOfTheOffer()
     {
-        Assert.Equal(StrictCardChain.NoCardTaken, StrictCardChain.PickEntry([]));
-        Assert.Equal("CARD.A@1", StrictCardChain.PickEntry([("CARD.A", 1)]));
-        Assert.Equal("CARD.A@0+CARD.B@1", StrictCardChain.PickEntry([("CARD.A", 0), ("CARD.B", 1)]));
+        Assert.Equal("CARD.A@1<CARD.B@0,CARD.C@0",
+            StrictCardChain.PickEntry([("CARD.A", 1)], [("CARD.B", 0), ("CARD.C", 0)]));
+        Assert.Equal("CARD.A@0+CARD.B@1<CARD.C@0",
+            StrictCardChain.PickEntry([("CARD.A", 0), ("CARD.B", 1)], [("CARD.C", 0)]));
+        Assert.Equal("none<CARD.A@0,CARD.B@0,CARD.C@0",
+            StrictCardChain.PickEntry([], [("CARD.A", 0), ("CARD.B", 0), ("CARD.C", 0)]));
+    }
+
+    [Fact]
+    public void TheSamePickFromDifferentOffersIsADifferentEntry()
+    {
+        Assert.NotEqual(
+            StrictCardChain.PickEntry([("CARD.INFLAME", 0)], [("CARD.ANGER", 0), ("CARD.CLASH", 1)]),
+            StrictCardChain.PickEntry([("CARD.INFLAME", 0)], [("CARD.ANGER", 0), ("CARD.HAVOC", 0)]));
     }
 
     [Fact]
