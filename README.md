@@ -42,7 +42,7 @@ Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetai
 - If you've done this step correctly, `mods/Archipelago/` contains the loader DLL,
   common dependencies, the PCK, and `lib/0.107.1/` plus `lib/0.111.0/`. Keep that
   directory structure intact.
-- The bundled `spire2.apworld` lets hosts use the **Install APWorld** button from the game's main menu.
+- The bundled `spire2.apworld` matches this mod version. Hosts can install it through the Archipelago Launcher's **Install APWorld**.
 
 6. Start the game
 

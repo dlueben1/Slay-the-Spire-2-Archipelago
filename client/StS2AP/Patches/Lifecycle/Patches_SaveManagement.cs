@@ -20,6 +20,7 @@ using StS2AP.Utils;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
+using StS2AP.Utils.RunGraph;
 
 namespace StS2AP.Patches
 {
@@ -236,6 +237,10 @@ namespace StS2AP.Patches
             if (serializableRun.Players.Count != 1
                 || serializableRun.Players[0].CharacterId?.Entry != expectedCharacter)
                 throw new InvalidDataException("The checkpoint character does not match the selected AP run.");
+            ApRunGraphRecorder.OnCheckpointRestored(
+                serializableRun.StartTime,
+                serializableRun.MapPointHistory?.Sum(act => act.Count) ?? 0
+            );
             RunState runState = RunState.FromSerializable(serializableRun);
             NAudioManager.Instance?.StopMusic();
             await RunManager.Instance.SetUpSavedSingleplayer(runState, serializableRun);

@@ -1,6 +1,7 @@
 using MegaCrit.Sts2.Core.Entities.Players;
 using StS2AP.Extensions;
 using static StS2AP.Data.ItemTable;
+using StS2AP.Utils.RunGraph;
 
 namespace StS2AP.Utils
 {
@@ -160,6 +161,7 @@ namespace StS2AP.Utils
             {
                 ArchipelagoClient.Progress.Items.MarkUsed(receiptIndex.Value);
                 ArchipelagoClient.Progress.BankedRelicRewards--;
+                ApRunGraphRecorder.RecordItemClaim(receiptIndex.Value);
             }
             else
             {

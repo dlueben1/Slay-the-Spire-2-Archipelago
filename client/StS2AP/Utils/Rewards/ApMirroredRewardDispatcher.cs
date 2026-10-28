@@ -29,6 +29,7 @@ using StS2AP.Patches;
 using StS2AP.UI;
 using STS2RitsuLib.Combat.Rewards;
 using STS2RitsuLib.Networking.Sidecar;
+using StS2AP.Utils.RunGraph;
 
 namespace StS2AP.Utils;
 
@@ -847,6 +848,7 @@ public static class ApMirroredRewardDispatcher
     internal static bool CommitDiscreteReward(int itemIndex, ApMirroredRewardKind kind)
     {
         ArchipelagoClient.Progress.Items.MarkUsed(itemIndex);
+        ApRunGraphRecorder.RecordItemClaim(itemIndex);
 
         switch (kind)
         {

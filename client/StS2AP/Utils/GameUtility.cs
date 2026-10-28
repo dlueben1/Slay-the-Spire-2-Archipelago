@@ -17,6 +17,7 @@ using StS2AP.Extensions;
 using StS2AP.Patches;
 using StS2AP.UI;
 using static StS2AP.Data.ItemTable;
+using StS2AP.Utils.RunGraph;
 
 namespace StS2AP.Utils
 {
@@ -533,6 +534,7 @@ namespace StS2AP.Utils
                 foreach (long id in pending)
                     if (!ArchipelagoClient.CheckedLocations.Contains(id))
                         ArchipelagoClient.CheckedLocations.Add(id);
+                ApRunGraphRecorder.RecordChecks(pending);
             }
             return new(dispatch, requested.Length, accepted, alreadyChecked, notInSlot);
         }

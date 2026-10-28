@@ -3,8 +3,6 @@
   "AP_DISCONNECT.body": "Disconnect from slot '{slot}'? Your saved runs and pending location checks will be kept. You can then connect to another room or slot.",
   "CONTINUE_RUN.header": "Continue Run?",
   "CONTINUE_RUN.body": "Would you like to resume your last AP save for this character? (Yes, AP keeps the save even if you die.)",
-  "INSTALL_APWORLD.header": "Install/Update APWorld?",
-  "INSTALL_APWORLD.body": "The APWorld is [i]only necessary[/i] if you're [b]hosting the Archipelago yourself[/b], and to install it you must have the [b]Archipelago Launcher (v0.6.7 or later) installed[/b] for this to work.\n\nThis will install in the background and take a few moments, then please restart your launcher. Proceed?",
   "APWORLD_MISMATCH.header": "APWorld Compatibility Warning",
   "APWORLD_MISMATCH.body": "The server uses APWorld {server}; this client bundles APWorld {bundled}.\n\nServer compatibility flag: {server_flag}. Client compatibility flag: {client_flag}.\n\nUpdating the APWorld or client is recommended.\n\nConnect anyway?"
 }

@@ -69,6 +69,7 @@
     <Compile Include="..\StS2AP\Persistence\SingleplayerCheckpointBank.cs" Link="Persistence\SingleplayerCheckpointBank.cs" />
     <Compile Include="..\StS2AP\Persistence\RemoteSingleplayerSaveKey.cs" Link="Persistence\RemoteSingleplayerSaveKey.cs" />
     <Compile Include="..\StS2AP\Persistence\CampaignSaveFiles.cs" Link="Persistence\CampaignSaveFiles.cs" />
+    <Compile Include="..\StS2AP\Persistence\ApRunGraphLog.cs" Link="Persistence\ApRunGraphLog.cs" />
     <Compile Include="..\StS2AP\Persistence\LocalApSaveDeletion.cs" Link="Persistence\LocalApSaveDeletion.cs" />
     <Compile Include="..\StS2AP\Persistence\ApRelicReceiptState.cs" Link="Persistence\ApRelicReceiptState.cs" />
     <Using Include="StS2AP.Models" />

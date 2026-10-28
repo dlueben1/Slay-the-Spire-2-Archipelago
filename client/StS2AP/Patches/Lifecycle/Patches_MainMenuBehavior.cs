@@ -16,6 +16,7 @@ using MegaCrit.Sts2.Core.Saves;
 using MegaCrit.Sts2.addons.mega_text;
 using StS2AP.UI;
 using StS2AP.Utils;
+using StS2AP.UI.RunGraph;
 
 namespace StS2AP.Patches
 {
@@ -129,10 +130,9 @@ namespace StS2AP.Patches
         private const string ArchipelagoSettingsButtonPath =
             MainMenuButtonsPath + "/" + ArchipelagoSettingsButtonName;
 
-        // The new name & path of our injected "Install APWorld" button, which is a clone of the vanilla Settings button
-        private const string InstallWorldButtonName = "InstallAPWorldButton";
-        private const string InstallWorldButtonPath =
-            MainMenuButtonsPath + "/" + InstallWorldButtonName;
+        // The new name & path of our injected "Past AP Runs" button, which is a clone of the vanilla Settings button
+        private const string PastRunsButtonName = "PastApRunsButton";
+        private const string PastRunsButtonPath = MainMenuButtonsPath + "/" + PastRunsButtonName;
 
         // The new name & path of our injected "Visit Website" button, which is a clone of the vanilla Settings button
         private const string WebsiteButtonName = "VisitWebsiteButton";
@@ -219,10 +219,8 @@ namespace StS2AP.Patches
                     ArchipelagoSettingsButtonPath
                 );
 
-                // Grab the custom Install APWorld button
-                var installWorldButton = __instance.GetNodeOrNull<NMainMenuTextButton>(
-                    InstallWorldButtonPath
-                );
+                // Grab the custom Past AP Runs button
+                var pastRunsButton = __instance.GetNodeOrNull<NMainMenuTextButton>(PastRunsButtonPath);
 
                 // Grab the custom Visit Website button
                 var visitWebsiteButton = __instance.GetNodeOrNull<NMainMenuTextButton>(
@@ -290,13 +288,13 @@ namespace StS2AP.Patches
                     archipelagoSettingsButton.label.Text = "Archipelago Settings";
                 }
 
-                /// Configure the injected Install APWorld button after its label
+                /// Configure the injected Past AP Runs button after its label
                 /// reference has been initialized by the vanilla _Ready method.
-                if (installWorldButton?.label != null)
+                if (pastRunsButton?.label != null)
                 {
-                    installWorldButton.Visible = true;
-                    installWorldButton.Enable();
-                    installWorldButton.label.Text = "Install APWorld";
+                    pastRunsButton.Visible = true;
+                    pastRunsButton.Enable();
+                    pastRunsButton.label.Text = "Past AP Runs";
                 }
 
                 /// Configure the injected Visit Website button after its label
@@ -363,50 +361,15 @@ namespace StS2AP.Patches
                 archipelagoSettingsButton.CustomMinimumSize.Y
             );
 
-            // Create an "Install APWorld" button
-            var installButton = (NMainMenuTextButton)settingsButton.Duplicate();
-            installButton.Name = InstallWorldButtonName;
-            installButton.Connect(
+            // Create a "Past AP Runs" button. The vanilla Compendium, which holds Run History, is
+            // hidden here, so this is how players reach the run graphs of earlier AP runs.
+            var pastRunsButton = (NMainMenuTextButton)settingsButton.Duplicate();
+            pastRunsButton.Name = PastRunsButtonName;
+            pastRunsButton.Connect(
                 NClickableControl.SignalName.Released,
-                Callable.From<NButton>(_ =>
-                {
-                    // Show a dialog that speedbumps the user and ensures they want to install this
-                    var popup = new ConfirmPopup();
-                    popup.Header = new LocString("main_menu_ui", "INSTALL_APWORLD.header");
-                    popup.Body = new LocString("main_menu_ui", "INSTALL_APWORLD.body");
-                    popup.ButtonPressed = (yesPressed) =>
-                    {
-                        if (yesPressed)
-                        {
-                            try
-                            {
-                                // Shared bundle files live at the registered mod root, even
-                                // when this assembly was loaded from lib/<game-version>.
-                                var mod = ModManager.GetLoadedMods()
-                                    .Single(mod => mod.manifest?.id == ModEntry.ModId);
-                                var apWorldPath = Path.Combine(mod.path, "spire2.apworld");
-                                LogUtility.Info($"Launching APWorld installer: {apWorldPath}");
-                                Process.Start(
-                                    new ProcessStartInfo
-                                    {
-                                        FileName = apWorldPath,
-                                        UseShellExecute = true,
-                                    }
-                                );
-                            }
-                            catch (Exception ex)
-                            {
-                                LogUtility.Error(
-                                    $"Failed to launch APWorld installer: {ex.Message}\n{ex.StackTrace}"
-                                );
-                            }
-                        }
-                    };
-                    popup.Show();
-                })
+                Callable.From<NButton>(_ => ApPastRunsOverlay.Show(mainMenu))
             );
-            settingsButton.AddSibling(installButton);
-            settingsButton.CustomMinimumSize = new Vector2(300f, installButton.CustomMinimumSize.Y);
+            archipelagoSettingsButton.AddSibling(pastRunsButton);
 
             // Create a "Website & YAML Builder" button
             var websiteButton = (NMainMenuTextButton)settingsButton.Duplicate();
@@ -420,8 +383,8 @@ namespace StS2AP.Patches
                     Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
                 })
             );
-            installButton.AddSibling(websiteButton);
-            installButton.CustomMinimumSize = new Vector2(300f, websiteButton.CustomMinimumSize.Y);
+            settingsButton.AddSibling(websiteButton);
+            settingsButton.CustomMinimumSize = new Vector2(300f, websiteButton.CustomMinimumSize.Y);
 
             // Adjust button focusing
             var selfNodePath = new NodePath(".");
@@ -429,8 +392,10 @@ namespace StS2AP.Patches
             connectButton.FocusNeighborRight = selfNodePath;
             archipelagoSettingsButton.FocusNeighborLeft = selfNodePath;
             archipelagoSettingsButton.FocusNeighborRight = selfNodePath;
-            installButton.FocusNeighborLeft = selfNodePath;
-            installButton.FocusNeighborRight = selfNodePath;
+            pastRunsButton.FocusNeighborLeft = selfNodePath;
+            pastRunsButton.FocusNeighborRight = selfNodePath;
+            websiteButton.FocusNeighborLeft = selfNodePath;
+            websiteButton.FocusNeighborRight = selfNodePath;
 
             var connectionStatus = new Label
             {

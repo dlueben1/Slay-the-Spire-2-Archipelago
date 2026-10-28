@@ -15,10 +15,7 @@ To install the Archipelago Launcher, [download the latest version from Archipela
 
 An `.apworld` file provides support for games that are not officially supported by Archipelago yet.
 
-There are two ways to get this file:
-
-- If you have Slay the Spire II installed, and have already setup the Slay the Spire II Archipelago Mod, you can select the "Install APWorld" option on the game's main menu.
-- Otherwise, you can [visit our GitHub](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest/) and download it from the latest release. It should be near the bottom of the page, in a link called `spire2.apworld`. Once downloaded, double click the `.apworld` to install it - and be patient, this method takes up to a minute to give you a confirmation dialog.
+[Visit our GitHub](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest/) and download it from the latest release. It should be near the bottom of the page, in a link called `spire2.apworld`. Once downloaded, double click the `.apworld` to install it - and be patient, this method takes up to a minute to give you a confirmation dialog.
 
 ## YAML Files for each Participant
 

@@ -2,6 +2,7 @@ using Archipelago.MultiClient.Net.Models;
 using MegaCrit.Sts2.Core.Entities.Players;
 using StS2AP.Data;
 using static StS2AP.Data.ItemTable;
+using StS2AP.Utils.RunGraph;
 
 namespace StS2AP.Utils;
 
@@ -157,6 +158,7 @@ public static class ApGrantDispatcher
         }
 
         ArchipelagoClient.Progress.GoldRedeemed = claim.RedeemedRawAfter;
+        ApRunGraphRecorder.RecordGoldClaim(claim.GrantedAmount);
         Player? player = GameUtility.CurrentPlayer;
         if (player != null && ApRunData.PublishLocalProgress(player))
             return true;
