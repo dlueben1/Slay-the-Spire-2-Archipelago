@@ -1,3 +1,4 @@
+using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Creatures;
@@ -108,5 +109,49 @@ public static class Patches_HiddenIntents
         }
 
         private static bool AllowOverlay() => IntentSight.Detail == IntentDetail.Full;
+    }
+
+    // MINTY_SPIRE: optional mod 'dependency', like Intent Graph above
+    /// <summary>
+    /// The optional Minty Spire mod shows the summed incoming attack damage beside the player's
+    /// health bar, which gives away intent numbers. Hide that label until full sight.
+    /// </summary>
+    [HarmonyPatch(typeof(LocManager), nameof(LocManager.Initialize))]
+    public static class HideMintyIncomingDamage
+    {
+        private const string LabelName = "MintyIncomingDamageText";
+        private static bool _attempted;
+
+        [HarmonyPostfix]
+        public static void Postfix()
+        {
+            if (_attempted)
+                return;
+            _attempted = true;
+            // Minty Spire is optional, so resolve its API by name without requiring its DLL.
+            var render = AccessTools.TypeByName("MintySpire2.MintySpire2Code.combat.SummedIncomingDamageRender");
+            if (render is null)
+                return;
+            try
+            {
+                // Every path that shows or updates the label goes through this method.
+                var refresh = AccessTools.Method(render, "RefreshVisibilityAndText", [typeof(NHealthBar)])
+                    ?? throw new MissingMethodException(render.FullName, "RefreshVisibilityAndText");
+                new Harmony("archipelago.patch.mintyspire.hiddenintents").Patch(refresh,
+                    postfix: new HarmonyMethod(typeof(HideMintyIncomingDamage), nameof(HideLabel)));
+                LogUtility.Info("Hidden Intents can now hide Minty Spire's incoming damage.");
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Warn($"Could not hide Minty Spire's incoming damage for Hidden Intents: {ex.Message}");
+            }
+        }
+
+        // Harmony binds by name, so the parameter must keep Minty's name "bar".
+        private static void HideLabel(NHealthBar bar)
+        {
+            if (IntentSight.Detail != IntentDetail.Full && bar.GetNodeOrNull<Control>(LabelName) is { } label)
+                label.Visible = false;
+        }
     }
 }
