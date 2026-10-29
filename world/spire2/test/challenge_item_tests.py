@@ -53,3 +53,20 @@ class TestHiddenHealth(Spire2TestBase):
 
     def test_option_is_sent_in_slot_data(self):
         self.assertEqual(1, self.world.fill_slot_data()["hidden_health"])
+
+
+class TestTwoSightCopies(Spire2TestBase):
+    options = {
+        "characters": ["ironclad", "silent"],
+        "hidden_intents": 2,
+        "hidden_health": 2,
+    }
+
+    def test_two_copies_of_each_sight_are_added(self):
+        for name in ("Progressive Intent Sight", "Progressive Health Sight"):
+            self.assertEqual(2, sum(item.name == name for item in self.multiworld.itempool))
+
+    def test_copy_counts_are_sent_in_slot_data(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(2, slot_data["hidden_intents"])
+        self.assertEqual(2, slot_data["hidden_health"])

@@ -18,7 +18,7 @@ from .characters import (CharacterConfig, character_list, vanilla_character_ids,
                          needs_generic_block)
 from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET, GENERIC_CHARACTER_BLOCKS
 from .items import (item_table, chars_to_items, bonus_item_table, ItemType, base_event_item_pairs, ItemData,
-                    item_groups, INTENT_SIGHT_COPIES, HEALTH_SIGHT_COPIES)
+                    item_groups)
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
 from .options import Spire2Options
 
@@ -577,10 +577,8 @@ class SlayTheSpire2World(World):
                 )
             bonus_item_names.append(bonus_data.item_name)
         # Challenge items take filler slots the same way Bonus Items do.
-        if self.options.hidden_intents:
-            bonus_item_names += ["Progressive Intent Sight"] * INTENT_SIGHT_COPIES
-        if self.options.hidden_health:
-            bonus_item_names += ["Progressive Health Sight"] * HEALTH_SIGHT_COPIES
+        bonus_item_names += ["Progressive Intent Sight"] * self.options.hidden_intents.value
+        bonus_item_names += ["Progressive Health Sight"] * self.options.hidden_health.value
 
         available_filler_slots = sum(count for _, count in filler_counts)
         if len(bonus_item_names) > available_filler_slots:

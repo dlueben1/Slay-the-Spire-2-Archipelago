@@ -18,9 +18,9 @@ internal enum HealthDetail
 }
 
 /// <summary>
-/// The Hidden Health challenge: health stays hidden until the slot receives a Progressive Health
+/// The Hidden Health challenge: health stays hidden until the slot receives any Progressive Health
 /// Sight, which shows everyone's health. The <see cref="HealthDetail.OwnSide"/> step is unused
-/// while the APWorld adds a single copy (see <see cref="ChallengeSightItems.UnlockedSteps"/>).
+/// while every copy unlocks everything (see <see cref="ChallengeSightItems.UnlockedSteps"/>).
 /// </summary>
 internal static class HealthSight
 {

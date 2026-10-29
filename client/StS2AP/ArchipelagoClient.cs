@@ -1711,11 +1711,12 @@ namespace StS2AP
             // Older APWorlds omit this key; their slots keep free card reward browsing.
             if (slotData.ContainsKey("strict_card_rewards"))
                 settings.StrictCardRewards = Convert.ToBoolean(slotData["strict_card_rewards"]);
-            // Older APWorlds omit this key; their slots show intents.
+            // Older APWorlds omit these keys; their slots show intents and health. The values are
+            // Sight copies in the pool, and 0 turns the challenge off.
             if (slotData.ContainsKey("hidden_intents"))
-                settings.HiddenIntents = Convert.ToBoolean(slotData["hidden_intents"]);
+                settings.HiddenIntents = Convert.ToInt32(slotData["hidden_intents"]) > 0;
             if (slotData.ContainsKey("hidden_health"))
-                settings.HiddenHealth = Convert.ToBoolean(slotData["hidden_health"]);
+                settings.HiddenHealth = Convert.ToInt32(slotData["hidden_health"]) > 0;
             if (slotData.ContainsKey("lock_characters"))
                 settings.NoCharactersLocked = Convert.ToInt32(slotData["lock_characters"]) == 0;
             if (slotData.ContainsKey("enable_death_fragments"))

@@ -16,9 +16,9 @@ internal enum IntentDetail
 }
 
 /// <summary>
-/// The Hidden Intents challenge: intents stay hidden until the slot receives a Progressive Intent
-/// Sight, which shows everything. The <see cref="IntentDetail.Types"/> step is unused while the
-/// APWorld adds a single copy (see <see cref="ChallengeSightItems.UnlockedSteps"/>).
+/// The Hidden Intents challenge: intents stay hidden until the slot receives any Progressive Intent
+/// Sight, which shows everything. The <see cref="IntentDetail.Types"/> step is unused while every
+/// copy unlocks everything (see <see cref="ChallengeSightItems.UnlockedSteps"/>).
 /// </summary>
 internal static class IntentSight
 {

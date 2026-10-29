@@ -48,9 +48,8 @@ internal static class ChallengeSightItems
 
     /// <summary>
     /// Sight steps the slot has unlocked, from 0 (everything hidden) to <paramref name="fullSteps"/>
-    /// (everything shown). The APWorld adds one Sight item per challenge, and that one copy shows
-    /// everything. The partial steps stay in the Sight levels for a return to one progressive
-    /// copy per step.
+    /// (everything shown). Any copy shows everything, so a second copy in the pool is a spare. The
+    /// partial steps stay in the Sight levels for a return to one progressive step per copy.
     /// </summary>
     internal static int UnlockedSteps(ItemTable.APItem item, int fullSteps)
     {
