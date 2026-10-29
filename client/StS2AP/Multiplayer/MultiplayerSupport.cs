@@ -282,7 +282,7 @@ public static class MultiplayerSupport
     private static MultiplayerFeature GetFeatureForUniversalItem(ItemInfo item)
     {
         APItem universalItem = item.GetUniversalItemId();
-        if (universalItem is APItem.ProgressiveIntentSight or APItem.ProgressiveHealthSight)
+        if (universalItem is APItem.IntentSight or APItem.HealthSight)
             return MultiplayerFeature.ChallengeSight;
 
         // In multiplayer, Bonus Wax Relics arrive as gold unless the experimental Bonus Items

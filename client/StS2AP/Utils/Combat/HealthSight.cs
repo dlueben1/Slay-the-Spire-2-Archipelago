@@ -18,8 +18,8 @@ internal enum HealthDetail
 }
 
 /// <summary>
-/// The Hidden Health challenge: health stays hidden until the slot receives any Progressive Health
-/// Sight, which shows everyone's health. The <see cref="HealthDetail.OwnSide"/> step is unused
+/// The Hidden Health challenge: health stays hidden until the slot receives any Health Sight,
+/// which shows everyone's health. The <see cref="HealthDetail.OwnSide"/> step is unused
 /// while every copy unlocks everything (see <see cref="ChallengeSightItems.UnlockedSteps"/>).
 /// </summary>
 internal static class HealthSight
@@ -27,7 +27,7 @@ internal static class HealthSight
     internal static HealthDetail Detail =>
         ChallengeSightItems.Applies(ArchipelagoClient.Settings?.HiddenHealth == true)
             ? (HealthDetail)ChallengeSightItems.UnlockedSteps(
-                ItemTable.APItem.ProgressiveHealthSight,
+                ItemTable.APItem.HealthSight,
                 (int)HealthDetail.Full)
             : HealthDetail.Full;
 

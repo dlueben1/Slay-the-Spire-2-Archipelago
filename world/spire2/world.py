@@ -577,8 +577,8 @@ class SlayTheSpire2World(World):
                 )
             bonus_item_names.append(bonus_data.item_name)
         # Challenge items take filler slots the same way Bonus Items do.
-        bonus_item_names += ["Progressive Intent Sight"] * self.options.hidden_intents.value
-        bonus_item_names += ["Progressive Health Sight"] * self.options.hidden_health.value
+        bonus_item_names += ["Intent Sight"] * self.options.hidden_intents.value
+        bonus_item_names += ["Health Sight"] * self.options.hidden_health.value
 
         available_filler_slots = sum(count for _, count in filler_counts)
         if len(bonus_item_names) > available_filler_slots:

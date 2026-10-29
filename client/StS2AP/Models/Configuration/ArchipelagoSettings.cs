@@ -77,14 +77,14 @@ namespace StS2AP.Models
         /// <summary>
         /// Whether the slot enabled the Hidden Intents challenge. When it is off, intents are never
         /// hidden. When it is on, <see cref="StS2AP.Utils.IntentSight"/> works out what is visible
-        /// from the Progressive Intent Sight items received so far.
+        /// from the Intent Sight items received so far.
         /// </summary>
         public bool HiddenIntents { get; set; }
 
         /// <summary>
         /// Whether the slot enabled the Hidden Health challenge. When it is off, health is never
         /// hidden. When it is on, <see cref="StS2AP.Utils.Combat.HealthSight"/> works out what is visible
-        /// from the Progressive Health Sight items received so far.
+        /// from the Health Sight items received so far.
         /// </summary>
         public bool HiddenHealth { get; set; }
 

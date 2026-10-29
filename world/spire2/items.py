@@ -136,8 +136,8 @@ trap_item_table: Dict[str, ItemData] = {
 # ChallengeSightItems.UnlockedSteps: the first Intent Sight showed intents without numbers, the
 # first Health Sight showed only your own side's health.
 challenge_item_table: Dict[str, ItemData] = {
-    "Progressive Intent Sight": ItemData(800, ItemType.INTENT_SIGHT, ItemClassification.useful),
-    "Progressive Health Sight": ItemData(801, ItemType.HEALTH_SIGHT, ItemClassification.useful),
+    "Intent Sight": ItemData(800, ItemType.INTENT_SIGHT, ItemClassification.useful),
+    "Health Sight": ItemData(801, ItemType.HEALTH_SIGHT, ItemClassification.useful),
 }
 
 # `universal_bonus_items` is keyed by the actual Archipelago item name (like "Bonus Wax Relic").

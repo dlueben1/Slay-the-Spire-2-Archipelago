@@ -9,10 +9,10 @@ class TestHiddenIntents(Spire2TestBase):
     }
 
     def test_one_universal_intent_sight_is_added(self):
-        sights = [item for item in self.multiworld.itempool if item.name == "Progressive Intent Sight"]
+        sights = [item for item in self.multiworld.itempool if item.name == "Intent Sight"]
         self.assertEqual(1, len(sights))
         self.assertEqual({800}, {item.code for item in sights})
-        self.assertEqual(800, challenge_item_table["Progressive Intent Sight"].code)
+        self.assertEqual(800, challenge_item_table["Intent Sight"].code)
         self.assertTrue(all(item.useful and not item.advancement for item in sights))
 
     def test_intent_sights_replace_filler_without_changing_pool_size(self):
@@ -40,11 +40,11 @@ class TestHiddenHealth(Spire2TestBase):
     }
 
     def test_one_universal_health_sight_is_added(self):
-        sights = [item for item in self.multiworld.itempool if item.name == "Progressive Health Sight"]
+        sights = [item for item in self.multiworld.itempool if item.name == "Health Sight"]
         self.assertEqual(1, len(sights))
         self.assertEqual({801}, {item.code for item in sights})
         self.assertTrue(all(item.useful and not item.advancement for item in sights))
-        self.assertEqual(1, sum(item.name == "Progressive Intent Sight" for item in self.multiworld.itempool))
+        self.assertEqual(1, sum(item.name == "Intent Sight" for item in self.multiworld.itempool))
 
     def test_health_sights_replace_filler_without_changing_pool_size(self):
         locations = [location for location in self.multiworld.get_locations()
@@ -63,7 +63,7 @@ class TestTwoSightCopies(Spire2TestBase):
     }
 
     def test_two_copies_of_each_sight_are_added(self):
-        for name in ("Progressive Intent Sight", "Progressive Health Sight"):
+        for name in ("Intent Sight", "Health Sight"):
             self.assertEqual(2, sum(item.name == name for item in self.multiworld.itempool))
 
     def test_copy_counts_are_sent_in_slot_data(self):

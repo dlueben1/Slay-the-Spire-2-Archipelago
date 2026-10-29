@@ -400,12 +400,12 @@ namespace StS2AP.Patches
                 case APItem.BonusWaxRelic:
                     ArchipelagoClient.Progress.Items.RegisterReceived(receipt);
                     break;
-                case APItem.ProgressiveIntentSight:
+                case APItem.IntentSight:
                     // A permanent unlock with nothing to claim. The ledger keeps the copy count.
                     ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);
                     IntentSight.RefreshVisibleIntents();
                     break;
-                case APItem.ProgressiveHealthSight:
+                case APItem.HealthSight:
                     ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);
                     HealthSight.RefreshVisibleHealth();
                     break;

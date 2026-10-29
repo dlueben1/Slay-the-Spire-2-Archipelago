@@ -354,7 +354,7 @@ class StrictCardRewards(Toggle):
 
 class HiddenIntents(Range):
     """Harder: enemy intents are hidden, like Runic Dome in the first game, and so is the Intent Graph mod's overlay.
-    The value is how many Progressive Intent Sight items are added to the item pool, and 0 turns it off. Finding
+    The value is how many Intent Sight items are added to the item pool, and 0 turns it off. Finding
     any one of them shows intents again for every character, with their numbers and the Intent Graph overlay, so
     a second copy makes it easier to find. Does not change logic.
     """
@@ -365,9 +365,9 @@ class HiddenIntents(Range):
 
 class HiddenHealth(Range):
     """Harder: health is hidden. Health bars stay full and show no numbers, the top bar shows no HP, and the
-    poison and doom previews on health bars are hidden. Block is still shown. The value is how many Progressive
-    Health Sight items are added to the item pool, and 0 turns it off. Finding any one of them shows everyone's
-    health again for every character, so a second copy makes it easier to find. Does not change logic.
+    poison and doom previews on health bars are hidden. Block is still shown. The value is how many Health Sight
+    items are added to the item pool, and 0 turns it off. Finding any one of them shows everyone's health again
+    for every character, so a second copy makes it easier to find. Does not change logic.
     """
     display_name = "Hidden Health"
     range_start = 0
