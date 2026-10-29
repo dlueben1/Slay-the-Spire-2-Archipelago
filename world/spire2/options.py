@@ -532,7 +532,7 @@ class ActScalingPercent(Range):
     does not account for it. In multiplayer, the host's value applies to the whole run."""
     display_name = "Act Scaling Percent"
     range_start = 0
-    range_end = 25
+    range_end = 15
     default = 0
 
 # Death Link Options
