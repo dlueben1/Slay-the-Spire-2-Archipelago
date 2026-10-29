@@ -16,15 +16,16 @@ internal enum IntentDetail
 }
 
 /// <summary>
-/// The Hidden Intents challenge: intents stay hidden until the slot receives Progressive Intent
-/// Sight items, one step per copy.
+/// The Hidden Intents challenge: intents stay hidden until the slot receives a Progressive Intent
+/// Sight, which shows everything. The <see cref="IntentDetail.Types"/> step is unused while the
+/// APWorld adds a single copy (see <see cref="ChallengeSightItems.UnlockedSteps"/>).
 /// </summary>
 internal static class IntentSight
 {
     internal static IntentDetail Detail =>
         ChallengeSightItems.Applies(ArchipelagoClient.Settings?.HiddenIntents == true)
-            ? (IntentDetail)Math.Min(
-                ChallengeSightItems.Received(ItemTable.APItem.ProgressiveIntentSight),
+            ? (IntentDetail)ChallengeSightItems.UnlockedSteps(
+                ItemTable.APItem.ProgressiveIntentSight,
                 (int)IntentDetail.Full)
             : IntentDetail.Full;
 

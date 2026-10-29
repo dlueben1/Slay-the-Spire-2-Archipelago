@@ -131,8 +131,11 @@ trap_item_table: Dict[str, ItemData] = {
 
 # Universal items that undo a challenge option, one ID range for all of them: 800-899.
 # Each is added to the pool only when its option is on; logic never counts them.
-INTENT_SIGHT_COPIES = 2
-HEALTH_SIGHT_COPIES = 2
+# One copy of each undoes its whole challenge. With 2 copies the client would still need its
+# one-step-per-copy rule restored (ChallengeSightItems.UnlockedSteps): the first Intent Sight
+# showed intents without numbers, the first Health Sight showed only your own side's health.
+INTENT_SIGHT_COPIES = 1
+HEALTH_SIGHT_COPIES = 1
 challenge_item_table: Dict[str, ItemData] = {
     "Progressive Intent Sight": ItemData(800, ItemType.INTENT_SIGHT, ItemClassification.useful),
     "Progressive Health Sight": ItemData(801, ItemType.HEALTH_SIGHT, ItemClassification.useful),

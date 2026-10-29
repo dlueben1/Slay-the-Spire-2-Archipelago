@@ -68,12 +68,12 @@ Slay the Spire II:
   # Discard it, so you cannot look through every card reward first. The mod's settings can override it.
   strict_card_rewards: false
 
-  # Harder: hides enemy intents. Adds two Progressive Intent
-  # Sight items for the whole slot: the first shows intents without numbers, the second shows them all.
+  # Harder: hides enemy intents. Adds one Progressive Intent
+  # Sight item for the whole slot, which shows them all again.
   hidden_intents: false
 
-  # Harder: hides health. Bars stay full and show "?" instead of numbers; block still shows. Adds two
-  # Progressive Health Sight items for the whole slot: the first shows your own side's health, the second enemies'.
+  # Harder: hides health. Bars stay full and show "?" instead of numbers; block still shows. Adds one
+  # Progressive Health Sight item for the whole slot, which shows everyone's health again.
   hidden_health: false
 
   # Extra difficulty modifiers for every run, on top of Ascension; logic ignores them. Most leave Act 1

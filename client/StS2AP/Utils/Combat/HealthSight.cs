@@ -18,15 +18,16 @@ internal enum HealthDetail
 }
 
 /// <summary>
-/// The Hidden Health challenge: health stays hidden until the slot receives Progressive Health
-/// Sight items. The first copy shows the player's own side, the second shows enemies too.
+/// The Hidden Health challenge: health stays hidden until the slot receives a Progressive Health
+/// Sight, which shows everyone's health. The <see cref="HealthDetail.OwnSide"/> step is unused
+/// while the APWorld adds a single copy (see <see cref="ChallengeSightItems.UnlockedSteps"/>).
 /// </summary>
 internal static class HealthSight
 {
     internal static HealthDetail Detail =>
         ChallengeSightItems.Applies(ArchipelagoClient.Settings?.HiddenHealth == true)
-            ? (HealthDetail)Math.Min(
-                ChallengeSightItems.Received(ItemTable.APItem.ProgressiveHealthSight),
+            ? (HealthDetail)ChallengeSightItems.UnlockedSteps(
+                ItemTable.APItem.ProgressiveHealthSight,
                 (int)HealthDetail.Full)
             : HealthDetail.Full;
 
