@@ -32,8 +32,8 @@ That resolves `sts2.dll`, `0Harmony.dll`, and `GodotSharp.dll` from the selected
 When fixing a compatibility error, select the failing version in `local.props`, reload the project, and work against that API. An editor evaluates one selected project configuration at a time; it does not check every supported STS2 API simultaneously. Final compatibility verification therefore requires separate builds for every supported version:
 
 ```powershell
-$versions = (dotnet msbuild client/StS2AP/StS2AP.csproj -getProperty:Sts2PublicApiCompat,Sts2BetaApiCompat | ConvertFrom-Json).Properties
-dotnet build client/StS2AP/StS2AP.csproj -p:Sts2ApiCompat=$($versions.Sts2PublicApiCompat) -p:UseSts2RefLib=true -p:BuildMode=CompileOnly
+$versions = (dotnet msbuild client/StS2AP/StS2AP.csproj -getProperty:Sts2MainApiCompat,Sts2BetaApiCompat | ConvertFrom-Json).Properties
+dotnet build client/StS2AP/StS2AP.csproj -p:Sts2ApiCompat=$($versions.Sts2MainApiCompat) -p:UseSts2RefLib=true -p:BuildMode=CompileOnly
 dotnet build client/StS2AP/StS2AP.csproj -p:Sts2ApiCompat=$($versions.Sts2BetaApiCompat) -p:UseSts2RefLib=true -p:BuildMode=CompileOnly
 ```
 

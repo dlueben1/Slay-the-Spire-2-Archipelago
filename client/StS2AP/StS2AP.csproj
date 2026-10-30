@@ -46,7 +46,7 @@
 
     <!-- Supported versions come from SupportedGameVersions.props. -->
     <SupportedSts2ApiCompats>
-      $(Sts2PublicApiCompat);$(Sts2BetaApiCompat)
+      $(Sts2MainApiCompat);$(Sts2BetaApiCompat)
     </SupportedSts2ApiCompats>
 
     <!-- The Default Version of StS2 we support, if not specified -->
@@ -58,8 +58,8 @@
     <STS2ReferenceDataDir Condition="'$(Sts2ApiSignatureDir)' != ''">$(Sts2ApiSignatureDir)</STS2ReferenceDataDir>
 
     <!-- Resolves the proper version string for the Reference Library based on the targeted game version -->
-    <Sts2RefLibPackageVersion Condition="'$(Sts2ApiCompat)' == '$(Sts2PublicApiCompat)'">
-      $(Sts2PublicApiCompat)
+    <Sts2RefLibPackageVersion Condition="'$(Sts2ApiCompat)' == '$(Sts2MainApiCompat)'">
+      $(Sts2MainApiCompat)
     </Sts2RefLibPackageVersion>
     <Sts2RefLibPackageVersion Condition="'$(Sts2ApiCompat)' == '$(Sts2BetaApiCompat)'">
       $(Sts2BetaApiCompat)-beta
@@ -76,8 +76,8 @@
     <OutputPath>$(MSBuildProjectDirectory)/bin/$(Sts2ApiCompat)/$(Configuration)/</OutputPath>
 
     <!-- Create pre-processor directives for each supported game version -->
-    <DefineConstants Condition="'$(Sts2ApiCompat)' == '$(Sts2PublicApiCompat)'"
-      >$(DefineConstants);STS_PUBLIC</DefineConstants>
+    <DefineConstants Condition="'$(Sts2ApiCompat)' == '$(Sts2MainApiCompat)'"
+      >$(DefineConstants);STS_MAIN</DefineConstants>
     <DefineConstants Condition="'$(Sts2ApiCompat)' == '$(Sts2BetaApiCompat)'"
       >$(DefineConstants);STS_BETA</DefineConstants>
 
@@ -163,7 +163,7 @@
   <!-- Prevent unsupported StS2 versions from building -->
   <Target Name="ValidateSts2ApiCompat" BeforeTargets="ResolveAssemblyReferences">
     <Error
-      Condition="'$(Sts2ApiCompat)' != '$(Sts2PublicApiCompat)' and '$(Sts2ApiCompat)' != '$(Sts2BetaApiCompat)'"
+      Condition="'$(Sts2ApiCompat)' != '$(Sts2MainApiCompat)' and '$(Sts2ApiCompat)' != '$(Sts2BetaApiCompat)'"
       Text="Unsupported Sts2ApiCompat '$(Sts2ApiCompat)'. Supported targets: $(SupportedSts2ApiCompats)."
     />
 
@@ -394,6 +394,6 @@ dotnet/embed_build_outputs=false
     <PropertyGroup>
       <LocalBundleArgument Condition="'$(BuildMode)' == 'Local'">--local</LocalBundleArgument>
     </PropertyGroup>
-    <Exec Command="&quot;$(PythonExe)&quot; &quot;$(MSBuildProjectDirectory)/../../scripts/package_client_bundle.py&quot; --configuration &quot;$(Configuration)&quot; --output &quot;$(ModsOutputDir)&quot; --public &quot;$(Sts2PublicApiCompat)&quot; --beta &quot;$(Sts2BetaApiCompat)&quot; $(LocalBundleArgument)" />
+    <Exec Command="&quot;$(PythonExe)&quot; &quot;$(MSBuildProjectDirectory)/../../scripts/package_client_bundle.py&quot; --configuration &quot;$(Configuration)&quot; --output &quot;$(ModsOutputDir)&quot; --public &quot;$(Sts2MainApiCompat)&quot; --beta &quot;$(Sts2BetaApiCompat)&quot; $(LocalBundleArgument)" />
   </Target>
 </Project>
