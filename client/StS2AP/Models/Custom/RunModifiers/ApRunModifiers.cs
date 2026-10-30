@@ -52,11 +52,17 @@ public static class ApRunModifiers
             else
                 LogUtility.Warn($"Ignoring unknown run modifier '{optionName}' from slot data.");
         }
-        if (settings.ActScalingPercent > 0)
+        if (settings.EnemyHpScaling > 0)
         {
-            var actScaling = (ApActScaling)ModelDb.Modifier<ApActScaling>().ToMutable();
-            actScaling.PercentPerAct = settings.ActScalingPercent;
-            added.Add(actScaling);
+            var hpScaling = (ApEnemyHpScaling)ModelDb.Modifier<ApEnemyHpScaling>().ToMutable();
+            hpScaling.Percent = settings.EnemyHpScaling;
+            added.Add(hpScaling);
+        }
+        if (settings.EnemyDamageScaling > 0)
+        {
+            var damageScaling = (ApEnemyDamageScaling)ModelDb.Modifier<ApEnemyDamageScaling>().ToMutable();
+            damageScaling.Percent = settings.EnemyDamageScaling;
+            added.Add(damageScaling);
         }
 
         // Keep one of each type, including any the run already has.

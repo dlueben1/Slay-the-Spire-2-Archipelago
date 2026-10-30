@@ -9,23 +9,21 @@ using MegaCrit.Sts2.Core.ValueProps;
 namespace StS2AP.Models;
 
 /// <summary>
-/// Enemies get extra max HP and damage for each act after Act 1: the slot's percentage in Act 2
-/// and twice it in Act 3. The game has no hook for a monster's starting HP, so
-/// <c>Patches_ApActScaling</c> calls <see cref="ScaleNewEnemy"/> as each enemy is created.
+/// Enemies deal the slot's percentage of extra damage in Acts 2 and 3.
 /// </summary>
-public sealed class ApActScaling : ApRunModifier
+public sealed class ApEnemyDamageScaling : ApRunModifier
 {
-    private int _percentPerAct;
+    private int _percent;
 
     // Saved with the run, so a run keeps the percentage it started with.
     [SavedProperty]
-    public int PercentPerAct
+    public int Percent
     {
-        get => _percentPerAct;
+        get => _percent;
         set
         {
             AssertMutable();
-            _percentPerAct = value;
+            _percent = value;
         }
     }
 
@@ -36,23 +34,9 @@ public sealed class ApActScaling : ApRunModifier
         get
         {
             LocString description = base.Description;
-            description.Add("Act2Percent", PercentPerAct);
-            description.Add("Act3Percent", PercentPerAct * 2);
+            description.Add("Percent", Percent);
             return description;
         }
-    }
-
-    /// <summary>
-    /// Scales a new enemy's max and current HP, after the game has rolled them and scaled them
-    /// for multiplayer.
-    /// </summary>
-    public void ScaleNewEnemy(Creature enemy)
-    {
-        decimal factor = CurrentActFactor();
-        if (factor == 1m)
-            return;
-        enemy.SetMaxHpInternal(Scale(enemy.MaxHp, factor));
-        enemy.SetCurrentHpInternal(Scale(enemy.CurrentHp, factor));
     }
 
     // The game multiplies damage by each listener's factor after additive bonuses such as
@@ -82,11 +66,6 @@ public sealed class ApActScaling : ApRunModifier
     {
         bool enemyHitsPlayersSide = dealer is { Side: CombatSide.Enemy }
             && target is not { Side: CombatSide.Enemy };
-        return enemyHitsPlayersSide ? CurrentActFactor() : 1m;
+        return enemyHitsPlayersSide ? LaterActsFactor(Percent) : 1m;
     }
-
-    private decimal CurrentActFactor() => 1m + PercentPerAct * RunState.CurrentActIndex / 100m;
-
-    private static int Scale(int hp, decimal factor) =>
-        (int)Math.Round(hp * factor, MidpointRounding.AwayFromZero);
 }

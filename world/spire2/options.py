@@ -526,11 +526,21 @@ class RunModifiers(OptionSet):
     default = frozenset()
 
 
-class ActScalingPercent(Range):
-    """Extra max HP and damage for every enemy after Act 1, as a percentage per act: enemies get this
-    much more in Act 2 and twice as much in Act 3. Act 1 is unchanged. Stacks with Ascension. Logic
-    does not account for it. In multiplayer, the host's value applies to the whole run."""
-    display_name = "Act Scaling Percent"
+class EnemyHpScaling(Range):
+    """Extra max HP for every enemy in Acts 2 and 3, as a percentage. Act 1 is unchanged. Stacks with
+    Ascension. Logic does not account for it. In multiplayer, the host's value applies to the whole
+    run."""
+    display_name = "Enemy HP Scaling"
+    range_start = 0
+    range_end = 15
+    default = 0
+
+
+class EnemyDamageScaling(Range):
+    """Extra damage from every enemy in Acts 2 and 3, as a percentage. Act 1 is unchanged. Stacks with
+    Ascension. Logic does not account for it. In multiplayer, the host's value applies to the whole
+    run."""
+    display_name = "Enemy Damage Scaling"
     range_start = 0
     range_end = 15
     default = 0
@@ -799,7 +809,8 @@ class Spire2Options(PerGameCommonOptions):
     ascension: Ascension
     ascension_down: AscensionDown
     run_modifiers: RunModifiers
-    act_scaling_percent: ActScalingPercent
+    enemy_hp_scaling: EnemyHpScaling
+    enemy_damage_scaling: EnemyDamageScaling
 
     # Main game flow
     use_new_logic: UseNewLogic

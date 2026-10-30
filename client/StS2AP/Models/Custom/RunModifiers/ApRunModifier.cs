@@ -21,6 +21,12 @@ public abstract class ApRunModifier : ModifierModel
 
     protected static bool IsEnemy(Creature creature) => creature.Side != CombatSide.Player;
 
+    /// <summary>
+    /// The multiplier for a percentage that applies in Acts 2 and 3 but leaves Act 1 unchanged.
+    /// </summary>
+    protected decimal LaterActsFactor(int percent) =>
+        RunState.CurrentActIndex >= 1 ? 1m + percent / 100m : 1m;
+
     protected static bool IsEliteOrBossCombat(RoomType roomType) =>
         roomType is RoomType.Elite or RoomType.Boss;
 

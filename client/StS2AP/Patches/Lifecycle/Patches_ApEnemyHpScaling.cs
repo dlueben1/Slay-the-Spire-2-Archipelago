@@ -5,19 +5,19 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 namespace StS2AP.Patches
 {
     /// <summary>
-    /// Applies the Act Scaling Percent run modifier to enemy HP. CreateCreature rolls a monster's
+    /// Applies the Enemy HP Scaling run modifier. CreateCreature rolls a monster's
     /// HP and scales it for multiplayer before any health bar exists; it builds both encounter
     /// monsters and summons.
     /// </summary>
     [HarmonyPatch(typeof(CombatState), nameof(CombatState.CreateCreature))]
-    public static class Patches_ApActScaling
+    public static class Patches_ApEnemyHpScaling
     {
         [HarmonyPostfix]
         public static void Postfix(CombatState __instance, CombatSide side, Creature __result)
         {
             if (side != CombatSide.Enemy)
                 return;
-            __instance.RunState.Modifiers.OfType<ApActScaling>().FirstOrDefault()?.ScaleNewEnemy(__result);
+            __instance.RunState.Modifiers.OfType<ApEnemyHpScaling>().FirstOrDefault()?.ScaleNewEnemy(__result);
         }
     }
 }

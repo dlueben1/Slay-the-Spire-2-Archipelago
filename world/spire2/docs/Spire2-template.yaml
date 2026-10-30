@@ -73,9 +73,13 @@ Slay the Spire II:
   # In multiplayer, the host's modifiers apply to the whole run.
   run_modifiers: []
 
-  # Extra enemy max HP and damage per act after Act 1 (0-15): 10 gives +10% in Act 2 and +20% in Act 3.
-  # Logic ignores it. In multiplayer, the host's value applies to the whole run.
-  act_scaling_percent: 0
+  # Extra enemy max HP in Acts 2 and 3, in percent (0-15); Act 1 is unchanged. Logic ignores it.
+  # In multiplayer, the host's value applies to the whole run.
+  enemy_hp_scaling: 0
+
+  # Extra enemy damage in Acts 2 and 3, in percent (0-15); Act 1 is unchanged. Logic ignores it.
+  # In multiplayer, the host's value applies to the whole run.
+  enemy_damage_scaling: 0
 
   ################
   # Game Options #
