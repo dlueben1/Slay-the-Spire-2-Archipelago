@@ -8,19 +8,25 @@ from .constants import (NUM_CUSTOM, VANILLA_CHARACTER_BLOCKS, GENERIC_CHARACTER_
 @dataclass(frozen=True)
 class StarterPower:
     # Missing-starter penalty, then second-receipt bonus above the normal loadout.
-    card: tuple[float, float] = (1.0, 4.0)
-    relic: tuple[float, float] = (2.5, 4.0)
+    card: tuple[float, float]
+    relic: tuple[float, float]
+    # Extra penalty, charged once, while either starter is missing. For a starter card and relic
+    # that work as a pair, restoring both should match leaving the starters unshuffled.
+    missing_pair: float = 0.0
 
 
-DEFAULT_STARTER_POWER = StarterPower()
+# Close to the average of the reviewed vanilla characters below (card 1.2 / 3.9, relic 2.3 / 3.3);
+# recheck it by hand after retuning them. It leaves out missing_pair, which only fits a known card
+# and relic pair.
+DEFAULT_STARTER_POWER = StarterPower(card=(1.0, 4.0), relic=(2.0, 3.5))
 
 
 @dataclass(frozen=True)
 class CharacterDefinition:
     name: str
     internal_id: str | None
-    # Vanilla entries explicitly choose reviewed values or DEFAULT_STARTER_POWER.
-    # Modded entries have no assumed power credit for unverified starter upgrades.
+    # Reviewed starter values; None uses DEFAULT_STARTER_POWER. Modded characters are assumed to
+    # define Archaic Tooth and Touch of Orobas mappings, so the defaults fit them until reviewed.
     starter_power: StarterPower | None = None
 
 
@@ -30,7 +36,8 @@ VANILLA_CHARACTERS = (
     CharacterDefinition("Silent", "Silent", StarterPower((1.5, 4.5), (2.0, 3.5))),
     CharacterDefinition("Defect", "Defect", StarterPower((1.0, 3.0), (1.0, 3.0))),
     CharacterDefinition("Regent", "Regent", StarterPower((1.5, 5.0), (1.5, 2.5))),
-    CharacterDefinition("Necrobinder", "Necrobinder", StarterPower((1.0, 2.5), (4.0, 5.0))),
+    # Normal Necrobinder starts with both halves of a card/relic synergy.
+    CharacterDefinition("Necrobinder", "Necrobinder", StarterPower((1.0, 2.5), (4.0, 5.0), missing_pair=0.5)),
 )
 
 # Fill these in with their known starter power once people know them better
@@ -44,15 +51,19 @@ PREDEFINED_CHARACTERS = (
     CharacterDefinition("Tectonic", "INTOTHESPIREVERSE-SHADOW_IRONCLAD"),
     CharacterDefinition("Captain", "INTOTHESPIREVERSE-SHADOW_REGENT"),
     CharacterDefinition("Acolyte", "INTOTHESPIREVERSE-SHADOW_SILENT"),
-    # Downfall - Classic Characters
-    CharacterDefinition("Slime Boss", "SLIMEBOSS-SLIME_BOSS"),
-    CharacterDefinition("Guardian", "GUARDIAN-GUARDIAN"),
-    CharacterDefinition("Hexaghost", "HEXAGHOST-HEXAGHOST"),
-    CharacterDefinition("Champ", "CHAMP-CHAMP"),
-    CharacterDefinition("Automaton", "AUTOMATON-AUTOMATON"),
-    CharacterDefinition("Snecko", "SNECKO-SNECKO"),
-    CharacterDefinition("Hermit", "HERMIT-HERMIT"),
-    CharacterDefinition("Awakened One", "AWAKENED-AWAKENED"),
+    # Downfall - Classic Characters. Starter power read from Downfall 0.1.23's Orobas mappings,
+    # not yet playtested.
+    # Archaic Tooth turns Tackle into a placeholder card weaker than Tackle, and an AP item can't
+    # lower power, so its upgrade adds nothing.
+    CharacterDefinition("Slime Boss", "SLIMEBOSS-SLIME_BOSS", StarterPower((1.5, 0.0), (2.5, 2.5))),
+    CharacterDefinition("Guardian", "GUARDIAN-GUARDIAN", StarterPower((1.0, 4.5), (1.5, 3.0))),
+    CharacterDefinition("Hexaghost", "HEXAGHOST-HEXAGHOST", StarterPower((1.0, 4.5), (1.5, 2.5))),
+    # Execute is the only Finisher in Champ's starting deck.
+    CharacterDefinition("Champ", "CHAMP-CHAMP", StarterPower((1.5, 4.0), (2.0, 4.0))),
+    CharacterDefinition("Automaton", "AUTOMATON-AUTOMATON", StarterPower((1.0, 3.5), (2.0, 4.5))),
+    CharacterDefinition("Snecko", "SNECKO-SNECKO", StarterPower((1.0, 2.5), (1.0, 2.0))),
+    CharacterDefinition("Hermit", "HERMIT-HERMIT", StarterPower((1.0, 3.0), (1.0, 4.0))),
+    CharacterDefinition("Awakened One", "AWAKENED-AWAKENED", StarterPower((1.0, 3.5), (1.5, 5.0))),
     # Watcher by Lamali
     CharacterDefinition("Watcher", "WATCHER-WATCHER"),
     CharacterDefinition("Hornet", "HORNET_MOD_CHARACTER_HORNET_MOD_CHARACTER"),

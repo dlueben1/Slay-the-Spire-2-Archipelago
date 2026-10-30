@@ -20,7 +20,7 @@ class UseNewLogic(DefaultOnToggle):
     no longer requires this as 'Power' can be made up with extra cards/relics. Similar cases for ancients/smiths/rests.
 
     Old logic is used automatically (regardless of this option) when floor, gold, and potion checks
-     are all disabled to reduce failed generations.
+    are all disabled and this is the only world in the generation, to reduce failed generations.
     """
     display_name = "Use New Logic"
 
@@ -316,7 +316,7 @@ class ShopSanityCosts(Choice):
     Discount Tiered: 50 percent of the calculated baseline.
     Tiered: the full calculated baseline.
 
-    Generation logic does not account for these prices."""
+    Somewhat accounted for in logic."""
     display_name = "Shop Sanity Costs"
     option_Fixed = 0
     option_Super_Discount_Tiered = 1
@@ -325,7 +325,8 @@ class ShopSanityCosts(Choice):
     default = 2
 
 class GoldSanity(Toggle):
-    """Whether to replace combat, elite, and boss gold rewards with AP locations. Adds 22 locations per character."""
+    """Whether to replace combat, elite, and boss gold rewards with AP locations. Adds 22 locations per character.
+    """
     display_name = "Gold Sanity"
     default = 0
 

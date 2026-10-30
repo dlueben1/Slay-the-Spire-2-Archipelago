@@ -10,8 +10,10 @@ from BaseClasses import CollectionState, Item, Location, Region, MultiWorld, Ite
 from Options import OptionError
 from worlds.AutoWorld import World
 from .regions import create_regions
-from .rules import FALLBACK_REASON, MID_ACT_1_POWER, select_logic, set_rules
+from .rules import FALLBACK_REASON, is_sparse, select_logic, set_rules
 from . import rules_old
+from .logic_table import (COMBAT_GOLD_ITEMS, PATH_RELIC_REWARDS, REGIONS, RELIC_POWER, SMITH_POWER_BY_TIER,
+                          card_reward_strength, card_reward_table, card_rewards_needed)
 from .web_world import SlayTheSpire2Web
 from .characters import (CharacterConfig, character_list, vanilla_character_ids, character_registry,
                          registered_character_blocks, unique_character_ids, character_identity,
@@ -22,9 +24,34 @@ from .items import (item_table, chars_to_items, bonus_item_table, ItemType, base
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
 from .options import Spire2Options
 
-COMBAT_GOLD_ITEM_COUNT = 13
+COMBAT_GOLD_ITEM_COUNT = COMBAT_GOLD_ITEMS
 ELITE_GOLD_ITEM_COUNT = 7
 BOSS_GOLD_ITEM_COUNT = 2
+
+SPARSE_SHOP_ITEM_TYPES = {ItemType.SHOP_CARD, ItemType.SHOP_NEUTRAL, ItemType.SHOP_RELIC, ItemType.SHOP_POTION,
+                          ItemType.SHOP_REMOVE}
+
+
+def sparse_placement_rank(item: 'SlayTheSpire2Item') -> int:
+    """When fill should place this progression item in a sparse world; lower ranks go first.
+
+    Items placed first are placed while nearly every other item is still held, so they can take
+    the late checks. Card Rewards, which matter least one at a time, should take those. Support
+    that early gates need goes last, when only early checks are still reachable.
+    """
+    item_type = item.item_data.type
+    if item_type == ItemType.CARD_REWARD:
+        return 0
+    if item_type in (ItemType.RELIC, ItemType.RARE_CARD_REWARD) or item_type in SPARSE_SHOP_ITEM_TYPES:
+        return 1
+    if item.name.endswith(" Progressive Smith"):
+        return 2
+    if item_type == ItemType.PROGRESSIVE_ANCIENT:
+        return 3
+    if item.name.endswith(" Progressive Rest"):
+        return 4
+    # Unlocks and anything else.
+    return 5
 
 
 class SlayTheSpire2Item(Item):
@@ -120,13 +147,26 @@ class SlayTheSpire2World(World):
             # Mixing cards and relics meets the power/card floor within the available checks;
             # ordinary cards alone can fill every opening slot and still fall short.
             early_items = self.multiworld.early_items[self.player]
-            cards = 1 if self.options.shuffle_all_cards else 0
-            vanilla_cards = 0 if self.options.shuffle_all_cards else 1.5
-            relics = ceil((MID_ACT_1_POWER - cards - vanilla_cards) / 1.5)
-            if self.effective_logic == "old" and not self.options.shuffle_all_cards:
-                # Old logic values a half-shuffled Card Reward at 2 power. Pair it with
-                # one Relic for 3.5 power using the same two early slots as two Relics.
-                cards, relics = 1, 1
+            if self.effective_logic == "old":
+                # Old logic's Mid Act 1 needs 3 power. It values a half-shuffled Card Reward at 2,
+                # so one Card Reward and one Relic use the same two early slots as two Relics.
+                cards, relics = (1, 2) if self.options.shuffle_all_cards else (1, 1)
+            else:
+                mid_act_1 = REGIONS["Mid Act 1"]
+                power = mid_act_1.power_for(bool(self.options.seeded))
+                if self.options.campfire_sanity:
+                    # The opening holds a Rest but no Smith, so Mid Act 1 charges its smith share.
+                    power += SMITH_POWER_BY_TIER[0] * mid_act_1.smith
+                vanilla_cards = 0 if self.options.shuffle_all_cards else mid_act_1.vanilla_card_strength
+                table = card_reward_table(bool(self.options.shuffle_all_cards))
+                cards = card_rewards_needed(table, mid_act_1.minimum_cards - vanilla_cards)
+                card_strength = card_reward_strength(table, cards) + vanilla_cards
+                # Relics past those a run can claim in Mid Act 1 do not help; Card Rewards make up
+                # the rest.
+                claimable = self.options.relic_rewards_available_anytime.value + PATH_RELIC_REWARDS["Mid Act 1"]
+                relics = min(max(0, ceil((power - card_strength) / RELIC_POWER)), claimable)
+                cards = card_rewards_needed(table, max(mid_act_1.minimum_cards, power - relics * RELIC_POWER)
+                                            - vanilla_cards)
             for config in self.characters:
                 if config.locked:
                     continue
@@ -388,10 +428,15 @@ class SlayTheSpire2World(World):
         data = item_table[name]
         item_id = data.code
         classification = data.classification
-        if (self.effective_logic == 'new' and not self.options.shop_sanity
-                and name.endswith((' Elite Gold', ' Boss Gold'))):
-            # Only shops require gold in new logic; legacy boss gates still need it.
+        if self.effective_logic == 'new' and name.endswith((' Elite Gold', ' Boss Gold')) and not self.options.gold_sanity:
+            # New logic counts Elite and Boss Gold only with Gold Sanity, for shop choices and each
+            # act's shop gold; legacy boss gates still need it.
             classification = ItemClassification.useful
+        elif (self.effective_logic == 'new' and name.endswith(' Combat Gold')
+              and self.options.gold_sanity and self.options.shop_sanity):
+            # Each act's shop gold counts Combat Gold too. Many small items can meet it, so none
+            # needs balancing or a priority location.
+            classification = ItemClassification.progression_deprioritized_skip_balancing
         return SlayTheSpire2Item(data, name, classification, item_id, self.player)
 
     def build_filler_pools(self) -> None:
@@ -639,6 +684,19 @@ class SlayTheSpire2World(World):
     def set_rules(self) -> None:
         set_rules(self)
 
+    def fill_hook(self, progitempool: List[Item], usefulitempool: List[Item], filleritempool: List[Item],
+                  fill_locations: List[Location]) -> None:
+        # A sparse world on new logic has about one location per item. Fill takes each player's
+        # items from the end of this pool, so order this world's own items by placement rank,
+        # within the positions they already hold. Other players' items do not move.
+        if self.effective_logic != "new" or not is_sparse(self.options):
+            return
+        positions = [index for index, item in enumerate(progitempool) if item.player == self.player]
+        # Python's sort is stable, so items of one rank keep their shuffled order.
+        ordered = sorted((progitempool[index] for index in positions), key=sparse_placement_rank, reverse=True)
+        for index, item in zip(positions, ordered):
+            progitempool[index] = item
+
     def fill_slot_data(self) -> dict:
         slot_data = {
             "effective_logic": self.effective_logic,
@@ -701,6 +759,8 @@ class SlayTheSpire2World(World):
             FALLBACK_REASON if self.options.use_new_logic and self.effective_logic == "old" else None
         )
         self.options.lock_characters.value = slot_data['lock_characters']
+        # Seeded Run changes Act 1 power checks.
+        self.options.seeded.value = slot_data['seeded']
         self.options.shop_card_slots.value = slot_data["shop_sanity_options"]["card_slots"]
         self.options.shop_remove_slots.value = slot_data["shop_sanity_options"]["card_remove"]
         self.options.shop_neutral_card_slots.value = slot_data["shop_sanity_options"]["neutral_slots"]
