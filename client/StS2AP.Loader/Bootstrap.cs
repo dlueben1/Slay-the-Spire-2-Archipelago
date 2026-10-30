@@ -23,6 +23,8 @@ public static class Bootstrap
     private static AssemblyLoadContext? _loadContext;
     private static int _initializationStarted;
 
+    // Every failure below throws: the game reports a mod as failing to initialize only when its
+    // initializer throws, and otherwise lists it as loaded with nothing running.
     public static void Initialize()
     {
         // Initializers cannot safely be replayed after partial content registration.
@@ -32,36 +34,29 @@ public static class Bootstrap
             return;
         }
 
-        _modDirectory = Path.GetDirectoryName(typeof(Bootstrap).Assembly.Location);
-        if (string.IsNullOrWhiteSpace(_modDirectory))
-        {
-            Log.Error("[Archipelago.Loader] Could not resolve the mod directory; refusing to load.");
-            return;
-        }
-
-        _loadContext = AssemblyLoadContext.GetLoadContext(typeof(Bootstrap).Assembly)
-            ?? AssemblyLoadContext.Default;
-        _loadContext.Resolving += ResolveDependency;
-
-        string? hostVersionText = NormalizeGameVersion(ReleaseInfoManager.Instance.ReleaseInfo?.Version);
-        if (hostVersionText is null || !Version.TryParse(hostVersionText, out Version? hostVersion))
-        {
-            Log.Error("[Archipelago.Loader] Could not determine the Slay the Spire 2 version; refusing to load.");
-            return;
-        }
-
         try
         {
+            _modDirectory = Path.GetDirectoryName(typeof(Bootstrap).Assembly.Location);
+            if (string.IsNullOrWhiteSpace(_modDirectory))
+                throw new InvalidOperationException("Could not resolve the mod directory.");
+
+            _loadContext = AssemblyLoadContext.GetLoadContext(typeof(Bootstrap).Assembly)
+                ?? AssemblyLoadContext.Default;
+            _loadContext.Resolving += ResolveDependency;
+
+            string? hostVersionText = NormalizeGameVersion(ReleaseInfoManager.Instance.ReleaseInfo?.Version);
+            if (hostVersionText is null || !Version.TryParse(hostVersionText, out Version? hostVersion))
+                throw new InvalidOperationException("Could not determine the Slay the Spire 2 version.");
+
             VariantManifest manifest = ReadManifest(_modDirectory);
             VariantSelection? selection = PickVariant(hostVersion, manifest.Variants);
             if (selection is null)
             {
                 string supported = string.Join(", ", manifest.Variants.Keys.Order());
-                Log.Error(
-                    $"[Archipelago.Loader] STS2 {hostVersionText} has no compatible build on the same major.minor version line. " +
-                    $"Compiled targets: {supported}. Refusing to load."
+                throw new InvalidOperationException(
+                    $"STS2 {hostVersionText} has no compatible build on the same major.minor version line. " +
+                    $"Compiled targets: {supported}."
                 );
-                return;
             }
 
             if (selection.Version != hostVersion)
@@ -87,7 +82,8 @@ public static class Bootstrap
         }
         catch (Exception ex)
         {
-            Log.Error($"[Archipelago.Loader] Compatibility load failed; Archipelago will not start: {ex}");
+            Log.Error($"[Archipelago.Loader] Archipelago will not start: {ex}");
+            throw;
         }
     }
 
