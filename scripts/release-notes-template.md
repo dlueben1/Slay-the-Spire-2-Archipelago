@@ -12,7 +12,7 @@ Archipelago **Launcher v0.6.7+** is required for generation. Install **STS2-Rits
 
 - **Archipelago Client:** {{CLIENT_VERSION}}
 - **APWorld:** {{WORLD_VERSION}}
-- **Slay the Spire II main branch:** v{{STS2_PUBLIC_VERSION}}
+- **Slay the Spire II main branch:** v{{STS2_MAIN_VERSION}}
 - **Slay the Spire II beta branch:** v{{STS2_BETA_VERSION}}
 
 # Changelist

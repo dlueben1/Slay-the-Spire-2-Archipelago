@@ -55,12 +55,12 @@ jobs:
           --property:BuildMode=CompileOnly
           --nologo
 
-      - name: Compile compatibility loader once against the public API
-        if: matrix.sts2_api == needs.versions.outputs.public_api
+      - name: Compile compatibility loader once against the main API
+        if: matrix.sts2_api == needs.versions.outputs.main_api
         run: >-
           dotnet build client/StS2AP.Loader/StS2AP.Loader.csproj
           --configuration Release
-          --property:Sts2ApiCompat=${{ needs.versions.outputs.public_api }}
+          --property:Sts2ApiCompat=${{ needs.versions.outputs.main_api }}
           --property:UseSts2RefLib=true
           --nologo
 
