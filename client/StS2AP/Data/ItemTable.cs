@@ -73,6 +73,12 @@
             ConfusedTrap = 706,
             SlothTrap = 707,
             DazedTrap = 708,
+            
+            /// ── Challenge items (universal / character-agnostic) ───────────────────────
+            /// Undo a challenge option; each copy is a permanent unlock for every character.
+            /// IDs match challenge_item_table in items.py.
+            IntentSight = 800,
+            HealthSight = 801,
         }
 
         public static Dictionary<int, string> Items = new Dictionary<int, string>
@@ -132,6 +138,8 @@
             { 706, "Confused Trap" },
             { 707, "Sloth Trap" },
             { 708, "Dazed Trap" },
+            { 800, "Intent Sight" },
+            { 801, "Health Sight" },
         };
 
         /// <summary>

@@ -340,6 +340,46 @@ class CardReward(Toggle):
     display_name = "Shuffle All Card Rewards"
     default = False
 
+class StrictCardRewards(Toggle):
+    """Harder: you can no longer look through every Card Reward in the AP Menu before picking.
+    Opening one reveals its cards and locks the other Card Rewards until you take a card or Discard it,
+    like a card reward after a fight. Skip, the map, the deck and closing the menu keep the revealed
+    reward for later. With Pael's Wing, its Sacrifice replaces Discard.
+    In singleplayer, a Card Reward you have not opened yet depends on what you took from the ones before it,
+    so loading a checkpoint and picking differently changes it.
+    Does not change logic. The mod's settings can override this.
+    Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder
+    """
+    display_name = "Strict Card Rewards"
+    visibility = Visibility.template | Visibility.spoiler
+    default = 0
+
+class HiddenIntents(Range):
+    """Harder: enemy intents are hidden, like Runic Dome in the first game, and so is the Intent Graph mod's overlay.
+    The value is how many Intent Sight items are added to the item pool, and 0 turns it off. Finding
+    any one of them shows intents again for every character, with their numbers and the Intent Graph overlay, so
+    a second copy makes it easier to find. Does not change logic.
+    Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder
+    """
+    display_name = "Hidden Intents"
+    visibility = Visibility.template | Visibility.spoiler
+    range_start = 0
+    range_end = 2
+    default = 0
+
+class HiddenHealth(Range):
+    """Harder: health is hidden. Health bars stay full and show no numbers, the top bar shows no HP, and the
+    poison and doom previews on health bars are hidden. Block is still shown. The value is how many Health Sight
+    items are added to the item pool, and 0 turns it off. Finding any one of them shows everyone's health again
+    for every character, so a second copy makes it easier to find. Does not change logic.
+    Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder
+    """
+    display_name = "Hidden Health"
+    visibility = Visibility.template | Visibility.spoiler
+    range_start = 0
+    range_end = 2
+    default = 0
+
 class SeededRun(Toggle):
     """Whether each character should have a fixed seed to climb the spire with or not."""
     display_name = "Seeded Run"
@@ -826,6 +866,9 @@ class Spire2Options(PerGameCommonOptions):
     progressive_starter_card: ProgressiveStarterCard
     progressive_starter_relic: ProgressiveStarterRelic
     shuffle_all_cards: CardReward
+    strict_card_rewards: StrictCardRewards
+    hidden_intents: HiddenIntents
+    hidden_health: HiddenHealth
 
     # Bonus items
     bonus_items: BonusItems

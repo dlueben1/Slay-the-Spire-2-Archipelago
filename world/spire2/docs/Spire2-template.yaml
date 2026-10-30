@@ -58,6 +58,24 @@ Slay the Spire II:
   # A single number N removes your highest N Ascensions; otherwise list numbers or names as above.
   ascension_down: []
 
+  ##############
+  # Challenges #
+  ##############
+
+  # Optional ways to make every run harder. Logic ignores all of them.
+
+  # Harder: opening a card reward in the AP menu locks the others until you take a card or
+  # Discard it, so you cannot look through every card reward first. The mod's settings can override it.
+  strict_card_rewards: false
+
+  # Harder: hides enemy intents. The value (0-2) is how many Intent Sight items the slot gets;
+  # 0 is off, and any one of them shows intents again for the whole slot.
+  hidden_intents: 0
+
+  # Harder: hides health. Bars stay full and show "?" instead of numbers; block still shows. The value (0-2) is
+  # how many Health Sight items the slot gets; 0 is off, and any one of them shows health again.
+  hidden_health: 0
+
   # Extra difficulty modifiers for every run, on top of Ascension; logic ignores them. Most leave Act 1
   # as it is and grow harder in Acts 2 and 3. Names (case-sensitive):
   #   RisingStrength     - elites and bosses start each combat with 1 Strength in Act 2, 2 in Act 3

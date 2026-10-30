@@ -36,6 +36,10 @@ public static class ModSettingsRegistration
     private const string RelicRewards_OverrideId = "override_relic_rewards_available_anytime";
     private const string RelicRewards_AvailableAnytimeId = "relic_rewards_available_anytime";
 
+    // Card rewards
+    private const string CardRewards_OverrideStrictId = "override_strict_card_rewards";
+    private const string CardRewards_StrictId = "strict_card_rewards";
+
     // Cloud saves
     private const string CloudSaves_EnableId = "enable_remote_singleplayer_saves";
 
@@ -127,6 +131,7 @@ public static class ModSettingsRegistration
                     .AddSection("cloud_saves", ConfigureCloudSavesSection)
                     .AddSection("local_saves", ConfigureLocalSavesSection)
                     .AddSection("relic_rewards", ConfigureRelicRewardsSection)
+                    .AddSection("card_rewards", ConfigureCardRewardsSection)
                     .AddSection("ancient_rewards", ConfigureAncientRewardsSection)
                     .AddSection("deathlink", ConfigureDeathLinkSection)
                     .AddSection("bug_reports", ConfigureBugReportsSection)
@@ -476,6 +481,55 @@ public static class ModSettingsRegistration
             );
     }
 
+    private static void ConfigureCardRewardsSection(ModSettingsSectionBuilder section)
+    {
+        section
+            .WithTitle(ModSettingsText.Literal("Card Rewards"))
+            .WithDescription(
+                ModSettingsText.Literal("Configure how AP menu card rewards are opened.")
+            )
+            .WithMenuCapabilities(ModSettingsMenuCapabilities.None)
+            .AddToggle(
+                CardRewards_OverrideStrictId,
+                ModSettingsText.Literal("Override AP Strict Card Rewards"),
+                CreateBinding(
+                    static settings => settings.OverrideStrictCardRewards,
+                    static (settings, value) =>
+                    {
+                        // Start an override from the slot's value instead of a stale local value.
+                        if (value && !settings.OverrideStrictCardRewards)
+                        {
+                            settings.StrictCardRewards =
+                                ArchipelagoClient.Settings?.StrictCardRewards
+                                ?? settings.StrictCardRewards;
+                        }
+
+                        settings.OverrideStrictCardRewards = value;
+                    }
+                ),
+                ModSettingsText.Literal(
+                    "Use a local value instead of the one supplied by the Archipelago slot."
+                )
+            )
+            .ConfigureEntryMenu(CardRewards_OverrideStrictId, ModSettingsMenuCapabilities.None)
+            .AddToggle(
+                CardRewards_StrictId,
+                ModSettingsText.Literal("Strict Card Rewards"),
+                CreateBinding(
+                    static settings => settings.OverrideStrictCardRewards
+                        ? settings.StrictCardRewards
+                        : ArchipelagoClient.Settings?.StrictCardRewards
+                            ?? settings.StrictCardRewards,
+                    static (settings, value) => settings.StrictCardRewards = value
+                ),
+                ModSettingsText.Literal(
+                    "Harder: opening an AP card reward locks the others until you take a card or Discard it. Skip, the map, the deck and closing the menu keep it for later. Applies the next time the AP menu opens."
+                )
+            )
+            .ConfigureEntryMenu(CardRewards_StrictId, ModSettingsMenuCapabilities.None)
+            .WithEntryEnabledWhen(CardRewards_StrictId, IsStrictCardRewardsOverrideEnabled);
+    }
+
     #endregion
 
     #region Helper Functions
@@ -496,6 +550,12 @@ public static class ModSettingsRegistration
     {
         var store = RitsuLibFramework.GetDataStore(ModEntry.ModId);
         return store.Get<ClientSettings>("apsettings").OverrideRelicRewardsAvailableAnytime;
+    }
+
+    private static bool IsStrictCardRewardsOverrideEnabled()
+    {
+        var store = RitsuLibFramework.GetDataStore(ModEntry.ModId);
+        return store.Get<ClientSettings>("apsettings").OverrideStrictCardRewards;
     }
 
     /// <summary>

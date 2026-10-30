@@ -59,6 +59,8 @@ namespace StS2AP.Patches
             {
                 background.SelfModulate = AncientBackgroundTint;
             }
+
+            ArchipelagoRewardUI.ApplyCardRewardLock(__instance);
         }
     }
 

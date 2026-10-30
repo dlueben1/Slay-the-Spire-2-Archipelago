@@ -67,6 +67,26 @@ namespace StS2AP.Models
         /// </summary>
         public int RelicRewardsAvailableAnytime { get; set; } = 10;
 
+        /// <summary>
+        /// Whether opening an AP menu card reward locks the other card rewards until a card is
+        /// taken or the revealed reward is discarded.
+        /// </summary>
+        public bool StrictCardRewards { get; set; }
+
+        /// <summary>
+        /// Whether the slot enabled the Hidden Intents challenge. When it is off, intents are never
+        /// hidden. When it is on, <see cref="StS2AP.Utils.IntentSight"/> works out what is visible
+        /// from the Intent Sight items received so far.
+        /// </summary>
+        public bool HiddenIntents { get; set; }
+
+        /// <summary>
+        /// Whether the slot enabled the Hidden Health challenge. When it is off, health is never
+        /// hidden. When it is on, <see cref="StS2AP.Utils.Combat.HealthSight"/> works out what is visible
+        /// from the Health Sight items received so far.
+        /// </summary>
+        public bool HiddenHealth { get; set; }
+
         /// <summary>Whether a victory releases the winning character's remaining checks.</summary>
         public bool ReleaseOnVictory { get; set; } = true;
 
