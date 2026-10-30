@@ -348,8 +348,10 @@ class StrictCardRewards(Toggle):
     In singleplayer, a Card Reward you have not opened yet depends on what you took from the ones before it,
     so loading a checkpoint and picking differently changes it.
     Does not change logic. The mod's settings can override this.
+    Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder
     """
     display_name = "Strict Card Rewards"
+    visibility = Visibility.template | Visibility.spoiler
     default = 0
 
 class HiddenIntents(Range):
@@ -357,8 +359,10 @@ class HiddenIntents(Range):
     The value is how many Intent Sight items are added to the item pool, and 0 turns it off. Finding
     any one of them shows intents again for every character, with their numbers and the Intent Graph overlay, so
     a second copy makes it easier to find. Does not change logic.
+    Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder
     """
     display_name = "Hidden Intents"
+    visibility = Visibility.template | Visibility.spoiler
     range_start = 0
     range_end = 2
     default = 0
@@ -368,8 +372,10 @@ class HiddenHealth(Range):
     poison and doom previews on health bars are hidden. Block is still shown. The value is how many Health Sight
     items are added to the item pool, and 0 turns it off. Finding any one of them shows everyone's health again
     for every character, so a second copy makes it easier to find. Does not change logic.
+    Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder
     """
     display_name = "Hidden Health"
+    visibility = Visibility.template | Visibility.spoiler
     range_start = 0
     range_end = 2
     default = 0
