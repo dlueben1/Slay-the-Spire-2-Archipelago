@@ -1,6 +1,6 @@
 # Selecting an STS2 API for development
 
-`Sts2ApiCompat` selects the supported Slay the Spire 2 API that the C# client is compiled against. It controls the versioned game DLL directory, compatibility symbols, isolated `obj`/`bin` paths, and assembly build metadata. The supported public and beta versions are set in the tracked `client/StS2AP/SupportedGameVersions.props`; the client defaults to beta, and the loader targets public.
+`Sts2ApiCompat` selects the supported Slay the Spire 2 API that the C# client is compiled against. It controls the versioned game DLL directory, compatibility symbols, isolated `obj`/`bin` paths, and assembly build metadata. The supported main and beta versions are set in the tracked `client/StS2AP/SupportedGameVersions.props`; the client defaults to beta, and the loader targets main.
 
 For local development, copy `client/StS2AP/local.props.template` to the gitignored `client/StS2AP/local.props`. Set `Sts2ApiCompat` to the version you want your IDE or editor to inspect. The simplest setup uses the MegaCrit-permissioned, stripped `Book.StS2.RefLib` reference assemblies from NuGet:
 
@@ -13,7 +13,7 @@ For local development, copy `client/StS2AP/local.props.template` to the gitignor
 </Project>
 ```
 
-The public API selects the matching `Book.StS2.RefLib` version; beta selects the matching version with a `-beta` suffix. This works in tools that evaluate the C# project through MSBuild, including Rider, Visual Studio, and Visual Studio Code C# tooling. After changing `Sts2ApiCompat`, reload the project or solution (or restart the editor's C# language server) so autocomplete, navigation, and compile-time diagnostics reflect the newly selected API.
+The main API selects the matching `Book.StS2.RefLib` version; beta selects the matching version with a `-beta` suffix. This works in tools that evaluate the C# project through MSBuild, including Rider, Visual Studio, and Visual Studio Code C# tooling. After changing `Sts2ApiCompat`, reload the project or solution (or restart the editor's C# language server) so autocomplete, navigation, and compile-time diagnostics reflect the newly selected API.
 
 For an authoritative comparison with files from your own game installations, set `UseSts2RefLib` to `false` and point `Sts2ApiSignatureRoot` at a directory containing one subdirectory per supported API:
 

@@ -11,9 +11,9 @@ on:
         default: ""
 
     outputs:
-      public_api:
-        description: "Current supported public StS2 API version"
-        value: ${{ jobs.versions.outputs.public_api }}
+      main_api:
+        description: "Current supported main StS2 API version"
+        value: ${{ jobs.versions.outputs.main_api }}
 
       beta_api:
         description: "Current supported beta StS2 API version"
@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      public_api: ${{ steps.read.outputs.public_api }}
+      main_api: ${{ steps.read.outputs.main_api }}
       beta_api: ${{ steps.read.outputs.beta_api }}
       matrix: ${{ steps.read.outputs.matrix }}
 
@@ -54,15 +54,15 @@ jobs:
           properties=$(dotnet msbuild client/StS2AP/StS2AP.csproj \
             -getProperty:Sts2MainApiCompat,Sts2BetaApiCompat)
 
-          public=$(echo "$properties" | jq -r '.Properties.Sts2MainApiCompat')
+          main=$(echo "$properties" | jq -r '.Properties.Sts2MainApiCompat')
           beta=$(echo "$properties" | jq -r '.Properties.Sts2BetaApiCompat')
 
           matrix=$(jq -cn \
-            --arg public "$public" \
+            --arg main "$main" \
             --arg beta "$beta" \
-            '[$public, $beta]')
+            '[$main, $beta]')
 
-          echo "public_api=$public" >> "$GITHUB_OUTPUT"
+          echo "main_api=$main" >> "$GITHUB_OUTPUT"
           echo "beta_api=$beta" >> "$GITHUB_OUTPUT"
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
@@ -71,6 +71,6 @@ jobs:
             echo ""
             echo "| Target | Version |"
             echo "| --- | --- |"
-            echo "| Public | \`$public\` |"
+            echo "| Main | \`$main\` |"
             echo "| Beta | \`$beta\` |"
           } >> "$GITHUB_STEP_SUMMARY"

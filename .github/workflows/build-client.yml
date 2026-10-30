@@ -134,11 +134,11 @@ jobs:
         if: inputs.build_mode == 'CompileOnly'
         shell: bash
         run: |
-          public_api=$(dotnet msbuild client/StS2AP/StS2AP.csproj -getProperty:Sts2MainApiCompat)
+          main_api=$(dotnet msbuild client/StS2AP/StS2AP.csproj -getProperty:Sts2MainApiCompat)
           dotnet build client/StS2AP.Loader/StS2AP.Loader.csproj \
             --configuration Release \
             -p:UseSts2RefLib=true \
-            -p:Sts2ApiCompat="$public_api"
+            -p:Sts2ApiCompat="$main_api"
 
       - name: Test compiled client manifests
         if: inputs.build_mode == 'CompileOnly'

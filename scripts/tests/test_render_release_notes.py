@@ -25,7 +25,7 @@ class RenderReleaseNotesTests(unittest.TestCase):
         self.values = {
             "CLIENT_VERSION": "1.2.0",
             "WORLD_VERSION": "1.1.1",
-            "STS2_PUBLIC_VERSION": "0.107.1",
+            "STS2_MAIN_VERSION": "0.107.1",
             "STS2_BETA_VERSION": "0.111.0",
         }
         self.template = " ".join("{{" + key + "}}" for key in self.values)
@@ -51,7 +51,7 @@ class ReleaseNotesTemplateTests(unittest.TestCase):
         rendered = render_notes(self.template, {
             "CLIENT_VERSION": "2.0.0",
             "WORLD_VERSION": "1.2.0",
-            "STS2_PUBLIC_VERSION": "0.107.1",
+            "STS2_MAIN_VERSION": "0.107.1",
             "STS2_BETA_VERSION": "0.111.0",
         })
         self.assertIn("- **Archipelago Client:** 2.0.0", rendered)

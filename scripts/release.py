@@ -466,7 +466,7 @@ def render_release_notes(repo: Path, versions: Versions, destination: Path) -> N
         .replace("{{APWORLD_VERSION}}", str(versions.apworld))
         .replace("{{CLIENT_VERSION}}", str(versions.mod))
         .replace("{{WORLD_VERSION}}", str(versions.apworld))
-        .replace("{{STS2_PUBLIC_VERSION}}", SUPPORTED_STS2_API_COMPATS[0])
+        .replace("{{STS2_MAIN_VERSION}}", SUPPORTED_STS2_API_COMPATS[0])
         .replace("{{STS2_BETA_VERSION}}", SUPPORTED_STS2_API_COMPATS[1])
     )
     content = content.replace(f"spire2-{versions.apworld}.apworld", APWORLD_ARCHIVE_NAME)
