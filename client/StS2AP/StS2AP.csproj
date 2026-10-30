@@ -96,7 +96,7 @@
       PrivateAssets="all"
       Condition="'$(UseSts2RefLib)' == 'true' and '$(Sts2RefLibPackageVersion)' != ''"
     />
-    <PackageReference Include="STS2.RitsuLib.Compat.0.107.1" Version="0.6.0" />
+    <PackageReference Include="STS2.RitsuLib.Compat.0.107.1" Version="0.6.10" />
     <PackageReference Include="Krafs.Publicizer" Version="2.3.2" PrivateAssets="all" Condition="'$(UseSts2RefLib)' != 'true'" />
   </ItemGroup>
   <ItemGroup>

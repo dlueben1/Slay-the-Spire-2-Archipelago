@@ -1579,6 +1579,17 @@ namespace StS2AP
                 LogUtility.Info($"SLOT - Bonus Items configured: {settings.BonusItems.Count}");
             }
 
+            if (slotData.TryGetValue("run_modifiers", out object? runModifiersValue)
+                && runModifiersValue is Newtonsoft.Json.Linq.JArray runModifiers)
+            {
+                settings.RunModifiers = runModifiers.Select(token => token.ToString()).ToList();
+                LogUtility.Info($"SLOT - Run Modifiers: [{string.Join(",", settings.RunModifiers)}]");
+            }
+            if (slotData.ContainsKey("enemy_hp_scaling"))
+                settings.EnemyHpScaling = Convert.ToInt32(slotData["enemy_hp_scaling"]);
+            if (slotData.ContainsKey("enemy_damage_scaling"))
+                settings.EnemyDamageScaling = Convert.ToInt32(slotData["enemy_damage_scaling"]);
+
             if (slotData.ContainsKey("campfire_sanity"))
                 settings.CampfireSanity = Convert.ToInt32(slotData["campfire_sanity"]) != 0;
 

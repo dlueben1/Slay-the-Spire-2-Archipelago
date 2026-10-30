@@ -98,6 +98,18 @@ namespace StS2AP.Models
                 ? definitions
                 : Array.Empty<BonusItemDefinition>();
 
+        /// <summary>
+        /// Run Modifiers names from the YAML (for example "EliteStrength"). A new run adds the
+        /// matching AP modifiers; see <see cref="ApRunModifiers"/>.
+        /// </summary>
+        public List<string> RunModifiers { get; set; } = new();
+
+        /// <summary>Extra enemy max HP in Acts 2 and 3, in percent (0-15).</summary>
+        public int EnemyHpScaling { get; set; }
+
+        /// <summary>Extra enemy damage in Acts 2 and 3, in percent (0-15).</summary>
+        public int EnemyDamageScaling { get; set; }
+
         public bool CampfireSanity { get; set; }
         public bool GoldSanity { get; set; }
         public bool PotionSanity { get; set; }
