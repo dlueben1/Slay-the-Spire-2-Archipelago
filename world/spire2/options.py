@@ -508,8 +508,11 @@ class RunModifiers(OptionSet):
     - 'DangerousUnknowns': ? rooms lean towards fights. Combat starts at 20% and rises 15% each
       time a ? room is not a fight; elites start at 0% and rise 4%; chests start and rise at 1%.
       Shops are unchanged. The chances reset each act, with no cap. The extra fights and elites
-      reach combat and relic checks sooner than logic expects."""
+      reach combat and relic checks sooner than logic expects.
+
+    Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder"""
     display_name = "Run Modifiers"
+    visibility = Visibility.template | Visibility.spoiler
     valid_keys_casefold = False
     valid_keys = {
         "RisingStrength",
@@ -529,8 +532,9 @@ class RunModifiers(OptionSet):
 class EnemyHpScaling(Range):
     """Extra max HP for every enemy in Acts 2 and 3, as a percentage. Act 1 is unchanged. Stacks with
     Ascension. Logic does not account for it. In multiplayer, the host's value applies to the whole
-    run."""
+    run. Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder"""
     display_name = "Enemy HP Scaling"
+    visibility = Visibility.template | Visibility.spoiler
     range_start = 0
     range_end = 15
     default = 0
@@ -539,8 +543,9 @@ class EnemyHpScaling(Range):
 class EnemyDamageScaling(Range):
     """Extra damage from every enemy in Acts 2 and 3, as a percentage. Act 1 is unchanged. Stacks with
     Ascension. Logic does not account for it. In multiplayer, the host's value applies to the whole
-    run."""
+    run. Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder"""
     display_name = "Enemy Damage Scaling"
+    visibility = Visibility.template | Visibility.spoiler
     range_start = 0
     range_end = 15
     default = 0
