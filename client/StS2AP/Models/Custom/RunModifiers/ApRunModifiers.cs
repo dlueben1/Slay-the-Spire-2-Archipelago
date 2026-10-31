@@ -41,8 +41,17 @@ public static class ApRunModifiers
     /// </summary>
     public static void AddToNewRun(RunState runState, ArchipelagoSettings? settings)
     {
-        if (settings == null || runState.GameMode != GameMode.Standard)
+        // Log the skips: without them, a player's log cannot show why a run had no modifiers.
+        if (settings == null)
+        {
+            LogUtility.Info("Skipped run modifiers: no AP slot settings for this run.");
             return;
+        }
+        if (runState.GameMode != GameMode.Standard)
+        {
+            LogUtility.Info($"Skipped run modifiers: game mode is {runState.GameMode}.");
+            return;
+        }
 
         var added = new List<ModifierModel>();
         foreach (string optionName in settings.RunModifiers)
