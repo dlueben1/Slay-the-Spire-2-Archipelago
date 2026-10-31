@@ -1091,6 +1091,13 @@ namespace StS2AP
             else
             {
                 SetupUnlockedCharacters();
+                // Disconnect cleared the combat-effect queues, and the SDK's replay of receipts
+                // at or below the item index is ignored, so restore those still unconsumed.
+                // Receipts still waiting in the item processor are queued when it reaches them.
+                BuffUtility.RequeueAnnouncedReceipts(
+                    session.Items.AllItemsReceived,
+                    Patches_ItemProcessor.LastIndexHandled
+                );
             }
 
             // Pre-scout all locations so we have item info available for notifications
@@ -1098,6 +1105,7 @@ namespace StS2AP
 
             // Restore goaled characters from DataStorage so cross-session goal tracking works
             _ = GameUtility.RestoreGoaledCharsFromStorage();
+            GameUtility.SendVictoryAwaitingReconnect();
 
             // Load the set of already-consumed buff indices from DataStorage before item processing begins.
             _ = BuffUtility.LoadFromStorageAsync();
@@ -1105,7 +1113,11 @@ namespace StS2AP
             // Let the game know that we've connected
             PublishConnectionState();
             if (ApReconnectController.IsActive)
+            {
                 ApReconnectController.OnConnected();
+                if (!MultiplayerSupport.IsMultiplayerScope)
+                    NotificationUtility.ShowRawText("Reconnected to Archipelago.");
+            }
         }
 
         /// <summary>
@@ -1326,6 +1338,7 @@ namespace StS2AP
         private static void HandleUnexpectedDisconnect()
         {
             bool shouldReconnect;
+            bool keepSingleplayerSlot;
             lock (_connectionStateLock)
             {
                 // SocketClosed can arrive after an intentional Disconnect, and ErrorReceived
@@ -1333,14 +1346,43 @@ namespace StS2AP
                 if (State == ConnectionState.Disconnected)
                     return;
 
-                shouldReconnect =
-                    MultiplayerSupport.IsMultiplayerScope
-                    && MultiplayerSupport.PreparedApRoomSeed != null;
-                Disconnect();
+                // A singleplayer run continues offline: checks wait in the durable outbox and
+                // the retained item index lets the next login resume receipts where they stopped.
+                keepSingleplayerSlot = !MultiplayerSupport.IsMultiplayerScope && HasAuthenticatedSlot;
+                shouldReconnect = keepSingleplayerSlot
+                    || (MultiplayerSupport.IsMultiplayerScope
+                        && MultiplayerSupport.PreparedApRoomSeed != null);
+                Disconnect(showMultiplayerNotice: !keepSingleplayerSlot);
             }
 
+            if (keepSingleplayerSlot)
+            {
+                NotificationUtility.ShowRawText(
+                    "Lost connection to Archipelago. Reconnecting for up to five minutes; "
+                        + "checks you make are saved and sent once it reconnects.",
+                    timeout: 6.0,
+                    priority: NotificationUtility.NotificationPriority.High
+                );
+            }
             if (shouldReconnect)
                 ApReconnectController.Begin();
+        }
+
+        /// <summary>
+        /// Gives up on a singleplayer reconnect that has not succeeded within five minutes and
+        /// returns any run to the menu. Checkpoints and the pending-check outbox are kept for
+        /// the next manual connection.
+        /// </summary>
+        internal static void AbandonSingleplayerReconnect()
+        {
+            ApReconnectController.Stop("no connection after five minutes");
+            Disconnect(showMultiplayerNotice: false);
+            NotificationUtility.ShowRawText(
+                "Could not reconnect to Archipelago within five minutes.",
+                timeout: 6.0,
+                priority: NotificationUtility.NotificationPriority.High
+            );
+            GameUtility.ShowOptionsOnLostConnection();
         }
 
         /// <summary>
