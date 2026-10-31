@@ -9,6 +9,7 @@ using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Runs;
+using StS2AP.Data;
 using StS2AP.Patches;
 using static StS2AP.Data.ItemTable;
 
@@ -128,6 +129,9 @@ namespace StS2AP.Utils
                 // new run flow
                 foreach (var item in ArchipelagoClient.Progress.AllReceivedItems)
                 {
+                    // Universal items such as Progressive Intent Sight have no character type.
+                    if (!ArchipelagoIdCodec.IsCharacterItemId(item.Item.ItemId))
+                        continue;
                     var id = item.Item.GetCharacterItemType();
                     if (((int)id) >= 19 && ((int)id) <= 28)
                     {
