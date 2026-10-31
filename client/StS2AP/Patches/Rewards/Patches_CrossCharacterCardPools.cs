@@ -47,7 +47,7 @@ internal static class Patches_CrossCharacterCardPools
             if (__instance.Owner != player ||
                 options.Flags.HasFlag(CardCreationFlags.NoCardPoolModifications) ||
                 !options.Flags.HasFlag(CardCreationFlags.IsCardReward) ||
-#if STS_PUBLIC
+#if STS_MAIN
                 options.CustomCardPool is not null ||
 #endif
                 __state.All(pool => pool.IsColorless) ||
@@ -57,7 +57,7 @@ internal static class Patches_CrossCharacterCardPools
             }
 
             var pools = characterPools.Concat(__state).Distinct().ToArray();
-#if STS_PUBLIC
+#if STS_MAIN
             // The public API clears the filter unless it is explicitly passed back in.
             __result = __result.WithCardPools(pools, __result.CardPoolFilter);
 #else

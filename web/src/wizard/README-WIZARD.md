@@ -18,19 +18,24 @@ The wizard deliberately separates what the player means from what Archipelago ac
 The first-pass flow is organized as:
 
 1. Character Setup
-2. Gameplay Modifiers
+2. Run Settings
 3. Checks & Rewards
 4. Death Link
-5. Progression
-6. Review
+5. Challenges
+6. Progression
+7. Review
 
 Character Setup presents one roster model for built-in and modded characters. Shared Ascensions without starter overrides compile through `characters`, `modded_characters`, `ascension`, and `ascension_down`. Individual Ascensions or active per-character starter overrides compile through `use_advanced_characters` and `advanced_characters`; shared Ascensions are copied into each entry when needed, and ignored standard fields are removed from guided YAML. Starter overrides live in Character Setup, inherit the Checks & Rewards defaults when omitted, and have no effect while Floor Checks are off. Random roster selection, unlock behavior, starting character, and completion goal apply to both modes.
 
-Gameplay Modifiers owns immediate Relic-item availability, overpowered-relic removal, releasing a winning character's remaining checks, and seeded runs. Overpowered-relic removal shows one checkbox per `remove_op_relics` category; `OP_RELIC_CATEGORY_KEYS` maps each answer field to its generated category name, and the client decides which relics each category removes. Checks & Rewards begins with Starting Equipment, whose progressive starter card and relic toggles require Floor Checks, followed by the two Progressive Ancient choices. It then provides the additional checks and rewards including Neow Sanity, floor, campfire, gold, potion, and card-reward shuffling. It also owns the Shop Slots toggle, the conditional Shop Sanity subsection, Bonus Items, the Filler Items table, and Traps. Trap Chance defaults to the generated value; individual weights appear when the chance is above zero. A positive chance requires at least one enabled trap type. Shop details remain hidden until Shop Slots is enabled.
+Run Settings owns immediate Relic-item availability, overpowered-relic removal, releasing a winning character's remaining checks, and seeded runs. Overpowered-relic removal shows one checkbox per `remove_op_relics` category; `OP_RELIC_CATEGORY_KEYS` maps each answer field to its generated category name, and the client decides which relics each category removes.
+
+Checks & Rewards begins with Starting Equipment, whose progressive starter card and relic toggles require Floor Checks, followed by the two Progressive Ancient choices. It then provides the additional checks and rewards including Neow Sanity, floor, campfire, gold, potion, and card-reward shuffling. It also owns the Shop Slots toggle, the conditional Shop Sanity subsection, Bonus Items, the Filler Items table, and Traps. Trap Chance defaults to the generated value; individual weights appear when the chance is above zero. A positive chance requires at least one enabled trap type. Shop details remain hidden until Shop Slots is enabled.
 
 Progression includes Use New Logic and the shared Archipelago settings: progression balancing and accessibility. Progression balancing is an integral 0-99 value; the named Disabled, Normal, and Extreme buttons are presentation shortcuts for 0, 50, and 99 rather than separate compiler concepts.
 
 Death Link hides received-effect controls until its controlling option is enabled. The wizard requires one received effect: Death Fragment, nonlethal Max HP damage, or Die. Selecting Die clears both nonlethal effects. Python exposes only `enable_death_fragments` and `death_link_damage_percent`, so `applyDeathLinkOptions.ts` maps disabled damage to 0 and Die to 100 while suppressing the mutually exclusive fragment setting. Do not reproduce that technical coupling in the Vue component.
+
+Challenges sits just before Progression, and its keys come after Death Link's in the YAML, so most players finish the main steps first. It owns the options that make runs harder without changing logic: Run Modifiers, Enemy HP Scaling, Enemy Damage Scaling, Hidden Intents, Hidden Health, and Strict Card Rewards. Its step definition carries a `warning`, which the wizard view renders above the questions, and Review repeats a short warning whenever any challenge is on. Challenges are opt-in: the questions stay hidden until the player turns on the step's switch, which `ChallengeOptIn.vue` shows as three banners, each appearing below the last once it is ticked; challenges turn on with the third, and the banner text is in `challengeOptIn.ts`. Hidden Intents and Hidden Health are radio choices of Off, one or two Sight items (`SightCopies`). While the switch is off, `applyChallengeOptions.ts` leaves every challenge at its generated default, so earlier ticks never reach the YAML. `RunModifier.ts` maps each canonical `run_modifiers` name to its display name, effect, starting act, and table group; `RunModifierTable.vue` edits only the ordered list of selected names, and `compiler/applyChallengeOptions.ts` rejects names the generated schema no longer accepts.
 
 The player name is not a game option and must never be added to a section compiler or `GuidedOption.ts`. `buildWizardYaml` validates it, adds the fixed builder description and `Slay the Spire II` game identifier, and nests the selected guided settings under the game-name mapping. `WizardView.vue` computes one shared document, and Review uses that exact string for preview, clipboard, and download behavior.
 
@@ -57,7 +62,7 @@ Standard descriptors use a section-relative `field` path and one of these contro
 
 Use `help` for extra guidance, `isVisible` for conditional flow, and `isEnabled` when a question should remain visible but unavailable until a prerequisite is met. Numeric descriptors get schema-backed bounds through semantic names in `optionRanges.ts`; `WizardStep.ts` must not import Archipelago option keys.
 
-A question without a `control` descriptor is intentionally bespoke. Its step component renders the custom interface inside `WizardQuestion.vue` while still sourcing the question copy and visibility from `WizardStep.ts`. Current examples include the character portrait grid, modded-character table, Ascension editors, roster-derived selects, Bonus Items table and Wax Relic dialog, and Filler Items table.
+A question without a `control` descriptor is intentionally bespoke. Its step component renders the custom interface inside `WizardQuestion.vue` while still sourcing the question copy and visibility from `WizardStep.ts`. Current examples include the character portrait grid, modded-character table, Ascension editors, Run Modifier table, roster-derived selects, Bonus Items table and Wax Relic dialog, and Filler Items table.
 
 Cross-field rules belong in pure wizard modules instead of Vue setters. `deathLinkTransitions.ts` owns Death Link effect invariants, `checksTransitions.ts` owns the Floor Checks and Starting Equipment relationship, and `characterReconciliation.ts` repairs roster-dependent Character Setup answers. Components should only call those transitions and emit the resulting answer model.
 

@@ -118,6 +118,10 @@ function downloadYaml(): void {
           <dd>
             {{ section.summary }}
 
+            <p v-if="section.warning" class="review-warning">
+              {{ section.warning }}
+            </p>
+
             <ul
               v-if="section.items?.length"
               class="review-bonus-items"
@@ -241,6 +245,12 @@ function downloadYaml(): void {
   margin-top: 0.25rem;
   color: var(--ui-text);
   line-height: 1.6;
+}
+
+.review-warning {
+  margin-top: 0.35rem;
+  color: var(--ui-warning);
+  font-weight: 600;
 }
 
 .review-bonus-items {

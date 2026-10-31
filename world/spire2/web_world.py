@@ -40,14 +40,6 @@ class SlayTheSpire2Web(WebWorld):
             Ascension,
             AscensionDown,
         ]),
-        OptionGroup("Challenges", [
-            StrictCardRewards,
-            HiddenIntents,
-            HiddenHealth,
-            RunModifiers,
-            EnemyHpScaling,
-            EnemyDamageScaling,
-        ]),
         OptionGroup("Game Options", [
             UseNewLogic,
             ProgressionBalancing,
@@ -118,5 +110,13 @@ class SlayTheSpire2Web(WebWorld):
             ThornsFillerWeight,
             ArtifactFillerWeight,
             #SingleColorlessCardFillerWeight,
+        ]),
+        OptionGroup("Challenges", [
+            RunModifiers,
+            EnemyHpScaling,
+            EnemyDamageScaling,
+            HiddenIntents,
+            HiddenHealth,
+            StrictCardRewards,
         ]),
     ]

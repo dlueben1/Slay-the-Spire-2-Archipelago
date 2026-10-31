@@ -11,7 +11,7 @@ import WizardQuestion from "../core/WizardQuestion.vue";
 import { useWizardAnswers } from "../core/wizardAnswersContext";
 
 /**
- * Gameplay Modifiers step rendered entirely from declarative question definitions.
+ * Run Settings step rendered entirely from declarative question definitions.
  *
  * Every question here uses a standard control, so this component only iterates the
  * step's visible questions; copy, control types, and bindings all live in

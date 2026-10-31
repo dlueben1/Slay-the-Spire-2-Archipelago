@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TabsItem } from "@nuxt/ui";
 import { computed, reactive, ref, type Component } from "vue";
+import ChallengesStep from "../components/wizard/steps/ChallengesStep.vue";
 import CharacterSetupStep from "../components/wizard/steps/CharacterSetupStep.vue";
 import CheckSetupStep from "../components/wizard/steps/CheckSetupStep.vue";
 import DeathLinkStep from "../components/wizard/steps/DeathLinkStep.vue";
@@ -27,6 +28,7 @@ const sectionStepComponents: Record<WizardSectionKey, Component> = {
   run: RunSettingsStep,
   checksAndRewards: CheckSetupStep,
   deathLink: DeathLinkStep,
+  challenges: ChallengesStep,
   progression: ProgressionStep,
 };
 
@@ -344,8 +346,17 @@ function next(): void {
           class="mt-1 text-sm text-muted"
         >
           {{ wizardSteps[stepIndex]!.description }}
-        </p></template
-      >
+        </p>
+        <UAlert
+          v-if="wizardSteps[stepIndex]!.warning"
+          color="warning"
+          variant="subtle"
+          icon="i-glyphs-exclamation-circle-bold"
+          :title="wizardSteps[stepIndex]!.warning!.title"
+          :description="wizardSteps[stepIndex]!.warning!.description"
+          class="mt-4"
+          :ui="{ title: 'font-bold' }"
+      /></template>
       <ReviewStep
         v-if="activeStepId === 'review'"
         :sections="reviewSections"

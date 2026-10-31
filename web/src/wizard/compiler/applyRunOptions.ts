@@ -1,7 +1,7 @@
 /**
- * @file Translates Gameplay Modifiers answers into generated relic and seed options.
+ * @file Translates Run Settings answers into generated relic and seed options.
  *
- * The Gameplay Modifiers step groups settings that change how an individual climb is offered
+ * The Run Settings step groups settings that change how an individual climb is offered
  * and rewarded without changing the selected character roster. This compiler owns the
  * immediate Relic availability, overpowered-relic removal, victory release, and seeded-run
  * fields. Generic catalog validation still runs after every section.
@@ -44,7 +44,7 @@ function compileOpRelicCategories(
 }
 
 /**
- * Applies player-facing Gameplay Modifiers answers to a compiler-owned option object.
+ * Applies player-facing Run Settings answers to a compiler-owned option object.
  *
  * @param target - Fresh complete option object assembled by the root compiler.
  * @param answers - Player-facing Relic availability and removal, victory, and seed choices.
