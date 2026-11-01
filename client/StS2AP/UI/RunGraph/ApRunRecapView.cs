@@ -5,8 +5,8 @@ using static StS2AP.UI.RunGraph.RunGraphStyle;
 namespace StS2AP.UI.RunGraph;
 
 /// <summary>
-/// Builds the end-of-run recap page: the run's numbers, highlights, the climb, who the checks
-/// helped, and the deck. The overlay shows it in a scroll box; a saved image draws the same page.
+/// Builds the end-of-run recap: the run's numbers, highlights, the climb, who the checks helped,
+/// and the deck. The overlay splits it into tabs; a saved image draws it as one page.
 /// </summary>
 internal static class ApRunRecapView
 {
@@ -16,21 +16,59 @@ internal static class ApRunRecapView
     internal const int RecapImageWidth = 1200;
     internal const int GraphImageWidth = 1600;
 
-    /// <summary>Returns the page and its graph, whose hovered floors the overlay turns into tooltips.</summary>
-    internal static VBoxContainer Build(ApRunRecapData data, bool interactive, out ApRunGraphCanvas canvas)
+    /// <summary>
+    /// The whole recap as one tall page, for the saved picture: the top bar, the climb, then the
+    /// summary that the overlay shows in its Recap tab.
+    /// </summary>
+    internal static VBoxContainer Build(ApRunRecapData data)
     {
-        var page = new VBoxContainer();
-        page.AddThemeConstantOverride("separation", SectionGap);
+        var page = VBox(SectionGap);
         page.AddChild(TopBar(data));
-        // The climb comes first so the run's shape is the first thing seen without scrolling.
-        page.AddChild(Climb(data, interactive, out canvas));
+        page.AddChild(Climb(data));
+        AddSummary(page, data);
+        return page;
+    }
+
+    /// <summary>The overlay's Recap tab: everything but the top bar and the climb, which the overlay shows itself.</summary>
+    internal static VBoxContainer BuildSummary(ApRunRecapData data)
+    {
+        var page = VBox(SectionGap);
+        AddSummary(page, data);
+        return page;
+    }
+
+    private static void AddSummary(VBoxContainer page, ApRunRecapData data)
+    {
         page.AddChild(Hero(data));
         if (data.Recap.Highlights.Count > 0)
             page.AddChild(Highlights(data.Recap));
         page.AddChild(Multiworld(data));
         page.AddChild(DeckAndRelics(data));
         page.AddChild(Footer(data));
-        return page;
+    }
+
+    /// <summary>
+    /// The overlay's first tab: the climb filling the tab, with its legend. Returns the graph too,
+    /// whose hovered floors the overlay turns into tooltips.
+    /// </summary>
+    internal static Control BuildClimbTab(ApRunRecapData data, out ApRunGraphCanvas canvas)
+    {
+        var box = VBox(14);
+        canvas = new ApRunGraphCanvas
+        {
+            CustomMinimumSize = new Vector2(0f, 400f),
+            SizeFlagsVertical = Control.SizeFlags.ExpandFill,
+        };
+        canvas.Load(data.Floors, ApRunGraphCanvas.GroupEvents(data.Log, data.Floors.Count), data.Log.Outcome, interactive: true);
+        box.AddChild(canvas);
+
+        var bottom = HBox(16);
+        var legend = Legend();
+        legend.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        bottom.AddChild(legend);
+        bottom.AddChild(Label("Hover a floor to see what happened there", 14, TextFaint));
+        box.AddChild(bottom);
+        return box;
     }
 
     /// <summary>
@@ -84,14 +122,25 @@ internal static class ApRunRecapView
     private static Control TopBar(ApRunRecapData data)
     {
         var bar = Panel(PanelColor, PanelBorder, 12, 16f);
+        bar.AddChild(TopBarRow(data));
+        return bar;
+    }
+
+    /// <summary>
+    /// The top bar's contents. The overlay also uses it as its header above the tabs, with
+    /// <paramref name="withIdentity"/> adding who played, since its tabs have no hero card of their own.
+    /// </summary>
+    internal static HBoxContainer TopBarRow(ApRunRecapData data, bool withIdentity = false)
+    {
         var row = HBox(32);
-        bar.AddChild(row);
+        if (withIdentity)
+            row.AddChild(Identity(data));
 
         var outcome = HBox(14);
         outcome.AddChild(Centered(Caps("Archipelago", 13, TextMuted, spacing: 3)));
         var (text, color) = Outcome(data);
         outcome.AddChild(Label(text, 36, color, bold: true));
-        row.AddChild(outcome);
+        row.AddChild(withIdentity ? Centered(outcome) : outcome);
 
         var stats = HBox(28);
         stats.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
@@ -100,13 +149,33 @@ internal static class ApRunRecapView
         stats.AddChild(Stat($"{data.Ascension}", "Ascension", Text));
         stats.AddChild(Stat($"{data.Recap.ChecksSent}", "Checks sent", Gold));
         stats.AddChild(Stat($"{data.Recap.Claims.Count}", "Items claimed", Claim));
-        row.AddChild(stats);
+        row.AddChild(withIdentity ? Centered(stats) : stats);
 
         var when = VBox(2);
         when.AddChild(RightAligned(Label(data.Date.ToString("d MMMM yyyy"), 15, TextMuted)));
-        when.AddChild(RightAligned(Label(data.Log.SlotName, 15, Text)));
+        // With the identity shown, the slot name is already there; say what ended a lost run instead.
+        if (!withIdentity)
+            when.AddChild(RightAligned(Label(data.Log.SlotName, 15, Text)));
+        else if (data.Log.Outcome == ApRunOutcome.Lost && data.KilledBy.Length > 0)
+            when.AddChild(RightAligned(Label($"Killed by {data.KilledBy}", 15, DeathText)));
         row.AddChild(Centered(when));
-        return bar;
+        return row;
+    }
+
+    /// <summary>A small portrait with the slot name and the character, for the overlay's header.</summary>
+    private static Control Identity(ApRunRecapData data)
+    {
+        Color characterColor = data.Character?.NameColor ?? TextMuted;
+        var identity = HBox(14);
+        identity.AddChild(Portrait(data, characterColor, 64f));
+        var names = VBox(4);
+        // Archipelago caps slot names at 16 characters, so the name fits without cutting.
+        names.AddChild(Label(data.Log.SlotName, 22, Text, bold: true));
+        var pill = Pill(CharacterName(data), characterColor);
+        pill.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
+        names.AddChild(pill);
+        identity.AddChild(Centered(names));
+        return identity;
     }
 
     private static VBoxContainer Stat(string value, string caption, Color color)
@@ -186,10 +255,10 @@ internal static class ApRunRecapView
         return card;
     }
 
-    private static Control Portrait(ApRunRecapData data, Color border)
+    private static Control Portrait(ApRunRecapData data, Color border, float size = 112f)
     {
-        var frame = Panel(Card.Darkened(0.3f), border, 12, 4f, borderWidth: 2);
-        frame.CustomMinimumSize = new Vector2(112f, 112f);
+        var frame = Panel(Card.Darkened(0.3f), border, size < 80f ? 8 : 12, size < 80f ? 2f : 4f, borderWidth: 2);
+        frame.CustomMinimumSize = new Vector2(size, size);
         frame.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
         Texture2D? portrait = null;
         try
@@ -212,7 +281,7 @@ internal static class ApRunRecapView
         }
         else
         {
-            var initial = Label(CharacterName(data)[..1], 44, border, bold: true);
+            var initial = Label(CharacterName(data)[..1], (int)(size * 0.4f), border, bold: true);
             initial.HorizontalAlignment = HorizontalAlignment.Center;
             initial.VerticalAlignment = VerticalAlignment.Center;
             frame.AddChild(initial);
@@ -333,13 +402,11 @@ internal static class ApRunRecapView
 
     // ---- The climb: HP by floor with the checks sent below it ----
 
-    private static Control Climb(ApRunRecapData data, bool interactive, out ApRunGraphCanvas canvas)
+    private static Control Climb(ApRunRecapData data)
     {
-        var section = Section("The climb", interactive
-            ? "HP by floor, with every check sent below it. Hover a floor."
-            : "HP by floor, with every check sent below it");
-        canvas = new ApRunGraphCanvas { CustomMinimumSize = new Vector2(0f, 400f) };
-        canvas.Load(data.Floors, ApRunGraphCanvas.GroupEvents(data.Log, data.Floors.Count), data.Log.Outcome, interactive);
+        var section = Section("The climb", "HP by floor, with every check sent below it");
+        var canvas = new ApRunGraphCanvas { CustomMinimumSize = new Vector2(0f, 400f) };
+        canvas.Load(data.Floors, ApRunGraphCanvas.GroupEvents(data.Log, data.Floors.Count), data.Log.Outcome, interactive: false);
         section.AddChild(canvas);
         section.AddChild(Legend());
         return section;

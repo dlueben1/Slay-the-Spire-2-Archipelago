@@ -1,4 +1,5 @@
 using Godot;
+using MegaCrit.Sts2.Core.ControllerInput;
 using StS2AP.Utils;
 using StS2AP.Utils.RunGraph;
 using static StS2AP.UI.RunGraph.RunGraphStyle;
@@ -7,7 +8,8 @@ namespace StS2AP.UI.RunGraph;
 
 /// <summary>
 /// Full-screen overlay with the AP end-of-run recap. It is added on top of whichever screen opened
-/// it (game over, Run History or Past AP Runs) and removes itself when closed.
+/// it (game over, Run History or Past AP Runs) and removes itself when closed. The climb opens
+/// first in its own tab; the rest of the recap is in a second tab, leaving room for more later.
 /// </summary>
 internal sealed partial class ApRunRecapOverlay : Control
 {
@@ -20,6 +22,9 @@ internal sealed partial class ApRunRecapOverlay : Control
     private VBoxContainer _tooltipLines = null!;
     private Button _saveGraph = null!;
     private Button _saveRecap = null!;
+    private readonly List<RecapTab> _tabButtons = new();
+    private readonly List<(RecapTab Tab, Control Page)> _tabs = new();
+    private int _currentTab;
 
     internal static bool IsOpen => _open != null && IsInstanceValid(_open);
 
@@ -55,6 +60,7 @@ internal sealed partial class ApRunRecapOverlay : Control
         overlay.Build(data);
         _open = overlay;
         ApOverlayLayer.Show(overlay, host, overlay.QueueFree);
+        overlay.BindTabHotkeys();
     }
 
     private void Build(ApRunRecapData data)
@@ -86,25 +92,28 @@ internal sealed partial class ApRunRecapOverlay : Control
         var root = new VBoxContainer();
         root.AddThemeConstantOverride("separation", 0);
         panel.AddChild(root);
-        root.AddChild(BuildToolbar());
+        root.AddChild(BuildHeader());
+        root.AddChild(BuildTabRow());
+        root.AddChild(new ColorRect { Color = PanelBorder, CustomMinimumSize = new Vector2(0f, 1f) });
+
+        var climb = Padded(ApRunRecapView.BuildClimbTab(data, out var canvas), top: 24);
+        climb.SizeFlagsVertical = SizeFlags.ExpandFill;
+        root.AddChild(climb);
+        _eventsByFloor = ApRunGraphCanvas.GroupEvents(data.Log, data.Floors.Count);
+        canvas.HoveredFloorChanged += ShowTooltip;
 
         var scroll = new ScrollContainer
         {
             SizeFlagsVertical = SizeFlags.ExpandFill,
             HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
         };
-        var margin = new MarginContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        foreach (string side in new[] { "left", "right", "bottom" })
-            margin.AddThemeConstantOverride($"margin_{side}", 32);
-        margin.AddThemeConstantOverride("margin_top", 8);
-        scroll.AddChild(margin);
+        var summary = Padded(ApRunRecapView.BuildSummary(data), top: 24);
+        summary.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        scroll.AddChild(summary);
         root.AddChild(scroll);
 
-        margin.AddChild(ApRunRecapView.Build(data, interactive: true, out var canvas));
-        _eventsByFloor = ApRunGraphCanvas.GroupEvents(data.Log, data.Floors.Count);
-        canvas.HoveredFloorChanged += ShowTooltip;
-        // A tooltip placed for one scroll position would point at the wrong floor after scrolling.
-        scroll.GetVScrollBar().ValueChanged += _ => _tooltip.Visible = false;
+        _tabs.Add((_tabButtons[0], climb));
+        _tabs.Add((_tabButtons[1], scroll));
 
         // Added last so it draws above the panel; it ignores the mouse so hovering keeps working.
         _tooltip = new PanelContainer { Visible = false, MouseFilter = MouseFilterEnum.Ignore };
@@ -114,23 +123,55 @@ internal sealed partial class ApRunRecapOverlay : Control
         _tooltipLines.AddThemeConstantOverride("separation", 4);
         _tooltip.AddChild(_tooltipLines);
         AddChild(_tooltip);
+        ShowTab(0);
     }
 
-    private Control BuildToolbar()
+    private static MarginContainer Padded(Control content, int top)
+    {
+        var margin = new MarginContainer();
+        foreach (string side in new[] { "left", "right", "bottom" })
+            margin.AddThemeConstantOverride($"margin_{side}", 32);
+        margin.AddThemeConstantOverride("margin_top", top);
+        margin.AddChild(content);
+        return margin;
+    }
+
+    /// <summary>Who played, the outcome and the run's numbers, above the tabs so every tab keeps them in view.</summary>
+    private Control BuildHeader()
+    {
+        var header = new PanelContainer();
+        var style = Box(PanelColor, PanelBorder, 0, 0f, borderWidth: 0);
+        // Inside the panel's 2-pixel border, so its corners sit just inside the panel's own.
+        style.CornerRadiusTopLeft = style.CornerRadiusTopRight = 14;
+        style.ContentMarginLeft = style.ContentMarginRight = 32f;
+        style.ContentMarginTop = style.ContentMarginBottom = 14f;
+        header.AddThemeStyleboxOverride("panel", style);
+        header.AddChild(ApRunRecapView.TopBarRow(_data, withIdentity: true));
+        return header;
+    }
+
+    private Control BuildTabRow()
     {
         var bar = new MarginContainer();
-        bar.AddThemeConstantOverride("margin_left", 32);
+        bar.AddThemeConstantOverride("margin_left", 20);
         bar.AddThemeConstantOverride("margin_right", 24);
-        bar.AddThemeConstantOverride("margin_top", 20);
-        bar.AddThemeConstantOverride("margin_bottom", 16);
+        bar.AddThemeConstantOverride("margin_top", 10);
+        bar.AddThemeConstantOverride("margin_bottom", 6);
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 12);
         bar.AddChild(row);
 
-        var title = Label("Archipelago run recap", 22, TextMuted, bold: true);
-        title.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        title.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        row.AddChild(title);
+        var tabs = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        tabs.AddThemeConstantOverride("separation", 4);
+        foreach (string title in new[] { "The climb", "Recap" })
+        {
+            int index = _tabButtons.Count;
+            var tab = new RecapTab(title);
+            tab.Pressed += () => ShowTab(index);
+            _tabButtons.Add(tab);
+            tabs.AddChild(tab);
+        }
+        row.AddChild(tabs);
 
         _saveGraph = ActionButton("Save graph");
         _saveGraph.TooltipText = "Save a short picture: your character, the run's numbers and the climb.";
@@ -141,7 +182,7 @@ internal sealed partial class ApRunRecapOverlay : Control
         _saveRecap = ActionButton("Save recap");
         _saveRecap.TooltipText = "Save the whole recap as one tall picture.";
         _saveRecap.Pressed += () => SaveImage(
-            () => ApRunRecapView.Build(_data, interactive: false, out _), ApRunRecapView.RecapImageWidth, "recap");
+            () => ApRunRecapView.Build(_data), ApRunRecapView.RecapImageWidth, "recap");
         row.AddChild(_saveRecap);
 
         // Escape and the controller's back button close it through ApOverlayLayer.
@@ -151,6 +192,26 @@ internal sealed partial class ApRunRecapOverlay : Control
         // Focus the button once in the tree so a controller can close the overlay.
         Ready += () => close.GrabFocus();
         return bar;
+    }
+
+    private void ShowTab(int index)
+    {
+        for (int i = 0; i < _tabs.Count; i++)
+        {
+            _tabs[i].Tab.Selected = i == index;
+            _tabs[i].Page.Visible = i == index;
+        }
+        _currentTab = index;
+        _tooltip.Visible = false;
+    }
+
+    /// <summary>The game's tab-left and tab-right inputs switch tabs, as in its settings screen.</summary>
+    private void BindTabHotkeys()
+    {
+        ApOverlayLayer.BindHotkey(this, MegaInput.viewDeckAndTabLeft,
+            () => ShowTab((_currentTab + _tabs.Count - 1) % _tabs.Count));
+        ApOverlayLayer.BindHotkey(this, MegaInput.viewExhaustPileAndTabRight,
+            () => ShowTab((_currentTab + 1) % _tabs.Count));
     }
 
     private async void SaveImage(Func<Control> build, int width, string kind)
@@ -187,8 +248,12 @@ internal sealed partial class ApRunRecapOverlay : Control
             return;
         }
 
+        // Removed at once, not just queued, so the resize below measures only the new floor's lines.
         foreach (var child in _tooltipLines.GetChildren())
+        {
+            _tooltipLines.RemoveChild(child);
             child.QueueFree();
+        }
 
         var floor = floors[index];
         _tooltipLines.AddChild(Label($"Floor {index + 1} · {floor.RoomName}", 20, Text, bold: true));
@@ -236,5 +301,45 @@ internal sealed partial class ApRunRecapOverlay : Control
             ApRunGraphEventKind.DeathLinkReceived => $"DeathLink from {e.OtherPlayer}",
             _ => e.Kind.ToString(),
         };
+    }
+}
+
+/// <summary>A tab in the recap's tab row: plain text, with a gold bar under the open tab.</summary>
+internal sealed partial class RecapTab : Button
+{
+    private bool _selected;
+
+    internal RecapTab(string title)
+    {
+        Text = title;
+        FocusMode = FocusModeEnum.All;
+        CustomMinimumSize = new Vector2(0f, 52f);
+        var plain = new StyleBoxEmpty { ContentMarginLeft = 18f, ContentMarginRight = 18f };
+        foreach (string state in new[] { "normal", "hover", "pressed", "disabled" })
+            AddThemeStyleboxOverride(state, plain);
+        // A controller needs to see which tab has focus.
+        AddThemeStyleboxOverride("focus", Box(Colors.Transparent, Progression, 8, 18f));
+        AddThemeFontOverride("font", Bold);
+        AddThemeFontSizeOverride("font_size", 21);
+        AddThemeColorOverride("font_hover_color", RunGraphStyle.Text);
+        AddThemeColorOverride("font_pressed_color", RunGraphStyle.Text);
+        Draw += () =>
+        {
+            if (_selected)
+                DrawStyleBox(Box(Gold, Gold, 2, 0f), new Rect2(14f, Size.Y - 5f, Size.X - 28f, 4f));
+        };
+        Selected = false;
+    }
+
+    internal bool Selected
+    {
+        set
+        {
+            _selected = value;
+            Color color = value ? RunGraphStyle.Text : TextMuted;
+            AddThemeColorOverride("font_color", color);
+            AddThemeColorOverride("font_focus_color", color);
+            QueueRedraw();
+        }
     }
 }

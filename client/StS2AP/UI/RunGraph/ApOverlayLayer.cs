@@ -42,15 +42,29 @@ internal static class ApOverlayLayer
         if (hotkeys == null)
             return;
         hotkeys.AddBlockingScreen(overlay);
-        hotkeys.PushHotkeyPressedBinding(MegaInput.cancel, close);
-        hotkeys.PushHotkeyPressedBinding(MegaInput.pauseAndBack, close);
         overlay.TreeExiting += () =>
         {
-            if (!GodotObject.IsInstanceValid(hotkeys))
-                return;
-            hotkeys.RemoveHotkeyPressedBinding(MegaInput.cancel, close);
-            hotkeys.RemoveHotkeyPressedBinding(MegaInput.pauseAndBack, close);
-            hotkeys.RemoveBlockingScreen(overlay);
+            if (GodotObject.IsInstanceValid(hotkeys))
+                hotkeys.RemoveBlockingScreen(overlay);
+        };
+        BindHotkey(overlay, MegaInput.cancel, close);
+        BindHotkey(overlay, MegaInput.pauseAndBack, close);
+    }
+
+    /// <summary>
+    /// Gives one of the game's inputs to <paramref name="overlay"/> while it is open. Call it after
+    /// <see cref="Show"/>, so the binding is newer than the overlay's block on the screens below.
+    /// </summary>
+    internal static void BindHotkey(Control overlay, string input, Action action)
+    {
+        var hotkeys = NHotkeyManager.Instance;
+        if (hotkeys == null)
+            return;
+        hotkeys.PushHotkeyPressedBinding(input, action);
+        overlay.TreeExiting += () =>
+        {
+            if (GodotObject.IsInstanceValid(hotkeys))
+                hotkeys.RemoveHotkeyPressedBinding(input, action);
         };
     }
 
