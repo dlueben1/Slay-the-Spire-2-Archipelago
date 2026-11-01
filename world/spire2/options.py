@@ -545,8 +545,8 @@ class RunModifiers(OptionSet):
     - 'FrailStart': Start each run with 10% less max HP.
     - 'DangerousUnknowns': ? rooms lean towards fights. Combat starts at 20% and rises 15% each
       time a ? room is not a fight; elites start at 0% and rise 4%; chests start and rise at 1%.
-      Shops are unchanged. The chances reset each act, with no cap. The extra fights and elites
-      reach combat and relic checks sooner than logic expects.
+      Shops are unchanged. The chances reset each act, with no cap. Juzu Bracelet never appears.
+      The extra fights and elites reach combat and relic checks sooner than logic expects.
 
     Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder"""
     display_name = "Run Modifiers"
