@@ -157,6 +157,7 @@ namespace StS2AP.Patches
             public static string SerializeAndCompress(SerializableRun vanillaSave)
             {
                 var save = ArchipelagoClient.Progress.ToSerializable(vanillaSave);
+                save.RunGraphEventCount = ApRunGraphRecorder.EventCountFor(vanillaSave.StartTime);
                 var json = JsonSerializer.Serialize(
                     save,
                     SerializationUtility.CombinedOptions.GetTypeInfo(typeof(SerializableAP))
@@ -239,7 +240,8 @@ namespace StS2AP.Patches
                 throw new InvalidDataException("The checkpoint character does not match the selected AP run.");
             ApRunGraphRecorder.OnCheckpointRestored(
                 serializableRun.StartTime,
-                serializableRun.MapPointHistory?.Sum(act => act.Count) ?? 0
+                serializableRun.MapPointHistory?.Sum(act => act.Count) ?? 0,
+                apSave.RunGraphEventCount
             );
             RunState runState = RunState.FromSerializable(serializableRun);
             NAudioManager.Instance?.StopMusic();

@@ -293,7 +293,7 @@ internal sealed partial class ApRunGraphCanvas : Control
         float x = XFor(index);
 
         // Items claimed from the multiworld hang above the HP point.
-        if (events.Any(e => e.Kind is ApRunGraphEventKind.ItemClaimed or ApRunGraphEventKind.GoldClaimed))
+        if (events.Any(e => (e.Kind is ApRunGraphEventKind.ItemClaimed or ApRunGraphEventKind.GoldClaimed) && !e.Abandoned))
         {
             DrawClaimMarker(this, new Vector2(x, hpPoint.Y - 11f));
         }

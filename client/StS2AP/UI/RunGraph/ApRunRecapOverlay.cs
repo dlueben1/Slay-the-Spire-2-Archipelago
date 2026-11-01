@@ -287,7 +287,8 @@ internal sealed partial class ApRunRecapOverlay : Control
 
     internal static Color ColorFor(ApRunGraphEvent e) => e.Kind switch
     {
-        ApRunGraphEventKind.CheckSent when e.Abandoned => TextMuted,
+        ApRunGraphEventKind.CheckSent or ApRunGraphEventKind.ItemClaimed or ApRunGraphEventKind.GoldClaimed
+            when e.Abandoned => TextMuted,
         ApRunGraphEventKind.CheckSent => ForItem(e.Classification),
         ApRunGraphEventKind.ItemClaimed or ApRunGraphEventKind.GoldClaimed => Claim,
         _ => Death,
@@ -300,8 +301,10 @@ internal sealed partial class ApRunRecapOverlay : Control
         {
             ApRunGraphEventKind.CheckSent => $"Sent {e.ItemName} to {who}"
                 + (e.Abandoned ? " (before a reload)" : ""),
-            ApRunGraphEventKind.ItemClaimed => $"Claimed {e.ItemName} from {who}",
-            ApRunGraphEventKind.GoldClaimed => $"Claimed {e.Amount} AP gold",
+            ApRunGraphEventKind.ItemClaimed => $"Claimed {e.ItemName} from {who}"
+                + (e.Abandoned ? " (before a reload)" : ""),
+            ApRunGraphEventKind.GoldClaimed => $"Claimed {e.Amount} AP gold"
+                + (e.Abandoned ? " (before a reload)" : ""),
             ApRunGraphEventKind.DeathLinkSent => "Sent a DeathLink",
             ApRunGraphEventKind.DeathLinkReceived => $"DeathLink from {e.OtherPlayer}",
             _ => e.Kind.ToString(),

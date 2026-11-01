@@ -82,6 +82,21 @@ public sealed class ApRunGraphLog
         return marked;
     }
 
+    /// <summary>
+    /// Marks every event from <paramref name="eventCount"/> on as abandoned: everything recorded
+    /// after a checkpoint that held that many events was saved.
+    /// </summary>
+    public int MarkAbandonedFrom(int eventCount)
+    {
+        int marked = 0;
+        foreach (var e in Events.Skip(Math.Max(0, eventCount)).Where(e => !e.Abandoned))
+        {
+            e.Abandoned = true;
+            marked++;
+        }
+        return marked;
+    }
+
     public static ApRunGraphItemType Classify(bool progression, bool useful, bool trap) =>
         progression ? ApRunGraphItemType.Progression
         : useful ? ApRunGraphItemType.Useful

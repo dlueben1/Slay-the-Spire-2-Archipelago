@@ -121,19 +121,30 @@ internal static class ApRunGraphRecorder
             Append(new ApRunGraphEvent { Kind = ApRunGraphEventKind.DeathLinkReceived, OtherPlayer = source }));
     }
 
+    /// <summary>How many events the run's log holds now, for a save to remember; null when no log is open for it.</summary>
+    internal static int? EventCountFor(long startTime) =>
+        _active?.StartTime == startTime ? _active.Events.Count : null;
+
     /// <summary>
     /// A checkpoint reload rewinds the run but not the checks it already sent. Mark everything
-    /// after the restored floor so the graph can show those checks as a reloaded branch.
+    /// recorded after the checkpoint was saved so the graph can show it as a reloaded branch.
+    /// <paramref name="eventCount"/> is the log's size when the checkpoint was saved; an older
+    /// checkpoint without it falls back to marking what came after its floor.
     /// </summary>
-    internal static void OnCheckpointRestored(long startTime, int completedFloors)
+    internal static void OnCheckpointRestored(long startTime, int completedFloors, int? eventCount)
     {
         Guard(nameof(OnCheckpointRestored), () =>
         {
             var store = Store;
             var log = _active?.StartTime == startTime ? _active : store.Load(startTime, out _);
-            if (log == null || log.MarkAbandonedAfter(completedFloors) == 0)
+            if (log == null)
                 return;
-            store.Save(log);
+            // A count larger than this log came from a log on another machine (a remote save).
+            int marked = eventCount is { } count && count <= log.Events.Count
+                ? log.MarkAbandonedFrom(count)
+                : log.MarkAbandonedAfter(completedFloors);
+            if (marked > 0)
+                store.Save(log);
         });
     }
 

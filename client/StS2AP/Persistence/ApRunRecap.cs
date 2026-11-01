@@ -55,7 +55,8 @@ public sealed class ApRunRecap
     public static ApRunRecap Build(ApRunGraphLog log, IReadOnlyList<ApRecapFloorHp> floors)
     {
         var sent = log.Events.Where(e => e.Kind == ApRunGraphEventKind.CheckSent).ToList();
-        var claims = log.Events.Where(e => e.Kind == ApRunGraphEventKind.ItemClaimed).ToList();
+        // A reload hands back what was claimed after its checkpoint, so those claims did not happen.
+        var claims = log.Events.Where(e => e.Kind == ApRunGraphEventKind.ItemClaimed && !e.Abandoned).ToList();
         var players = sent
             .GroupBy(e => (e.OtherPlayer, e.IsSelf))
             .Select(g => new ApRecapPlayer(
@@ -79,7 +80,7 @@ public sealed class ApRunRecap
             SentOnUndoneBranch = sentOnUndoneBranch,
             SentByType = CountByType(sent),
             Claims = claims,
-            GoldClaimed = log.Events.Where(e => e.Kind == ApRunGraphEventKind.GoldClaimed).Sum(e => e.Amount),
+            GoldClaimed = log.Events.Where(e => e.Kind == ApRunGraphEventKind.GoldClaimed && !e.Abandoned).Sum(e => e.Amount),
             DeathLinksSent = log.Events.Count(e => e.Kind == ApRunGraphEventKind.DeathLinkSent),
             DeathLinksReceived = log.Events.Count(e => e.Kind == ApRunGraphEventKind.DeathLinkReceived),
             Players = players,

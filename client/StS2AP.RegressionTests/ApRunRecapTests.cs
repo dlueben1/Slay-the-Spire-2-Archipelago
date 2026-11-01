@@ -63,6 +63,36 @@ public sealed class ApRunRecapTests
         Assert.Equal(new[] { ApRecapHighlightKind.HomeCooking }, kinds);
     }
 
+    [Fact]
+    public void ClaimsAReloadUndidAreNotCounted()
+    {
+        var log = new ApRunGraphLog();
+        log.Events.Add(new ApRunGraphEvent { Kind = ApRunGraphEventKind.GoldClaimed, Floor = 1, Amount = 116, Abandoned = true });
+        log.Events.Add(new ApRunGraphEvent { Kind = ApRunGraphEventKind.ItemClaimed, Floor = 1, ItemName = "Relic", Abandoned = true });
+        log.Events.Add(new ApRunGraphEvent { Kind = ApRunGraphEventKind.GoldClaimed, Floor = 1, Amount = 116 });
+        log.Events.Add(new ApRunGraphEvent { Kind = ApRunGraphEventKind.ItemClaimed, Floor = 1, ItemName = "Relic" });
+
+        var recap = ApRunRecap.Build(log, Array.Empty<ApRecapFloorHp>());
+
+        Assert.Single(recap.Claims);
+        Assert.Equal(116, recap.GoldClaimed);
+    }
+
+    [Fact]
+    public void ReloadingACheckpointUndoesEverythingRecordedAfterIt()
+    {
+        // The checkpoint was saved on floor 1 with one event in the log; the claims after it,
+        // also on floor 1, are made again after the reload.
+        var log = new ApRunGraphLog();
+        log.Events.Add(Sent(1, "Me", ApRunGraphItemType.Filler, self: true));
+        log.Events.Add(new ApRunGraphEvent { Kind = ApRunGraphEventKind.ItemClaimed, Floor = 1 });
+        log.Events.Add(Sent(3, "Mira", ApRunGraphItemType.Progression));
+
+        Assert.Equal(2, log.MarkAbandonedFrom(1));
+        Assert.Equal(new[] { false, true, true }, log.Events.Select(e => e.Abandoned));
+        Assert.Equal(0, log.MarkAbandonedFrom(1));
+    }
+
     private static ApRunGraphEvent Sent(
         int floor,
         string player,
