@@ -12,21 +12,72 @@ internal static class ApRunRecapView
 {
     private const int SectionGap = 36;
 
+    /// <summary>Widths of the saved pictures: the tall full recap, and the short graph card.</summary>
+    internal const int RecapImageWidth = 1200;
+    internal const int GraphImageWidth = 1600;
+
     /// <summary>Returns the page and its graph, whose hovered floors the overlay turns into tooltips.</summary>
     internal static VBoxContainer Build(ApRunRecapData data, bool interactive, out ApRunGraphCanvas canvas)
     {
         var page = new VBoxContainer();
         page.AddThemeConstantOverride("separation", SectionGap);
         page.AddChild(TopBar(data));
+        // The climb comes first so the run's shape is the first thing seen without scrolling.
+        page.AddChild(Climb(data, interactive, out canvas));
         page.AddChild(Hero(data));
         if (data.Recap.Highlights.Count > 0)
             page.AddChild(Highlights(data.Recap));
-        page.AddChild(Climb(data, interactive, out canvas));
         page.AddChild(Multiworld(data));
         page.AddChild(DeckAndRelics(data));
         page.AddChild(Footer(data));
         return page;
     }
+
+    /// <summary>
+    /// The short picture: who played, the run's numbers and the climb, without the rest of the
+    /// recap. It is only saved as an image, so its graph is static.
+    /// </summary>
+    internal static VBoxContainer BuildGraphCard(ApRunRecapData data)
+    {
+        var page = VBox(20);
+
+        var header = HBox(20);
+        Color characterColor = data.Character?.NameColor ?? TextMuted;
+        header.AddChild(Portrait(data, characterColor));
+        var names = VBox(8);
+        names.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        names.AddChild(Ellipsized(Label(data.Log.SlotName, 34, Text, bold: true)));
+        var tags = HBox(10);
+        tags.AddChild(Pill(CharacterName(data), characterColor));
+        var (outcome, outcomeColor) = Outcome(data);
+        tags.AddChild(Centered(Label(outcome, 18, outcomeColor, bold: true)));
+        var when = Centered(Ellipsized(Label($"{HeroSubtitle(data)} · {data.Date:d MMMM yyyy}", 15, TextMuted)));
+        when.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        tags.AddChild(when);
+        names.AddChild(tags);
+        header.AddChild(Centered(names));
+        var stats = HBox(28);
+        stats.AddChild(Stat($"{data.Floors.Count}", "Floor", Text));
+        stats.AddChild(Stat(FormatTime(data.RunSeconds), "Time", Text));
+        stats.AddChild(Stat($"{data.Recap.ChecksSent}", "Checks sent", Gold));
+        stats.AddChild(Stat($"{data.Recap.Claims.Count}", "Items claimed", Claim));
+        header.AddChild(Centered(stats));
+        page.AddChild(header);
+
+        var canvas = new ApRunGraphCanvas { CustomMinimumSize = new Vector2(0f, 460f) };
+        canvas.Load(data.Floors, ApRunGraphCanvas.GroupEvents(data.Log, data.Floors.Count), data.Log.Outcome, interactive: false);
+        page.AddChild(canvas);
+        page.AddChild(Legend());
+        page.AddChild(Footer(data));
+        return page;
+    }
+
+    private static (string Text, Color Color) Outcome(ApRunRecapData data) => data.Log.Outcome switch
+    {
+        ApRunOutcome.Won => ("Victory", Gold),
+        ApRunOutcome.Lost => ("Defeat", DeathText),
+        _ => ("Unfinished", TextMuted),
+    };
 
     // ---- Top bar: outcome and the run's numbers, like the game's own top bar ----
 
@@ -38,12 +89,7 @@ internal static class ApRunRecapView
 
         var outcome = HBox(14);
         outcome.AddChild(Centered(Caps("Archipelago", 13, TextMuted, spacing: 3)));
-        var (text, color) = data.Log.Outcome switch
-        {
-            ApRunOutcome.Won => ("Victory", Gold),
-            ApRunOutcome.Lost => ("Defeat", DeathText),
-            _ => ("Unfinished", TextMuted),
-        };
+        var (text, color) = Outcome(data);
         outcome.AddChild(Label(text, 36, color, bold: true));
         row.AddChild(outcome);
 

@@ -15,7 +15,6 @@ namespace StS2AP.UI.RunGraph;
 /// </summary>
 internal sealed partial class ApPastRunsOverlay : Control
 {
-    private const string NodeName = "ApPastRunsOverlay";
     private const string EmptyText =
         "No AP runs recorded yet. Finish a run while connected to Archipelago and it will appear here.";
 
@@ -42,19 +41,22 @@ internal sealed partial class ApPastRunsOverlay : Control
         internal int Total => Math.Max(Checked, Runs.Max(r => r.Log.SlotLocationCount));
     }
 
+    private static ApPastRunsOverlay? _open;
+
     internal static void Show(Control host)
     {
-        host.GetNodeOrNull(NodeName)?.QueueFree();
-        var overlay = new ApPastRunsOverlay { Name = NodeName };
+        if (_open != null && IsInstanceValid(_open))
+            _open.QueueFree();
+        var overlay = new ApPastRunsOverlay { Name = "ApPastRunsOverlay" };
         overlay.Build();
-        host.AddChild(overlay);
+        _open = overlay;
+        ApOverlayLayer.Show(overlay, host, overlay.QueueFree);
     }
 
     private void Build()
     {
         SetAnchorsPreset(LayoutPreset.FullRect);
         MouseFilter = MouseFilterEnum.Stop;
-        ZIndex = 100;
 
         var dim = new ColorRect { Color = Backdrop, MouseFilter = MouseFilterEnum.Stop };
         dim.SetAnchorsPreset(LayoutPreset.FullRect);
@@ -120,8 +122,8 @@ internal sealed partial class ApPastRunsOverlay : Control
         openFolder.TooltipText = "Open the folder that holds the run logs, exports and saved images.";
         openFolder.Pressed += () => ApRunGraphFiles.ShowInFileManager(_store.RootDirectory);
         header.AddChild(openFolder);
+        // Escape and the controller's back button close it through ApOverlayLayer.
         _close = ActionButton("Close  (Esc)");
-        _close.Shortcut = new Shortcut { Events = new Godot.Collections.Array { new InputEventAction { Action = "ui_cancel" } } };
         _close.Pressed += QueueFree;
         header.AddChild(_close);
         return header;

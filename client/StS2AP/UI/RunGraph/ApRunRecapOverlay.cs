@@ -11,17 +11,23 @@ namespace StS2AP.UI.RunGraph;
 /// </summary>
 internal sealed partial class ApRunRecapOverlay : Control
 {
-    private const string NodeName = "ApRunRecapOverlay";
+    private static ApRunRecapOverlay? _open;
     private const float TooltipWidth = 360f;
 
     private ApRunRecapData _data = null!;
     private Dictionary<int, List<ApRunGraphEvent>> _eventsByFloor = new();
     private PanelContainer _tooltip = null!;
     private VBoxContainer _tooltipLines = null!;
-    private Button _saveImage = null!;
+    private Button _saveGraph = null!;
+    private Button _saveRecap = null!;
 
-    /// <summary>Loads the run's AP log and shows its recap; <paramref name="build"/> adds the game's side of the run.</summary>
-    internal static void Open(Control host, long startTime, Func<ApRunGraphLog, ApRunRecapData> build)
+    internal static bool IsOpen => _open != null && IsInstanceValid(_open);
+
+    /// <summary>
+    /// Loads the run's AP log and shows its recap above <paramref name="host"/>, the screen that
+    /// asked for it; <paramref name="build"/> adds the game's side of the run.
+    /// </summary>
+    internal static void Open(Node host, long startTime, Func<ApRunGraphLog, ApRunRecapData> build)
     {
         var log = ApRunGraphRecorder.Store.Load(startTime, out string? error);
         if (log == null)
@@ -43,10 +49,12 @@ internal sealed partial class ApRunRecapOverlay : Control
             return;
         }
 
-        host.GetNodeOrNull(NodeName)?.QueueFree();
-        var overlay = new ApRunRecapOverlay { Name = NodeName };
+        if (IsOpen)
+            _open!.QueueFree();
+        var overlay = new ApRunRecapOverlay { Name = "ApRunRecapOverlay" };
         overlay.Build(data);
-        host.AddChild(overlay);
+        _open = overlay;
+        ApOverlayLayer.Show(overlay, host, overlay.QueueFree);
     }
 
     private void Build(ApRunRecapData data)
@@ -54,7 +62,6 @@ internal sealed partial class ApRunRecapOverlay : Control
         _data = data;
         SetAnchorsPreset(LayoutPreset.FullRect);
         MouseFilter = MouseFilterEnum.Stop;
-        ZIndex = 100;
 
         var dim = new ColorRect { Color = Backdrop, MouseFilter = MouseFilterEnum.Stop };
         dim.SetAnchorsPreset(LayoutPreset.FullRect);
@@ -125,13 +132,20 @@ internal sealed partial class ApRunRecapOverlay : Control
         title.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         row.AddChild(title);
 
-        _saveImage = ActionButton("Save image");
-        _saveImage.TooltipText = "Save this recap as a picture, ready to share.";
-        _saveImage.Pressed += SaveImage;
-        row.AddChild(_saveImage);
+        _saveGraph = ActionButton("Save graph");
+        _saveGraph.TooltipText = "Save a short picture: your character, the run's numbers and the climb.";
+        _saveGraph.Pressed += () => SaveImage(
+            () => ApRunRecapView.BuildGraphCard(_data), ApRunRecapView.GraphImageWidth, "graph");
+        row.AddChild(_saveGraph);
 
+        _saveRecap = ActionButton("Save recap");
+        _saveRecap.TooltipText = "Save the whole recap as one tall picture.";
+        _saveRecap.Pressed += () => SaveImage(
+            () => ApRunRecapView.Build(_data, interactive: false, out _), ApRunRecapView.RecapImageWidth, "recap");
+        row.AddChild(_saveRecap);
+
+        // Escape and the controller's back button close it through ApOverlayLayer.
         var close = ActionButton("Close  (Esc)");
-        close.Shortcut = new Shortcut { Events = new Godot.Collections.Array { new InputEventAction { Action = "ui_cancel" } } };
         close.Pressed += QueueFree;
         row.AddChild(close);
         // Focus the button once in the tree so a controller can close the overlay.
@@ -139,27 +153,28 @@ internal sealed partial class ApRunRecapOverlay : Control
         return bar;
     }
 
-    private async void SaveImage()
+    private async void SaveImage(Func<Control> build, int width, string kind)
     {
-        _saveImage.Disabled = true;
+        // One picture at a time: both use the same offscreen viewport approach and file folder.
+        _saveGraph.Disabled = _saveRecap.Disabled = true;
         try
         {
-            string fileName = $"{_data.Log.StartTime}-recap.png";
-            string? path = await ApRecapImage.SaveAsync(this, _data, ApRunGraphRecorder.Store.ExportsDirectory, fileName);
+            string fileName = $"{_data.Log.StartTime}-{kind}.png";
+            string? path = await ApRecapImage.SaveAsync(this, build, width, ApRunGraphRecorder.Store.ExportsDirectory, fileName);
             if (path != null)
             {
-                NotificationUtility.ShowRawText($"Saved the recap to {path}", timeout: 8);
+                NotificationUtility.ShowRawText($"Saved the {kind} to {path}", timeout: 8);
                 ApRunGraphFiles.ShowInFileManager(path);
             }
             else
             {
-                NotificationUtility.ShowRawText("The recap image could not be saved. The log has details.");
+                NotificationUtility.ShowRawText($"The {kind} image could not be saved. The log has details.");
             }
         }
         finally
         {
-            if (IsInstanceValid(_saveImage))
-                _saveImage.Disabled = false;
+            if (IsInstanceValid(this))
+                _saveGraph.Disabled = _saveRecap.Disabled = false;
         }
     }
 

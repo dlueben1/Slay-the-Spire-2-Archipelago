@@ -21,6 +21,7 @@ namespace StS2AP.Patches
     {
         private const string ButtonName = "ApRunGraphButton";
         private const string ApIconPath = "res://images/APIcon.png";
+        private const double AutoOpenDelaySeconds = 1.5;
 
         [HarmonyPatch(typeof(RunManager), nameof(RunManager.Launch))]
         public static class BeginRunGraph
@@ -50,19 +51,21 @@ namespace StS2AP.Patches
                     if (run == null || !ApRunGraphRecorder.Store.Exists(run.StartTime))
                         return;
 
-                    var button = CreateGraphButton(() => ApRunRecapOverlay.Open(__instance, run.StartTime, log => RecapAtGameOver(run, log)));
+                    void OpenRecap() => ApRunRecapOverlay.Open(__instance, run.StartTime, log => RecapAtGameOver(run, log));
+                    var button = CreateGraphButton(OpenRecap);
                     button.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
                     button.OffsetLeft = 40f;
                     button.OffsetTop = -120f;
-                    // Appear with the main-menu button, once the run summary has finished animating.
-                    var mainMenu = __instance._mainMenuButton;
-                    button.Visible = mainMenu.Visible;
-                    mainMenu.VisibilityChanged += () =>
-                    {
-                        if (GodotObject.IsInstanceValid(button))
-                            button.Visible = mainMenu.Visible;
-                    };
                     __instance._uiNode.AddChild(button);
+
+                    // The recap opens by itself once the defeat or victory banner has played; closing
+                    // it leaves the game's own screen, and the button brings it back.
+                    var timer = __instance.GetTree().CreateTimer(AutoOpenDelaySeconds);
+                    timer.Timeout += () =>
+                    {
+                        if (GodotObject.IsInstanceValid(__instance) && __instance.IsInsideTree() && !ApRunRecapOverlay.IsOpen)
+                            OpenRecap();
+                    };
                 }
                 catch (Exception ex)
                 {
