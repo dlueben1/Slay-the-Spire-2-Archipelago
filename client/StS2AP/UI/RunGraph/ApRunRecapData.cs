@@ -95,7 +95,7 @@ internal sealed class ApRunRecapData
         .ThenBy(card => card.Upgraded)
         .ToList();
 
-    private static RecapRelic ToRelic(SerializableRelic relic)
+    internal static RecapRelic ToRelic(SerializableRelic relic)
     {
         var model = relic.Id == null ? null : SaveUtil.RelicOrDeprecated(relic.Id);
         if (model == null)

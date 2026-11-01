@@ -268,7 +268,7 @@ internal sealed partial class ApPastRunsOverlay : Control
         Color color = RunColor(run);
         var top = new HBoxContainer();
         top.AddThemeConstantOverride("separation", 12);
-        top.AddChild(CharacterIcon(character, log.Character, color));
+        top.AddChild(ApRunRecapView.CharacterIcon(character, Pretty(log.Character), color));
         var names = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         names.AddThemeConstantOverride("separation", 3);
         var nameRow = new HBoxContainer();
@@ -331,39 +331,6 @@ internal sealed partial class ApPastRunsOverlay : Control
         buttons.AddChild(CreateDeleteButton(run.Log));
         box.AddChild(buttons);
         return card;
-    }
-
-    private static Control CharacterIcon(CharacterModel? character, string fallbackId, Color color)
-    {
-        var frame = ApRunRecapView.Panel(color with { A = 0.14f }, color, 10, 2f, borderWidth: 2);
-        frame.CustomMinimumSize = new Vector2(52f, 52f);
-        frame.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        Texture2D? icon = null;
-        try
-        {
-            icon = character?.IconTexture;
-        }
-        catch (Exception)
-        {
-            // A modded character without a top-bar icon gets its initial instead.
-        }
-        if (icon != null)
-        {
-            frame.AddChild(new TextureRect
-            {
-                Texture = icon,
-                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-                StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-            });
-        }
-        else
-        {
-            var initial = Label(Pretty(fallbackId)[..1], 26, color, bold: true);
-            initial.HorizontalAlignment = HorizontalAlignment.Center;
-            initial.VerticalAlignment = VerticalAlignment.Center;
-            frame.AddChild(initial);
-        }
-        return frame;
     }
 
     private static Control OutcomePill(ApRunOutcome? outcome)

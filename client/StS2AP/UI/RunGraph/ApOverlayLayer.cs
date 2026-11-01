@@ -34,9 +34,10 @@ internal static class ApOverlayLayer
     /// <summary>
     /// The game turns Escape and the controller's back button into its own actions and gives them
     /// to the newest hotkey binding, which is how its popups close. Blocking first keeps every other
-    /// hotkey, such as the pause menu, from reaching the screen underneath.
+    /// hotkey, such as the pause menu or a back button, from reaching the screen underneath.
+    /// The bindings last while <paramref name="overlay"/> is in the tree.
     /// </summary>
-    private static void BindBack(Control overlay, Action close)
+    internal static void BindBack(Control overlay, Action close)
     {
         var hotkeys = NHotkeyManager.Instance;
         if (hotkeys == null)

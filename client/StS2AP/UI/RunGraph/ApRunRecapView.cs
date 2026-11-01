@@ -1,5 +1,6 @@
 using Godot;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Models;
 using static StS2AP.UI.RunGraph.RunGraphStyle;
 
 namespace StS2AP.UI.RunGraph;
@@ -282,6 +283,43 @@ internal static class ApRunRecapView
         else
         {
             var initial = Label(CharacterName(data)[..1], (int)(size * 0.4f), border, bold: true);
+            initial.HorizontalAlignment = HorizontalAlignment.Center;
+            initial.VerticalAlignment = VerticalAlignment.Center;
+            frame.AddChild(initial);
+        }
+        return frame;
+    }
+
+    /// <summary>
+    /// A character's small top-bar icon in a frame of <paramref name="color"/>, or the initial of
+    /// <paramref name="fallbackName"/> when there is no icon, as for some modded characters.
+    /// </summary>
+    internal static Control CharacterIcon(CharacterModel? character, string fallbackName, Color color, float size = 52f)
+    {
+        var frame = Panel(color with { A = 0.14f }, color, 10, 2f, borderWidth: 2);
+        frame.CustomMinimumSize = new Vector2(size, size);
+        frame.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        Texture2D? icon = null;
+        try
+        {
+            icon = character?.IconTexture;
+        }
+        catch (Exception)
+        {
+            // A modded character without a top-bar icon gets its initial instead.
+        }
+        if (icon != null)
+        {
+            frame.AddChild(new TextureRect
+            {
+                Texture = icon,
+                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+                StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+            });
+        }
+        else
+        {
+            var initial = Label(fallbackName.Length > 0 ? fallbackName[..1] : "?", (int)(size / 2f), color, bold: true);
             initial.HorizontalAlignment = HorizontalAlignment.Center;
             initial.VerticalAlignment = VerticalAlignment.Center;
             frame.AddChild(initial);
@@ -625,7 +663,7 @@ internal static class ApRunRecapView
         return panel;
     }
 
-    private static Control Pill(string text, Color color)
+    internal static Control Pill(string text, Color color)
     {
         var pill = Panel(color with { A = 0.18f }, color with { A = 0.18f }, 999, 3f);
         var style = (StyleBoxFlat)pill.GetThemeStylebox("panel");
