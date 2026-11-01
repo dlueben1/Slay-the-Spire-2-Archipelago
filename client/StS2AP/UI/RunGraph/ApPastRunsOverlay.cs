@@ -21,23 +21,29 @@ internal sealed partial class ApPastRunsOverlay : Control
     private readonly ApRunGraphStore _store = ApRunGraphRecorder.Store;
     private List<SeedGroup> _seeds = new();
     private string? _selectedSeed;
+    private bool _showUnfinished;
     private Label _subtitle = null!;
     private VBoxContainer _seedList = null!;
     private VBoxContainer _detail = null!;
     private Button _close = null!;
 
-    /// <summary>A logged run with the game's saved history for it, which unfinished runs lack.</summary>
-    private sealed record PastRun(ApRunGraphLog Log, RunHistory? History)
+    /// <summary>
+    /// A logged run with the game's saved history for it, and how many locations the slot gained
+    /// during it. Unfinished runs never reached a game-over screen, so the game saved no history.
+    /// </summary>
+    private sealed record PastRun(ApRunGraphLog Log, RunHistory? History, int SlotGain)
     {
         internal int ChecksSent => Log.Events.Count(e => e.Kind == ApRunGraphEventKind.CheckSent);
-        internal int SlotGain => Math.Max(0, (Log.SlotChecksAtEnd ?? Log.SlotChecksAtStart) - Log.SlotChecksAtStart);
+        internal bool Unfinished => History == null;
     }
 
     /// <summary>The runs played on one AP seed, newest first.</summary>
     private sealed record SeedGroup(string Seed, List<PastRun> Runs)
     {
         internal ApRunGraphLog Newest => Runs[0].Log;
-        internal int Checked => Runs.Max(r => r.Log.SlotChecksAtEnd ?? r.Log.SlotChecksAtStart);
+        internal IEnumerable<PastRun> Finished => Runs.Where(r => !r.Unfinished);
+        internal List<PastRun> Unfinished => Runs.Where(r => r.Unfinished).ToList();
+        internal int Checked => Runs.Max(r => r.Log.SlotChecksAtStart + r.SlotGain);
         internal int Total => Math.Max(Checked, Runs.Max(r => r.Log.SlotLocationCount));
     }
 
@@ -132,20 +138,46 @@ internal sealed partial class ApPastRunsOverlay : Control
     /// <summary>Reads every log and its history again, keeping the selected seed when it still exists.</summary>
     private void Reload()
     {
-        var runs = LoadLogs().Select(log => new PastRun(log, LoadHistory(log.StartTime))).ToList();
-        _seeds = runs
-            .GroupBy(run => run.Log.Seed)
-            .Select(group => new SeedGroup(group.Key, group.OrderByDescending(r => r.Log.StartTime).ToList()))
+        _seeds = LoadLogs()
+            .GroupBy(log => log.Seed)
+            .Select(group => new SeedGroup(group.Key, WithSlotGains(group).OrderByDescending(r => r.Log.StartTime).ToList()))
             .OrderByDescending(group => group.Newest.StartTime)
             .ToList();
         if (_selectedSeed == null || _seeds.All(s => s.Seed != _selectedSeed))
             _selectedSeed = _seeds.FirstOrDefault()?.Seed;
 
-        _subtitle.Text = runs.Count == 0
+        int finished = _seeds.Sum(seed => seed.Finished.Count());
+        int unfinished = _seeds.Sum(seed => seed.Unfinished.Count);
+        _subtitle.Text = finished + unfinished == 0
             ? "Every Archipelago run recorded on this profile"
-            : $"{runs.Count} {(runs.Count == 1 ? "run" : "runs")} on this profile, across {_seeds.Count} Archipelago {(_seeds.Count == 1 ? "seed" : "seeds")}";
+            : $"{finished} finished {(finished == 1 ? "run" : "runs")}"
+                + (unfinished > 0 ? $" and {unfinished} unfinished" : "")
+                + $" on this profile, across {_seeds.Count} Archipelago {(_seeds.Count == 1 ? "seed" : "seeds")}";
         ShowSeeds();
         ShowSelectedSeed();
+    }
+
+    /// <summary>
+    /// Pairs one seed's logs with their histories and works out what each run added to the slot.
+    /// A finished run recorded the slot's count at its end. An unfinished one did not, so the next
+    /// run's starting count stands in; for the newest run, its own distinct checks sent do.
+    /// </summary>
+    private static IEnumerable<PastRun> WithSlotGains(IEnumerable<ApRunGraphLog> logs)
+    {
+        var ordered = logs.OrderBy(log => log.StartTime).ToList();
+        for (int i = 0; i < ordered.Count; i++)
+        {
+            var log = ordered[i];
+            int end = log.SlotChecksAtEnd
+                ?? (i + 1 < ordered.Count
+                    ? ordered[i + 1].SlotChecksAtStart
+                    : log.SlotChecksAtStart + log.Events
+                        .Where(e => e.Kind == ApRunGraphEventKind.CheckSent && e.LocationId != null)
+                        .Select(e => e.LocationId)
+                        .Distinct()
+                        .Count());
+            yield return new PastRun(log, LoadHistory(log.StartTime), Math.Max(0, end - log.SlotChecksAtStart));
+        }
     }
 
     private void ShowSeeds()
@@ -167,6 +199,8 @@ internal sealed partial class ApPastRunsOverlay : Control
         button.AddThemeStyleboxOverride("pressed", normal);
         button.Pressed += () =>
         {
+            if (_selectedSeed != seed.Seed)
+                _showUnfinished = false;
             _selectedSeed = seed.Seed;
             ShowSeeds();
             ShowSelectedSeed();
@@ -189,8 +223,15 @@ internal sealed partial class ApPastRunsOverlay : Control
         top.AddChild(Label(LocalDate(seed.Newest.StartTime).ToString("MMM d"), 14, TextMuted));
         box.AddChild(top);
         int wins = seed.Runs.Count(r => r.Log.Outcome == ApRunOutcome.Won);
+        int finished = seed.Finished.Count();
         string winText = wins == 0 ? "no wins yet" : wins == 1 ? "1 win" : $"{wins} wins";
-        box.AddChild(Label($"{seed.Newest.SlotName} · {seed.Runs.Count} {(seed.Runs.Count == 1 ? "run" : "runs")} · {winText}", 14, TextMuted));
+        string runsText = finished > 0
+            ? $"{finished} {(finished == 1 ? "run" : "runs")} · {winText}"
+            : $"{seed.Unfinished.Count} unfinished";
+        var summary = Label($"{seed.Newest.SlotName} · {runsText}", 14, TextMuted);
+        summary.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        summary.ClipText = true;
+        box.AddChild(summary);
         float fraction = seed.Total > 0 ? (float)seed.Checked / seed.Total : 0f;
         box.AddChild(new RecapBar(new[] { (1f, Gold) }, fraction, 8f));
         box.AddChild(Label($"{seed.Checked} of {seed.Total} locations checked", 14, Text));
@@ -218,13 +259,102 @@ internal sealed partial class ApPastRunsOverlay : Control
             SizeFlagsVertical = SizeFlags.ExpandFill,
             HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
         };
+        var column = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        column.AddThemeConstantOverride("separation", 16);
+        scroll.AddChild(column);
+        _detail.AddChild(scroll);
+
         var grid = new GridContainer { Columns = 3, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         grid.AddThemeConstantOverride("h_separation", 14);
         grid.AddThemeConstantOverride("v_separation", 14);
-        foreach (var run in seed.Runs)
+        foreach (var run in seed.Finished)
             grid.AddChild(RunCard(run));
-        scroll.AddChild(grid);
-        _detail.AddChild(scroll);
+        if (grid.GetChildCount() > 0)
+            column.AddChild(grid);
+        else
+            column.AddChild(Label("No finished runs on this seed yet.", 16, TextMuted));
+
+        var unfinished = seed.Unfinished;
+        if (unfinished.Count > 0)
+            column.AddChild(UnfinishedFold(unfinished));
+    }
+
+    /// <summary>
+    /// Runs that never reached a game-over screen, folded into one row: most are restarts on the
+    /// first floors, but some sent checks or can still be reloaded from a checkpoint.
+    /// </summary>
+    private Control UnfinishedFold(List<PastRun> runs)
+    {
+        var panel = ApRunRecapView.Panel(PanelColor with { A = 0.6f }, PanelBorder, 14, 16f);
+        var box = new VBoxContainer();
+        box.AddThemeConstantOverride("separation", 12);
+        panel.AddChild(box);
+
+        var header = new HBoxContainer();
+        header.AddThemeConstantOverride("separation", 14);
+        var text = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
+        text.AddThemeConstantOverride("separation", 2);
+        text.AddChild(Label($"{runs.Count} unfinished {(runs.Count == 1 ? "run" : "runs")}", 19, Text, bold: true));
+        int sent = runs.Sum(run => run.ChecksSent);
+        int furthest = runs.Max(FurthestFloor);
+        text.AddChild(Label($"Never reached a game-over screen · {sent} checks sent · furthest floor {furthest}", 14, TextMuted));
+        header.AddChild(text);
+
+        var toggle = ActionButton(_showUnfinished ? "Hide" : "Show");
+        toggle.CustomMinimumSize = new Vector2(110f, 42f);
+        toggle.Pressed += () =>
+        {
+            _showUnfinished = !_showUnfinished;
+            ShowSelectedSeed();
+        };
+        header.AddChild(toggle);
+        var deleteAll = CreateDeleteButton(runs.Select(run => run.Log).ToList(), "Delete all",
+            "Delete the AP logs of every unfinished run on this seed. Finished runs are kept.");
+        deleteAll.CustomMinimumSize = new Vector2(130f, 42f);
+        header.AddChild(deleteAll);
+        box.AddChild(header);
+
+        if (_showUnfinished)
+        {
+            foreach (var run in runs)
+                box.AddChild(UnfinishedRow(run));
+        }
+        return panel;
+    }
+
+    private Control UnfinishedRow(PastRun run)
+    {
+        var log = run.Log;
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 12);
+        var character = CharacterOf(run);
+        Color color = character?.NameColor ?? TextMuted;
+        row.AddChild(ApRunRecapView.CharacterIcon(character, Pretty(log.Character), color, 38f));
+        row.AddChild(Centered(Label(character?.Title.GetFormattedText() ?? Pretty(log.Character), 16, Text, bold: true), 150f));
+        row.AddChild(Centered(Label(LocalDate(log.StartTime).ToString("MMM d · HH:mm"), 14, TextMuted), 130f));
+        row.AddChild(Centered(Label($"floor {FurthestFloor(run)}", 14, TextMuted), 80f));
+        var checks = Label(run.ChecksSent == 0 ? "no checks" : $"{run.ChecksSent} checks", 14, run.ChecksSent == 0 ? TextFaint : Gold);
+        checks.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        row.AddChild(Centered(checks, 0f));
+        var export = ActionButton("Export");
+        export.CustomMinimumSize = new Vector2(96f, 38f);
+        export.TooltipText = "Write this run's AP log into a JSON file.";
+        export.Pressed += () => ExportRun(log);
+        row.AddChild(export);
+        var delete = CreateDeleteButton(new[] { log }, "Delete", "Delete this run's AP log.");
+        delete.CustomMinimumSize = new Vector2(96f, 38f);
+        row.AddChild(delete);
+        return row;
+    }
+
+    /// <summary>The highest floor any of the run's AP events happened on.</summary>
+    private static int FurthestFloor(PastRun run) => run.Log.Events.Select(e => e.Floor).DefaultIfEmpty(1).Max();
+
+    private static Label Centered(Label label, float width)
+    {
+        label.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        label.CustomMinimumSize = new Vector2(width, 0f);
+        return label;
     }
 
     /// <summary>How each run moved the slot, oldest first, one colored segment per run.</summary>
@@ -315,20 +445,14 @@ internal sealed partial class ApPastRunsOverlay : Control
         open.CustomMinimumSize = new Vector2(0f, 42f);
         open.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         open.Pressed += () => OpenRecap(run);
-        // The recap is drawn from the game's saved history, which only exists once a run has ended.
-        if (run.History == null)
-        {
-            open.Text = "Not finished";
-            open.Disabled = true;
-            open.TooltipText = "This run never reached a game-over screen, so the game saved no history to show.";
-        }
         buttons.AddChild(open);
         var export = ActionButton("Export");
         export.CustomMinimumSize = new Vector2(96f, 42f);
         export.TooltipText = "Write this run's AP log and the game's history for it into one JSON file.";
         export.Pressed += () => ExportRun(run.Log);
         buttons.AddChild(export);
-        buttons.AddChild(CreateDeleteButton(run.Log));
+        buttons.AddChild(CreateDeleteButton(new[] { run.Log }, "Delete",
+            "Delete this run's AP log. The game's own Run History keeps the run."));
         box.AddChild(buttons);
         return card;
     }
@@ -361,10 +485,13 @@ internal sealed partial class ApPastRunsOverlay : Control
         return killedBy.Length > 0 ? $"Killed by {killedBy}, floor {floors}" : $"Ended on floor {floors}";
     }
 
+    /// <summary>The run's character, from the game's history or, for an unfinished run, from AP's log.</summary>
     private static CharacterModel? CharacterOf(PastRun run)
     {
         var player = run.History?.Players.FirstOrDefault(p => p.Id == run.Log.LocalNetId) ?? run.History?.Players.FirstOrDefault();
-        return player == null || player.Character == ModelId.none ? null : SaveUtil.CharacterOrDeprecated(player.Character);
+        if (player == null)
+            return ApCampaignUi.FindCharacter(run.Log.Character);
+        return player.Character == ModelId.none ? null : SaveUtil.CharacterOrDeprecated(player.Character);
     }
 
     private static Color RunColor(PastRun run) =>
@@ -417,14 +544,13 @@ internal sealed partial class ApPastRunsOverlay : Control
 
     /// <summary>
     /// The first press arms the button and the second deletes, so a stray click cannot lose a
-    /// run. Only AP's log is deleted; the run stays in the game's own Run History.
+    /// run. Only AP's logs are deleted; finished runs stay in the game's own Run History.
     /// </summary>
-    private Button CreateDeleteButton(ApRunGraphLog log)
+    private Button CreateDeleteButton(IReadOnlyList<ApRunGraphLog> logs, string idleText, string tooltip)
     {
-        const string idleText = "Delete";
         var delete = ActionButton(idleText);
         delete.CustomMinimumSize = new Vector2(96f, 42f);
-        delete.TooltipText = "Delete this run's AP log. The game's own Run History keeps the run.";
+        delete.TooltipText = tooltip;
         bool armed = false;
 
         void Disarm()
@@ -439,20 +565,22 @@ internal sealed partial class ApPastRunsOverlay : Control
             if (!armed)
             {
                 armed = true;
-                delete.Text = "Delete?";
+                delete.Text = idleText + "?";
                 delete.AddThemeStyleboxOverride("normal", Box(Death.Darkened(0.35f), Death, 10, 8f));
                 return;
             }
-            try
+            foreach (var log in logs)
             {
-                _store.Delete(log.StartTime);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                LogUtility.Warn($"Could not delete run graph log {_store.PathFor(log.StartTime)}: {ex.Message}");
-                NotificationUtility.ShowRawText("Couldn't delete that run's log: " + ex.Message);
-                Disarm();
-                return;
+                try
+                {
+                    _store.Delete(log.StartTime);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    LogUtility.Warn($"Could not delete run graph log {_store.PathFor(log.StartTime)}: {ex.Message}");
+                    NotificationUtility.ShowRawText("Couldn't delete a run's log: " + ex.Message);
+                    break;
+                }
             }
             // Rebuilt after this press has finished, since the rebuild frees this button.
             Callable.From(Reload).CallDeferred();
