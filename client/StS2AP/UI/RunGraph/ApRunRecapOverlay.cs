@@ -9,7 +9,7 @@ namespace StS2AP.UI.RunGraph;
 /// <summary>
 /// Full-screen overlay with the AP end-of-run recap. It is added on top of whichever screen opened
 /// it (game over, Run History or Past AP Runs) and removes itself when closed. The climb opens
-/// first in its own tab; the rest of the recap is in a second tab, leaving room for more later.
+/// first in its own tab, then the run floor by floor, then the rest of the recap.
 /// </summary>
 internal sealed partial class ApRunRecapOverlay : Control
 {
@@ -102,6 +102,10 @@ internal sealed partial class ApRunRecapOverlay : Control
         _eventsByFloor = ApRunGraphCanvas.GroupEvents(data.Log, data.Floors.Count);
         canvas.HoveredFloorChanged += ShowTooltip;
 
+        var timeline = Padded(new ApRunTimelineView(data), top: 20);
+        timeline.SizeFlagsVertical = SizeFlags.ExpandFill;
+        root.AddChild(timeline);
+
         var scroll = new ScrollContainer
         {
             SizeFlagsVertical = SizeFlags.ExpandFill,
@@ -113,7 +117,8 @@ internal sealed partial class ApRunRecapOverlay : Control
         root.AddChild(scroll);
 
         _tabs.Add((_tabButtons[0], climb));
-        _tabs.Add((_tabButtons[1], scroll));
+        _tabs.Add((_tabButtons[1], timeline));
+        _tabs.Add((_tabButtons[2], scroll));
 
         // Added last so it draws above the panel; it ignores the mouse so hovering keeps working.
         _tooltip = new PanelContainer { Visible = false, MouseFilter = MouseFilterEnum.Ignore };
@@ -163,7 +168,7 @@ internal sealed partial class ApRunRecapOverlay : Control
 
         var tabs = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         tabs.AddThemeConstantOverride("separation", 4);
-        foreach (string title in new[] { "The climb", "Recap" })
+        foreach (string title in new[] { "The climb", "Timeline", "Recap" })
         {
             int index = _tabButtons.Count;
             var tab = new RecapTab(title);
@@ -280,7 +285,7 @@ internal sealed partial class ApRunRecapOverlay : Control
         _tooltip.Position = new Vector2(Math.Max(16f, x), y);
     }
 
-    private static Color ColorFor(ApRunGraphEvent e) => e.Kind switch
+    internal static Color ColorFor(ApRunGraphEvent e) => e.Kind switch
     {
         ApRunGraphEventKind.CheckSent when e.Abandoned => TextMuted,
         ApRunGraphEventKind.CheckSent => ForItem(e.Classification),
@@ -288,7 +293,7 @@ internal sealed partial class ApRunRecapOverlay : Control
         _ => Death,
     };
 
-    private static string Describe(ApRunGraphEvent e)
+    internal static string Describe(ApRunGraphEvent e)
     {
         string who = e.IsSelf ? "yourself" : e.OtherPlayer;
         return e.Kind switch

@@ -25,6 +25,8 @@ internal sealed class ApRunRecapData
     internal required ApRunGraphLog Log { get; init; }
     internal required ApRunRecap Recap { get; init; }
     internal required IReadOnlyList<RunGraphFloor> Floors { get; init; }
+    /// <summary>The game's record of each floor, per act, in the same order as <see cref="Floors"/>.</summary>
+    internal required IReadOnlyList<IReadOnlyList<MapPointHistoryEntry>> MapHistory { get; init; }
     internal CharacterModel? Character { get; init; }
     internal required IReadOnlyList<RecapCard> Deck { get; init; }
     internal required IReadOnlyList<RecapRelic> Relics { get; init; }
@@ -74,6 +76,7 @@ internal sealed class ApRunRecapData
             Log = log,
             Recap = ApRunRecap.Build(log, floors.Select(f => new ApRecapFloorHp(f.Hp, f.MaxHp)).ToList()),
             Floors = floors,
+            MapHistory = mapHistory,
             Character = character == null || character == ModelId.none ? null : SaveUtil.CharacterOrDeprecated(character),
             Deck = GroupDeck(deck ?? Enumerable.Empty<SerializableCard>()),
             Relics = (relics ?? Enumerable.Empty<SerializableRelic>()).Select(ToRelic).ToList(),
@@ -95,9 +98,11 @@ internal sealed class ApRunRecapData
         .ThenBy(card => card.Upgraded)
         .ToList();
 
-    internal static RecapRelic ToRelic(SerializableRelic relic)
+    internal static RecapRelic ToRelic(SerializableRelic relic) => ToRelic(relic.Id);
+
+    internal static RecapRelic ToRelic(ModelId? id)
     {
-        var model = relic.Id == null ? null : SaveUtil.RelicOrDeprecated(relic.Id);
+        var model = id == null ? null : SaveUtil.RelicOrDeprecated(id);
         if (model == null)
             return new RecapRelic("Unknown relic", null, false);
         Texture2D? icon = ResourceLoader.Exists(model.IconPath) ? model.Icon : null;
