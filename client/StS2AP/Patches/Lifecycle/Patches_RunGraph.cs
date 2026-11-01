@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Nodes.Screens.GameOverScreen;
 using MegaCrit.Sts2.Core.Nodes.Screens.RunHistoryScreen;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Runs.History;
+using MegaCrit.Sts2.Core.Saves;
 using StS2AP.UI;
 using StS2AP.UI.RunGraph;
 using StS2AP.Utils;
@@ -49,7 +50,7 @@ namespace StS2AP.Patches
                     if (run == null || !ApRunGraphRecorder.Store.Exists(run.StartTime))
                         return;
 
-                    var button = CreateGraphButton(() => Open(__instance, run.StartTime, run.MapPointHistory));
+                    var button = CreateGraphButton(() => ApRunRecapOverlay.Open(__instance, run.StartTime, log => RecapAtGameOver(run, log)));
                     button.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
                     button.OffsetLeft = 40f;
                     button.OffsetTop = -120f;
@@ -84,7 +85,7 @@ namespace StS2AP.Patches
                     {
                         var history = __instance._history;
                         if (history != null)
-                            Open(__instance, history.StartTime, history.MapPointHistory);
+                            ApRunRecapOverlay.Open(__instance, history.StartTime, log => ApRunRecapData.FromHistory(history, log));
                     });
                     button.SetAnchorsPreset(Control.LayoutPreset.BottomRight);
                     button.OffsetLeft = -300f;
@@ -115,7 +116,7 @@ namespace StS2AP.Patches
             var button = new Button
             {
                 Name = ButtonName,
-                Text = "AP Run Graph",
+                Text = "AP Run Recap",
                 FocusMode = Control.FocusModeEnum.All,
                 CustomMinimumSize = new Vector2(250f, 60f),
                 ExpandIcon = true,
@@ -147,16 +148,16 @@ namespace StS2AP.Patches
             return button;
         }
 
-        private static void Open(Control host, long startTime, List<List<MapPointHistoryEntry>> mapHistory)
+        /// <summary>
+        /// Prefers the saved history, which names what killed the player; the live run stands in
+        /// when the game has not written it.
+        /// </summary>
+        private static ApRunRecapData RecapAtGameOver(SerializableRun run, ApRunGraphLog log)
         {
-            var log = ApRunGraphRecorder.Store.Load(startTime, out string? error);
-            if (log == null)
-            {
-                LogUtility.Warn(error ?? $"No run graph log exists for run {startTime}.");
-                NotificationUtility.ShowRawText("The Archipelago graph for this run could not be read.");
-                return;
-            }
-            ApRunGraphOverlay.Show(host, mapHistory, log);
+            var history = SaveManager.Instance.LoadRunHistory($"{run.StartTime}.run");
+            return history.Success && history.SaveData != null
+                ? ApRunRecapData.FromHistory(history.SaveData, log)
+                : ApRunRecapData.FromRun(run, log);
         }
     }
 }

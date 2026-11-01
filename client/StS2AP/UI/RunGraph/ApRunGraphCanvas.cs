@@ -90,7 +90,8 @@ internal sealed partial class ApRunGraphCanvas : Control
     internal void Load(
         IReadOnlyList<RunGraphFloor> floors,
         IReadOnlyDictionary<int, List<ApRunGraphEvent>> eventsByFloor,
-        ApRunOutcome? outcome)
+        ApRunOutcome? outcome,
+        bool interactive = true)
     {
         _floors = floors;
         _eventsByFloor = eventsByFloor;
@@ -98,8 +99,16 @@ internal sealed partial class ApRunGraphCanvas : Control
         if (ResourceLoader.Exists(ApIconPath))
             _apIcon = ResourceLoader.Load<Texture2D>(ApIconPath);
 
-        MouseFilter = MouseFilterEnum.Stop;
         Draw += DrawGraph;
+        // A saved image is drawn once, fully revealed and without hover.
+        if (!interactive)
+        {
+            MouseFilter = MouseFilterEnum.Ignore;
+            _reveal = 1f;
+            return;
+        }
+
+        MouseFilter = MouseFilterEnum.Stop;
         GuiInput += OnGuiInput;
         MouseExited += () => SetHovered(-1);
 

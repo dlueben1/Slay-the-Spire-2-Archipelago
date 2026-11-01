@@ -62,7 +62,7 @@ internal static class ApRunGraphRecorder
             {
                 var e = new ApRunGraphEvent { Kind = ApRunGraphEventKind.CheckSent, LocationId = id };
                 if (ArchipelagoClient.ScoutedLocations.TryGetValue(id, out ScoutedItemInfo? item))
-                    Describe(e, item, item.Player.Slot == mySlot);
+                    Describe(e, item, item.Player.Slot == mySlot, game: item.ItemGame);
                 else
                     e.ItemName = $"Location {id}";
                 Append(e);
@@ -82,7 +82,7 @@ internal static class ApRunGraphRecorder
             if (receipt != null)
             {
                 int mySlot = ArchipelagoClient.Session?.ConnectionInfo.Slot ?? -1;
-                Describe(e, receipt.Item, receipt.Item.Player.Slot == mySlot);
+                Describe(e, receipt.Item, receipt.Item.Player.Slot == mySlot, game: receipt.Item.LocationGame);
             }
             else
             {
@@ -149,10 +149,11 @@ internal static class ApRunGraphRecorder
         });
     }
 
-    private static void Describe(ApRunGraphEvent e, ItemInfo item, bool isSelf)
+    private static void Describe(ApRunGraphEvent e, ItemInfo item, bool isSelf, string game)
     {
         e.ItemName = item.ItemDisplayName;
         e.OtherPlayer = item.Player.Name;
+        e.OtherGame = game;
         e.IsSelf = isSelf;
         e.Classification = ApRunGraphLog.Classify(item.Advancement(), item.Useful(), item.Trap());
     }

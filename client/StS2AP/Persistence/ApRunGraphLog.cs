@@ -37,6 +37,8 @@ public sealed class ApRunGraphEvent
     // Display text is stored resolved: Run History may show a seed we are no longer connected to.
     public string ItemName { get; set; } = "";
     public string OtherPlayer { get; set; } = "";
+    /// <summary>The other player's game: the receiver's for a check sent, the finder's for an item claimed.</summary>
+    public string OtherGame { get; set; } = "";
     public bool IsSelf { get; set; }
     public ApRunGraphItemType Classification { get; set; }
     public int Amount { get; set; }

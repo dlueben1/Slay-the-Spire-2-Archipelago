@@ -27,6 +27,14 @@ internal static class RunGraphStyle
     internal static readonly Color Claim = new("#4FD1A5");
     internal static readonly Color Death = new("#E5484D");
 
+    // The recap's page: a darker ground than the panels, and gold for the numbers that matter.
+    internal static readonly Color Page = new("#0E111D");
+    internal static readonly Color HeroBorder = new("#3A4170");
+    internal static readonly Color Gold = new("#F3CF6A");
+    internal static readonly Color DeathText = new("#F07A7E");
+    internal static readonly Color TextFaint = new("#7E84A8");
+    internal static readonly Color Track = new(1f, 1f, 1f, 0.07f);
+
     private static readonly Color HpLow = new("#E5484D");
     private static readonly Color HpMid = new("#F5A524");
     private static readonly Color HpHigh = new("#46C47E");
@@ -65,6 +73,43 @@ internal static class RunGraphStyle
         label.AddThemeFontOverride("font", bold ? Bold : Regular);
         label.AddThemeFontSizeOverride("font_size", size);
         label.AddThemeColorOverride("font_color", color);
+        return label;
+    }
+
+    /// <summary>The overlays' buttons: a dark card that lights up with the progression color on hover or focus.</summary>
+    internal static Button ActionButton(string text, Color? background = null, Color? border = null)
+    {
+        Color fill = background ?? Card;
+        var button = new Button
+        {
+            Text = text,
+            FocusMode = Control.FocusModeEnum.All,
+            CustomMinimumSize = new Vector2(150f, 46f),
+            SizeFlagsVertical = Control.SizeFlags.ShrinkCenter,
+        };
+        button.AddThemeStyleboxOverride("normal", Box(fill, border ?? PanelBorder, 10, 8f));
+        button.AddThemeStyleboxOverride("hover", Box(fill.Lightened(0.12f), Progression, 10, 8f));
+        button.AddThemeStyleboxOverride("focus", Box(fill.Lightened(0.12f), Progression, 10, 8f));
+        button.AddThemeStyleboxOverride("pressed", Box(fill.Darkened(0.2f), Progression, 10, 8f));
+        button.AddThemeStyleboxOverride("disabled", Box(fill, PanelBorder, 10, 8f));
+        button.AddThemeFontOverride("font", Bold);
+        button.AddThemeFontSizeOverride("font_size", 18);
+        button.AddThemeColorOverride("font_color", Text);
+        button.AddThemeColorOverride("font_hover_color", Text);
+        button.AddThemeColorOverride("font_focus_color", Text);
+        button.AddThemeColorOverride("font_disabled_color", TextMuted);
+        return button;
+    }
+
+    private static readonly Dictionary<int, Font> SpacedBold = new();
+
+    /// <summary>Small capitals with wide letter spacing, for captions such as "CHECKS SENT".</summary>
+    internal static Label Caps(string text, int size, Color color, int spacing = 2)
+    {
+        var label = Label(text.ToUpperInvariant(), size, color, bold: true);
+        if (!SpacedBold.TryGetValue(spacing, out var font) || !GodotObject.IsInstanceValid(font))
+            SpacedBold[spacing] = font = new FontVariation { BaseFont = Bold, SpacingGlyph = spacing };
+        label.AddThemeFontOverride("font", font);
         return label;
     }
 
