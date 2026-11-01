@@ -71,6 +71,7 @@
     <Compile Include="..\StS2AP\Persistence\CampaignSaveFiles.cs" Link="Persistence\CampaignSaveFiles.cs" />
     <Compile Include="..\StS2AP\Persistence\ApRunGraphLog.cs" Link="Persistence\ApRunGraphLog.cs" />
     <Compile Include="..\StS2AP\Persistence\ApRunRecap.cs" Link="Persistence\ApRunRecap.cs" />
+    <Compile Include="..\StS2AP\Persistence\ApRunEconomy.cs" Link="Persistence\ApRunEconomy.cs" />
     <Compile Include="..\StS2AP\Persistence\ApCardRewardGroups.cs" Link="Persistence\ApCardRewardGroups.cs" />
     <Compile Include="..\StS2AP\Persistence\LocalApSaveDeletion.cs" Link="Persistence\LocalApSaveDeletion.cs" />
     <Compile Include="..\StS2AP\Persistence\ApRelicReceiptState.cs" Link="Persistence\ApRelicReceiptState.cs" />
