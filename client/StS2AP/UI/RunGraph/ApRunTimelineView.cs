@@ -113,7 +113,7 @@ internal sealed partial class ApRunTimelineView : VBoxContainer
             _list.AddChild(Label("No floor in this run had an AP event.", 16, TextMuted));
     }
 
-    private static Control ActHeading(int act)
+    internal static Control ActHeading(int act)
     {
         var margin = new MarginContainer();
         margin.AddThemeConstantOverride("margin_top", act == 0 ? 0 : 18);
@@ -182,7 +182,7 @@ internal sealed partial class ApRunTimelineView : VBoxContainer
     }
 
     /// <summary>The room's own name (the encounter or event) and the kind of room it was.</summary>
-    private static (string Title, string Kind) Title(MapPointHistoryEntry entry, RunGraphFloor floor)
+    internal static (string Title, string Kind) Title(MapPointHistoryEntry entry, RunGraphFloor floor)
     {
         var room = entry.Rooms.FirstOrDefault(r => r.ModelId != null) ?? entry.Rooms.FirstOrDefault();
         string kind = floor.RoomName;
@@ -321,7 +321,7 @@ internal sealed partial class ApRunTimelineView : VBoxContainer
         return margin;
     }
 
-    private static string CardName(SerializableCard card)
+    internal static string CardName(SerializableCard card)
     {
         if (card.Id == null)
             return "a card";
@@ -329,13 +329,13 @@ internal sealed partial class ApRunTimelineView : VBoxContainer
         return card.CurrentUpgradeLevel > 0 ? name + "+" : name;
     }
 
-    private static string CardName(ModelId id) => SaveUtil.CardOrDeprecated(id).Title;
+    internal static string CardName(ModelId id) => SaveUtil.CardOrDeprecated(id).Title;
 
     /// <summary>
     /// The game's rest-site option ids, and AP's Campfire check, whose id is the type of item
     /// the check held (see ApRestSiteOption). "NOTHING" is AP's placeholder and is skipped.
     /// </summary>
-    private static string RestChoice(string choice) => choice switch
+    internal static string RestChoice(string choice) => choice switch
     {
         "HEAL" => "Rested",
         "SMITH" => "Smithed",
@@ -343,7 +343,7 @@ internal sealed partial class ApRunTimelineView : VBoxContainer
         _ => choice.Length == 0 ? "" : char.ToUpperInvariant(choice[0]) + choice[1..].ToLowerInvariant(),
     };
 
-    private static string Formatted(LocString text)
+    internal static string Formatted(LocString text)
     {
         try
         {

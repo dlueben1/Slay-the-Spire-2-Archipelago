@@ -13,6 +13,9 @@ internal sealed record RecapCard(string Name, CardType Type, bool Upgraded, int 
 
 internal sealed record RecapRelic(string Name, Texture2D? Icon, bool FromArchipelago);
 
+/// <summary>A floor of the game's history with its index in <see cref="ApRunRecapData.Floors"/> and the local player's stats.</summary>
+internal sealed record RecapFloorEntry(int Index, int Act, MapPointHistoryEntry Entry, PlayerMapPointHistoryEntry? Stats);
+
 /// <summary>
 /// Everything the recap draws for one run: the AP log, the numbers worked out from it, and what
 /// the game saved about the run. The game-over screen has only the live run's save, while Run
@@ -33,6 +36,22 @@ internal sealed class ApRunRecapData
     internal int Ascension { get; init; }
     internal long RunSeconds { get; init; }
     internal string KilledBy { get; init; } = "";
+
+    /// <summary>Every floor of <see cref="MapHistory"/> that has a graph floor, in order.</summary>
+    internal IEnumerable<RecapFloorEntry> FloorEntries()
+    {
+        int index = 0;
+        for (int act = 0; act < MapHistory.Count; act++)
+        {
+            foreach (var entry in MapHistory[act])
+            {
+                if (index >= Floors.Count)
+                    yield break;
+                var stats = entry.PlayerStats.FirstOrDefault(p => p.PlayerId == Log.LocalNetId) ?? entry.PlayerStats.FirstOrDefault();
+                yield return new RecapFloorEntry(index++, act, entry, stats);
+            }
+        }
+    }
 
     internal DateTimeOffset Date => DateTimeOffset.FromUnixTimeSeconds(Log.StartTime).ToLocalTime();
 

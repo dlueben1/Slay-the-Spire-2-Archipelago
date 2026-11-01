@@ -379,7 +379,7 @@ internal static class ApRunRecapView
         return panel;
     }
 
-    private static Control Tile(string value, string caption, Color color)
+    internal static Control Tile(string value, string caption, Color color)
     {
         var tile = Panel(Card, Card, 10, 14f);
         tile.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
@@ -646,7 +646,7 @@ internal static class ApRunRecapView
 
     // ---- Small builders shared by the sections ----
 
-    private static VBoxContainer Section(string title, string caption)
+    internal static VBoxContainer Section(string title, string caption)
     {
         var section = VBox(14);
         var heading = HBox(12);

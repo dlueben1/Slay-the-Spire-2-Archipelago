@@ -106,6 +106,10 @@ internal sealed partial class ApRunRecapOverlay : Control
         timeline.SizeFlagsVertical = SizeFlags.ExpandFill;
         root.AddChild(timeline);
 
+        var fights = Padded(new ApRunFightsView(data), top: 20);
+        fights.SizeFlagsVertical = SizeFlags.ExpandFill;
+        root.AddChild(fights);
+
         var scroll = new ScrollContainer
         {
             SizeFlagsVertical = SizeFlags.ExpandFill,
@@ -118,7 +122,8 @@ internal sealed partial class ApRunRecapOverlay : Control
 
         _tabs.Add((_tabButtons[0], climb));
         _tabs.Add((_tabButtons[1], timeline));
-        _tabs.Add((_tabButtons[2], scroll));
+        _tabs.Add((_tabButtons[2], fights));
+        _tabs.Add((_tabButtons[3], scroll));
 
         // Added last so it draws above the panel; it ignores the mouse so hovering keeps working.
         _tooltip = new PanelContainer { Visible = false, MouseFilter = MouseFilterEnum.Ignore };
@@ -168,7 +173,7 @@ internal sealed partial class ApRunRecapOverlay : Control
 
         var tabs = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         tabs.AddThemeConstantOverride("separation", 4);
-        foreach (string title in new[] { "The climb", "Timeline", "Recap" })
+        foreach (string title in new[] { "The climb", "Timeline", "Fights", "Recap" })
         {
             int index = _tabButtons.Count;
             var tab = new RecapTab(title);
