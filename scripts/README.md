@@ -33,7 +33,7 @@ release command and has not been ported or validated for native Linux/0.6.8.
 # GitHub Actions check ownership
 
 - `pr-checks.yml` runs script tests and builds the APWorld for PRs.
-- `build-sts2-compat.yml` owns public/beta client compilation, loader compilation,
+- `build-sts2-compat.yml` owns main/beta client compilation, loader compilation,
   and manifest checks after compile-only and incremental builds.
 - `test-domain.yml` runs domain and client regression tests on Linux and Windows.
 - The latter two use `ci-event.yml` to skip their push-side work when an open,

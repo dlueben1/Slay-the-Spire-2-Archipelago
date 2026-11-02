@@ -71,7 +71,7 @@
       >false</UseSts2RefLib>
     <UseSts2RefLib Condition="'$(UseSts2RefLib)' == ''">true</UseSts2RefLib>
 
-    <!-- Differentiate build outputs based on beta/public build -->
+    <!-- Differentiate build outputs based on beta/main build -->
     <IntermediateOutputPath>$(BaseIntermediateOutputPath)$(Sts2ApiCompat)/$(Configuration)/</IntermediateOutputPath>
     <OutputPath>$(MSBuildProjectDirectory)/bin/$(Sts2ApiCompat)/$(Configuration)/</OutputPath>
 
@@ -394,6 +394,6 @@ dotnet/embed_build_outputs=false
     <PropertyGroup>
       <LocalBundleArgument Condition="'$(BuildMode)' == 'Local'">--local</LocalBundleArgument>
     </PropertyGroup>
-    <Exec Command="&quot;$(PythonExe)&quot; &quot;$(MSBuildProjectDirectory)/../../scripts/package_client_bundle.py&quot; --configuration &quot;$(Configuration)&quot; --output &quot;$(ModsOutputDir)&quot; --public &quot;$(Sts2MainApiCompat)&quot; --beta &quot;$(Sts2BetaApiCompat)&quot; $(LocalBundleArgument)" />
+    <Exec Command="&quot;$(PythonExe)&quot; &quot;$(MSBuildProjectDirectory)/../../scripts/package_client_bundle.py&quot; --configuration &quot;$(Configuration)&quot; --output &quot;$(ModsOutputDir)&quot; --main &quot;$(Sts2MainApiCompat)&quot; --beta &quot;$(Sts2BetaApiCompat)&quot; $(LocalBundleArgument)" />
   </Target>
 </Project>

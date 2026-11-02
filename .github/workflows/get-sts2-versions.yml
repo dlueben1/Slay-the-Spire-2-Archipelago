@@ -1,4 +1,4 @@
-# Grabs the StS2 Versions we want to build (public and beta)
+# Grabs the StS2 Versions we want to build (main and beta)
 name: Get StS2 Versions
 
 on:

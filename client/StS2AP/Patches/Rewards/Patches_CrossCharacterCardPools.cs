@@ -58,7 +58,7 @@ internal static class Patches_CrossCharacterCardPools
 
             var pools = characterPools.Concat(__state).Distinct().ToArray();
 #if STS_MAIN
-            // The public API clears the filter unless it is explicitly passed back in.
+            // The main API clears the filter unless it is explicitly passed back in.
             __result = __result.WithCardPools(pools, __result.CardPoolFilter);
 #else
             __result = __result.WithCardPools(pools);
