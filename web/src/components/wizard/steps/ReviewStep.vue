@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
+import { splitYamlComment } from "../../../services/YamlService";
 import type { WizardReviewSection } from "../../../wizard/review";
 
 const props = defineProps<{
@@ -7,6 +8,9 @@ const props = defineProps<{
   yaml: string;
   playerName: string;
 }>();
+
+/** Preview lines split so comments can be styled apart from the settings. */
+const yamlLines = computed(() => props.yaml.split("\n").map(splitYamlComment));
 
 // Tooltip feedback confirms clipboard success without adding persistent page height.
 const copyFeedback = ref("Copy YAML");
@@ -191,7 +195,10 @@ function downloadYaml(): void {
       <p v-if="!yaml" class="yaml-output yaml-output--empty">
         Enter a valid player name to restore the YAML preview.
       </p>
-      <pre v-else class="yaml-output"><code>{{ yaml }}</code></pre>
+      <pre
+        v-else
+        class="yaml-output"
+      ><code><template v-for="(line, index) in yamlLines" :key="index">{{ index ? "\n" : "" }}{{ line.code }}<span v-if="line.comment" class="yaml-comment">{{ line.comment }}</span></template></code></pre>
     </section>
   </div>
 </template>
@@ -296,6 +303,10 @@ function downloadYaml(): void {
   border: 1px solid var(--ui-border);
   border-radius: 0.6rem;
   background: rgba(0, 0, 0, 0.35);
+}
+
+.yaml-comment {
+  color: var(--ui-text-muted);
 }
 
 .yaml-output--empty {
