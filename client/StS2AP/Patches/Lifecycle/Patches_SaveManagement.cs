@@ -156,28 +156,22 @@ namespace StS2AP.Patches
             public static string SerializeAndCompress(SerializableRun vanillaSave)
             {
                 var save = ArchipelagoClient.Progress.ToSerializable(vanillaSave);
-                var json = JsonSerializer.Serialize(
+                byte[] json = JsonSerializer.SerializeToUtf8Bytes(
                     save,
                     SerializationUtility.CombinedOptions.GetTypeInfo(typeof(SerializableAP))
                 );
                 return Zip(json);
             }
 
-            public static string Zip(string str)
+            public static string Zip(byte[] utf8Json)
             {
-                // https://stackoverflow.com/a/7343623
-                var bytes = Encoding.UTF8.GetBytes(str);
-
-                using (var msi = new MemoryStream(bytes))
-                using (var mso = new MemoryStream())
+                using var mso = new MemoryStream();
+                using (var gs = new GZipStream(mso, CompressionMode.Compress))
                 {
-                    using (var gs = new GZipStream(mso, CompressionMode.Compress))
-                    { 
-                        msi.CopyTo(gs);
-                    }
-
-                    return Convert.ToBase64String(mso.ToArray());
+                    gs.Write(utf8Json);
                 }
+
+                return Convert.ToBase64String(mso.ToArray());
             }
 
             public static string Unzip(string base64Str)

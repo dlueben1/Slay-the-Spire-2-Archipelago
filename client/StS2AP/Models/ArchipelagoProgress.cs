@@ -755,11 +755,14 @@ namespace StS2AP.Models
 
         public SerializableAP ToSerializable(SerializableRun run)
         {
-            using var runJson = JsonDocument.Parse(JsonSerializationUtility.ToJson(run));
             return new SerializableAP
             {
                 Progress = ToRunProgressState(),
-                SaveData = runJson.RootElement.Clone(),
+                // Same type info as JsonSerializationUtility.ToJson, without a string to reparse.
+                SaveData = JsonSerializer.SerializeToElement(
+                    run,
+                    JsonSerializationUtility.GetTypeInfo<SerializableRun>()
+                ),
             };
         }
 

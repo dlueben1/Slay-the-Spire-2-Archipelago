@@ -197,7 +197,7 @@ Slay the Spire II:
   ################
 
   # How often each filler item is picked: none, low, medium or high
-  # Buffs below apply at the start of your next combat turn.
+  # Buffs below are queued in the order received and apply one per combat.
   one_gold_filler_weight: "none"                    # 1 gold; used as a fallback if every weight is none
   five_gold_filler_weight: "high"                   # 5 gold
   free_attack_filler_weight: "high"                 # Next Attack costs 0
