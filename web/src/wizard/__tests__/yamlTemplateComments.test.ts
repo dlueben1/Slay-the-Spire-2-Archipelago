@@ -9,7 +9,11 @@
 import { describe, expect, it } from "vitest";
 import spire2Template from "../../../../world/spire2/docs/Spire2-template.yaml?raw";
 import { optionCatalog } from "../../generated/optionCatalog";
-import { buildWizardYaml, WIZARD_GAME_NAME } from "../../services/YamlService";
+import {
+  buildWizardYaml,
+  splitYamlComment,
+  WIZARD_GAME_NAME,
+} from "../../services/YamlService";
 import {
   parseTemplateComments,
   type YamlComments,
@@ -117,12 +121,33 @@ function templateCommentsNameRealOptions(): void {
   expect(unknown).toEqual([]);
 }
 
+function splitsCommentsForDisplay(): void {
+  expect(splitYamlComment("  # Whole-line comment")).toEqual({
+    code: "  ",
+    comment: "# Whole-line comment",
+  });
+  expect(splitYamlComment("  shop_card_slots: 2  # 0-5 card slots")).toEqual({
+    code: "  shop_card_slots: 2  ",
+    comment: "# 0-5 card slots",
+  });
+  // A `#` inside a quoted value, even after an escaped quote, is not a comment.
+  expect(splitYamlComment('    - "Mod \\" #1"  # note')).toEqual({
+    code: '    - "Mod \\" #1"  ',
+    comment: "# note",
+  });
+  expect(splitYamlComment('  modded_characters: ["a#b"]')).toEqual({
+    code: '  modded_characters: ["a#b"]',
+    comment: "",
+  });
+}
+
 describe("YAML template comments", () => {
   it(
     "reads only comments touching an option",
     readsOnlyCommentsTouchingAnOption,
   );
   it("writes comments into the document", writesCommentsIntoTheDocument);
+  it("splits comments from settings for display", splitsCommentsForDisplay);
   it(
     "names only real options in the bundled template",
     templateCommentsNameRealOptions,

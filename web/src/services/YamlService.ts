@@ -217,6 +217,48 @@ export function optionsToYaml(options: Record<string, OptionValue>): string {
   return `${lines.join("\n")}\n`;
 }
 
+/** One line of generated YAML, split for display. */
+export interface YamlDisplayLine {
+  /** Everything before the comment, including indentation and spacing. */
+  code: string;
+  /** The comment from its `#` onward, or empty when the line has none. */
+  comment: string;
+}
+
+/**
+ * Splits one line of builder YAML into its content and its comment.
+ *
+ * @param line - A single line of YAML produced by this service.
+ * @returns The line's code and comment parts; joined, they equal `line`.
+ * @remarks A `#` starts a comment only at the start of the line or after whitespace,
+ * and never inside a double-quoted string, which is the only quoting this service
+ * writes (modded character IDs could contain `#`).
+ */
+export function splitYamlComment(line: string): YamlDisplayLine {
+  let insideString = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+
+    if (insideString) {
+      if (character === "\\") {
+        index += 1;
+      } else if (character === '"') {
+        insideString = false;
+      }
+    } else if (character === '"') {
+      insideString = true;
+    } else if (
+      character === "#" &&
+      (index === 0 || /\s/.test(line[index - 1]!))
+    ) {
+      return { code: line.slice(0, index), comment: line.slice(index) };
+    }
+  }
+
+  return { code: line, comment: "" };
+}
+
 /**
  * Turns comment text into YAML comment lines at the given indentation.
  *
