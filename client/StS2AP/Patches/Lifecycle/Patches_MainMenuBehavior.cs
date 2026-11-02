@@ -548,27 +548,44 @@ namespace StS2AP.Patches
         public static class ConnectBeforeMultiplayer
         {
             [HarmonyPrefix]
-            public static bool Prefix()
+            public static bool Prefix() => TryBeginMultiplayerEntry();
+        }
+
+        /// <summary>
+        /// Steam overlay joins and invites (including a launch with +connect_lobby) close every
+        /// submenu, then call JoinGame, which opens the multiplayer submenu through the
+        /// parameterless overload and so bypasses <see cref="ConnectBeforeMultiplayer"/>.
+        /// Without this, the lobby opens with no multiplayer destination and Embark is handled
+        /// as an AP singleplayer start.
+        /// </summary>
+        [HarmonyPatch(typeof(NMainMenu), nameof(NMainMenu.JoinGame))]
+        public static class ConnectBeforeSteamJoin
+        {
+            [HarmonyPrefix]
+            public static bool Prefix(ref Task __result)
             {
-                MultiplayerSupport.BeginMultiplayerEntry();
-                if (ArchipelagoClient.IsConnected)
-                {
-                    if (!MultiplayerSupport.CanEnterMultiplayerLobby(out _)
-                        && !ArchipelagoClient.TryPrepareCurrentMultiplayerSession(
-                            out string preparationError))
-                    {
-                        LogUtility.Warn(
-                            $"Cannot open AP multiplayer lobby: {preparationError}"
-                        );
-                        NotificationUtility.ShowRawText(preparationError);
-                        return false;
-                    }
+                if (TryBeginMultiplayerEntry())
+                    return true;
 
-                    return MultiplayerSupport.CanEnterMultiplayerLobby(out _);
-                }
-
-                return MultiplayerSupport.CanEnterMultiplayerLobby(out _);
+                __result = Task.CompletedTask;
+                return false;
             }
+        }
+
+        private static bool TryBeginMultiplayerEntry()
+        {
+            MultiplayerSupport.BeginMultiplayerEntry();
+            if (ArchipelagoClient.IsConnected
+                && !MultiplayerSupport.CanEnterMultiplayerLobby(out _)
+                && !ArchipelagoClient.TryPrepareCurrentMultiplayerSession(
+                    out string preparationError))
+            {
+                LogUtility.Warn($"Cannot open AP multiplayer lobby: {preparationError}");
+                NotificationUtility.ShowRawText(preparationError);
+                return false;
+            }
+
+            return MultiplayerSupport.CanEnterMultiplayerLobby(out _);
         }
 
         /// <summary>

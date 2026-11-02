@@ -322,6 +322,16 @@ namespace StS2AP.Utils
 
         private static HashSet<string> _allGoaledCharacters = new(StringComparer.OrdinalIgnoreCase);
         private static bool _slotGoalSent;
+        private static Player? _victoryAwaitingReconnect;
+
+        /// <summary>Sends a singleplayer victory that was won while the AP connection was down.</summary>
+        internal static void SendVictoryAwaitingReconnect()
+        {
+            Player? player = _victoryAwaitingReconnect;
+            _victoryAwaitingReconnect = null;
+            if (player != null)
+                _ = TrySetGoalAchieved(player);
+        }
 
         public static async Task RestoreGoaledCharsFromStorage()
         {
@@ -368,6 +378,7 @@ namespace StS2AP.Utils
             _goaledCharacters = new(StringComparer.OrdinalIgnoreCase);
             _allGoaledCharacters = new(StringComparer.OrdinalIgnoreCase);
             _slotGoalSent = false;
+            _victoryAwaitingReconnect = null;
             CurrentPlayer = null;
             CurrentConfig = null;
         }
@@ -383,7 +394,20 @@ namespace StS2AP.Utils
 
             if (!ArchipelagoClient.IsConnected)
             {
-                LogUtility.Warn("TrySetGoalAchieved: not connected");
+                // A singleplayer run keeps going through a dropped connection, so it can be won
+                // offline. Hold the victory for the next login to the same slot.
+                if (ArchipelagoClient.HasAuthenticatedSlot && !MultiplayerSupport.IsMultiplayerScope)
+                {
+                    _victoryAwaitingReconnect = player;
+                    LogUtility.Warn("TrySetGoalAchieved: not connected; the victory will be sent after reconnecting");
+                    NotificationUtility.ShowRawText(
+                        "Victory saved. It will be sent to Archipelago when the connection returns.",
+                        timeout: 6.0);
+                }
+                else
+                {
+                    LogUtility.Warn("TrySetGoalAchieved: not connected");
+                }
                 return;
             }
 

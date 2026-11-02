@@ -22,6 +22,7 @@ public sealed class ArchipelagoRewardsTopBarHandler : IModTopBarButtonHandler
     private const float OpenRockAngle = 0.12f;
     private const float OpenRockDuration = 0.3f;
     private const float SettleDuration = 0.5f;
+    private static readonly Color OfflineModulate = new(0.5f, 0.5f, 0.5f, 0.6f);
 
     private NModCardPileButton? _button;
     private Tween? _openTween;
@@ -39,7 +40,11 @@ public sealed class ArchipelagoRewardsTopBarHandler : IModTopBarButtonHandler
         // basically unless things have gotten horribly wrong, this will stay true, mainly used for tweening
         bool visible = ctx.Player != null && ArchipelagoClient.Settings != null;
         if (visible && ctx.Button != null)
+        {
             UpdateOpenTween(ctx.Button, ArchipelagoRewardUI.IsOpen);
+            // A singleplayer run continues while AP reconnects; the dimmed icon shows it is offline.
+            ctx.Button.Modulate = ArchipelagoClient.IsConnected ? Colors.White : OfflineModulate;
+        }
         return visible;
     }
 

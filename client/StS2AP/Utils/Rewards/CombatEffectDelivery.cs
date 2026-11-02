@@ -142,6 +142,10 @@ internal sealed class CombatEffectDelivery
         }
     }
 
+    /// <summary>Queues a receipt whose notification was already shown before the queue was cleared.</summary>
+    public void RequeueAnnounced(APItem effectType, int itemIndex) =>
+        _ = _queue.Enqueue(effectType, itemIndex, notificationShown: true);
+
     /// <summary>
     /// Processes singleplayer combat effects at player turn start, after consumption history is loaded.
     /// Each receipt is consumed only after its power command completes. An unavailable target

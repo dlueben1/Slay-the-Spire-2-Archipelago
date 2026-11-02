@@ -3,8 +3,9 @@ using Godot;
 namespace StS2AP.Utils;
 
 /// <summary>
-/// Keeps a previously prepared multiplayer AP owner connected without pausing STS gameplay.
-/// Retry failures remain local; the five-minute threshold raises warning severity only.
+/// Keeps a previously authenticated AP slot connected without pausing STS gameplay.
+/// Retry failures remain local. After five minutes multiplayer only raises a warning,
+/// while singleplayer gives up and returns to the menu.
 /// </summary>
 public static class ApReconnectController
 {
@@ -136,14 +137,24 @@ public static class ApReconnectController
         if (token.IsCancellationRequested)
             return;
 
-        LogUtility.Warn(
-            "Archipelago has been disconnected for five minutes; STS gameplay remains available and AP operations stay queued"
-        );
         Callable.From(() =>
         {
-            if (!token.IsCancellationRequested)
-                NotificationUtility.ShowRawText(
-                    "Archipelago has been offline for five minutes. Gameplay remains available; AP checks stay queued.");
+            if (token.IsCancellationRequested)
+                return;
+
+            // A singleplayer run has no peers waiting on it, so it stops retrying and
+            // returns to the menu; its local checkpoints and queued checks are kept.
+            if (!MultiplayerSupport.IsMultiplayerScope)
+            {
+                ArchipelagoClient.AbandonSingleplayerReconnect();
+                return;
+            }
+
+            LogUtility.Warn(
+                "Archipelago has been disconnected for five minutes; STS gameplay remains available and AP operations stay queued"
+            );
+            NotificationUtility.ShowRawText(
+                "Archipelago has been offline for five minutes. Gameplay remains available; AP checks stay queued.");
         }).CallDeferred();
     }
 }
