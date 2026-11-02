@@ -641,7 +641,7 @@ public static class ApMultiplayerCampaignStore
 
     private static long? TryGetAPCharacterNumber(string characterId)
     {
-        if (ArchipelagoClient.Settings?.Characters.TryGetValue(characterId, out CharacterConfig? config) == true)
+        if (ArchipelagoClient.Settings?.TryGetCharacterConfig(characterId, out CharacterConfig? config) == true)
             return config.CharOffset;
         return null;
     }

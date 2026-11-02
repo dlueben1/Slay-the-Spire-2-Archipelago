@@ -49,7 +49,7 @@ internal static class ApSingleplayerSaves
     internal static bool CanLoad(string key, string character, bool startOfAct)
     {
         var settings = ArchipelagoClient.Settings;
-        if (settings == null || !settings.Characters.TryGetValue(character, out CharacterConfig? config))
+        if (settings == null || !settings.TryGetCharacterConfig(character, out CharacterConfig? config))
             return false;
         return SingleplayerCheckpointBank.IsAllowed(key,
             startOfAct && settings.APWorldVersion > Constants.VERSION_0_5_3,

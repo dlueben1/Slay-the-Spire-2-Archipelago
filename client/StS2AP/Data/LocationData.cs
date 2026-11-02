@@ -259,7 +259,7 @@ namespace StS2AP.Data
 
         public static bool IsCampfireLocationId(long locationId)
         {
-            long baseId = ArchipelagoIdCodec.GetBaseLocationId(locationId);
+            long baseId = ArchipelagoIdCodec.GetLocationIdOffset(locationId);
             return baseId is >= FirstCampfireBaseId
                 and < FirstCampfireBaseId + (3 * CampfiresPerAct);
         }
