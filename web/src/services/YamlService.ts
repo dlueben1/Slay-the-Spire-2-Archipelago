@@ -11,6 +11,7 @@
 import type { OptionValue } from "../generated/optionCatalog";
 import worldManifest from "../../../world/spire2/archipelago.json";
 import { validateWizardPlayerName } from "../wizard/validation/validateWizardMetadata";
+import { NO_YAML_COMMENTS, type YamlComments } from "./YamlTemplateComments";
 
 /** Stable description embedded in every generated wizard document. */
 export const WIZARD_YAML_DESCRIPTION =
@@ -217,10 +218,93 @@ export function optionsToYaml(options: Record<string, OptionValue>): string {
 }
 
 /**
+ * Turns comment text into YAML comment lines at the given indentation.
+ *
+ * @param text - Comment lines without their `#` prefix; empty lines stay bare `#`.
+ * @param prefix - Indentation written before each `#`.
+ * @returns One YAML comment line per text line.
+ */
+function commentLines(text: readonly string[], prefix: string): string[] {
+  return text.map((line) => (line ? `${prefix}# ${line}` : `${prefix}#`));
+}
+
+/**
+ * Serializes the game options with any comments attached to them.
+ *
+ * @param options - Ordered compiled option entries to serialize.
+ * @param comments - Comments keyed by option name.
+ * @returns Option lines without the game mapping's indentation.
+ * @remarks A commented option is set apart by a blank line so each explanation stays
+ * next to the option it describes. Same-line comments on consecutive options are
+ * aligned into one column, as in the template.
+ */
+function commentedOptionLines(
+  options: Record<string, OptionValue>,
+  comments: YamlComments["options"],
+): string[] {
+  const lines: string[] = [];
+  const trailingComments = new Map<number, string>();
+
+  for (const [key, value] of Object.entries(options)) {
+    const comment = comments.get(key);
+    const optionLines: string[] = [];
+    appendValue(optionLines, key, value, 0, false);
+
+    if (comment?.above.length) {
+      if (lines.length) {
+        lines.push("");
+      }
+      lines.push(...commentLines(comment.above, ""));
+    }
+
+    // The key line ends with `key:` or `key: value`, both of which accept a comment.
+    if (comment?.trailing) {
+      trailingComments.set(lines.length, comment.trailing);
+    }
+
+    lines.push(...optionLines);
+  }
+
+  alignTrailingComments(lines, trailingComments);
+  return lines;
+}
+
+/**
+ * Appends same-line comments, aligning each run of consecutive commented lines.
+ *
+ * @param lines - Option lines; commented lines are updated in place.
+ * @param trailingComments - Comment text keyed by the index of its line.
+ * @returns Nothing; `lines` receives the comments.
+ */
+function alignTrailingComments(
+  lines: string[],
+  trailingComments: ReadonlyMap<number, string>,
+): void {
+  const indices = [...trailingComments.keys()].sort((a, b) => a - b);
+
+  for (let start = 0; start < indices.length;) {
+    let end = start + 1;
+    while (end < indices.length && indices[end] === indices[end - 1]! + 1) {
+      end += 1;
+    }
+
+    const run = indices.slice(start, end);
+    const column = Math.max(...run.map((index) => lines[index]!.length)) + 2;
+    for (const index of run) {
+      lines[index] =
+        `${lines[index]!.padEnd(column)}# ${trailingComments.get(index)}`;
+    }
+
+    start = end;
+  }
+}
+
+/**
  * Builds a complete Archipelago YAML document for the guided wizard.
  *
  * @param playerName - Player name entered in the persistent wizard header.
  * @param options - Ordered, compiled game options selected for guided output.
+ * @param comments - Header and per-option comments; none by default.
  * @returns Complete YAML with player metadata and an indented game option mapping.
  * @throws When the player name is invalid.
  * @remarks Preview, clipboard, and download callers must all consume this one result so
@@ -229,16 +313,20 @@ export function optionsToYaml(options: Record<string, OptionValue>): string {
 export function buildWizardYaml(
   playerName: string,
   options: Record<string, OptionValue>,
+  comments: YamlComments = NO_YAML_COMMENTS,
 ): string {
   // Normalize the only player-authored metadata value before writing any YAML.
   const normalizedPlayerName = validateWizardPlayerName(playerName);
 
-  // Serialize generated options through the established recursive implementation.
-  const serializedOptions = optionsToYaml(options).trimEnd().split("\n");
+  const serializedOptions = commentedOptionLines(options, comments.options);
   // YAML options are compatible across patch releases of the same APWorld minor version.
   const [worldMajor, worldMinor] = worldManifest.world_version.split(".");
   const minimumWorldVersion = `${worldMajor}.${worldMinor}.0`;
+  const header = comments.header.length
+    ? [...commentLines(comments.header, ""), ""]
+    : [];
   const lines = [
+    ...header,
     // Archipelago's player-name field is conventionally a readable plain YAML scalar.
     `name: ${normalizedPlayerName}`,
     `description: ${scalar(WIZARD_YAML_DESCRIPTION)}`,
@@ -252,7 +340,7 @@ export function buildWizardYaml(
 
   // Archipelago expects every game option beneath the matching game-name key.
   for (const optionLine of serializedOptions) {
-    lines.push(`  ${optionLine}`);
+    lines.push(optionLine ? `  ${optionLine}` : "");
   }
 
   // Preserve the conventional trailing newline for previews and downloaded files.

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TabsItem } from "@nuxt/ui";
 import { computed, reactive, ref, type Component } from "vue";
+import { useRouter } from "vue-router";
 import ChallengesStep from "../components/wizard/steps/ChallengesStep.vue";
 import CharacterSetupStep from "../components/wizard/steps/CharacterSetupStep.vue";
 import CheckSetupStep from "../components/wizard/steps/CheckSetupStep.vue";
@@ -11,6 +12,7 @@ import RunSettingsStep from "../components/wizard/steps/RunSettingsStep.vue";
 import { provideWizardAnswers } from "../components/wizard/core/wizardAnswersContext";
 import { optionCatalog } from "../generated/optionCatalog";
 import { buildWizardYaml } from "../services/YamlService";
+import { builderYamlComments } from "../services/YamlTemplateComments";
 import { createDefaultWizardAnswers } from "../wizard/WizardAnswers";
 import { getConfiguredCharacterNames } from "../wizard/CharacterRoster";
 import {
@@ -91,6 +93,12 @@ function getGuidedSettings() {
   return selectGuidedOptions(compiledOptions);
 }
 
+/** Comments for the generated YAML, pointing back to this copy of the builder. */
+const yamlComments = builderYamlComments(
+  new URL(useRouter().resolve({ name: "builder" }).href, window.location.href)
+    .href,
+);
+
 /**
  * Builds the exact complete YAML required to enter Review.
  *
@@ -99,7 +107,7 @@ function getGuidedSettings() {
  */
 function buildCurrentYaml(): string {
   // Use one service result for every delivery path so metadata cannot diverge.
-  return buildWizardYaml(answers.playerName, getGuidedSettings());
+  return buildWizardYaml(answers.playerName, getGuidedSettings(), yamlComments);
 }
 
 interface WizardCompileState {
