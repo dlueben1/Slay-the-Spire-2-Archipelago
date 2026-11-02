@@ -12,7 +12,7 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "4df7f8b01945fc5c08c652a851785ec5fdc9e53dd4ef762e5aabefb0d337a88d"
+      "sha256": "569b44cba9eb2e4f1d701d7add23987713872419f0e8e2c47762e1399c851f9c"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
@@ -3093,11 +3093,14 @@
       "default": [],
       "raw_default": [],
       "visibility": {
-        "name": "template|spoiler",
-        "value": 9,
+        "name": "all",
+        "value": 15,
         "flags": [
           "template",
-          "spoiler"
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
         ]
       },
       "source": "game",
@@ -3128,11 +3131,14 @@
       "default": 0,
       "raw_default": 0,
       "visibility": {
-        "name": "template|spoiler",
-        "value": 9,
+        "name": "all",
+        "value": 15,
         "flags": [
           "template",
-          "spoiler"
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
         ]
       },
       "source": "game",
@@ -3151,11 +3157,14 @@
       "default": 0,
       "raw_default": 0,
       "visibility": {
-        "name": "template|spoiler",
-        "value": 9,
+        "name": "all",
+        "value": 15,
         "flags": [
           "template",
-          "spoiler"
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
         ]
       },
       "source": "game",
@@ -3174,11 +3183,14 @@
       "default": 0,
       "raw_default": 0,
       "visibility": {
-        "name": "template|spoiler",
-        "value": 9,
+        "name": "all",
+        "value": 15,
         "flags": [
           "template",
-          "spoiler"
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
         ]
       },
       "source": "game",
@@ -3197,11 +3209,14 @@
       "default": 0,
       "raw_default": 0,
       "visibility": {
-        "name": "template|spoiler",
-        "value": 9,
+        "name": "all",
+        "value": 15,
         "flags": [
           "template",
-          "spoiler"
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
         ]
       },
       "source": "game",
@@ -3220,11 +3235,14 @@
       "default": false,
       "raw_default": 0,
       "visibility": {
-        "name": "template|spoiler",
-        "value": 9,
+        "name": "all",
+        "value": 15,
         "flags": [
           "template",
-          "spoiler"
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
         ]
       },
       "source": "game",

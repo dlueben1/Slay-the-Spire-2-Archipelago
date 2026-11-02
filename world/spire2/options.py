@@ -352,7 +352,6 @@ class StrictCardRewards(Toggle):
     Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder
     """
     display_name = "Strict Card Rewards"
-    visibility = Visibility.template | Visibility.spoiler
     default = 0
 
 class HiddenIntents(Range):
@@ -363,7 +362,6 @@ class HiddenIntents(Range):
     Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder
     """
     display_name = "Hidden Intents"
-    visibility = Visibility.template | Visibility.spoiler
     range_start = 0
     range_end = 2
     default = 0
@@ -376,7 +374,6 @@ class HiddenHealth(Range):
     Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder
     """
     display_name = "Hidden Health"
-    visibility = Visibility.template | Visibility.spoiler
     range_start = 0
     range_end = 2
     default = 0
@@ -553,7 +550,6 @@ class RunModifiers(OptionSet):
 
     Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder"""
     display_name = "Run Modifiers"
-    visibility = Visibility.template | Visibility.spoiler
     valid_keys_casefold = False
     valid_keys = {
         "RisingStrength",
@@ -575,7 +571,6 @@ class EnemyHpScaling(Range):
     Ascension. Logic does not account for it. In multiplayer, the host's value applies to the whole
     run. Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder"""
     display_name = "Enemy HP Scaling"
-    visibility = Visibility.template | Visibility.spoiler
     range_start = 0
     range_end = 15
     default = 0
@@ -586,7 +581,6 @@ class EnemyDamageScaling(Range):
     Ascension. Logic does not account for it. In multiplayer, the host's value applies to the whole
     run. Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder"""
     display_name = "Enemy Damage Scaling"
-    visibility = Visibility.template | Visibility.spoiler
     range_start = 0
     range_end = 15
     default = 0
