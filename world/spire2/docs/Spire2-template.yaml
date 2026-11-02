@@ -76,6 +76,14 @@ Slay the Spire II:
   # how many Health Sight items the slot gets; 0 is off, and any one of them shows health again.
   hidden_health: 0
 
+  # Harder: hides your combat piles. The draw, discard and exhaust piles show "?" and can't be opened. The value (0-2)
+  # is how many Pile Sight items the slot gets; 0 is off, and any one of them shows the piles again.
+  hidden_piles: 0
+
+  # Harder: the map only shows the rooms you can move to next; rooms further ahead show a closed eye. The value (0-2) is
+  # how many Map Sight items the slot gets; 0 is off, and any one of them shows the whole map again.
+  hidden_map: 0
+
   # Extra difficulty modifiers for every run, on top of Ascension; logic ignores them. Most leave Act 1
   # as it is and grow harder in Acts 2 and 3. Names (case-sensitive):
   #   RisingStrength, EscalatingBuffs, ShrinkingRests, MountingCurses,

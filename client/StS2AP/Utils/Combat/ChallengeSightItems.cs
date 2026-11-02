@@ -25,6 +25,13 @@ internal static class ChallengeSightItems
     }
 
     /// <summary>
+    /// Whether a challenge with no partial steps still hides everything: its option is on and no
+    /// copy of its Sight item has arrived.
+    /// </summary>
+    internal static bool IsHidden(bool optionEnabled, ItemTable.APItem sightItem) =>
+        Applies(optionEnabled) && Received(sightItem) == 0;
+
+    /// <summary>
     /// Copies of a Sight item received by this slot. Combat visuals ask on every state change,
     /// so receipts are only counted again when the ledger changes.
     /// </summary>

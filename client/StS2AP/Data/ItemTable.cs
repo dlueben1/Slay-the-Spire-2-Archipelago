@@ -79,6 +79,8 @@
             /// IDs match challenge_item_table in items.py.
             IntentSight = 800,
             HealthSight = 801,
+            PileSight = 802,
+            MapSight = 803,
         }
 
         public static Dictionary<int, string> Items = new Dictionary<int, string>

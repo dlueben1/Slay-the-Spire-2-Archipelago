@@ -88,6 +88,18 @@ namespace StS2AP.Models
         /// </summary>
         public bool HiddenHealth { get; set; }
 
+        /// <summary>
+        /// Whether the slot enabled the Hidden Piles challenge. When it is on, combat piles stay
+        /// hidden until <see cref="StS2AP.Utils.Combat.PileSight"/> sees a Pile Sight item.
+        /// </summary>
+        public bool HiddenPiles { get; set; }
+
+        /// <summary>
+        /// Whether the slot enabled the Hidden Map challenge. When it is on, rooms beyond the next
+        /// step stay hidden until <see cref="StS2AP.Utils.MapSight"/> sees a Map Sight item.
+        /// </summary>
+        public bool HiddenMap { get; set; }
+
         /// <summary>Whether a victory releases the winning character's remaining checks.</summary>
         public bool ReleaseOnVictory { get; set; } = true;
 

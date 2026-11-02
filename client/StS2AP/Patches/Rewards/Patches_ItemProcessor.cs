@@ -409,6 +409,14 @@ namespace StS2AP.Patches
                     ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);
                     HealthSight.RefreshVisibleHealth();
                     break;
+                case APItem.PileSight:
+                    ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);
+                    PileSight.RefreshVisiblePiles();
+                    break;
+                case APItem.MapSight:
+                    ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);
+                    MapSight.RefreshVisibleMap();
+                    break;
                 case APItem.WeakTrap:
                 case APItem.FrailTrap:
                 case APItem.VulnerableTrap:
