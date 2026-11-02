@@ -56,6 +56,7 @@ Slay the Spire II:
 
   # Ascension Down items that each remove one enabled Ascension; requires include_floor_checks.
   # A single number N removes your highest N Ascensions; otherwise list numbers or names as above.
+  # DO NOT MAKE THIS NUMBER EQUAL TO YOUR ascension as Ascension 1 is necessary for relic checks
   ascension_down: []
 
   ##############
@@ -64,24 +65,24 @@ Slay the Spire II:
 
   # Optional ways to make every run harder. Logic ignores all of them.
 
-  # Harder: opening a card reward in the AP menu locks the others until you take a card or
+  # Opening a card reward in the AP menu locks the others until you take a card or
   # Discard it, so you cannot look through every card reward first. The mod's settings can override it.
   strict_card_rewards: false
 
-  # Harder: hides enemy intents. The value (0-2) is how many Intent Sight items the slot gets;
+  # Hides enemy intents. The value (0-2) is how many Intent Sight items the slot gets;
   # 0 is off, and any one of them shows intents again for the whole slot.
   hidden_intents: 0
 
-  # Harder: hides health. Bars stay full and show "?" instead of numbers; block still shows. The value (0-2) is
-  # how many Health Sight items the slot gets; 0 is off, and any one of them shows health again.
+  # Hides health. Bars stay full and show "?" instead of numbers; block still shows. The value
+  # (0-2) is how many Health Sight items the slot gets; 0 is off, and any one of them shows health again.
   hidden_health: 0
 
-  # Harder: hides your combat piles. The draw, discard and exhaust piles show "?" and can't be opened. The value (0-2)
-  # is how many Pile Sight items the slot gets; 0 is off, and any one of them shows the piles again.
+  # Hides your combat piles. The draw, discard and exhaust piles show "?" and can't be opened.
+  # The value (0-2) is how many Pile Sight items the slot gets; 0 is off, and any one of them shows the piles again.
   hidden_piles: 0
 
-  # Harder: the map only shows the rooms you can move to next; rooms further ahead show a closed eye. The value (0-2) is
-  # how many Map Sight items the slot gets; 0 is off, and any one of them shows the whole map again.
+  # The map only shows the rooms you can move to next; rooms further ahead show a closed eye.
+  # The value (0-2) is how many Map Sight items the slot gets; 0 is off, and any one of them shows the whole map again.
   hidden_map: 0
 
   # Extra difficulty modifiers for every run, on top of Ascension; logic ignores them. Most leave Act 1

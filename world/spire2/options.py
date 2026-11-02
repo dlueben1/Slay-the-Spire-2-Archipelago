@@ -224,9 +224,7 @@ class ProgressiveStarterCard(Toggle):
     The first item restores the normal card; the second applies its Archaic Tooth transformation.
 
     Characters without an Archaic Tooth transformation are left unchanged, although their two
-    Progressive Starter Card items are still present in the multiworld.
-
-    WARNING: This can make the early game significantly harder for some characters."""
+    Progressive Starter Card items are still present in the multiworld."""
     display_name = "Progressive Starter Card"
     default = 0
 
@@ -243,10 +241,7 @@ class ProgressiveStarterRelic(Toggle):
     The first item restores the normal relic; the second applies its Touch of Orobas refinement.
 
     Characters without a Touch of Orobas refinement are left unchanged, although their two
-    Progressive Starter Relic items are still present in the multiworld.
-
-    WARNING: This can make the early game significantly harder for characters whose starting relic
-    is central to their early power."""
+    Progressive Starter Relic items are still present in the multiworld."""
     display_name = "Progressive Starter Relic"
     default = 0
 
@@ -342,24 +337,23 @@ class CardReward(Toggle):
     default = False
 
 class StrictCardRewards(Toggle):
-    """Harder: you can no longer look through every Card Reward in the AP Menu before picking.
+    """You can no longer look through every Card Reward in the AP Menu before picking.
     Opening one reveals its cards and locks the other Card Rewards until you take a card or Discard it,
     like a card reward after a fight. Skip, the map, the deck and closing the menu keep the revealed
     reward for later. With Pael's Wing, its Sacrifice replaces Discard.
     In singleplayer, a Card Reward you have not opened yet depends on what you took from the ones before it,
     so loading a checkpoint and picking differently changes it.
     Does not change logic. The mod's settings can override this.
-    Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder
     """
     display_name = "Strict Card Rewards"
     default = 0
 
 class HiddenIntents(Range):
-    """Harder: enemy intents are hidden, like Runic Dome in the first game, and so is the Intent Graph mod's overlay.
+    """Enemy intents are hidden, like Runic Dome in the first game, and so is the Intent Graph 
+    mod's overlay.
     The value is how many Intent Sight items are added to the item pool, and 0 turns it off. Finding
     any one of them shows intents again for every character, with their numbers and the Intent Graph overlay, so
     a second copy makes it easier to find. Does not change logic.
-    Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder
     """
     display_name = "Hidden Intents"
     range_start = 0
@@ -367,11 +361,10 @@ class HiddenIntents(Range):
     default = 0
 
 class HiddenHealth(Range):
-    """Harder: health is hidden. Health bars stay full and show no numbers, the top bar shows no HP, and the
+    """Health is hidden. Health bars stay full and show no numbers, the top bar shows no HP, and the
     poison and doom previews on health bars are hidden. Block is still shown. The value is how many Health Sight
     items are added to the item pool, and 0 turns it off. Finding any one of them shows everyone's health again
     for every character, so a second copy makes it easier to find. Does not change logic.
-    Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder
     """
     display_name = "Hidden Health"
     range_start = 0
@@ -379,11 +372,10 @@ class HiddenHealth(Range):
     default = 0
 
 class HiddenPiles(Range):
-    """Harder: your combat piles are hidden. The draw, discard and exhaust piles show "?" instead of a card count
+    """The draw, discard and exhaust piles show "?" instead of a card count
     and can't be opened. The value is how many Pile Sight items are added to the item pool, and 0 turns it off.
     Finding any one of them shows the piles again for every character, so a second copy makes it easier to find.
     Does not change logic.
-    Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder
     """
     display_name = "Hidden Piles"
     range_start = 0
@@ -391,10 +383,10 @@ class HiddenPiles(Range):
     default = 0
 
 class HiddenMap(Range):
-    """Harder: the map only shows the rooms you can move to next. Rooms further ahead show a closed eye until you can reach them.
+    """The map only shows the rooms you can move to next. Rooms further ahead show a closed eye 
+    until you can reach them.
     The value is how many Map Sight items are added to the item pool, and 0 turns it off. Finding any one of them
     shows the whole map again for every character, so a second copy makes it easier to find. Does not change logic.
-    Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder
     """
     display_name = "Hidden Map"
     range_start = 0
