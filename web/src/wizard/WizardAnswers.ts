@@ -137,7 +137,7 @@ export interface RunAnswers {
 /** How many Sight items a hidden-information challenge adds; `off` leaves it off. */
 export type SightCopies = "off" | "one" | "two";
 
-/** Sight item counts written to `hidden_intents` and `hidden_health`. */
+/** Sight item counts written to the `hidden_*` options. */
 export const SIGHT_COPY_COUNTS: Readonly<Record<SightCopies, number>> = {
   off: 0,
   one: 1,
@@ -154,6 +154,8 @@ export interface ChallengeAnswers {
   enemyDamageScaling: number;
   hiddenIntents: SightCopies;
   hiddenHealth: SightCopies;
+  hiddenPiles: SightCopies;
+  hiddenMap: SightCopies;
   strictCardRewards: boolean;
 }
 
@@ -268,7 +270,7 @@ function getBooleanDefault(catalog: OptionCatalog, optionKey: string): boolean {
  * Reads a Sight item count default as its player-facing choice.
  *
  * @param catalog - Generated catalog containing the hidden-information range.
- * @param optionKey - Generated `hidden_intents` or `hidden_health` key.
+ * @param optionKey - Generated `hidden_*` key.
  * @returns The choice whose count matches the schema default.
  * @throws When the generated default is not a supported Sight item count.
  */
@@ -468,6 +470,14 @@ export function createDefaultWizardAnswers(
       hiddenHealth: getSightCopiesDefault(
         catalog,
         CHALLENGE_OPTION_KEYS.hiddenHealth,
+      ),
+      hiddenPiles: getSightCopiesDefault(
+        catalog,
+        CHALLENGE_OPTION_KEYS.hiddenPiles,
+      ),
+      hiddenMap: getSightCopiesDefault(
+        catalog,
+        CHALLENGE_OPTION_KEYS.hiddenMap,
       ),
       strictCardRewards: getBooleanDefault(
         catalog,

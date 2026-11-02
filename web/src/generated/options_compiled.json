@@ -12,11 +12,11 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "1a3760008f2fc06f4a2f855a9b2f70d68495781c87978c78267bd87b79002bb9"
+      "sha256": "5b61b1b3087d3fcc2876ffbf3726fdbec1dbf859566217242decbce7550da024"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "1488831f936b29123f12ea7acdbe826ba449d37aa54c035a4e1f6c9ec4236a8d"
+      "sha256": "3bd273962230a131b3083d2bb28f8205dabd3a43efbcd4ae829503ed05c16167"
     }
   },
   "characters": {
@@ -195,6 +195,8 @@
     "enemy_damage_scaling",
     "hidden_intents",
     "hidden_health",
+    "hidden_piles",
+    "hidden_map",
     "strict_card_rewards"
   ],
   "groups": [
@@ -326,6 +328,8 @@
         "enemy_damage_scaling",
         "hidden_intents",
         "hidden_health",
+        "hidden_piles",
+        "hidden_map",
         "strict_card_rewards"
       ],
       "start_collapsed": false,
@@ -3206,6 +3210,58 @@
       "kind": "range",
       "display_name": "Hidden Health",
       "description": "Harder: health is hidden. Health bars stay full and show no numbers, the top bar shows no HP, and the\npoison and doom previews on health bars are hidden. Block is still shown. The value is how many Health Sight\nitems are added to the item pool, and 0 turns it off. Finding any one of them shows everyone's health again\nfor every character, so a second copy makes it easier to find. Does not change logic.\nEasiest to set up in the YAML Builder: https://sts2ap.net/#/builder",
+      "default": 0,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "minimum": 0,
+      "maximum": 2,
+      "supports_weighting": true,
+      "group": "Challenges"
+    },
+    "hidden_piles": {
+      "key": "hidden_piles",
+      "class_name": "HiddenPiles",
+      "module": "worlds.spire2.options",
+      "kind": "range",
+      "display_name": "Hidden Piles",
+      "description": "Harder: your combat piles are hidden. The draw, discard and exhaust piles show \"?\" instead of a card count\nand can't be opened. The value is how many Pile Sight items are added to the item pool, and 0 turns it off.\nFinding any one of them shows the piles again for every character, so a second copy makes it easier to find.\nDoes not change logic.\nEasiest to set up in the YAML Builder: https://sts2ap.net/#/builder",
+      "default": 0,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "minimum": 0,
+      "maximum": 2,
+      "supports_weighting": true,
+      "group": "Challenges"
+    },
+    "hidden_map": {
+      "key": "hidden_map",
+      "class_name": "HiddenMap",
+      "module": "worlds.spire2.options",
+      "kind": "range",
+      "display_name": "Hidden Map",
+      "description": "Harder: the map only shows the rooms you can move to next. Rooms further ahead show a closed eye until you can reach them.\nThe value is how many Map Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows the whole map again for every character, so a second copy makes it easier to find. Does not change logic.\nEasiest to set up in the YAML Builder: https://sts2ap.net/#/builder",
       "default": 0,
       "raw_default": 0,
       "visibility": {
