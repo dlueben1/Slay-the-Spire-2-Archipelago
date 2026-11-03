@@ -63,8 +63,6 @@ public static class ApMirroredRewardDispatcher
     private static readonly HashSet<(ulong OwnerNetId, Guid MenuId)> ActiveRemoteMenus = new();
     private static readonly Dictionary<(ulong OwnerNetId, int ItemIndex), ApNativeCardReward>
         ReplicaCardAssignments = new();
-    private static readonly Dictionary<(ulong OwnerNetId, int ItemIndex), PotionModel>
-        ReplicaPotionAssignments = new();
     private static string? _activeRunIdentity;
 
     public static void Initialize()
@@ -112,11 +110,6 @@ public static class ApMirroredRewardDispatcher
                     if (reward is ApNativeCardReward native)
                         ReplicaCardAssignments[(player.NetId, itemIndex)] = native;
                 }
-                foreach ((int itemIndex, PotionModel potion) in
-                         ArchipelagoClient.Progress.PotionAssignments)
-                {
-                    ReplicaPotionAssignments[(player.NetId, itemIndex)] = potion;
-                }
                 continue;
             }
 
@@ -137,13 +130,6 @@ public static class ApMirroredRewardDispatcher
                     .ToList();
                 RestorePersistedCardAssignment(itemIndex, assignment, player, cards);
             }
-            foreach ((int itemIndex, string serialized) in
-                     state.Progress.PotionAssignments.OrderBy(entry => entry.Key))
-            {
-                ReplicaPotionAssignments[(player.NetId, itemIndex)] = PotionModel.FromSerializable(
-                    Deserialize<SerializablePotion>(serialized)
-                );
-            }
         }
     }
 
@@ -153,7 +139,6 @@ public static class ApMirroredRewardDispatcher
         Patches_APRewardSelectionOrder.Reset();
         ActiveRemoteMenus.Clear();
         ReplicaCardAssignments.Clear();
-        ReplicaPotionAssignments.Clear();
     }
 
     /// <summary>Opens the local player's current AP receipt catalog as a native reward screen.</summary>
@@ -430,7 +415,6 @@ public static class ApMirroredRewardDispatcher
                     );
                 }
 
-                ReplicaPotionAssignments[(player.NetId, itemIndex)] = potion!;
                 spec.SerializedModels.Add(SerializePotion(potion!));
                 break;
             }
@@ -493,7 +477,7 @@ public static class ApMirroredRewardDispatcher
 
     private static Reward BuildNativeReward(MirroredReward spec, Player owner) => spec.Match<Reward>(
         card => BuildCardReward(spec.Origin, card, owner),
-        potion => new ApNativePotionReward(GetReplicaPotionAssignment(spec.Origin, potion, owner), owner, spec.Origin),
+        potion => new ApNativePotionReward(LoadPotionAssignment(spec.Origin, potion), owner, spec.Origin),
         relic => BuildStandardRelicReward(spec.Origin, relic, owner),
         choices => BuildAncientReward(spec.Origin, choices, owner),
         reason => new ApUnavailableReward(spec.Origin.ItemName, reason, owner, spec.Origin),
@@ -514,43 +498,27 @@ public static class ApMirroredRewardDispatcher
             ReplicaCardAssignments[(player.NetId, origin.ReceivedItemIndex)] = reward;
         }
 
-        ValidateSerializedModels(origin, card.Models, reward.Cards.Select(SerializeCard), "card assignment");
+        ValidateSerializedModels(origin, card.Models, reward.Cards.Select(SerializeCard));
         reward.Configure(origin, card.Configuration);
         return reward;
     }
 
-    private static PotionModel GetReplicaPotionAssignment(
-        RewardOrigin origin,
-        PotionRewardData assignment,
-        Player player)
+    /// <summary>
+    /// The owner rolls each potion once and every menu carries that exact model, so all players
+    /// load the same potion from the same message and there is no second copy to compare.
+    /// </summary>
+    private static PotionModel LoadPotionAssignment(RewardOrigin origin, PotionRewardData assignment)
     {
-        if (!ReplicaPotionAssignments.TryGetValue(
-                (player.NetId, origin.ReceivedItemIndex),
-                out PotionModel? potion))
+        SerializablePotion serialized = Deserialize<SerializablePotion>(assignment.Model);
+        PotionModel potion = PotionModel.FromSerializable(serialized);
+        // An unknown ID loads as DeprecatedPotion, which would give this player a different potion.
+        if (potion.Id != serialized.Id)
         {
-            potion = PotionModel.FromSerializable(
-                Deserialize<SerializablePotion>(assignment.Model)
+            throw new InvalidOperationException(
+                $"AP potion assignment {origin.ReceiptIdentity} names {serialized.Id}, "
+                    + "which this game does not have."
             );
-            ReplicaPotionAssignments[(player.NetId, origin.ReceivedItemIndex)] = potion;
         }
-
-        // PotionFactory returns canonical pool entries, but PotionReward owns and may mutate the
-        // offered potion. Normalize older in-memory/save-restored assignments here as well as at
-        // their creation sites so an existing pending receipt can recover without being rerolled.
-        if (!potion.IsMutable)
-        {
-            potion = potion.ToMutable();
-            ReplicaPotionAssignments[(player.NetId, origin.ReceivedItemIndex)] = potion;
-            if (LocalContext.IsMe(player)
-                && ArchipelagoClient.Progress.PotionAssignments.ContainsKey(
-                    origin.ReceivedItemIndex
-                ))
-            {
-                ArchipelagoClient.Progress.PotionAssignments[origin.ReceivedItemIndex] = potion;
-            }
-        }
-
-        ValidateSerializedModels(origin, new[] { assignment.Model }, new[] { SerializePotion(potion) }, "potion assignment");
         return potion;
     }
 
@@ -710,14 +678,13 @@ public static class ApMirroredRewardDispatcher
     private static void ValidateSerializedModels(
         RewardOrigin origin,
         IReadOnlyList<string> expectedModels,
-        IEnumerable<string> actualModels,
-        string description)
+        IEnumerable<string> actualModels)
     {
         string[] actual = actualModels.ToArray();
-        if (!expectedModels.SequenceEqual(actual, StringComparer.Ordinal))
+        if (!ApCardRevealCodec.SameModels(expectedModels, actual))
         {
             throw new InvalidOperationException(
-                $"AP {description} {origin.ReceiptIdentity} differed after native materialization "
+                $"AP card assignment {origin.ReceiptIdentity} differed after native materialization "
                     + $"(expectedHash={StableHash(string.Join("\n", expectedModels))}, "
                     + $"actualHash={StableHash(string.Join("\n", actual))})."
             );
@@ -1033,8 +1000,6 @@ public static class ApMirroredRewardDispatcher
         protected override async Task<bool> OnSelect()
         {
             bool applied = await base.OnSelect();
-            if (applied)
-                ReplicaPotionAssignments.Remove((Player.NetId, _itemIndex));
             if (applied && LocalContext.IsMe(Player))
                 CommitDiscreteReward(_itemIndex, ApMirroredRewardKind.Potion);
             return applied;
