@@ -14,7 +14,7 @@ game: "Slay the Spire II"
 requires:
   version: 0.6.7 # Minimum Archipelago version for this YAML.
   game:
-    Slay the Spire II: 1.2.0 # Minimum APWorld version for this YAML.
+    Slay the Spire II: 1.3.0 # Minimum APWorld version for this YAML.
 Slay the Spire II:
   #####################
   # Character Options #
