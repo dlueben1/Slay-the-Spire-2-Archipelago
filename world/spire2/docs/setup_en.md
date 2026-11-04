@@ -1,121 +1,99 @@
 # Slay the Spire II Setup
 
-This guide covers installing the mod, preparing a player YAML, generating a
-multiworld and connecting to it. Check the release notes for the game versions
-supported by the release you are installing.
+This guide takes you from installing the mod to connecting to a game. If someone
+else is generating and hosting, you only need steps 1, 2 and 4.
 
-We recommend the **beta branch**, where Terairk mainly develops and tests the mod.
-The main branch remains supported, but receives little, if any, gameplay testing;
-compatibility is assessed primarily through compile-time checks and player bug reports.
-Beta branch updates can temporarily break compatibility until the mod is updated.
+We recommend the game's **beta branch**, where Terairk mainly develops and tests
+the mod. Beta updates can temporarily break the mod until it is updated. The main
+branch remains supported, but receives little gameplay testing.
 
-## Install the mod
+## 1. Install the mod
 
-You need Slay the Spire II and [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295)
-(version 0.6.0 or newer). Install only one copy of the Archipelago mod: either
-Steam Workshop or a manual installation.
+1. Subscribe to [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295)
+   (version 0.6.0 or newer) and [Slay the Spire II Archipelago](https://steamcommunity.com/sharedfiles/filedetails/?id=3748826296)
+   on Steam Workshop.
+2. Wait for Steam to finish downloading both mods, then start the game.
 
-### Steam Workshop
+Prefer not to use Workshop? See [Manual installation](#manual-installation).
 
-1. If you previously installed manually, move `mods/Archipelago` outside the
-   game's `mods` directory or remove that copy.
-2. Subscribe to [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295)
-   and [Slay the Spire II Archipelago](https://steamcommunity.com/sharedfiles/filedetails/?id=3748826296).
-3. Wait for Steam to finish downloading both mods, then start the game.
+We also recommend [Mod Launch Manager](https://steamcommunity.com/sharedfiles/filedetails/?id=3788556097) by Snowline on Steam Workshop.
+With it, you can enable all your mods in Steam's Workshop tab, see when mods update,
+and keep mod profiles to switch between different sets of mods.
 
-### Manual installation
+## 2. Make your YAML
 
-1. Unsubscribe from the Archipelago Workshop item if you were using it. Keep
-   RitsuLib installed separately.
-2. Download `Archipelago.zip` from the release you want to play.
-3. In Steam, open Slay the Spire 2's **Browse Local Files** action.
-4. Create `mods/Archipelago` inside that game directory and extract the ZIP's
-   contents into it. This works with Windows and Linux archive tools.
-5. Confirm that `Archipelago.dll`, `Archipelago.json`, the PCK and the `lib/` and
-   `data/` directories are directly inside `mods/Archipelago`, without an extra
-   nested `Archipelago` folder. Keep all packaged dependencies and both game
-   variants together: the root DLL is the loader.
-6. Start the game.
+A YAML is the file that holds your settings for the game. The easiest way to make
+one is the YAML Builder at <https://sts2ap.net/#/builder>. It walks through every
+option and downloads a finished YAML. The mod's **Mod Website & YAML Builder**
+main-menu button opens the same website.
 
-The loader selects the build for your installed game version. Later patches on a
-supported major/minor line can use its newest earlier build, with a log warning.
-An earlier patch or a new major/minor line needs a matching mod release. Consult
-that release's notes rather than assuming a newer game update is supported.
+**Modded characters (optional):** see [Predefined modded characters](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/world/spire2/docs/predefined_characters_en.md)
+for those with ready-made names and [Finding a modded character ID](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/world/spire2/docs/modded_characters_en.md)
+for any other.
 
-## Prepare your player YAML
+Other ways to make a YAML:
 
-The easiest and recommended way to make your YAML is the
-[YAML Builder](https://sts2ap.net/#/builder) on the Slay the Spire II Archipelago
-website. It walks through every option and downloads a finished YAML. The mod's
-**Mod Website & YAML Builder** main-menu button opens the same website.
+- The preview builder at <https://sts2ap.terairk.dev/#/builder> is updated more
+  freely, so it is more likely to be up to date. For now it also has options that
+  don't exist in the main releases and more of upcoming features.
+- Edit `Spire2-template.yaml` from the mod release by hand, or use the Archipelago
+  Launcher's **Options Creator**. Set `name` to the slot name you want.
 
-Alternatively, download `Spire2-template.yaml` from the same release and edit it
-by hand, or use the Archipelago Launcher's **Options Creator**. Set `name` to the
-Archipelago slot name you want to use and review the options before generation.
+YAMLs from either builder still work regardless of if they miss options or have extra options 
+compared to options-creator and template: extra options are ignored and missing options
+use their defaults.
 
-Each participant supplies one YAML. For custom characters, everyone who needs
-those characters must install the corresponding character mods; test their
-compatibility before a full multiworld.
+## 3. Generate and host the game
 
-If a slot's character mod is missing or broken, you can still connect after a
-warning. Every character's checks and victories then also count for each missing
-character. **Defect** is always playable in that case: it uses its own items if
-your YAML includes Defect, and otherwise the first missing character's items.
-Checkpoints saved with a different set of mods may not load; start a new run if
-one fails. As a last resort, the dev console command
-`ap_release_missing <character> confirm` sends all of a missing character's
-remaining checks; it is disabled in race rooms.
-
-## Generate a multiworld
-
-**You must generate using Archipelago Launcher v0.6.7 or newer.** This requirement
-applies to the Launcher used for generation; the Launcher is not required merely
-to play the StS2 mod and connect to an existing session.
+If someone else is doing this, send them your YAML (and the link to the APworld releases) and 
+skip to step 4.
 
 1. Install [Archipelago Launcher](https://github.com/ArchipelagoMW/Archipelago/releases)
    v0.6.7 or newer.
-2. Download the `.apworld` asset from the same mod release. Depending on the
-   release, it is named `spire2.apworld` or `spire2-<version>.apworld`.
+2. Download the `.apworld` file from the same mod release.
 3. Open the Launcher, select **Install APWorld**, and choose that file. On Windows,
    double-clicking the file also works if the Launcher installed its file association.
    The mod's main-menu **Install APWorld** action is another way to use the bundled file.
-4. Use **Browse Files** in the Launcher, open `Players`, and put the participants'
-   YAML files there.
-5. Select **Generate**. The resulting multiworld ZIP is written to `output`.
+4. Use **Browse Files** in the Launcher, open `Players`, and put the players' YAML
+   files there.
+5. Select **Generate**. The resulting ZIP is written to `output` in the Archipelago
+   folder.
 
-Install a newer APWorld before generating a new multiworld when updating it;
-installing the file alone does not change a seed that was already generated.
+To play online, upload the ZIP at [Archipelago](https://archipelago.gg/) and create
+a room, or use your preferred Archipelago server. Keep the room's server address,
+port and any password. You can also host locally to playtest before a sync.
 
-To play online, upload the generated ZIP at [Archipelago](https://archipelago.gg/)
-and create a room, or use your preferred Archipelago server. Keep the room's
-server address, port and any password for connecting.
-
-## Connect and play
+## 4. Connect and play
 
 1. Start Slay the Spire II with the Archipelago mod and RitsuLib enabled.
 2. Select **Connect to Archipelago** on the main menu.
-3. Enter the session's server address/port, your YAML's slot name and any password.
-4. Connect, then follow the mod's character/run selection.
+3. Enter the server address and port, your YAML's slot name and any password.
+4. Connect, then follow the mod's character and run selection.
 
-Avoid unrelated gameplay mods when troubleshooting.
+You don't need the Launcher to play, but we recommend it for two optional tools.
+**Universal Tracker** shows what's in logic; search up the `universal-tracker`
+channel on the main Archipelago Discord. The **Text Client** lets you see and send hints.
 
 ## Multiplayer
 
-The mod supports the game's co-op. Everyone in a lobby needs the same game
-version and the same gameplay-changing mods, and the host must be connected to
-an AP slot. Other players can share the host's slot, use their own slots, or
-join as vanilla guests without a slot. See the
-[multiplayer setup guide](../../../docs/multiplayer_setup.md) for hosting,
-joining and recommended settings.
+The mod supports the game's co-op. See the [multiplayer setup guide](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/world/spire2/docs/multiplayer_setup_en.md)
+for what everyone needs, hosting and joining.
 
 ## Troubleshooting
 
-- **The game loads the wrong mod copy:** check both Workshop subscriptions and
-  `mods/Archipelago`; keep only the installation you intend to use.
-- **The loader rejects the game version:** check the supported main branch and beta branch versions
-  in your mod release's notes and select the corresponding game branch.
-- **Generation does not recognize Slay the Spire II:** install the release's
-  APWorld in the Launcher you are actually using, verify it is v0.6.7+, and retry.
-- **Connection reports a version mismatch:** check that generation used the APWorld
-  supplied with the mod release. A compatibility warning needs investigation;
-  changing the installed APWorld will not rewrite an existing session.
+See the [troubleshooting guide](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/world/spire2/docs/troubleshooting_en.md) for things to check and
+fixes for common problems.
+
+## Manual installation
+
+Install only one copy of the Archipelago mod. If you were using the Workshop item,
+unsubscribe from it first, and keep RitsuLib installed separately.
+
+1. Download `Archipelago.zip` from the release you want to play.
+2. In Steam, open Slay the Spire 2's **Browse Local Files** action.
+3. Create `mods/Archipelago` inside that game directory and extract the ZIP's
+   contents into it.
+4. Confirm that `Archipelago.dll`, `Archipelago.json`, the PCK and the `lib/` and
+   `data/` directories are directly inside `mods/Archipelago`, without an extra
+   nested `Archipelago` folder.
+5. Start the game.
