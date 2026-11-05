@@ -8,7 +8,7 @@ namespace StS2AP.Patches
 {
     public static class Patches_PreventEpochTriggers
     {
-        [HarmonyPatch(typeof(ProgressSaveManager), "TryObtainEpochInternal")]
+        [HarmonyPatch(typeof(ProgressSaveManager), nameof(ProgressSaveManager.TryObtainEpochInternal))]
         public class BlockEpochUnlocksPatch
         {
             static bool Prefix(EpochModel epoch)
@@ -18,7 +18,7 @@ namespace StS2AP.Patches
             }
         }
 
-        [HarmonyPatch(typeof(NMainMenu), "Create")]
+        [HarmonyPatch(typeof(NMainMenu), nameof(NMainMenu.Create))]
         public class NeverOpenTimelinePatch
         {
             static void Prefix(ref bool openTimeline)
@@ -28,7 +28,7 @@ namespace StS2AP.Patches
             }
         }
 
-        [HarmonyPatch(typeof(NGameOverScreen), "DiscoveredAnyEpochs")]
+        [HarmonyPatch(typeof(NGameOverScreen), nameof(NGameOverScreen.DiscoveredAnyEpochs))]
         public class SkipTimelineAfterRunPatch
         {
             static bool Prefix(ref bool __result)

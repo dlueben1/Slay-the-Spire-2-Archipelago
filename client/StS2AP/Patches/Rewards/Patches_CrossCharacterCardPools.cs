@@ -94,7 +94,7 @@ internal static class Patches_CrossCharacterCardPools
     /// Retains the event's normal three-option limit and excludes the current character's
     /// pool, while selected installed modded characters join the candidate set.
     /// </summary>
-    [HarmonyPatch(typeof(ColorfulPhilosophers), "GenerateInitialOptions")]
+    [HarmonyPatch(typeof(ColorfulPhilosophers), nameof(ColorfulPhilosophers.GenerateInitialOptions))]
     private static class GenerateCrossCharacterOptions
     {
         [HarmonyPrefix]

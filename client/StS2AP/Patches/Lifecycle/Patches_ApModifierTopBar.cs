@@ -34,7 +34,7 @@ namespace StS2AP.Patches
         }
 
         // OnFocus is a protected override, which the publicizer leaves inaccessible.
-        [HarmonyPatch(typeof(NTopBarModifier), "OnFocus")]
+        [HarmonyPatch(typeof(NTopBarModifier), nameof(NTopBarModifier.OnFocus))]
         public static class ShowCollapsedTips
         {
             [HarmonyPrefix]

@@ -21,7 +21,7 @@ public static class Patches_Splash
     {
         // The async body and its captured card field are compiler-generated, so Harmony
         // must locate them through reflection rather than directly referencing game members.
-        Type? stateMachine = AccessTools.DeclaredMethod(typeof(Splash), "OnPlay")
+        Type? stateMachine = AccessTools.DeclaredMethod(typeof(Splash), nameof(Splash.OnPlay))
             ?.GetCustomAttribute<AsyncStateMachineAttribute>()?.StateMachineType;
         MethodInfo? moveNext = stateMachine == null ? null : AccessTools.Method(stateMachine, "MoveNext");
         // A game update changed Splash; fail the mod's startup rather than keep AP's

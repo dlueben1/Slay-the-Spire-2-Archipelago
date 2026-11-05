@@ -82,7 +82,7 @@ namespace StS2AP.Patches
     /// Rejects an AP-owned native row before MegaCrit emits RewardSelectedMessage. This keeps
     /// multiplayer combat and other expected claim gates as true non-selections.
     /// </summary>
-    [HarmonyPatch(typeof(NRewardButton), "OnRelease")]
+    [HarmonyPatch(typeof(NRewardButton), nameof(NRewardButton.OnRelease))]
     public static class GateNativeApRewardSelection
     {
         [HarmonyPrefix]
@@ -94,7 +94,7 @@ namespace StS2AP.Patches
     /// Vanilla removes an empty nonterminal reward screen immediately. AP intentionally exposes
     /// an empty persistent inventory, so retain only AP-owned screens that started empty.
     /// </summary>
-    [HarmonyPatch(typeof(NRewardsScreen), "UpdateScreenState")]
+    [HarmonyPatch(typeof(NRewardsScreen), nameof(NRewardsScreen.UpdateScreenState))]
     public static class KeepEmptyApRewardScreenOpen
     {
         [HarmonyPrefix]
@@ -169,7 +169,7 @@ namespace StS2AP.Patches
     /// Linked Ancient choices are grandchildren, so extend focus-following behavior to those
     /// AP-owned child buttons.
     /// </summary>
-    [HarmonyPatch(typeof(NRewardsScreen), "ProcessGuiFocus")]
+    [HarmonyPatch(typeof(NRewardsScreen), nameof(NRewardsScreen.ProcessGuiFocus))]
     public static class ScrollToFocusedApLinkedRewardChild
     {
         [HarmonyPostfix]
@@ -407,7 +407,7 @@ namespace StS2AP.Patches
     /// Empty and vanilla-guest AP screens have no live synchronized set to skip. Their native
     /// proceed button is presentation-only and simply closes the overlay.
     /// </summary>
-    [HarmonyPatch(typeof(NRewardsScreen), "OnProceedButtonPressed")]
+    [HarmonyPatch(typeof(NRewardsScreen), nameof(NRewardsScreen.OnProceedButtonPressed))]
     public static class CloseUnsynchronizedApRewardScreen
     {
         [HarmonyPrefix]

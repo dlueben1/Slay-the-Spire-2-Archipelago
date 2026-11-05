@@ -76,7 +76,7 @@ public static class Patches_APBossPresentation
         }
     }
 
-    [HarmonyPatch(typeof(NTopBarBossIcon), "OnFocus")]
+    [HarmonyPatch(typeof(NTopBarBossIcon), nameof(NTopBarBossIcon.OnFocus))]
     public static class ShowActiveBossTooltip
     {
         [HarmonyPrefix]

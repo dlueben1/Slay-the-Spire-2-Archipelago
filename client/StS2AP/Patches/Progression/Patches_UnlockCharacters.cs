@@ -19,7 +19,7 @@ namespace StS2AP.Patches
         /// Allows us to control which characters are registered as unlocked, using local state (derived from Archipelago Options)
         /// instead of in-game data/saves
         /// </summary>
-        [HarmonyPatch(typeof(UnlockState), "get_Characters", [])]
+        [HarmonyPatch(typeof(UnlockState), nameof(UnlockState.Characters), MethodType.Getter)]
         public static class OverrideUnlockedCharacterData
         {
             [HarmonyPostfix]
@@ -313,7 +313,10 @@ namespace StS2AP.Patches
             }
         }
 
-        [HarmonyPatch(typeof(NCharacterSelectScreen), "UpdateRandomCharacterVisibility")]
+        [HarmonyPatch(
+            typeof(NCharacterSelectScreen),
+            nameof(NCharacterSelectScreen.UpdateRandomCharacterVisibility)
+        )]
         public static class DisableRitsuStuff
         {
             [HarmonyPrefix]

@@ -18,7 +18,7 @@ namespace StS2AP.Patches
     ///    We return AllAncients directly which bypasses the epoch check, note:requires more testing but I don't have the time sorry
     /// </summary>
 
-    [HarmonyPatch(typeof(RunManager), "SetStartedWithNeowFlag")]
+    [HarmonyPatch(typeof(RunManager), nameof(RunManager.SetStartedWithNeowFlag))]
     public static class Patches_AncientsUnlock_Flag
     {
         [HarmonyPrefix]
@@ -40,7 +40,7 @@ namespace StS2AP.Patches
         }
     }
 
-    [HarmonyPatch(typeof(Overgrowth), "GetUnlockedAncients")]
+    [HarmonyPatch(typeof(Overgrowth), nameof(Overgrowth.GetUnlockedAncients))]
     public static class Patches_AncientsUnlock_Overgrowth
     {
         [HarmonyPostfix]
@@ -54,7 +54,7 @@ namespace StS2AP.Patches
         }
     }
 
-    [HarmonyPatch(typeof(Hive), "GetUnlockedAncients")]
+    [HarmonyPatch(typeof(Hive), nameof(Hive.GetUnlockedAncients))]
     public static class Patches_AncientsUnlock_Hive
     {
         [HarmonyPostfix]
@@ -68,7 +68,7 @@ namespace StS2AP.Patches
         }
     }
 
-    [HarmonyPatch(typeof(Glory), "GetUnlockedAncients")]
+    [HarmonyPatch(typeof(Glory), nameof(Glory.GetUnlockedAncients))]
     public static class Patches_AncientsUnlock_Glory
     {
         [HarmonyPostfix]
@@ -82,7 +82,7 @@ namespace StS2AP.Patches
         }
     }
 
-    [HarmonyPatch(typeof(Underdocks), "GetUnlockedAncients")]
+    [HarmonyPatch(typeof(Underdocks), nameof(Underdocks.GetUnlockedAncients))]
     public static class Patches_AncientsUnlock_Underdocks
     {
         [HarmonyPostfix]

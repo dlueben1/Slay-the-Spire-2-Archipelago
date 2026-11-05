@@ -762,7 +762,7 @@ namespace StS2AP.Patches
         #region Post-Purchase Visual Fixes
 
         /// <summary>Skips the vanilla fly-to-deck animation for AP card fakes and cleans up the now-orphaned card node</summary>
-        [HarmonyPatch(typeof(NMerchantCard), "OnSuccessfulPurchase")]
+        [HarmonyPatch(typeof(NMerchantCard), nameof(NMerchantCard.OnSuccessfulPurchase))]
         public static class CardVisualFix
         {
             [HarmonyPrefix]
@@ -780,7 +780,7 @@ namespace StS2AP.Patches
         }
 
         /// <summary>Skips the vanilla fly-to-inventory animation for AP relic fakes</summary>
-        [HarmonyPatch(typeof(NMerchantRelic), "OnSuccessfulPurchase")]
+        [HarmonyPatch(typeof(NMerchantRelic), nameof(NMerchantRelic.OnSuccessfulPurchase))]
         public static class RelicVisualFix
         {
             [HarmonyPrefix]
@@ -798,7 +798,7 @@ namespace StS2AP.Patches
         }
 
         /// <summary>Skips the vanilla fly-to-inventory animation for AP potion</summary>
-        [HarmonyPatch(typeof(NMerchantPotion), "OnSuccessfulPurchase")]
+        [HarmonyPatch(typeof(NMerchantPotion), nameof(NMerchantPotion.OnSuccessfulPurchase))]
         public static class PotionVisualFix
         {
             [HarmonyPrefix]
@@ -815,7 +815,7 @@ namespace StS2AP.Patches
             }
         }
 
-        [HarmonyPatch(typeof(RelicModel), "get_Pool")]
+        [HarmonyPatch(typeof(RelicModel), nameof(RelicModel.Pool), MethodType.Getter)]
         public static class ApRelicPoolFix
         {
             [HarmonyPrefix]
@@ -830,7 +830,7 @@ namespace StS2AP.Patches
             }
         }
 
-        [HarmonyPatch(typeof(PotionModel), "get_Pool")]
+        [HarmonyPatch(typeof(PotionModel), nameof(PotionModel.Pool), MethodType.Getter)]
         public static class ApPotionPoolFix
         {
             [HarmonyPrefix]
@@ -846,7 +846,7 @@ namespace StS2AP.Patches
         }
 
         /// <summary>Overwrites the potion icon TextureRect with the AP logo whenever an AP potion fake reloads</summary>
-        [HarmonyPatch(typeof(NPotion), "Reload")]
+        [HarmonyPatch(typeof(NPotion), nameof(NPotion.Reload))]
         public static class PotionIconOverride
         {
             private static Texture2D? _apLogoTexture;
@@ -889,7 +889,7 @@ namespace StS2AP.Patches
         /// <summary>
         /// goober stuff to bypass base game limits :p
         /// </summary>
-        [HarmonyPatch(typeof(RelicModel), "get_Description")]
+        [HarmonyPatch(typeof(RelicModel), nameof(RelicModel.Description), MethodType.Getter)]
         public static class ApRelicDescriptionFix
         {
             [HarmonyPrefix]
@@ -904,7 +904,7 @@ namespace StS2AP.Patches
             }
         }
 
-        [HarmonyPatch(typeof(PotionModel), "get_Title")]
+        [HarmonyPatch(typeof(PotionModel), nameof(PotionModel.Title), MethodType.Getter)]
         public static class ApPotionTitleFix
         {
             [HarmonyPrefix]
@@ -919,7 +919,7 @@ namespace StS2AP.Patches
             }
         }
 
-        [HarmonyPatch(typeof(PotionModel), "get_Description")]
+        [HarmonyPatch(typeof(PotionModel), nameof(PotionModel.Description), MethodType.Getter)]
         public static class ApPotionDescriptionFix
         {
             [HarmonyPrefix]

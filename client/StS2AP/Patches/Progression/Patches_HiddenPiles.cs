@@ -32,7 +32,7 @@ public static class Patches_HiddenPiles
         public static IEnumerable<System.Reflection.MethodBase> TargetMethods() =>
         [
             AccessTools.Method(typeof(NCombatCardPile), nameof(NCombatCardPile.Initialize)),
-            AccessTools.Method(typeof(NCombatCardPile), "AddCard"),
+            AccessTools.Method(typeof(NCombatCardPile), nameof(NCombatCardPile.AddCard)),
             AccessTools.Method(typeof(NCombatCardPile), nameof(NCombatCardPile.RemoveCard)),
         ];
 
@@ -49,7 +49,7 @@ public static class Patches_HiddenPiles
     /// pile. Taking the pile away for that call skips both the pile screen and the empty pile
     /// message, which would give the count away. OnRelease is virtual, so it is named by string.
     /// </summary>
-    [HarmonyPatch(typeof(NCombatCardPile), "OnRelease")]
+    [HarmonyPatch(typeof(NCombatCardPile), nameof(NCombatCardPile.OnRelease))]
     public static class BlockPileScreen
     {
         [HarmonyPrefix]

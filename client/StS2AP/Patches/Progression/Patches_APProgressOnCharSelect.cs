@@ -17,7 +17,7 @@ namespace StS2AP.Patches
         [HarmonyPatch(typeof(NCharacterSelectScreen))]
         public static class UpdateCharTrackerUI
         {
-            [HarmonyPatch("SelectCharacter")]
+            [HarmonyPatch(nameof(NCharacterSelectScreen.SelectCharacter))]
             [HarmonyPostfix]
             public static void Postfix(NCharacterSelectScreen __instance, NCharacterSelectButton charSelectButton, CharacterModel characterModel)
             {

@@ -447,7 +447,7 @@ namespace StS2AP.Patches
         /// <summary>
         /// Prevents NBackButton's OnWindowChange from resetting show/hide positions back to bottom-left
         /// </summary>
-        [HarmonyPatch(typeof(NBackButton), "OnWindowChange")]
+        [HarmonyPatch(typeof(NBackButton), nameof(NBackButton.OnWindowChange))]
         public static class SuppressBackButtonWindowChange
         {
             [HarmonyPrefix]
@@ -464,7 +464,7 @@ namespace StS2AP.Patches
         /// <summary>
         /// fixing esc button softlock
         /// </summary>
-        [HarmonyPatch(typeof(NBackButton), "get_Hotkeys")]
+        [HarmonyPatch(typeof(NBackButton), nameof(NBackButton.Hotkeys), MethodType.Getter)]
         public static class SuppressHotkeysForCustomNavButtons
         {
             [HarmonyPostfix]
@@ -610,7 +610,7 @@ namespace StS2AP.Patches
         /// Treats the two inventory nodes as one screen. Closing either page closes its
         /// still-open peer, then restores the canonical vanilla-front positions.
         /// </summary>
-        [HarmonyPatch(typeof(NMerchantInventory), "Close")]
+        [HarmonyPatch(typeof(NMerchantInventory), nameof(NMerchantInventory.Close))]
         public static class CoordinatePageClose
         {
             [HarmonyPostfix]
@@ -671,7 +671,7 @@ namespace StS2AP.Patches
         /// can deliver both signals before an unfocus, and the base method then tries to
         /// add the same owner to NHoverTipSet's active dictionary twice.
         /// </summary>
-        [HarmonyPatch(typeof(NMerchantSlot), "OnFocus")]
+        [HarmonyPatch(typeof(NMerchantSlot), nameof(NMerchantSlot.OnFocus))]
         public static class SuppressDuplicateSlotFocus
         {
             [HarmonyPrefix]
@@ -712,21 +712,21 @@ namespace StS2AP.Patches
             slot.MouseFilter = belongsOnThisPage ? Control.MouseFilterEnum.Stop : Control.MouseFilterEnum.Ignore;
         }
 
-        [HarmonyPatch(typeof(NMerchantCard), "UpdateVisual")]
+        [HarmonyPatch(typeof(NMerchantCard), nameof(NMerchantCard.UpdateVisual))]
         public static class CardPageFilter
         {
             [HarmonyPostfix]
             public static void Postfix(NMerchantCard __instance) => ApplyPageFilter(__instance);
         }
 
-        [HarmonyPatch(typeof(NMerchantRelic), "UpdateVisual")]
+        [HarmonyPatch(typeof(NMerchantRelic), nameof(NMerchantRelic.UpdateVisual))]
         public static class RelicPageFilter
         {
             [HarmonyPostfix]
             public static void Postfix(NMerchantRelic __instance) => ApplyPageFilter(__instance);
         }
 
-        [HarmonyPatch(typeof(NMerchantPotion), "UpdateVisual")]
+        [HarmonyPatch(typeof(NMerchantPotion), nameof(NMerchantPotion.UpdateVisual))]
         public static class PotionPageFilter
         {
             [HarmonyPostfix]
@@ -737,7 +737,7 @@ namespace StS2AP.Patches
 
         #region Duplicate-Reaction Guard
 
-        [HarmonyPatch(typeof(NMerchantInventory), "OnPurchaseCompleted")]
+        [HarmonyPatch(typeof(NMerchantInventory), nameof(NMerchantInventory.OnPurchaseCompleted))]
         public static class SuppressInactivePageReaction
         {
             [HarmonyPrefix]

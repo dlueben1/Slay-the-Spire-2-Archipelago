@@ -292,7 +292,7 @@ namespace StS2AP.Patches
             await transition.FadeIn();
         }
 
-        [HarmonyPatch(typeof(NCharacterSelectScreen), "OnEmbarkPressed")]
+        [HarmonyPatch(typeof(NCharacterSelectScreen), nameof(NCharacterSelectScreen.OnEmbarkPressed))]
         public static class MaybeLoadAP
         {
 
