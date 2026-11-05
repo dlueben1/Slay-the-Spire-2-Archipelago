@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../StS2AP/SupportedGameVersions.props" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- The reference package generates an attribute that 0Harmony also contains. -->
+    <NoWarn>$(NoWarn);CS0436</NoWarn>
+
+    <!-- The game's Harmony refuses newer runtimes, so this tool carries the runtime the game uses. -->
+    <RuntimeIdentifier>$(NETCoreSdkPortableRuntimeIdentifier)</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Only compiles against Harmony. At runtime the checked game's own 0Harmony.dll loads. -->
+    <PackageReference Include="Book.StS2.RefLib" Version="$(Sts2MainApiCompat)" PrivateAssets="all" />
+    <PackageReference Include="ICSharpCode.Decompiler" Version="11.1.0.9782" />
+  </ItemGroup>
+</Project>
