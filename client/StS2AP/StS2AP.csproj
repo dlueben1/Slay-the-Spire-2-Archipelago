@@ -75,11 +75,13 @@
     <IntermediateOutputPath>$(BaseIntermediateOutputPath)$(Sts2ApiCompat)/$(Configuration)/</IntermediateOutputPath>
     <OutputPath>$(MSBuildProjectDirectory)/bin/$(Sts2ApiCompat)/$(Configuration)/</OutputPath>
 
-    <!-- Create pre-processor directives for each supported game version -->
-    <DefineConstants Condition="'$(Sts2ApiCompat)' == '$(Sts2MainApiCompat)'"
-      >$(DefineConstants);STS_MAIN</DefineConstants>
-    <DefineConstants Condition="'$(Sts2ApiCompat)' == '$(Sts2BetaApiCompat)'"
-      >$(DefineConstants);STS_BETA</DefineConstants>
+    <!--
+      STS2_AT_LEAST_x_y_z means the targeted game API is that version or newer. Name a symbol after
+      the first version we saw with the change, and add a line here when a game update needs a new
+      one. Branches stay correct when a game branch moves on, with no source edits.
+    -->
+    <DefineConstants Condition="$([MSBuild]::VersionGreaterThanOrEquals('$(Sts2ApiCompat)', '0.111.0'))"
+      >$(DefineConstants);STS2_AT_LEAST_0_111_0</DefineConstants>
 
     <!-- The reference package generates the access-check attribute, so Publicizer must not add its own. -->
     <PublicizerRuntimeStrategies Condition="'$(UseSts2RefLib)' == 'true'">Unsafe</PublicizerRuntimeStrategies>

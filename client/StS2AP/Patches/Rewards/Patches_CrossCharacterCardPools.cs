@@ -47,9 +47,7 @@ internal static class Patches_CrossCharacterCardPools
             if (__instance.Owner != player ||
                 options.Flags.HasFlag(CardCreationFlags.NoCardPoolModifications) ||
                 !options.Flags.HasFlag(CardCreationFlags.IsCardReward) ||
-#if STS_MAIN
-                options.CustomCardPool is not null ||
-#endif
+                GameApiCompat.HasCustomCardPool(options) ||
                 __state.All(pool => pool.IsColorless) ||
                 !CrossCharacterCardPoolUtility.TryGetPools(player, out var characterPools))
             {
@@ -57,12 +55,7 @@ internal static class Patches_CrossCharacterCardPools
             }
 
             var pools = characterPools.Concat(__state).Distinct().ToArray();
-#if STS_MAIN
-            // The main API clears the filter unless it is explicitly passed back in.
-            __result = __result.WithCardPools(pools, __result.CardPoolFilter);
-#else
-            __result = __result.WithCardPools(pools);
-#endif
+            __result = GameApiCompat.WithCardPools(__result, pools);
             LogUtility.Debug(
                 $"Prismatic Gem card pools: {string.Join(", ", __result.CardPools.Select(pool => pool.Id))}"
             );

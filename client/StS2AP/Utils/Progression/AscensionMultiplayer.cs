@@ -74,7 +74,7 @@ public static class AscensionMultiplayer
         currentAscensions = new List<int>();
         handledReceiptIndexes = new List<int>();
 
-        var character = BetaMainCompatibility.GetLocalCharacter(lobby);
+        var character = lobby.LocalPlayer.character;
         if (!hostSettings.TryGetCharacterConfig(
                 character.Id.Entry,
                 out CharacterConfig? config))
@@ -511,7 +511,7 @@ public static class AscensionMultiplayer
             || message.ReceivedItemIndex <= 0
             || message.AscensionLevel is < 1 or > 10
             || RunManager.Instance.DebugOnlyGetState() is not RunState current
-            || !BetaMainCompatibility.TryGetHostNetId(
+            || !MultiplayerSupport.TryGetHostNetId(
                 RunManager.Instance.NetService,
                 out ulong hostNetId)
             || owner.NetId != hostNetId

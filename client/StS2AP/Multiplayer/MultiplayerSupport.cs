@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Entities.Multiplayer;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Multiplayer;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Multiplayer.Game.Lobby;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
@@ -55,10 +56,32 @@ public static class MultiplayerSupport
 
     internal static bool IsSynchronizedCombatActive =>
         CombatManager.Instance.IsStarting
-        || !BetaMainCompatibility.IsActionSynchronizerCombatState(
-            RunManager.Instance.ActionQueueSynchronizer.CombatState,
-            ActionSynchronizerCombatState.NotInCombat
-        );
+        || RunManager.Instance.ActionQueueSynchronizer.CombatState
+            != ActionSynchronizerCombatState.NotInCombat;
+
+    internal static bool TryGetHostNetId(INetGameService netService, out ulong hostNetId)
+    {
+        hostNetId = default;
+        if (netService.Type == NetGameType.Singleplayer)
+        {
+            hostNetId = netService.NetId;
+            return true;
+        }
+        if (!netService.IsConnected)
+            return false;
+
+        switch (netService.Type)
+        {
+            case NetGameType.Host:
+                hostNetId = netService.NetId;
+                return true;
+            case NetGameType.Client when netService is NetClientGameService client:
+                hostNetId = client.HostNetId;
+                return true;
+            default:
+                return false;
+        }
+    }
 
     private static readonly Dictionary<int, IndexedItemInfo> DeferredItems = new();
 
@@ -669,7 +692,7 @@ public static class MultiplayerSupport
                     screen.Lobby,
                     out string hostBlockedReason))
             {
-                bool wasReady = BetaMainCompatibility.IsLocalPlayerReady(screen.Lobby);
+                bool wasReady = screen.Lobby.LocalPlayer.isReady;
                 EnsureLocalPlayerUnready(screen);
                 embarkButton.Disable();
                 if (wasReady)
@@ -681,10 +704,10 @@ public static class MultiplayerSupport
                 return;
             }
 
-            if (BetaMainCompatibility.IsLocalPlayerReady(screen.Lobby))
+            if (screen.Lobby.LocalPlayer.isReady)
                 return;
 
-            if (CanEmbark(BetaMainCompatibility.GetLocalCharacter(screen.Lobby), out _))
+            if (CanEmbark(screen.Lobby.LocalPlayer.character, out _))
                 embarkButton.Enable();
             else
                 embarkButton.Disable();
@@ -697,7 +720,7 @@ public static class MultiplayerSupport
 
     private static void EnsureLocalPlayerUnready(NCharacterSelectScreen screen)
     {
-        if (!BetaMainCompatibility.IsLocalPlayerReady(screen.Lobby))
+        if (!screen.Lobby.LocalPlayer.isReady)
             return;
 
         // Use the native UI transition so auto-unready restores character buttons and the

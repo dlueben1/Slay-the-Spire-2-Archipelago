@@ -268,7 +268,7 @@ namespace StS2AP.Patches
                 if (__instance.Lobby == null)
                     return;
                 UpdateCharacterSelectAscension(__instance, __instance._selectedButton,
-                    BetaMainCompatibility.GetLocalCharacter(__instance.Lobby));
+                    __instance.Lobby.LocalPlayer.character);
             }
         }
 
