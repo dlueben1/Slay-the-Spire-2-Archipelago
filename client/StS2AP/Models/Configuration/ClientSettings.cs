@@ -70,6 +70,21 @@
 
         #endregion
 
+        #region Card Rewards
+
+        // Side note: this is more of a setting I used to make it easier to test but this is also
+        // quite cool to have in general. So keep it
+        /// <summary>Whether the local Strict Card Rewards value replaces the AP slot setting.</summary>
+        public bool OverrideStrictCardRewards { get; set; } = false;
+
+        /// <summary>
+        /// Local Strict Card Rewards value, read only when the override is enabled. Opening an
+        /// AP menu card reward then locks the others until a card is taken or it is discarded.
+        /// </summary>
+        public bool StrictCardRewards { get; set; } = false;
+
+        #endregion
+
         /// <summary>Null uses the AP slot default. Only captured for new runs.</summary>
         public AncientRelicLocation? AncientRelicLocationOverride { get; set; }
         public AncientRelicPoolMode? AncientRelicPoolOverride { get; set; }

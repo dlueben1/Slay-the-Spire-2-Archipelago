@@ -10,6 +10,7 @@ using StS2AP.Data;
 using StS2AP.Utils;
 using System.Collections.Concurrent;
 using StS2AP.Extensions;
+using StS2AP.Utils.Combat;
 using static StS2AP.Data.ItemTable;
 
 namespace StS2AP.Patches 
@@ -398,6 +399,15 @@ namespace StS2AP.Patches
             {
                 case APItem.BonusWaxRelic:
                     ArchipelagoClient.Progress.Items.RegisterReceived(receipt);
+                    break;
+                case APItem.IntentSight:
+                    // A permanent unlock with nothing to claim. The ledger keeps the copy count.
+                    ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);
+                    IntentSight.RefreshVisibleIntents();
+                    break;
+                case APItem.HealthSight:
+                    ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);
+                    HealthSight.RefreshVisibleHealth();
                     break;
                 case APItem.WeakTrap:
                 case APItem.FrailTrap:

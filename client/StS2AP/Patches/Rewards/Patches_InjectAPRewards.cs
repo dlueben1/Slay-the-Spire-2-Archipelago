@@ -480,14 +480,15 @@ namespace StS2AP.Patches
                 // Iterate created reward buttons and set their opacity based on reward type.
                 foreach (NRewardButton btn in rewardsContainer.GetChildren().OfType<NRewardButton>())
                 {
-                    Reward? reward = btn.Reward;
-                    if (reward == null)
+                    // Leave other rows alone: their _Ready already ran, and AP menu card rows
+                    // may be ghosted there by Strict Card Rewards.
+                    if (btn.Reward is not ArchipelagoReward apReward)
                     {
                         continue;
                     }
 
                     // Make Claimed Archipelago Rewards semi-transparent
-                    float targetAlpha = (reward is ArchipelagoReward && ((ArchipelagoReward)reward).IsChecked) ? _claimedAlpha : _normalAlpha;
+                    float targetAlpha = apReward.IsChecked ? _claimedAlpha : _normalAlpha;
 
                     // Immediate change:
                     btn.Modulate = new Color(1f, 1f, 1f, targetAlpha);

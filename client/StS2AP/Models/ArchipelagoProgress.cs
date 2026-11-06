@@ -160,6 +160,18 @@ namespace StS2AP.Models
         public Dictionary<int, CardReward> CardAssignments { get; set; } = new Dictionary<int, CardReward>();
 
         /// <summary>
+        /// Strict Card Rewards opened this run (singleplayer). Each one's position in this count
+        /// seeds its cards; see <see cref="StrictCardChain"/>.
+        /// </summary>
+        public int StrictCardRevealCount { get; set; }
+
+        /// <summary>
+        /// How each Strict Card Reward was resolved this run, in order (singleplayer). Saved with
+        /// the run, so loading a checkpoint rolls it back with the deck.
+        /// </summary>
+        public List<string> StrictCardPickHistory { get; set; } = new List<string>();
+
+        /// <summary>
         /// Maps an Archipelago item's index to the PotionModel that was pre-pulled from the PotionFactory for it.
         /// This ensures that opening/closing the reward screen always shows the same potion for each potion reward.
         /// Cleared on each new run via <see cref="ResetTrackers"/>.
@@ -378,6 +390,8 @@ namespace StS2AP.Models
             RelicChoiceAssignments.Clear();
             AncientRelicChoiceAssignments.Clear();
             CardAssignments.Clear();
+            StrictCardRevealCount = 0;
+            StrictCardPickHistory.Clear();
             PotionAssignments.Clear();
             Ascensions.Reset();
             GoldRedeemed = 0;
@@ -727,6 +741,8 @@ namespace StS2AP.Models
                             : string.Empty,
                     }
                 ),
+                StrictCardRevealCount = StrictCardRevealCount,
+                StrictCardPickHistory = new List<string>(StrictCardPickHistory),
                 PotionAssignments = PotionAssignments.ToDictionary(
                     kv => kv.Key,
                     kv => SerializeAssignment(
@@ -820,6 +836,8 @@ namespace StS2AP.Models
                 ProgressiveStarterRelicBaseId = saveData.ProgressiveStarterRelicBaseId,
                 ProgressiveStarterRelicUpgradedId = saveData.ProgressiveStarterRelicUpgradedId,
                 ProgressiveStarterRelicTier = saveData.ProgressiveStarterRelicTier,
+                StrictCardRevealCount = saveData.StrictCardRevealCount,
+                StrictCardPickHistory = new List<string>(saveData.StrictCardPickHistory ?? new List<string>()),
                 PotionAssignments = saveData.PotionAssignments.ToDictionary(
                     kv => kv.Key,
                     kv => PotionModel.FromSerializable(
