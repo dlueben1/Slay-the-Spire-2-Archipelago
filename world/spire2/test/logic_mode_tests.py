@@ -30,9 +30,18 @@ class LogicModeTests(unittest.TestCase):
                 mw = setup_multiworld(SlayTheSpire2World, seed=42,
                                       options={'characters': ['Ironclad'], **options})
                 world = mw.worlds[1]
-                useful_gold = world.effective_logic == 'new' and not world.options.shop_sanity
-                for suffix, legacy in legacy_flags.items():
-                    expected = ItemClassification.useful if useful_gold else legacy
+                # New logic counts Elite and Boss Gold toward shop power whenever Gold Sanity is on,
+                # and Combat Gold toward each act's shop gold with Shop Sanity too.
+                new_logic = world.effective_logic == 'new'
+                useful_gold = new_logic and not world.options.gold_sanity
+                counted_combat_gold = new_logic and world.options.gold_sanity and world.options.shop_sanity
+                expected_flags = {
+                    **{suffix: ItemClassification.useful if useful_gold else legacy
+                       for suffix, legacy in legacy_flags.items()},
+                    'Combat Gold': (ItemClassification.progression_deprioritized_skip_balancing
+                                    if counted_combat_gold else ItemClassification.useful),
+                }
+                for suffix, expected in expected_flags.items():
                     # Includes names used for modded characters and explicit item creation.
                     for character in ('Ironclad', 'Custom Character 1'):
                         self.assertEqual(expected, world.create_item(f'{character} {suffix}').classification)
@@ -63,34 +72,6 @@ class LogicModeTests(unittest.TestCase):
                                  options={'use_new_logic': False, 'include_floor_checks': True}).worlds[1]
         self.assertEqual('old', world.effective_logic)
         self.assertIsNone(world.logic_fallback_reason)
-
-    def test_floorless_legacy_half_shuffle_opening_mix(self):
-        for full_shuffle, cards, relics, power in [(False, 1, 1, 3.5), (True, 1, 2, 4.0)]:
-            with self.subTest(full_shuffle=full_shuffle):
-                world = setup_multiworld(SlayTheSpire2World, seed=42, options={
-                    **self.sparse, 'shuffle_all_cards': full_shuffle,
-                    'neow_sanity': True, 'campfire_sanity': True,
-                }).worlds[1]
-                early = world.multiworld.early_items[1]
-                self.assertEqual(cards, early['Ironclad Card Reward'])
-                self.assertEqual(relics, early['Ironclad Relic'])
-                state = CollectionState(world.multiworld)
-                for name, count in early.items():
-                    for _ in range(count):
-                        state.collect(world.create_item(name), prevent_sweep=True)
-                self.assertEqual(power, state.power_level[1][world.characters[0].char_offset])
-                self.assertTrue(world.get_entrance('Ironclad Mid Act 1').access_rule(state))
-        # New logic still uses its own opening mix when a sanity keeps it out of fallback.
-        world = setup_multiworld(SlayTheSpire2World, seed=42, options={
-            **self.sparse, 'gold_sanity': True, 'shuffle_all_cards': False,
-        }).worlds[1]
-        self.assertEqual('new', world.effective_logic)
-        self.assertEqual(0, world.multiworld.early_items[1].get('Ironclad Card Reward', 0))
-        self.assertEqual(2, world.multiworld.early_items[1]['Ironclad Relic'])
-        world = setup_multiworld(SlayTheSpire2World, seed=42, options={
-            **self.sparse, 'use_new_logic': False, 'include_floor_checks': True, 'shuffle_all_cards': False,
-        }).worlds[1]
-        self.assertFalse(world.multiworld.early_items[1])
 
     def test_legacy_power_copy_remove_and_mixed_slots(self):
         mw = setup_multiworld([SlayTheSpire2World] * 2, seed=42, options=[

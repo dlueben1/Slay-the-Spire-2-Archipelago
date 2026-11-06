@@ -56,34 +56,32 @@ class TestAdvancedStarters(unittest.TestCase):
         self.assertEqual(0, data["progressive_starter_card"])
         self.assertEqual(0, data["progressive_starter_relic"])
 
-    def test_vanilla_power_rules_use_each_characters_options(self):
+    def test_power_rules_use_each_characters_options(self):
         world = self.generate(progressive_starter_card=True, progressive_starter_relic=True)
         for config in world.characters:
-            if config.mod_num:
-                continue
             rule = SpireHasPower(config.char_offset, 9).resolve(world)
             self.assertEqual(config.progressive_starter_card, bool(rule.starter_card_power[0]))
             self.assertEqual(config.progressive_starter_relic, bool(rule.starter_relic_power[0]))
 
-    def test_modded_and_legacy_gates_use_overrides_instead_of_global_options(self):
-        for new_logic in (False, True):
-            with self.subTest(new_logic=new_logic):
-                world = self.generate(use_new_logic=new_logic, progressive_starter_card=False,
-                                      progressive_starter_relic=True, advanced_characters={
-                    "ModCard": {"progressive_starter_card": True, "progressive_starter_relic": False},
-                    "ModNeither": {"progressive_starter_card": False, "progressive_starter_relic": False},
-                })
-                state = world.multiworld.get_all_state(False)
-                gated = next(c for c in world.characters if c.option_name == "ModCard")
-                ungated = next(c for c in world.characters if c.option_name == "ModNeither")
-                gate = world.get_entrance(f"{gated.name} Late Act 1").access_rule
-                self.assertTrue(gate(state))
-                for _ in range(2):
-                    state.remove(world.create_item(f"{gated.name} Progressive Starter Card"))
-                self.assertFalse(gate(state))
-                self.assertTrue(world.get_entrance(f"{ungated.name} Late Act 1").access_rule(state))
-                state.collect(world.create_item(f"{gated.name} Progressive Starter Card"), prevent_sweep=True)
-                self.assertTrue(gate(state))
+    def test_modded_starters_use_overrides_instead_of_global_options(self):
+        overrides = {
+            "ModCard": {"progressive_starter_card": True, "progressive_starter_relic": False},
+            "ModNeither": {"progressive_starter_card": False, "progressive_starter_relic": False},
+        }
+        # Old logic gates Late Act 1 on a modded character's shuffled starters.
+        world = self.generate(use_new_logic=False, progressive_starter_card=False,
+                              progressive_starter_relic=True, advanced_characters=overrides)
+        state = world.multiworld.get_all_state(False)
+        gated = next(c for c in world.characters if c.option_name == "ModCard")
+        ungated = next(c for c in world.characters if c.option_name == "ModNeither")
+        gate = world.get_entrance(f"{gated.name} Late Act 1").access_rule
+        self.assertTrue(gate(state))
+        for _ in range(2):
+            state.remove(world.create_item(f"{gated.name} Progressive Starter Card"))
+        self.assertFalse(gate(state))
+        self.assertTrue(world.get_entrance(f"{ungated.name} Late Act 1").access_rule(state))
+        state.collect(world.create_item(f"{gated.name} Progressive Starter Card"), prevent_sweep=True)
+        self.assertTrue(gate(state))
 
     def test_tracker_round_trip_and_global_only_slot_data(self):
         original = self.generate(progressive_starter_card=True, progressive_starter_relic=False)

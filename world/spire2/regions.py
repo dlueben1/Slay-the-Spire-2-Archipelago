@@ -2,6 +2,7 @@ from math import ceil, floor
 from typing import TYPE_CHECKING, List
 
 from BaseClasses import Region
+from .logic_table import ELITES_PER_ACT, RELIC_REGIONS
 
 if TYPE_CHECKING:
     from worlds.spire2.world import SlayTheSpire2World
@@ -30,22 +31,65 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
     multiworld = world.multiworld
     every_other = not world.options.shuffle_all_cards
     ascension_mod = 1 if 'DoubleBoss'.lower() in config.ascension and 'DoubleBoss'.lower() not in config.ascension_down else 0
+    # Old logic has no elite track, so it keeps the relic checks in their original path regions.
+    is_new_logic = world.effective_logic == "new"
+    relic_regions = RELIC_REGIONS if is_new_logic else LEGACY_RELIC_REGIONS
+
+    def relics(region: str) -> List[str]:
+        return [f"Relic {number}" for number, name in relic_regions.items() if name == region]
+
+    def elite_track_entrances(act: int) -> List[str]:
+        """Elite track regions entered from an act's Mid region: its chest and its first elite."""
+        if not is_new_logic:
+            return []
+        return ([f"Act {act} Chest"] if act > 1 else []) + [f"Act {act} Elite 1"]
+
+    def create_elite_track(act: int) -> None:
+        """One region per relic: the act's chest after the previous act's elites, then each elite in
+        turn, entered from the one before."""
+        if not is_new_logic:
+            return
+        if act > 1:
+            chest = f"Act {act} Chest"
+            multiworld.regions.append(world.create_region(player, prefix, chest, config, relics(chest)))
+        elites = ELITES_PER_ACT[act - 1]
+        for number in range(1, elites + 1):
+            elite = f"Act {act} Elite {number}"
+            exits = [f"Act {act} Elite {number + 1}"] if number < elites else []
+            multiworld.regions.append(world.create_region(player, prefix, elite, config, relics(elite), exits))
 
     # IMPORTANT: Keep these location ranges at the canonical singleplayer counts. Multiplayer
     # has one fewer physical floor per act and fewer associated reward opportunities; the client
     # compensates at deterministic boss-room boundaries. Reducing the APWorld counts here would
     # also reduce singleplayer and prevent one generated slot from supporting either play mode.
+    # New logic ends Early Act 1 after the three weak hallway fights: the fourth fight's checks,
+    # including the floor after it, are in the Act 1 Hallway.
+    early_fights = 3 if is_new_logic else 4
+    # New logic budgets seven combat card rewards per act (logic_table.REGIONS), so the eighth
+    # fight's checks wait for Early Act 2.
+    act_1_fights = 7 if is_new_logic else 8
+    # A rest site offers every unchecked campfire check of its act and earlier acts, and rest
+    # sites start on each act's first Mid floor ie roughly floor 7 which is clearly not in the
+    # Early region so move it to Mid Act so people aren't forced to go out of logic, so an act's
+    # first campfire check opens with its Mid region. Floorless openings have few other
+    # locations, and fill needs Campfire 1 there:
+    # in Mid Act 1 it failed many more sparse seeds.
+    first_campfire_stage = "Mid" if is_new_logic and world.options.include_floor_checks else "Early"
+
+    def first_campfire(act: int, stage: str) -> List[str]:
+        return [f"Act {act} Campfire 1"] if stage == first_campfire_stage else []
+
     first_char_region = world.create_region(player, prefix, 'Early Act 1', config,
                                             [
                                                 "Press Start",
                                                 "Potion Drop 1",
-                                                "Act 1 Campfire 1",
+                                                *first_campfire(1, "Early"),
                                                 "Ancient Act 1",
-                                                *_create_floor_check(1,6),
-                                                *_create_combat_check(1,4),
-                                                *_create_card_rewards(1, 4, every_other)
+                                                *_create_floor_check(1, early_fights + 2),
+                                                *_create_combat_check(1, early_fights),
+                                                *_create_card_rewards(1, early_fights, every_other)
                                             ],
-                                            ["Mid Act 1", "Act 1 Shop"])
+                                            ["Act 1 Hallway" if is_new_logic else "Mid Act 1", "Act 1 Shop"])
 
     neow.connect(first_char_region, first_char_region.name)
     multiworld.regions.append(first_char_region)
@@ -53,25 +97,34 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
     multiworld.regions.append(world.create_region(player, prefix, "Act 1 Shop", config,
                                                   [f"Shop Slot {i}" for i in range(1,6)]))
 
+    if is_new_logic:
+        multiworld.regions.append(world.create_region(player, prefix, "Act 1 Hallway", config,
+                                                      [
+                                                          *_create_floor_check(6, 6),
+                                                          *_create_combat_check(4, 4),
+                                                          *_create_card_rewards(4, 4, every_other),
+                                                      ], ["Mid Act 1"]))
+
     multiworld.regions.append(world.create_region(player, prefix, 'Mid Act 1', config,
                                                   [
-                                                      'Relic 1',
-                                                      'Relic 2',
+                                                      *relics('Mid Act 1'),
                                                       "Potion Drop 2",
+                                                      *first_campfire(1, "Mid"),
                                                       "Act 1 Campfire 2",
                                                       *_create_floor_check(7, 11),
                                                       *_create_combat_check(5, 6),
                                                       *_create_card_rewards(5,6, every_other),
-                                                  ],["Late Act 1"]))
+                                                  ],["Late Act 1", *elite_track_entrances(1)]))
 
     multiworld.regions.append(world.create_region(player, prefix, 'Late Act 1', config,
                                                   [
-                                                      'Relic 3',
+                                                      *relics('Late Act 1'),
                                                       "Potion Drop 3",
                                                       *_create_floor_check(12, 16),
-                                                      *_create_combat_check(7, 8),
-                                                      *_create_card_rewards(7,8, every_other)
+                                                      *_create_combat_check(7, act_1_fights),
+                                                      *_create_card_rewards(7, act_1_fights, every_other)
                                                   ], ['Act 1 Boss Arena']))
+    create_elite_track(1)
 
     multiworld.regions.append(world.create_region(player, prefix, 'Act 1 Boss Arena', config,
                                                   [
@@ -87,32 +140,33 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                   [
                                                       "Potion Drop 4",
                                                       *_create_floor_check(18, 22),
-                                                      "Act 2 Campfire 1",
-                                                      *_create_combat_check(9, 10),
-                                                      *_create_card_rewards(9, 10, every_other),
+                                                      *first_campfire(2, "Early"),
+                                                      *_create_combat_check(act_1_fights + 1, 10),
+                                                      *_create_card_rewards(act_1_fights + 1, 10, every_other),
                                                   ], ["Mid Act 2", "Act 2 Shop"]))
 
     multiworld.regions.append(world.create_region(player, prefix, "Act 2 Shop", config,
                                                   [f"Shop Slot {i}" for i in range(6,11)]))
     multiworld.regions.append(world.create_region(player, prefix, 'Mid Act 2', config,
                                                   [
-                                                      'Relic 4',
-                                                      'Relic 5',
+                                                      *relics('Mid Act 2'),
                                                       "Potion Drop 5",
+                                                      *first_campfire(2, "Mid"),
                                                       "Act 2 Campfire 2",
                                                       *_create_floor_check(23, 27),
                                                       *_create_combat_check(11, 12),
                                                       *_create_card_rewards(11, 12, every_other)
-                                                  ], ["Late Act 2"]))
+                                                  ], ["Late Act 2", *elite_track_entrances(2)]))
 
     multiworld.regions.append(world.create_region(player, prefix, 'Late Act 2', config,
                                                   [
-                                                      'Relic 6',
+                                                      *relics('Late Act 2'),
                                                       "Potion Drop 6",
                                                       *_create_floor_check(28, 32),
                                                       *_create_combat_check(13, 14),
                                                       *_create_card_rewards(13, 14, every_other)
                                                   ], ['Act 2 Boss Arena']))
+    create_elite_track(2)
 
     multiworld.regions.append(world.create_region(player, prefix, 'Act 2 Boss Arena', config,
                                                   [
@@ -127,7 +181,7 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
     multiworld.regions.append(world.create_region(player, prefix, 'Early Act 3', config,
                                                   [
                                                       "Potion Drop 7",
-                                                      "Act 3 Campfire 1",
+                                                      *first_campfire(3, "Early"),
                                                       *_create_floor_check(34, 38),
                                                       *_create_combat_check(15, 16),
                                                       *_create_card_rewards(15, 16, every_other)
@@ -138,25 +192,25 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
 
     multiworld.regions.append(world.create_region(player, prefix, 'Mid Act 3', config,
                                                   [
-                                                      "Relic 7",
-                                                      "Relic 8",
+                                                      *relics('Mid Act 3'),
                                                       "Potion Drop 8",
+                                                      *first_campfire(3, "Mid"),
                                                       "Act 3 Campfire 2",
                                                       *_create_floor_check(39, 43),
                                                       *_create_combat_check(17, 18),
                                                       *_create_card_rewards(17, 18, every_other)
-                                                  ], ["Late Act 3"]))
+                                                  ], ["Late Act 3", *elite_track_entrances(3)]))
 
 
     multiworld.regions.append(world.create_region(player, prefix, 'Late Act 3', config,
                                                   [
-                                                      "Relic 9",
-                                                      "Relic 10",
+                                                      *relics('Late Act 3'),
                                                       "Potion Drop 9",
                                                       *_create_floor_check(44, 47),
                                                       *_create_combat_check(19, 20),
                                                       *_create_card_rewards(19, 20, every_other)
                                                   ], ['Act 3 Boss Arena']))
+    create_elite_track(3)
 
 
     multiworld.regions.append(world.create_region(player, prefix, 'Act 3 Boss Arena', config,
@@ -165,13 +219,23 @@ def _create_regions(world: 'SlayTheSpire2World', player: int, config: 'Character
                                                       *_create_floor_check(48, 48 + ascension_mod),
                                                   ]))
 
+# Relic placement before the elite track. Old logic gates these path regions by power alone.
+LEGACY_RELIC_REGIONS = {
+    1: "Mid Act 1", 2: "Mid Act 1", 3: "Late Act 1",
+    4: "Mid Act 2", 5: "Mid Act 2", 6: "Late Act 2",
+    7: "Mid Act 3", 8: "Mid Act 3", 9: "Late Act 3", 10: "Late Act 3",
+}
+
+
 def _create_floor_check(start: int, end: int) -> List[str]:
     return [f"Reached Floor {i}" for i in range(start, end + 1)]
 
 def _create_card_rewards(start: int, end: int, every_other: bool) -> List[str]:
+    """The Card Reward checks of combat card rewards start to end. With half shuffle the client
+    makes every odd one a check, so Card Reward N is the run's card reward 2N - 1."""
     if every_other:
-        start =  ceil(start/2)
-        end =  floor(end/2)
+        start = ceil((start + 1) / 2)
+        end = floor((end + 1) / 2)
     return [f"Card Reward {i}" for i in range(start, end + 1)]
 
 def _create_combat_check(start: int, end: int) -> List[str]:
