@@ -45,6 +45,8 @@ export const CHALLENGE_OPTION_KEYS = {
   enemyDamageScaling: "enemy_damage_scaling",
   hiddenIntents: "hidden_intents",
   hiddenHealth: "hidden_health",
+  hiddenPiles: "hidden_piles",
+  hiddenMap: "hidden_map",
   strictCardRewards: "strict_card_rewards",
 } as const;
 

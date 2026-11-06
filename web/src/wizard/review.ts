@@ -328,6 +328,8 @@ export function hasActiveChallenges(answers: ChallengeAnswers): boolean {
       answers.enemyDamageScaling > 0 ||
       answers.hiddenIntents !== "off" ||
       answers.hiddenHealth !== "off" ||
+      answers.hiddenPiles !== "off" ||
+      answers.hiddenMap !== "off" ||
       answers.strictCardRewards)
   );
 }
@@ -387,6 +389,18 @@ export function summarizeChallengeAnswers(answers: ChallengeAnswers): string {
   if (answers.hiddenHealth !== "off") {
     sentences.push(
       `Health is hidden until ${describeSightItems(answers.hiddenHealth, "Health Sight")} is found.`,
+    );
+  }
+
+  if (answers.hiddenPiles !== "off") {
+    sentences.push(
+      `Combat piles are hidden until ${describeSightItems(answers.hiddenPiles, "Pile Sight")} is found.`,
+    );
+  }
+
+  if (answers.hiddenMap !== "off") {
+    sentences.push(
+      `Rooms beyond your next move are hidden until ${describeSightItems(answers.hiddenMap, "Map Sight")} is found.`,
     );
   }
 

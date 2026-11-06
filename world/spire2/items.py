@@ -29,6 +29,8 @@ class ItemType(Enum):
     BONUS_WAX_RELIC = auto()
     INTENT_SIGHT = auto()
     HEALTH_SIGHT = auto()
+    PILE_SIGHT = auto()
+    MAP_SIGHT = auto()
     TRAP = auto()
     CAW_CAW = auto()
     BUFF = auto()
@@ -131,13 +133,15 @@ trap_item_table: Dict[str, ItemData] = {
 
 # Universal items that undo a challenge option, one ID range for all of them: 800-899.
 # Each is added to the pool only when its option is on; logic never counts them.
-# The Hidden Intents and Hidden Health options set how many copies of their Sight item are added.
+# Each Hidden option sets how many copies of its Sight item are added.
 # Any copy undoes the whole challenge. The client keeps a one-step-per-copy rule commented out in
 # ChallengeSightItems.UnlockedSteps: the first Intent Sight showed intents without numbers, the
 # first Health Sight showed only your own side's health.
 challenge_item_table: Dict[str, ItemData] = {
     "Intent Sight": ItemData(800, ItemType.INTENT_SIGHT, ItemClassification.useful),
     "Health Sight": ItemData(801, ItemType.HEALTH_SIGHT, ItemClassification.useful),
+    "Pile Sight": ItemData(802, ItemType.PILE_SIGHT, ItemClassification.useful),
+    "Map Sight": ItemData(803, ItemType.MAP_SIGHT, ItemClassification.useful),
 }
 
 # `universal_bonus_items` is keyed by the actual Archipelago item name (like "Bonus Wax Relic").

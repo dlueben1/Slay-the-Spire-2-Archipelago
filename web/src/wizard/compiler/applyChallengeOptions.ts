@@ -62,5 +62,9 @@ export function applyChallengeOptions(
     SIGHT_COPY_COUNTS[answers.hiddenIntents];
   target[CHALLENGE_OPTION_KEYS.hiddenHealth] =
     SIGHT_COPY_COUNTS[answers.hiddenHealth];
+  target[CHALLENGE_OPTION_KEYS.hiddenPiles] =
+    SIGHT_COPY_COUNTS[answers.hiddenPiles];
+  target[CHALLENGE_OPTION_KEYS.hiddenMap] =
+    SIGHT_COPY_COUNTS[answers.hiddenMap];
   target[CHALLENGE_OPTION_KEYS.strictCardRewards] = answers.strictCardRewards;
 }

@@ -8,7 +8,7 @@ from .options import (
     IncludeFloorChecks, NeowSanity, CampfireSanity, GoldSanity, PotionSanity,
     ShopSanity, ShopCardSlots, ShopNeutralSlots, ShopRelicSlots, ShopPotionSlots, ShopRemoveSlots, ShopSanityCosts,
     AncientRelicLocation, AncientRelicPool, RelicRewardsAvailableAnytime, RemoveOPRelics, ReleaseOnVictory,
-    CardReward, StrictCardRewards, HiddenIntents, HiddenHealth, ProgressiveStarterCard, ProgressiveStarterRelic, BonusItems, SeededRun,
+    CardReward, StrictCardRewards, HiddenIntents, HiddenHealth, HiddenPiles, HiddenMap, ProgressiveStarterCard, ProgressiveStarterRelic, BonusItems, SeededRun,
     OneGoldFillerWeight, FiveGoldFillerWeight,
     FreeAttackFillerWeight, FreePowerFillerWeight, FreeSkillFillerWeight,
     DexterityFillerWeight, StrengthFillerWeight, PlatingFillerWeight,
@@ -117,6 +117,8 @@ class SlayTheSpire2Web(WebWorld):
             EnemyDamageScaling,
             HiddenIntents,
             HiddenHealth,
+            HiddenPiles,
+            HiddenMap,
             StrictCardRewards,
         ]),
     ]

@@ -474,6 +474,30 @@ export const challengeSetupStep: WizardStep = {
       },
     },
     {
+      id: "hidden-piles",
+      isVisible: usesChallenges,
+      title: "Should your combat piles be hidden?",
+      description:
+        'Hidden Piles shows "?" on the draw, discard and exhaust piles and stops them opening until a Pile Sight is found. Finding one shows the piles again, for every character.',
+      control: {
+        kind: "radio",
+        field: "hiddenPiles",
+        choices: sightCopyChoices("Pile Sight", "Piles are shown as normal."),
+      },
+    },
+    {
+      id: "hidden-map",
+      isVisible: usesChallenges,
+      title: "Should the map be hidden?",
+      description:
+        "Hidden Map only shows the rooms you can move to next. Rooms further ahead show a closed eye until a Map Sight is found. Finding one shows the whole map again, for every character.",
+      control: {
+        kind: "radio",
+        field: "hiddenMap",
+        choices: sightCopyChoices("Map Sight", "The map is shown as normal."),
+      },
+    },
+    {
       id: "strict-card-rewards",
       isVisible: usesChallenges,
       title: "Should Card Rewards in the AP Menu be picked one at a time?",

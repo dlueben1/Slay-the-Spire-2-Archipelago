@@ -87,6 +87,8 @@ function compilesConfiguredChallenges(): void {
     enemyDamageScaling: 10,
     hiddenIntents: "one",
     hiddenHealth: "two",
+    hiddenPiles: "one",
+    hiddenMap: "two",
     strictCardRewards: true,
   };
 
@@ -100,6 +102,8 @@ function compilesConfiguredChallenges(): void {
   expect(options[CHALLENGE_OPTION_KEYS.enemyDamageScaling]).toBe(10);
   expect(options[CHALLENGE_OPTION_KEYS.hiddenIntents]).toBe(1);
   expect(options[CHALLENGE_OPTION_KEYS.hiddenHealth]).toBe(2);
+  expect(options[CHALLENGE_OPTION_KEYS.hiddenPiles]).toBe(1);
+  expect(options[CHALLENGE_OPTION_KEYS.hiddenMap]).toBe(2);
   expect(options[CHALLENGE_OPTION_KEYS.strictCardRewards]).toBe(true);
 }
 
@@ -120,6 +124,8 @@ function ignoresChallengesUntilOptedIn(): void {
     enemyDamageScaling: 8,
     hiddenIntents: "two",
     hiddenHealth: "one",
+    hiddenPiles: "two",
+    hiddenMap: "one",
     strictCardRewards: true,
   };
 
@@ -154,6 +160,8 @@ function showsQuestionsOnlyAfterOptingIn(): void {
     "enemy-damage-scaling",
     "hidden-intents",
     "hidden-health",
+    "hidden-piles",
+    "hidden-map",
     "strict-card-rewards",
   ]);
 }
@@ -229,6 +237,14 @@ function reviewWarnsOnlyWithActiveChallenges(): void {
   expect(summarizeChallengeAnswers(answers.challenges)).toContain(
     "either of two Health Sights",
   );
+
+  answers.challenges.hiddenPiles = "one";
+  answers.challenges.hiddenMap = "two";
+
+  const summary = summarizeChallengeAnswers(answers.challenges);
+
+  expect(summary).toContain("until Pile Sight is found");
+  expect(summary).toContain("either of two Map Sights");
 }
 
 /**
