@@ -1,4 +1,6 @@
-﻿using MegaCrit.Sts2.Core.Entities.Players;
+﻿using Archipelago.MultiClient.Net.Models;
+using MegaCrit.Sts2.Core.Entities.Players;
+using StS2AP.Data;
 using static StS2AP.Data.ItemTable;
 
 namespace StS2AP.Utils;
@@ -38,6 +40,25 @@ public static class BuffUtility
     {
         Buffs.ProcessMultiplayer();
         Traps.ProcessMultiplayer();
+    }
+
+    /// <summary>
+    /// Restores combat effects that a singleplayer reconnect dropped from the queues. Their
+    /// receipts are at or below the client's item index, so the SDK's replay skips them, and
+    /// their notifications were already shown when they first arrived.
+    /// </summary>
+    internal static void RequeueAnnouncedReceipts(IReadOnlyList<ItemInfo> receivedItems, int throughIndex)
+    {
+        for (int index = 1; index <= Math.Min(throughIndex, receivedItems.Count); index++)
+        {
+            ItemInfo item = receivedItems[index - 1];
+            if (!ArchipelagoIdCodec.IsUniversalItemId(item.ItemId))
+                continue;
+            if (IsUniversalTrap(item.ItemId))
+                Traps.RequeueAnnounced(item.GetUniversalItemId(), index);
+            else if (IsUniversalCombatBuff(item.ItemId))
+                Buffs.RequeueAnnounced(item.GetUniversalItemId(), index);
+        }
     }
 
     public static void ClearQueue()
