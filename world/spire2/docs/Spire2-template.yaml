@@ -58,6 +58,29 @@ Slay the Spire II:
   # A single number N removes your highest N Ascensions; otherwise list numbers or names as above.
   ascension_down: []
 
+  # Extra difficulty modifiers for every run, on top of Ascension; logic ignores them. Most leave Act 1
+  # as it is and grow harder in Acts 2 and 3. Names (case-sensitive):
+  #   RisingStrength     - elites and bosses start each combat with 1 Strength in Act 2, 2 in Act 3
+  #   EscalatingBuffs    - enemies start combat with 1 random buff in Act 2, 2 different ones in Act 3
+  #   ShrinkingRests     - resting heals 25% of max HP in Act 2 and 20% in Act 3 instead of 30%
+  #   MountingCurses     - gain a random curse at the start of Act 2 and of Act 3
+  #   MountingBanes      - gain an Ascender's Bane (cannot be removed) at the start of Act 2 and of Act 3
+  #   CursedRun          - gain a random curse at the start of every act, Act 1 included; stacks with MountingCurses
+  #   ExtraAscendersBane - start each run with an extra Ascender's Bane; stacks with MountingBanes
+  #   SlowStart          - draw 1 fewer card on the first turn of each combat, in every act
+  #   FrailStart         - start each run with 10% less max HP
+  #   DangerousUnknowns  - ? rooms lean towards fights: combat 20% (+15%), elites 0% (+4%), chests 1% (+1%)
+  # In multiplayer, the host's modifiers apply to the whole run.
+  run_modifiers: []
+
+  # Extra enemy max HP in Acts 2 and 3, in percent (0-15); Act 1 is unchanged. Logic ignores it.
+  # In multiplayer, the host's value applies to the whole run.
+  enemy_hp_scaling: 0
+
+  # Extra enemy damage in Acts 2 and 3, in percent (0-15); Act 1 is unchanged. Logic ignores it.
+  # In multiplayer, the host's value applies to the whole run.
+  enemy_damage_scaling: 0
+
   ################
   # Game Options #
   ################

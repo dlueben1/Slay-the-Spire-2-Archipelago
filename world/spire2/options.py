@@ -485,6 +485,71 @@ class AscensionDown(OptionSet):
     valid_keys = { *[str(i) for i in range(1,11)], *ASCENSIONS.keys() }
     default = list()
 
+
+class RunModifiers(OptionSet):
+    """Extra difficulty modifiers for every run, on top of Ascension. Logic does not account for them.
+    Most leave Act 1 as it is and grow harder in Acts 2 and 3. Names are case-sensitive. In
+    multiplayer, the host's modifiers apply to the whole run.
+
+    - 'RisingStrength': Elites and bosses start each combat with 1 Strength in Act 2 and 2 in Act 3.
+    - 'EscalatingBuffs': Enemies start combat with one random buff in Act 2 and two different ones in
+      Act 3, from 1 Strength, 4 Plating, 2 Thorns, 1 Artifact, 3 Regen, 4 Curl Up, 4 Vigor and
+      1 Slippery.
+    - 'ShrinkingRests': Resting heals 25% of max HP in Act 2 and 20% in Act 3, instead of 30%.
+    - 'MountingCurses': Gain a random curse at the start of Act 2 and of Act 3.
+    - 'MountingBanes': Gain an Ascender's Bane, which cannot be removed, at the start of Act 2 and
+      of Act 3.
+    - 'CursedRun': Gain a random curse at the start of every act, including Act 1 (the base game's
+      Cursed Run). Stacks with 'MountingCurses'.
+    - 'ExtraAscendersBane': Start each run with an extra Ascender's Bane. Stacks with
+      'MountingBanes'.
+    - 'SlowStart': Draw 1 fewer card on the first turn of each combat, in every act.
+    - 'FrailStart': Start each run with 10% less max HP.
+    - 'DangerousUnknowns': ? rooms lean towards fights. Combat starts at 20% and rises 15% each
+      time a ? room is not a fight; elites start at 0% and rise 4%; chests start and rise at 1%.
+      Shops are unchanged. The chances reset each act, with no cap. The extra fights and elites
+      reach combat and relic checks sooner than logic expects.
+
+    Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder"""
+    display_name = "Run Modifiers"
+    visibility = Visibility.template | Visibility.spoiler
+    valid_keys_casefold = False
+    valid_keys = {
+        "RisingStrength",
+        "EscalatingBuffs",
+        "ShrinkingRests",
+        "MountingCurses",
+        "MountingBanes",
+        "CursedRun",
+        "ExtraAscendersBane",
+        "SlowStart",
+        "FrailStart",
+        "DangerousUnknowns",
+    }
+    default = frozenset()
+
+
+class EnemyHpScaling(Range):
+    """Extra max HP for every enemy in Acts 2 and 3, as a percentage. Act 1 is unchanged. Stacks with
+    Ascension. Logic does not account for it. In multiplayer, the host's value applies to the whole
+    run. Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder"""
+    display_name = "Enemy HP Scaling"
+    visibility = Visibility.template | Visibility.spoiler
+    range_start = 0
+    range_end = 15
+    default = 0
+
+
+class EnemyDamageScaling(Range):
+    """Extra damage from every enemy in Acts 2 and 3, as a percentage. Act 1 is unchanged. Stacks with
+    Ascension. Logic does not account for it. In multiplayer, the host's value applies to the whole
+    run. Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder"""
+    display_name = "Enemy Damage Scaling"
+    visibility = Visibility.template | Visibility.spoiler
+    range_start = 0
+    range_end = 15
+    default = 0
+
 # Death Link Options
 
 class DeathLink(ArchipelagoDeathLink):
@@ -748,6 +813,9 @@ class Spire2Options(PerGameCommonOptions):
     # final_act: FinalAct
     ascension: Ascension
     ascension_down: AscensionDown
+    run_modifiers: RunModifiers
+    enemy_hp_scaling: EnemyHpScaling
+    enemy_damage_scaling: EnemyDamageScaling
 
     # Main game flow
     use_new_logic: UseNewLogic

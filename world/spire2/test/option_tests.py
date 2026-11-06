@@ -194,7 +194,6 @@ class TestRemoveOPRelicsConfigured(Spire2TestBase):
         # The client maps categories to relics, so slot data carries only the category names.
         self.assertEqual(["Ancient", "Rare"], self.world.fill_slot_data()["remove_op_relics"])
 
-
 class TestAscensionDowns(Spire2TestBase):
     options = {
         "characters": [
