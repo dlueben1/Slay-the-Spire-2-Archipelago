@@ -19,6 +19,9 @@ public static class SerializationUtility
                 megaResolver,
                 ApSerializationContext.Default
             ),
+            // Indented JSON otherwise uses the OS newline. These models travel between players,
+            // so Windows and Linux or macOS must write the same text.
+            NewLine = "\n",
         };
     }
 }

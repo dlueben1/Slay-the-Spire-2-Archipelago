@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace StS2AP.DomainAdapters;
@@ -27,10 +28,7 @@ internal static class ApCardRevealCodec
             spec.IsRareCardReward, spec.CardRewardActIndex, spec.CardCanReroll, FirstReveal = firstReveal,
             Cards = spec.SerializedModels.Select(model => JsonSerializer.Deserialize<JsonElement>(model)),
         }));
-        using var stream = new MemoryStream();
-        using (var writer = new Utf8JsonWriter(stream))
-            WriteCanonical(writer, document.RootElement);
-        byte[] digest = SHA256.HashData(stream.ToArray());
+        byte[] digest = SHA256.HashData(CanonicalBytes(document.RootElement));
         var result = new List<int>(DigestWords);
         for (int offset = 0; offset < digest.Length; offset += sizeof(int))
             result.Add(BinaryPrimitives.ReadInt32LittleEndian(digest.AsSpan(offset, sizeof(int))));
@@ -43,6 +41,27 @@ internal static class ApCardRevealCodec
             || !local.SequenceEqual(owner))
             throw new InvalidOperationException($"Replicated AP card offer {receipt} disagreed with the owner "
                 + "(receipt or card offer). No picker choice was applied.");
+    }
+
+    /// <summary>
+    /// Whether two ordered lists of serialized models mean the same thing. Players can write the
+    /// same model as different text, so this compares the parsed JSON.
+    /// </summary>
+    internal static bool SameModels(IReadOnlyList<string> left, IReadOnlyList<string> right) =>
+        left.Select(Canonicalize).SequenceEqual(right.Select(Canonicalize), StringComparer.Ordinal);
+
+    private static string Canonicalize(string model)
+    {
+        using var document = JsonDocument.Parse(model);
+        return Encoding.UTF8.GetString(CanonicalBytes(document.RootElement));
+    }
+
+    private static byte[] CanonicalBytes(JsonElement value)
+    {
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream))
+            WriteCanonical(writer, value);
+        return stream.ToArray();
     }
 
     private static void WriteCanonical(Utf8JsonWriter writer, JsonElement value)

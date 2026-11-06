@@ -119,6 +119,27 @@ public sealed class ApCardRevealTests
     }
 
     [Fact]
+    public void ModelsMatchAcrossOperatingSystemNewlinesAndPropertyOrder()
+    {
+        const string windows = "{\r\n  \"id\": \"CARD.A\",\r\n  \"upgrade\": 1\r\n}";
+        const string linux = "{\n  \"id\": \"CARD.A\",\n  \"upgrade\": 1\n}";
+        const string reordered = """{"upgrade":1,"id":"CARD.A"}""";
+        Assert.True(ApCardRevealCodec.SameModels([windows], [linux]));
+        Assert.True(ApCardRevealCodec.SameModels([windows], [reordered]));
+    }
+
+    [Fact]
+    public void ModelsThatReallyDifferStillDisagree()
+    {
+        const string a = """{"id":"CARD.A","upgrade":0}""";
+        const string upgraded = """{"id":"CARD.A","upgrade":1}""";
+        const string b = """{"id":"CARD.B","upgrade":0}""";
+        Assert.False(ApCardRevealCodec.SameModels([a], [upgraded]));
+        Assert.False(ApCardRevealCodec.SameModels([a, b], [b, a]));
+        Assert.False(ApCardRevealCodec.SameModels([a], [a, b]));
+    }
+
+    [Fact]
     public void RefreshedOfferSurvivesSaveAndProgressDeltaWithoutReplayInstructions()
     {
         var before = Final();
