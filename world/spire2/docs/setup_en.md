@@ -74,6 +74,9 @@ You don't need the Launcher to play, but we recommend it for two optional tools.
 **Universal Tracker** shows what's in logic; search up the `universal-tracker`
 channel on the main Archipelago Discord. The **Text Client** lets you see and send hints.
 
+The [hinting guide](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/world/spire2/docs/hinting_en.md)
+explains what each item and location means, how to earn each check, and how to hint.
+
 ## Multiplayer
 
 The mod supports the game's co-op. See the [multiplayer setup guide](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/world/spire2/docs/multiplayer_setup_en.md)
