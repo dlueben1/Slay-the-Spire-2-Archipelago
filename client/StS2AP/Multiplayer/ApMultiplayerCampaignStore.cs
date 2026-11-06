@@ -721,6 +721,22 @@ public static class ApMultiplayerCampaignStore
         }
     }
 
+    /// <summary>A save's run JSON, for showing what it holds; null when it is missing or does not verify.</summary>
+    internal static string? TryReadSnapshotJson(CampaignMetadata metadata, SaveKind kind)
+    {
+        CampaignSnapshot? snapshot = GetSnapshot(metadata, kind);
+        if (snapshot == null || GetSnapshotError(metadata, kind) != null)
+            return null;
+        try
+        {
+            return File.ReadAllText(GetSnapshotPath(metadata.CampaignId, snapshot));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            return null;
+        }
+    }
+
     private static string GetSnapshotPath(string campaignId, CampaignSnapshot snapshot) =>
         CampaignSaveFiles.GetPath(GetCampaignDirectory(campaignId), snapshot.FileName, snapshot.Sha256);
 

@@ -4,6 +4,7 @@ using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves;
 using StS2AP.Utils;
+using StS2AP.Utils.RunGraph;
 
 namespace StS2AP.Patches
 {
@@ -85,6 +86,7 @@ namespace StS2AP.Patches
                     return true;
                 }
                 deathLinkController.SendDeathLink(new DeathLink(ArchipelagoClient.PlayerName, causeMsg));
+                ApRunGraphRecorder.RecordDeathLinkSent();
 
                 // Finally, return control to the function
                 return true;

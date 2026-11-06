@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models;
 using STS2RitsuLib.Settings;
+using StS2AP.Utils.RunGraph;
 
 namespace StS2AP.Utils
 {
@@ -133,6 +134,8 @@ namespace StS2AP.Utils
                 DeathLinkMultiplayer.Receive(info);
                 return;
             }
+
+            ApRunGraphRecorder.RecordDeathLinkReceived(info.Source);
 
             // Notify the User
             try
