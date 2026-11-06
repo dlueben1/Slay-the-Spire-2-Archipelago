@@ -145,7 +145,7 @@ public static class AncientMultiplayer
             reason = $"No host-confirmed Ancient progress was frozen for player {player.NetId}.";
             return false;
         }
-        if (!settings.Characters.TryGetValue(
+        if (!settings.TryGetCharacterConfig(
                 player.Character.Id.Entry,
                 out CharacterConfig? config
             ))

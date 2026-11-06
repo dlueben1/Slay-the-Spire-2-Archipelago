@@ -359,12 +359,6 @@ public static class MultiplayerSupport
             reason = "The AP slot did not provide any usable character settings.";
             return false;
         }
-        if (!ArchipelagoClient.TryValidateConfiguredCharacters(
-                ArchipelagoClient.Settings,
-                out reason))
-        {
-            return false;
-        }
 
         var identity = ApSessionIdentity.Create(
             ArchipelagoClient.ServerAddress, roomSeed, apTeamId, apSlotId);
@@ -772,12 +766,7 @@ public static class MultiplayerSupport
             && ApRunData.TryGetSharedState(runState, out ApRunSharedState hostShared)
             && hostShared.HostSettings != null)
         {
-            if (!ArchipelagoClient.TryUseMultiplayerHostSettings(
-                    hostShared.HostSettings,
-                    out string settingsReason))
-            {
-                InvalidateRunClaims(settingsReason);
-            }
+            ArchipelagoClient.UseMultiplayerHostSettings(hostShared.HostSettings);
         }
 
         LogUtility.Info(
@@ -909,7 +898,7 @@ public static class MultiplayerSupport
         };
 
         foreach ((string key, CharacterConfig config) in source.Characters)
-            snapshot.Characters[key] = CloneCharacterConfig(config);
+            snapshot.Characters[key] = config.Clone();
         return snapshot;
     }
 
@@ -923,27 +912,8 @@ public static class MultiplayerSupport
         {
             return;
         }
-        if (!ArchipelagoClient.TryUseMultiplayerHostSettings(
-                shared.HostSettings,
-                out string settingsReason))
-        {
-            InvalidateRunClaims(settingsReason);
-        }
+        ArchipelagoClient.UseMultiplayerHostSettings(shared.HostSettings);
     }
-
-    private static CharacterConfig CloneCharacterConfig(CharacterConfig source) => new()
-    {
-        Name = source.Name,
-        OptionName = source.OptionName,
-        CharOffset = source.CharOffset,
-        OfficialName = source.OfficialName,
-        Seed = source.Seed,
-        Locked = source.Locked,
-        ModNum = source.ModNum,
-        ProgressiveStarterCard = source.ProgressiveStarterCard,
-        ProgressiveStarterRelic = source.ProgressiveStarterRelic,
-        Ascension = new HashSet<string>(source.Ascension, StringComparer.Ordinal),
-    };
 
     public static void EndRun()
     {

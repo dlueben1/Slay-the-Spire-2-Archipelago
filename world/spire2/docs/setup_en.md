@@ -57,6 +57,15 @@ Each participant supplies one YAML. For custom characters, everyone who needs
 those characters must install the corresponding character mods; test their
 compatibility before a full multiworld.
 
+If a slot's character mod is missing or broken, you can still connect after a
+warning. Every character's checks and victories then also count for each missing
+character. **Defect** is always playable in that case: it uses its own items if
+your YAML includes Defect, and otherwise the first missing character's items.
+Checkpoints saved with a different set of mods may not load; start a new run if
+one fails. As a last resort, the dev console command
+`ap_release_missing <character> confirm` sends all of a missing character's
+remaining checks; it is disabled in race rooms.
+
 ## Generate a multiworld
 
 **You must generate using Archipelago Launcher v0.6.7 or newer.** This requirement
