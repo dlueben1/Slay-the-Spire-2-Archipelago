@@ -292,7 +292,7 @@ namespace StS2AP.Patches
             await transition.FadeIn();
         }
 
-        [HarmonyPatch(typeof(NCharacterSelectScreen), "OnEmbarkPressed")]
+        [HarmonyPatch(typeof(NCharacterSelectScreen), nameof(NCharacterSelectScreen.OnEmbarkPressed))]
         public static class MaybeLoadAP
         {
 
@@ -302,7 +302,7 @@ namespace StS2AP.Patches
                 if (MultiplayerSupport.PendingDestination == ApPlayDestination.Multiplayer)
                     return true;
 
-                var character = BetaMainCompatibility.GetLocalCharacter(__instance.Lobby);
+                var character = __instance.Lobby.LocalPlayer.character;
                 if (!ArchipelagoClient.CanSelectCharacter(character, out string blockedReason))
                 {
                     __instance.Lobby.SetReady(ready: false);

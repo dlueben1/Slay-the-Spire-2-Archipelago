@@ -26,7 +26,7 @@ namespace StS2AP.Patches
         /// <summary>
         /// Sets the hover tooltip based on the currently enabled ascensions.
         /// </summary>
-        [HarmonyPatch(typeof(NTopBarPortraitTip), "OnFocus")]
+        [HarmonyPatch(typeof(NTopBarPortraitTip), nameof(NTopBarPortraitTip.OnFocus))]
         public static class ChangeHoverTip
         {
             [HarmonyPrefix]
@@ -71,7 +71,7 @@ namespace StS2AP.Patches
         /// <summary>
         /// Captures the ascension number label, so we can change the number.
         /// </summary>
-        [HarmonyPatch(typeof(NTopBar), "Initialize")]
+        [HarmonyPatch(typeof(NTopBar), nameof(NTopBar.Initialize))]
         public static class CaptureAscensionLabel
         {
             [HarmonyPostfix]
@@ -95,7 +95,10 @@ namespace StS2AP.Patches
         /// During a run, everything gets piped to this method.  There are some things that happen outside of runs, but
         /// we mostly don't care.
         /// </summary>
-        [HarmonyPatch(typeof(MegaCrit.Sts2.Core.Entities.Ascension.AscensionManager), "HasLevel")]
+        [HarmonyPatch(
+            typeof(MegaCrit.Sts2.Core.Entities.Ascension.AscensionManager),
+            nameof(MegaCrit.Sts2.Core.Entities.Ascension.AscensionManager.HasLevel)
+        )]
         public static class InGameAscensionOverride
         {
             [HarmonyPostfix]
@@ -139,7 +142,11 @@ namespace StS2AP.Patches
         /// <summary>
         /// Helps disable Double Boss when that ascension was active, but is no longer.
         /// </summary>
-        [HarmonyPatch(typeof(SerializableActMap), nameof(SerializableActMap.SecondBossPoint), MethodType.Getter)]
+        [HarmonyPatch(
+            typeof(SerializableActMap),
+            nameof(SerializableActMap.SecondBossPoint),
+            MethodType.Getter
+        )]
         public static class DisableSecondBossMapPointSerializable
         {
             [HarmonyPostfix]
@@ -261,7 +268,7 @@ namespace StS2AP.Patches
                 if (__instance.Lobby == null)
                     return;
                 UpdateCharacterSelectAscension(__instance, __instance._selectedButton,
-                    BetaMainCompatibility.GetLocalCharacter(__instance.Lobby));
+                    __instance.Lobby.LocalPlayer.character);
             }
         }
 
@@ -320,7 +327,7 @@ namespace StS2AP.Patches
         [HarmonyPatch(typeof(NAscensionPanel))]
         public static class HideAscensionArrows
         {
-            [HarmonyPatch("RefreshArrowVisibility")]
+            [HarmonyPatch(nameof(NAscensionPanel.RefreshArrowVisibility))]
             [HarmonyPostfix]
             public static void Postfix(NAscensionPanel __instance)
             {

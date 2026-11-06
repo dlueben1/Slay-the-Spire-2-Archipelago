@@ -25,7 +25,7 @@ namespace StS2AP.Patches
     /// asynchronous purchases. Keep the AP page navigation unavailable until that
     /// entire operation, including card removal, has completed.
     /// </summary>
-    [HarmonyPatch(typeof(LordsParasol), "PurchaseEverything")]
+    [HarmonyPatch(typeof(LordsParasol), nameof(LordsParasol.PurchaseEverything))]
     public static class BlockShopPageNavigationForLordsParasol
     {
         [HarmonyPrefix]

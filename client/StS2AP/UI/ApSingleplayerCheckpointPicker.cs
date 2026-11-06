@@ -297,7 +297,7 @@ public sealed partial class ApSingleplayerCheckpointPicker : Control, IScreenCon
     private void StartNewRun()
     {
         if (_loading) return;
-        if (!ArchipelagoClient.CanSelectCharacter(BetaMainCompatibility.GetLocalCharacter(_screen.Lobby), out string reason))
+        if (!ArchipelagoClient.CanSelectCharacter(_screen.Lobby.LocalPlayer.character, out string reason))
         { NotificationUtility.ShowRawText(reason); return; }
         NModalContainer.Instance?.Clear();
         _screen.Lobby.SetReady(ready: true);

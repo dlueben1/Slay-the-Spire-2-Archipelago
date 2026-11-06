@@ -155,7 +155,7 @@ public static class Patches_APCardRewardUpgradeOdds
     /// </summary>
     [HarmonyPatch(
         typeof(CardFactory),
-        "RollForRarity",
+        nameof(CardFactory.RollForRarity),
         [
             typeof(Player),
             typeof(CardRarityOddsType),

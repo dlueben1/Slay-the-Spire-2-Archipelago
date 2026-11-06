@@ -588,7 +588,7 @@ public static class ApMirroredRewardDispatcher
         CardRarityOddsType rarity = rare
             ? CardRarityOddsType.BossEncounter
             : CardRarityOddsType.RegularEncounter;
-        return BetaMainCompatibility.WithCombatRewardCompatibility(
+        return GameApiCompat.WithCombatRewardCompatibility(
             new CardCreationOptions(
                 new[] { player.Character.CardPool },
                 CardCreationSource.Encounter,

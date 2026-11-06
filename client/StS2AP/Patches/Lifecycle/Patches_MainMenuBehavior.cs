@@ -144,7 +144,7 @@ namespace StS2AP.Patches
 
         // Backing out of Host/Join or a lobby must release the pending multiplayer intent.
         // Otherwise settings still see a multiplayer scope after the player returns home.
-        [HarmonyPatch(typeof(NMainMenu), "OnSubmenuStackChanged")]
+        [HarmonyPatch(typeof(NMainMenu), nameof(NMainMenu.OnSubmenuStackChanged))]
         private static class ClearPendingPlaySelectionAtHome
         {
             [HarmonyPostfix]
@@ -164,7 +164,7 @@ namespace StS2AP.Patches
         /// Delays beta StS2's developer fast-multiplayer action until this process's
         /// AP slot has connected and prepared. Ordinary fastmp invocations remain native.
         /// </summary>
-        [HarmonyPatch(typeof(NMainMenu), "CheckCommandLineArgs")]
+        [HarmonyPatch(typeof(NMainMenu), nameof(NMainMenu.CheckCommandLineArgs))]
         public static class DelayApFastMultiplayerUntilReady
         {
             [HarmonyPrefix]
@@ -567,7 +567,11 @@ namespace StS2AP.Patches
             return false;
         }
 
-        [HarmonyPatch(typeof(NMultiplayerSubmenu), "OnHostPressed", new[] { typeof(NButton) })]
+        [HarmonyPatch(
+            typeof(NMultiplayerSubmenu),
+            nameof(NMultiplayerSubmenu.OnHostPressed),
+            new[] { typeof(NButton) }
+        )]
         private static class RequireApSlotForHostButton
         {
             [HarmonyPrefix]
@@ -650,7 +654,7 @@ namespace StS2AP.Patches
         /// AP owns multiplayer save selection. Keep Host available and remove the native
         /// single-save Load/Abandon bypasses from the AP multiplayer submenu.
         /// </summary>
-        [HarmonyPatch(typeof(NMultiplayerSubmenu), "UpdateButtons")]
+        [HarmonyPatch(typeof(NMultiplayerSubmenu), nameof(NMultiplayerSubmenu.UpdateButtons))]
         private static class UseUnifiedApCampaignButton
         {
             [HarmonyPostfix]
@@ -668,7 +672,11 @@ namespace StS2AP.Patches
             }
         }
 
-        [HarmonyPatch(typeof(NMultiplayerSubmenu), "get_InitialFocusedControl")]
+        [HarmonyPatch(
+            typeof(NMultiplayerSubmenu),
+            nameof(NMultiplayerSubmenu.InitialFocusedControl),
+            MethodType.Getter
+        )]
         private static class FocusUnifiedApCampaignButton
         {
             [HarmonyPostfix]
@@ -685,7 +693,7 @@ namespace StS2AP.Patches
         }
 
         /// <summary>Prevents a local ready signal unless this process's AP owner is prepared.</summary>
-        [HarmonyPatch(typeof(NCharacterSelectScreen), "OnEmbarkPressed")]
+        [HarmonyPatch(typeof(NCharacterSelectScreen), nameof(NCharacterSelectScreen.OnEmbarkPressed))]
         public static class RequireApReadyToEmbark
         {
             [HarmonyPrefix]
@@ -695,7 +703,7 @@ namespace StS2AP.Patches
                     return true;
 
                 ApRunData.StageLocalPlayer(__instance.Lobby);
-                CharacterModel character = BetaMainCompatibility.GetLocalCharacter(__instance.Lobby);
+                CharacterModel character = __instance.Lobby.LocalPlayer.character;
                 if (!MultiplayerSupport.CanEmbark(character, out string blockedReason))
                     return BlockReady(__instance, blockedReason);
 
@@ -719,7 +727,7 @@ namespace StS2AP.Patches
                 NCharacterSelectScreen screen,
                 string blockedReason)
             {
-                if (BetaMainCompatibility.IsLocalPlayerReady(screen.Lobby))
+                if (screen.Lobby.LocalPlayer.isReady)
                     screen.Lobby.SetReady(ready: false);
                 NotificationUtility.ShowRawText(blockedReason);
                 LogUtility.Warn($"Blocked AP multiplayer embark: {blockedReason}");
@@ -731,7 +739,10 @@ namespace StS2AP.Patches
         /// The native load lobby permits continuing with missing players. Preserve that, but
         /// reject unsupported beta save contracts and identities outside the frozen roster.
         /// </summary>
-        [HarmonyPatch(typeof(NMultiplayerLoadGameScreen), "ShouldAllowRunToBegin")]
+        [HarmonyPatch(
+            typeof(NMultiplayerLoadGameScreen),
+            nameof(NMultiplayerLoadGameScreen.ShouldAllowRunToBegin)
+        )]
         private static class RequireCompatibleSavedCampaign
         {
             [HarmonyPostfix]
@@ -766,7 +777,7 @@ namespace StS2AP.Patches
         /// readies or a client is the last player to ready. The host recomputes readiness from
         /// current RitsuLib staging; no saved validation flag is consulted.
         /// </summary>
-        [HarmonyPatch(typeof(StartRunLobby), "BeginRunForAllPlayersIfAllReady")]
+        [HarmonyPatch(typeof(StartRunLobby), nameof(StartRunLobby.BeginRunForAllPlayersIfAllReady))]
         public static class RequireCompleteApLobbyBeforeLaunch
         {
             [HarmonyPrefix]
@@ -826,7 +837,7 @@ namespace StS2AP.Patches
         [HarmonyPatch(typeof(NCharacterSelectScreen))]
         public static class NCharacterSelectScreenPatches
         {
-            [HarmonyPatch("_Ready")]
+            [HarmonyPatch(nameof(NCharacterSelectScreen._Ready))]
             [HarmonyPostfix]
             private static void HideBackButtonOnCharSelectScreen(NCharacterSelectScreen __instance)
             {

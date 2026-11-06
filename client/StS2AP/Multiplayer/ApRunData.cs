@@ -325,7 +325,7 @@ public static class ApRunData
 
         ulong fixedHostNetId = lobby.NetService.NetId;
         ParticipantIdentity? hostIdentity = null;
-        foreach (ulong netId in BetaMainCompatibility.GetLobbyPlayerNetIds(lobby))
+        foreach (ulong netId in lobby.Players.Select(player => player.id).ToArray())
         {
             bool contributed = TryGetLobbyPlayerState(lobby, netId, out ApPlayerRunState state);
             ContributionReadiness readiness = ParticipantAdapter.Evaluate(contributed ? state : null);
@@ -708,7 +708,7 @@ public static class ApRunData
     }
 
     private static bool IsMessageFromHost(ulong senderNetId) =>
-        BetaMainCompatibility.TryGetHostNetId(
+        MultiplayerSupport.TryGetHostNetId(
             RunManager.Instance.NetService,
             out ulong hostNetId
         ) && senderNetId == hostNetId;

@@ -14,6 +14,31 @@ Remove `BuildMode=CompileOnly` and any staging `ModsOutputDir` override from
 The APWorld is copied from `dist/spire2.apworld` when present; build it on Linux/WSL
 with `.venv/bin/python scripts/build_apworld_local.py`.
 
+# Game update check
+
+`check_game_update.py` reports what a new game version means for the client, without launching the
+game. Put the new version's `sts2.dll`, `0Harmony.dll` and `GodotSharp.dll` in
+`.local-tools/sts2-references/<version>/` (or pass `--references`), then run:
+
+```bash
+.venv/bin/python scripts/check_game_update.py --old 0.111.0 --new 0.115.0
+```
+
+`--old` is the version the client builds against now. The script builds the client without deploying
+it, and writes `dist/game-update-<old>-to-<new>.md`, listing:
+
+- patches from the old build that don't attach to the new game, with the reason
+- compile errors against the new game
+- game methods the client patches whose code changed, largest change first, with diffs
+- game content added or removed, by kind of model
+- every version branch in the client, and which ones no longer differ
+
+It exits with 1 when there are patches or compile errors to fix. A patch that attaches can still
+misbehave, so the in-game test still matters, and patches applied by hand for optional mods aren't
+covered. The installed game's data folder comes from `STS2GamePath` in `client/StS2AP/local.props`,
+or from `--game-data`. The checks themselves are in `client/StS2AP.UpdateCheck`, which isn't in the
+solution because it builds self-contained and needs real game DLLs to do anything.
+
 # Release preparation
 
 See [the release guide](../docs/releasing.md) for the supported manual workflow.

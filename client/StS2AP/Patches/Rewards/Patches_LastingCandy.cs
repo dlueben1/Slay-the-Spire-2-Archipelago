@@ -2,7 +2,7 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models.Relics;
-#if !STS_BETA
+#if !STS2_AT_LEAST_0_111_0
 using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Runs;
 #endif
@@ -19,7 +19,7 @@ public static class Patches_LastingCandy
 {
     private static void CountCardReward(LastingCandy candy)
     {
-#if STS_BETA
+#if STS2_AT_LEAST_0_111_0
         // Matches the native BeforeCombatRewardOffered.
         if (candy.IsInTriggeringCombat)
             TaskHelper.RunSafely(candy.DoActivateVisuals());
@@ -36,11 +36,11 @@ public static class Patches_LastingCandy
     [HarmonyPatch(typeof(LastingCandy), nameof(LastingCandy.TryModifyCardRewardOptions))]
     private static class CountApCardRewards
     {
-#if STS_BETA
-        // Beta decides from the count before the reward being generated is added to it.
+#if STS2_AT_LEAST_0_111_0
+        // 0.111 decides from the count before the reward being generated is added to it.
         [HarmonyPostfix]
 #else
-        // Main decides from the count after the reward being generated is added to it.
+        // Older versions decide from the count after the reward being generated is added to it.
         [HarmonyPrefix]
 #endif
         private static void Count(LastingCandy __instance, Player player)
@@ -50,8 +50,8 @@ public static class Patches_LastingCandy
         }
     }
 
-#if !STS_BETA
-    // Beta already counts only combats whose reward set still has a native card reward. Main counts
+#if !STS2_AT_LEAST_0_111_0
+    // 0.111 counts only combats whose reward set still has a native card reward. Older versions count
     // every combat, so a fight whose reward became an AP check would still move the counter.
     // Vanilla Guests have no AP card rewards and keep the native cadence.
     private static bool CountsCardRewards(Player? player) => player != null

@@ -41,16 +41,8 @@ public sealed class ApEnemyDamageScaling : ApRunModifier
 
     // The game multiplies damage by each listener's factor after additive bonuses such as
     // Strength, alongside Vulnerable and Weak. Intents use the same pipeline, so they show the
-    // scaled damage. The beta API adds the card play to the hook.
-#if STS_MAIN
-    public override decimal ModifyDamageMultiplicative(
-        Creature? target,
-        decimal amount,
-        ValueProp props,
-        Creature? dealer,
-        CardModel? cardSource) =>
-        DamageFactor(target, dealer);
-#else
+    // scaled damage. 0.111 adds the card play to the hook.
+#if STS2_AT_LEAST_0_111_0
     public override decimal ModifyDamageMultiplicative(
         Creature? target,
         decimal amount,
@@ -58,6 +50,14 @@ public sealed class ApEnemyDamageScaling : ApRunModifier
         Creature? dealer,
         CardModel? cardSource,
         CardPlay? cardPlay) =>
+        DamageFactor(target, dealer);
+#else
+    public override decimal ModifyDamageMultiplicative(
+        Creature? target,
+        decimal amount,
+        ValueProp props,
+        Creature? dealer,
+        CardModel? cardSource) =>
         DamageFactor(target, dealer);
 #endif
 

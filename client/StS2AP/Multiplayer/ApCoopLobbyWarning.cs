@@ -103,7 +103,7 @@ public static class ApCoopLobbyWarning
     }
 
     private static CoopPlayerSelection.Member[] ReadRoster(StartRunLobby lobby) =>
-        BetaMainCompatibility.GetLobbyPlayerNetIds(lobby).Select(netId =>
+        lobby.Players.Select(player => player.id).Select(netId =>
         {
             ApRunData.TryGetLobbyPlayerState(lobby, netId, out ApPlayerRunState state);
             bool ownsSlot = state?.Participation == ApParticipationKind.OwnApSlot;

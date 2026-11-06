@@ -1,6 +1,8 @@
 using Godot;
 using MegaCrit.Sts2.Core.ControllerInput;
+using MegaCrit.Sts2.Core.Entities.CardRewardAlternatives;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Entities.Rewards;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
@@ -494,9 +496,38 @@ public static class ArchipelagoRewardUI
 
         // Match the exact screen held by an AP card reward, not just an arbitrary top overlay.
         foreach (CardReward reward in _set.Rewards.OfType<CardReward>())
-            if (BetaMainCompatibility.TrySkipCardRewardSelection(reward, picker))
+            if (TrySkipCardRewardSelection(reward, picker))
                 return true;
         return false;
+    }
+
+    private static bool TrySkipCardRewardSelection(CardReward reward, NCardRewardSelectionScreen picker)
+    {
+        try
+        {
+            if (!ReferenceEquals(reward._currentlyShownScreen, picker))
+                return false;
+            if (picker._completionSource == null || picker._completionSource.Task.IsCompleted)
+                return false;
+
+            for (int i = 0; i < picker._extraOptions.Count; i++)
+            {
+                CardRewardAlternative alternative = picker._extraOptions[i];
+                if (!string.Equals(alternative.OptionId, "Skip", StringComparison.OrdinalIgnoreCase)
+                    || alternative.AfterSelected != PostAlternateCardRewardAction.EndSelectionAndDoNotCompleteReward)
+                    continue;
+
+                picker.OnAlternateRewardSelected(i);
+                LogUtility.Info($"Skipped AP card selection through native Skip for player {reward.Player.NetId}.");
+                return true;
+            }
+            return false;
+        }
+        catch (Exception ex)
+        {
+            LogUtility.Error($"Could not skip AP card selection for player {reward.Player.NetId}: {ex}");
+            return false;
+        }
     }
 
     private static void PrepareForOpen()

@@ -122,7 +122,7 @@ public static class ApMultiplayerCampaignFlow
                 }
             }
 
-            HashSet<ulong> connectedIds = BetaMainCompatibility
+            HashSet<ulong> connectedIds = GameApiCompat
                 .GetConnectedRunPlayerNetIds(lobby)
                 .ToHashSet();
             connectedIds.Add(lobby.NetService.NetId);

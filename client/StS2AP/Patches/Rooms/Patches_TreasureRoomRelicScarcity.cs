@@ -13,7 +13,11 @@ namespace StS2AP.Patches;
 /// </summary>
 public static class Patches_TreasureRoomRelicScarcity
 {
-    [HarmonyPatch(typeof(NTreasureRoomRelicCollection), "get_DefaultFocusedControl")]
+    [HarmonyPatch(
+        typeof(NTreasureRoomRelicCollection),
+        nameof(NTreasureRoomRelicCollection.DefaultFocusedControl),
+        MethodType.Getter
+    )]
     private static class FocusFirstVisibleScarcityRelic
     {
         [HarmonyPrefix]
@@ -33,7 +37,7 @@ public static class Patches_TreasureRoomRelicScarcity
         }
     }
 
-    [HarmonyPatch(typeof(NHandImageCollection), "_Input")]
+    [HarmonyPatch(typeof(NHandImageCollection), nameof(NHandImageCollection._Input))]
     private static class IgnoreHandInputWithoutLocalPlayer
     {
         [HarmonyPrefix]

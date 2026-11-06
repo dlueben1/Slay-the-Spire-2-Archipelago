@@ -14,7 +14,7 @@ namespace StS2AP.Patches
     /// </summary>
     public static class Patches_NeowIgnoresApModifiers
     {
-        [HarmonyPatch(typeof(Neow), "GenerateInitialOptions")]
+        [HarmonyPatch(typeof(Neow), nameof(Neow.GenerateInitialOptions))]
         public static class InitialOptions
         {
             [HarmonyPrefix]

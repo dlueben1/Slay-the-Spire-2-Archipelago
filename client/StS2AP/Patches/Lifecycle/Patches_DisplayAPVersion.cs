@@ -6,7 +6,7 @@ namespace StS2AP.Patches
     /// <summary>
     /// Adds the Archipelago Version to the game's version info overlay
     /// </summary>
-    [HarmonyPatch(typeof(NDebugInfoLabelManager), "UpdateText")]
+    [HarmonyPatch(typeof(NDebugInfoLabelManager), nameof(NDebugInfoLabelManager.UpdateText))]
     public static class Patches_DisplayAPVersion
     {
         // Set by the loader when no build exists for this game version's line and it fell

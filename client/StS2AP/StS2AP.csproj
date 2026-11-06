@@ -75,11 +75,16 @@
     <IntermediateOutputPath>$(BaseIntermediateOutputPath)$(Sts2ApiCompat)/$(Configuration)/</IntermediateOutputPath>
     <OutputPath>$(MSBuildProjectDirectory)/bin/$(Sts2ApiCompat)/$(Configuration)/</OutputPath>
 
-    <!-- Create pre-processor directives for each supported game version -->
-    <DefineConstants Condition="'$(Sts2ApiCompat)' == '$(Sts2MainApiCompat)'"
-      >$(DefineConstants);STS_MAIN</DefineConstants>
-    <DefineConstants Condition="'$(Sts2ApiCompat)' == '$(Sts2BetaApiCompat)'"
-      >$(DefineConstants);STS_BETA</DefineConstants>
+    <!--
+      STS2_AT_LEAST_x_y_z means the targeted game API is that version or newer. Name a symbol after
+      the first version we saw with the change, and add a line here when a game update needs a new
+      one. Branches stay correct when a game branch moves on, with no source edits.
+    -->
+    <DefineConstants Condition="$([MSBuild]::VersionGreaterThanOrEquals('$(Sts2ApiCompat)', '0.111.0'))"
+      >$(DefineConstants);STS2_AT_LEAST_0_111_0</DefineConstants>
+
+    <!-- The reference package generates the access-check attribute, so Publicizer must not add its own. -->
+    <PublicizerRuntimeStrategies Condition="'$(UseSts2RefLib)' == 'true'">Unsafe</PublicizerRuntimeStrategies>
 
     <!-- Defines a flag for how we want to build the app, which excludes/includes certain features. Valid options are Local, CompileOnly, and Package. -->
     <BuildMode Condition="'$(BuildMode)' == '' and '$(DllOnlyBuild)' == 'true'">CompileOnly</BuildMode>
@@ -97,10 +102,32 @@
       Condition="'$(UseSts2RefLib)' == 'true' and '$(Sts2RefLibPackageVersion)' != ''"
     />
     <PackageReference Include="STS2.RitsuLib.Compat.0.107.1" Version="0.6.10" />
-    <PackageReference Include="Krafs.Publicizer" Version="2.3.2" PrivateAssets="all" Condition="'$(UseSts2RefLib)' != 'true'" />
+    <PackageReference Include="Krafs.Publicizer" Version="2.3.2" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
     <Publicize Include="sts2" IncludeCompilerGeneratedMembers="false" IncludeVirtualMembers="false" Condition="'$(UseSts2RefLib)' != 'true'" />
+    <!--
+      Protected virtual members that patches name with nameof, so the compiler can check them.
+      IncludeVirtualMembers stays false above because the mod's own protected overrides would stop
+      matching, and the reference package leaves these members protected as well, so these items
+      apply to every build. Never list a member the mod overrides: that fails at runtime.
+    -->
+    <Publicize Include="sts2:MegaCrit.Sts2.Core.Models.AncientEventModel.GenerateInitialOptionsWrapper" />
+    <Publicize Include="sts2:MegaCrit.Sts2.Core.Models.Events.ColorfulPhilosophers.GenerateInitialOptions" />
+    <Publicize Include="sts2:MegaCrit.Sts2.Core.Nodes.CommonUi.NBackButton.Hotkeys" />
+    <Publicize Include="sts2:MegaCrit.Sts2.Core.Nodes.Combat.NCombatCardPile.AddCard" />
+    <Publicize Include="sts2:MegaCrit.Sts2.Core.Nodes.Combat.NCombatCardPile.OnRelease" />
+    <Publicize Include="sts2:MegaCrit.Sts2.Core.Models.Events.Neow.GenerateInitialOptions" />
+    <Publicize Include="sts2:MegaCrit.Sts2.Core.Nodes.Screens.Shops.NMerchantCard.UpdateVisual" />
+    <Publicize Include="sts2:MegaCrit.Sts2.Core.Nodes.Screens.Shops.NMerchantPotion.UpdateVisual" />
+    <Publicize Include="sts2:MegaCrit.Sts2.Core.Nodes.Screens.Shops.NMerchantRelic.UpdateVisual" />
+    <Publicize Include="sts2:MegaCrit.Sts2.Core.Nodes.Screens.MainMenu.NMultiplayerSubmenu.InitialFocusedControl" />
+    <Publicize Include="sts2:MegaCrit.Sts2.Core.Nodes.Rewards.NRewardButton.OnRelease" />
+    <Publicize Include="sts2:MegaCrit.sts2.Core.Nodes.TopBar.NTopBarBossIcon.OnFocus" />
+    <Publicize Include="sts2:MegaCrit.sts2.Core.Nodes.TopBar.NTopBarModifier.OnFocus" />
+    <Publicize Include="sts2:MegaCrit.sts2.Core.Nodes.TopBar.NTopBarPortraitTip.OnFocus" />
+    <Publicize Include="sts2:MegaCrit.Sts2.Core.Models.Events.Orobas.GenerateInitialOptions" />
+    <Publicize Include="sts2:MegaCrit.Sts2.Core.Models.Cards.Splash.OnPlay" />
     <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
       <_Parameter1>Sts2ApiCompat</_Parameter1>
       <_Parameter2>$(Sts2ApiCompat)</_Parameter2>
@@ -159,6 +186,13 @@
     BeforeTargets="_GenerateCompileInputs"
     DependsOnTargets="PrepareResources"
   />
+
+  <!-- Publicizer always compiles its copy of the attribute, even with the Unsafe strategy above. -->
+  <Target Name="DropPublicizerAttributeCopy" BeforeTargets="CoreCompile" Condition="'$(UseSts2RefLib)' == 'true'">
+    <ItemGroup>
+      <Compile Remove="@(Compile)" Condition="'%(Filename)' == 'IgnoresAccessChecksToAttribute'" />
+    </ItemGroup>
+  </Target>
 
   <!-- Prevent unsupported StS2 versions from building -->
   <Target Name="ValidateSts2ApiCompat" BeforeTargets="ResolveAssemblyReferences">
