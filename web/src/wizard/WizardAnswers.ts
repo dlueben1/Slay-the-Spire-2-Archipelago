@@ -14,7 +14,9 @@ import {
   getDefaultAscensionLevels,
   type AscensionLevel,
 } from "./AscensionModifier";
+import { getOrderedRunModifiers } from "./RunModifier";
 import {
+  CHALLENGE_OPTION_KEYS,
   CHECK_OPTION_KEYS,
   DEATH_LINK_OPTION_KEYS,
   ANCIENT_OPTION_KEYS,
@@ -132,6 +134,29 @@ export interface RunAnswers {
   seeded: boolean;
 }
 
+/** How many Sight items a hidden-information challenge adds; `off` leaves it off. */
+export type SightCopies = "off" | "one" | "two";
+
+/** Sight item counts written to `hidden_intents` and `hidden_health`. */
+export const SIGHT_COPY_COUNTS: Readonly<Record<SightCopies, number>> = {
+  off: 0,
+  one: 1,
+  two: 2,
+};
+
+/** Optional difficulty settings that logic does not account for. */
+export interface ChallengeAnswers {
+  /** Opt-in switch; while off, every challenge compiles to its default. */
+  enabled: boolean;
+  /** Canonical Run Modifier names in `RUN_MODIFIERS` order. */
+  runModifiers: string[];
+  enemyHpScaling: number;
+  enemyDamageScaling: number;
+  hiddenIntents: SightCopies;
+  hiddenHealth: SightCopies;
+  strictCardRewards: boolean;
+}
+
 /** Progressive starting card and relic choices presented under Checks & Rewards. */
 export interface StartingEquipmentAnswers {
   progressiveStarterCard: boolean;
@@ -190,6 +215,7 @@ export interface WizardAnswers {
   playerName: string;
   characters: CharacterAnswers;
   run: RunAnswers;
+  challenges: ChallengeAnswers;
   checksAndRewards: ChecksAndRewardsAnswers;
   deathLink: DeathLinkAnswers;
   progression: ProgressionAnswers;
@@ -236,6 +262,32 @@ function getBooleanDefault(catalog: OptionCatalog, optionKey: string): boolean {
 
   // Preserve the exact generated toggle default.
   return value;
+}
+
+/**
+ * Reads a Sight item count default as its player-facing choice.
+ *
+ * @param catalog - Generated catalog containing the hidden-information range.
+ * @param optionKey - Generated `hidden_intents` or `hidden_health` key.
+ * @returns The choice whose count matches the schema default.
+ * @throws When the generated default is not a supported Sight item count.
+ */
+function getSightCopiesDefault(
+  catalog: OptionCatalog,
+  optionKey: string,
+): SightCopies {
+  const count = getNumberDefault(catalog, optionKey);
+  const choice = (Object.keys(SIGHT_COPY_COUNTS) as SightCopies[]).find(
+    (candidate) => SIGHT_COPY_COUNTS[candidate] === count,
+  );
+
+  if (!choice) {
+    throw new Error(
+      `Generated option '${optionKey}' has an unsupported default of ${count}.`,
+    );
+  }
+
+  return choice;
 }
 
 /**
@@ -394,6 +446,33 @@ export function createDefaultWizardAnswers(
         RUN_OPTION_KEYS.releaseOnVictory,
       ),
       seeded: getBooleanDefault(catalog, RUN_OPTION_KEYS.seeded),
+    },
+    challenges: {
+      // Challenges are opt-in regardless of their generated defaults.
+      enabled: false,
+      runModifiers: getOrderedRunModifiers(
+        getStringSetDefault(catalog, CHALLENGE_OPTION_KEYS.runModifiers),
+      ),
+      enemyHpScaling: getNumberDefault(
+        catalog,
+        CHALLENGE_OPTION_KEYS.enemyHpScaling,
+      ),
+      enemyDamageScaling: getNumberDefault(
+        catalog,
+        CHALLENGE_OPTION_KEYS.enemyDamageScaling,
+      ),
+      hiddenIntents: getSightCopiesDefault(
+        catalog,
+        CHALLENGE_OPTION_KEYS.hiddenIntents,
+      ),
+      hiddenHealth: getSightCopiesDefault(
+        catalog,
+        CHALLENGE_OPTION_KEYS.hiddenHealth,
+      ),
+      strictCardRewards: getBooleanDefault(
+        catalog,
+        CHALLENGE_OPTION_KEYS.strictCardRewards,
+      ),
     },
     checksAndRewards: {
       startingEquipment: {

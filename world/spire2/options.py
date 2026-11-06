@@ -352,7 +352,6 @@ class StrictCardRewards(Toggle):
     Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder
     """
     display_name = "Strict Card Rewards"
-    visibility = Visibility.template | Visibility.spoiler
     default = 0
 
 class HiddenIntents(Range):
@@ -363,7 +362,6 @@ class HiddenIntents(Range):
     Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder
     """
     display_name = "Hidden Intents"
-    visibility = Visibility.template | Visibility.spoiler
     range_start = 0
     range_end = 2
     default = 0
@@ -376,7 +374,6 @@ class HiddenHealth(Range):
     Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder
     """
     display_name = "Hidden Health"
-    visibility = Visibility.template | Visibility.spoiler
     range_start = 0
     range_end = 2
     default = 0
@@ -553,7 +550,6 @@ class RunModifiers(OptionSet):
 
     Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder"""
     display_name = "Run Modifiers"
-    visibility = Visibility.template | Visibility.spoiler
     valid_keys_casefold = False
     valid_keys = {
         "RisingStrength",
@@ -575,7 +571,6 @@ class EnemyHpScaling(Range):
     Ascension. Logic does not account for it. In multiplayer, the host's value applies to the whole
     run. Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder"""
     display_name = "Enemy HP Scaling"
-    visibility = Visibility.template | Visibility.spoiler
     range_start = 0
     range_end = 15
     default = 0
@@ -586,7 +581,6 @@ class EnemyDamageScaling(Range):
     Ascension. Logic does not account for it. In multiplayer, the host's value applies to the whole
     run. Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder"""
     display_name = "Enemy Damage Scaling"
-    visibility = Visibility.template | Visibility.spoiler
     range_start = 0
     range_end = 15
     default = 0
@@ -854,9 +848,6 @@ class Spire2Options(PerGameCommonOptions):
     # final_act: FinalAct
     ascension: Ascension
     ascension_down: AscensionDown
-    run_modifiers: RunModifiers
-    enemy_hp_scaling: EnemyHpScaling
-    enemy_damage_scaling: EnemyDamageScaling
 
     # Main game flow
     use_new_logic: UseNewLogic
@@ -867,9 +858,6 @@ class Spire2Options(PerGameCommonOptions):
     progressive_starter_card: ProgressiveStarterCard
     progressive_starter_relic: ProgressiveStarterRelic
     shuffle_all_cards: CardReward
-    strict_card_rewards: StrictCardRewards
-    hidden_intents: HiddenIntents
-    hidden_health: HiddenHealth
 
     # Bonus items
     bonus_items: BonusItems
@@ -928,3 +916,11 @@ class Spire2Options(PerGameCommonOptions):
     confused_trap_weight: ConfusedTrapWeight
     sloth_trap_weight: SlothTrapWeight
     dazed_trap_weight: DazedTrapWeight
+
+    # Challenges
+    run_modifiers: RunModifiers
+    enemy_hp_scaling: EnemyHpScaling
+    enemy_damage_scaling: EnemyDamageScaling
+    hidden_intents: HiddenIntents
+    hidden_health: HiddenHealth
+    strict_card_rewards: StrictCardRewards

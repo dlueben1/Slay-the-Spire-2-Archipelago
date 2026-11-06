@@ -627,7 +627,7 @@ public static class ApMirroredRewardDispatcher
     private static Rng CreateRngFromSeedMaterial(string seedMaterial)
     {
         byte[] digest = SHA256.HashData(Encoding.UTF8.GetBytes(seedMaterial));
-        // The public build accepts a 32-bit seed while the beta build widens the same value.
+        // The main build accepts a 32-bit seed while the beta build widens the same value.
         // Using the shared 32-bit seed keeps materialization deterministic across both variants.
         return new Rng(BinaryPrimitives.ReadUInt32LittleEndian(digest));
     }

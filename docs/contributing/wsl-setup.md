@@ -32,7 +32,7 @@ Place them in ignored `.local-tools/sts2-references/` with this layout:
 
 ```text
 .local-tools/sts2-references/
-├── 0.107.1/             # public game version
+├── 0.107.1/             # main game version
 │   ├── sts2.dll
 │   ├── 0Harmony.dll
 │   └── GodotSharp.dll
@@ -46,7 +46,7 @@ After switching Steam to the version you want, copy the files from that installa
 
 ```bash
 game_data_dir="/path/to/Slay the Spire 2/data_sts2_windows_x86_64"
-api_version="0.111.0"  # use 0.107.1 for the public version
+api_version="0.111.0"  # use 0.107.1 for the main version
 mkdir -p ".local-tools/sts2-references/$api_version"
 cp "$game_data_dir/sts2.dll" "$game_data_dir/0Harmony.dll" "$game_data_dir/GodotSharp.dll" \
   ".local-tools/sts2-references/$api_version/"

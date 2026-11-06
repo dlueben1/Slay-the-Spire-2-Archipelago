@@ -73,7 +73,7 @@ for both game API versions. The complete bundle test runs locally against a full
 ## Runtime validation kept separate
 
 These checks require the installed supported game and matching RitsuLib. Run multiplayer
-checks with two processes on beta 0.111.0; repeat affected singleplayer behavior on the public
+checks with two processes on beta 0.111.0; repeat affected singleplayer behavior on the main
 variant. Unit tests establish the behavior of our policies, not native callbacks or network timing.
 
 | In-game scenario | Expected result |

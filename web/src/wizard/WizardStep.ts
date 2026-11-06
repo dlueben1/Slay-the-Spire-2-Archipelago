@@ -18,8 +18,11 @@ import {
   receiveFragmentTransition,
 } from "./deathLinkTransitions";
 import { generatedRange } from "./optionRanges";
-import type { WizardControlDescriptor } from "./QuestionControl";
-import type { WizardAnswers } from "./WizardAnswers";
+import type {
+  WizardControlChoice,
+  WizardControlDescriptor,
+} from "./QuestionControl";
+import type { SightCopies, WizardAnswers } from "./WizardAnswers";
 
 export interface WizardQuestion {
   id: string;
@@ -37,10 +40,17 @@ export interface WizardQuestion {
 /** Answer sections addressable by wizard steps; the player name is document metadata. */
 export type WizardSectionKey = Exclude<keyof WizardAnswers, "playerName">;
 
+/** Prominent caution shown above a step's questions. */
+export interface WizardStepWarning {
+  title: string;
+  description: string;
+}
+
 export interface WizardStep {
   id: string;
   title: string;
   description?: string;
+  warning?: WizardStepWarning;
   /** Answer section owned by this step's questions; absent for Review. */
   sectionKey?: WizardSectionKey;
   questions: WizardQuestion[];
@@ -271,10 +281,10 @@ export const characterSetupStep: WizardStep = {
   ],
 };
 
-/** Gameplay Modifiers definition consumed by its component and wizard navigation. */
+/** Run Settings definition consumed by its component and wizard navigation. */
 export const runSetupStep: WizardStep = {
   id: "run",
-  title: "Gameplay Modifiers",
+  title: "Run Settings",
   description:
     "Configure your experience, how Archipelago Rewards are handled, and what gets randomized.",
   sectionKey: "run",
@@ -338,6 +348,144 @@ export const runSetupStep: WizardStep = {
               "Remove Prayer Wheel and White Star from every relic source.",
           },
         ],
+      },
+    },
+  ],
+};
+
+/**
+ * Checks whether the player opted in to challenges.
+ *
+ * @param answers - Current player-facing wizard answers.
+ * @returns Whether the challenge questions should be shown.
+ */
+function usesChallenges(answers: WizardAnswers): boolean {
+  // While the switch is off, the questions are hidden and compile to defaults.
+  return answers.challenges.enabled;
+}
+
+/**
+ * Builds the Off / one / two choices of a hidden-information challenge.
+ *
+ * @param itemName - Display name of the challenge's Sight item.
+ * @param offDescription - What the player sees with the challenge off.
+ * @returns Radio choices whose values are `SightCopies`.
+ */
+function sightCopyChoices(
+  itemName: string,
+  offDescription: string,
+): WizardControlChoice[] {
+  return [
+    {
+      label: "Off",
+      description: offDescription,
+      value: "off" satisfies SightCopies,
+    },
+    {
+      label: `One ${itemName}`,
+      description: `Adds one ${itemName} to the item pool.`,
+      value: "one" satisfies SightCopies,
+    },
+    {
+      label: `Two ${itemName}s`,
+      description:
+        "Adds two to the item pool, so one turns up sooner. Either one is enough.",
+      value: "two" satisfies SightCopies,
+    },
+  ];
+}
+
+/** Challenges definition consumed by its component and wizard navigation. */
+export const challengeSetupStep: WizardStep = {
+  id: "challenges",
+  title: "Challenges",
+  description:
+    "Optional ways to make every run harder, on top of Ascension. Everything here is off by default.",
+  warning: {
+    title: "Only turn these on if you know what you're doing.",
+    description:
+      "Logic doesn't account for any challenge. Each one makes runs harder, and turning on several can make runs too hard to win. Then the checks your seed needs stay out of reach and the seed gets stuck. If you aren't confident, leave every challenge off.",
+  },
+  sectionKey: "challenges",
+  questions: [
+    {
+      // Rendered by ChallengeOptIn.vue, which asks three times before turning challenges on.
+      id: "challenges-enabled",
+    },
+    {
+      id: "run-modifiers",
+      isVisible: usesChallenges,
+      title: "Which run modifiers should apply?",
+      description:
+        "Most leave Act 1 as it is and grow harder in Acts 2 and 3. In multiplayer, the host's modifiers apply to the whole run.",
+    },
+    {
+      id: "enemy-hp-scaling",
+      isVisible: usesChallenges,
+      title: "How much extra max HP should enemies have after Act 1?",
+      description:
+        "Enemies get this much extra max HP in Acts 2 and 3. Stacks with Ascension. In multiplayer, the host's value applies to the whole run.",
+      help: "0% leaves enemy HP unchanged.",
+      control: {
+        kind: "slider",
+        field: "enemyHpScaling",
+        range: generatedRange("enemyHpScaling"),
+        unit: "%",
+        ariaLabel: "Enemy HP scaling percent",
+      },
+    },
+    {
+      id: "enemy-damage-scaling",
+      isVisible: usesChallenges,
+      title: "How much extra damage should enemies deal after Act 1?",
+      description:
+        "Enemies deal this much extra damage in Acts 2 and 3. Stacks with Ascension. In multiplayer, the host's value applies to the whole run.",
+      help: "0% leaves enemy damage unchanged.",
+      control: {
+        kind: "slider",
+        field: "enemyDamageScaling",
+        range: generatedRange("enemyDamageScaling"),
+        unit: "%",
+        ariaLabel: "Enemy damage scaling percent",
+      },
+    },
+    {
+      id: "hidden-intents",
+      isVisible: usesChallenges,
+      title: "Should enemy intents be hidden?",
+      description:
+        "Hidden Intents hides enemy intents and the Intent Graph overlay until an Intent Sight is found. Finding one shows intents again, with their numbers, for every character.",
+      control: {
+        kind: "radio",
+        field: "hiddenIntents",
+        choices: sightCopyChoices("Intent Sight", "Intents are shown as normal."),
+      },
+    },
+    {
+      id: "hidden-health",
+      isVisible: usesChallenges,
+      title: "Should health be hidden?",
+      description:
+        "Hidden Health keeps health bars full and shows no HP numbers until a Health Sight is found. Block is still shown. Finding one shows everyone's health again, for every character.",
+      control: {
+        kind: "radio",
+        field: "hiddenHealth",
+        choices: sightCopyChoices("Health Sight", "Health is shown as normal."),
+      },
+    },
+    {
+      id: "strict-card-rewards",
+      isVisible: usesChallenges,
+      title: "Should Card Rewards in the AP Menu be picked one at a time?",
+      description:
+        "Normally you can look through every Card Reward in the AP Menu before picking.",
+      help: "The mod's own settings can override this.",
+      control: {
+        kind: "checkbox",
+        field: "strictCardRewards",
+        label: "Strict Card Rewards",
+        description:
+          "Opening a Card Reward reveals its cards and locks the others until you take a card or discard it, like a card reward after a fight.",
       },
     },
   ],
@@ -738,6 +886,7 @@ export const wizardSteps: WizardStep[] = [
   runSetupStep,
   checkSetupStep,
   deathLinkSetupStep,
+  challengeSetupStep,
   progressionSetupStep,
   {
     id: "review",

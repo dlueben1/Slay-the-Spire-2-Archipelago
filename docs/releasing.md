@@ -100,7 +100,7 @@ dotnet test client/StS2AP.Domain.Tests/StS2AP.Domain.Tests.fsproj -c Release
 
 Extract the exact candidate ZIP into a fresh staging folder, then run regressions
 with `STS2AP_TEST_BUNDLE` pointing to that folder and `STS2AP_TEST_ASSEMBLY` pointing
-to its `lib/<public-version>/Archipelago.dll`. Run Category=Manifest again for beta.
+to its `lib/<main-version>/Archipelago.dll`. Run Category=Manifest again for beta.
 Run the APWorld tests using Archipelago's test framework and generate a seed from
 the actual packaged APWorld and release YAML. Python changes should be checked
 on 3.11, 3.12 and 3.13. Edit the example YAML's slot name/options before playing.

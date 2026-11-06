@@ -17,7 +17,7 @@ VARIANT_MANIFEST_NAME = "archipelago-variants.manifest"
 _client_project = ElementTree.parse(Path(__file__).resolve().parents[1] / "client/StS2AP/SupportedGameVersions.props")
 SUPPORTED_STS2_API_COMPATS = tuple(
     _client_project.findtext(f".//{property_name}")
-    for property_name in ("Sts2PublicApiCompat", "Sts2BetaApiCompat")
+    for property_name in ("Sts2MainApiCompat", "Sts2BetaApiCompat")
 )
 EXPECTED_MOD_ID = "Archipelago"
 EXCLUDED_CLIENT_FILES = {"0Harmony.dll", "GodotSharp.dll", "sts2.dll"}
