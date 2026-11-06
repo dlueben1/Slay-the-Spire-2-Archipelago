@@ -18,7 +18,7 @@
   "AP_FRAIL_START.title": "Frail Start",
   "AP_FRAIL_START.description": "Start the run with 10% less Max HP.",
   "AP_DANGEROUS_UNKNOWNS.title": "Dangerous Unknowns",
-  "AP_DANGEROUS_UNKNOWNS.description": "? rooms lean towards fights. Combat starts at 20% and rises 15% each time a ? room is not a fight. [gold]Elites[/gold] start at 0% and rise 4%. Chests start and rise at 1%.",
+  "AP_DANGEROUS_UNKNOWNS.description": "? rooms lean towards fights. Combat starts at 20% and rises 15% each time a ? room is not a fight. [gold]Elites[/gold] start at 0% and rise 4%. Chests start and rise at 1%. Juzu Bracelet never appears.",
   "AP_EXTRA_ASCENDERS_BANE.title": "Extra Ascender's Bane",
   "AP_EXTRA_ASCENDERS_BANE.description": "Start the run with an extra [gold]Ascender's Bane[/gold]."
 }

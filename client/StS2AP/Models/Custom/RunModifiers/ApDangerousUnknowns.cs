@@ -1,3 +1,5 @@
+using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Odds;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
@@ -8,6 +10,7 @@ namespace StS2AP.Models;
 /// ? rooms lean towards fights. Combat starts at 20% and rises 15% each time a ? room is not a
 /// fight, elites start at 0% and rise 4%, and chests start and rise at 1%. Shops keep the base
 /// game's 3%. The base game resets every chance at the start of each act and has no cap.
+/// Juzu Bracelet, which turns ? room fights back into events, never appears.
 /// </summary>
 public sealed class ApDangerousUnknowns : ApRunModifier
 {
@@ -21,6 +24,12 @@ public sealed class ApDangerousUnknowns : ApRunModifier
 
     protected override void AfterRunCreated(RunState runState)
     {
+        // As the base game's Deadly Events does. The grab bags are saved with the run, and AP's
+        // own relic rewards draw from them too, so removing it once keeps it out of every source.
+        foreach (Player player in runState.Players)
+            player.RelicGrabBag.Remove<JuzuBracelet>();
+        runState.SharedRelicGrabBag.Remove<JuzuBracelet>();
+
         UnknownMapPointOdds odds = runState.Odds.UnknownMapPoint;
         SetStartingOdds(odds);
         odds.MonsterOdds = MonsterStart;
