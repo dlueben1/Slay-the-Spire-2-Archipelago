@@ -5,6 +5,7 @@ using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Helpers;
 using Archipelago.MultiClient.Net.MessageLog.Messages;
 using Archipelago.MultiClient.Net.Models;
+using Archipelago.MultiClient.Net.Packets;
 using Godot;
 using MegaCrit.Sts2.Core.Models;
 using Newtonsoft.Json.Linq;
@@ -357,6 +358,10 @@ namespace StS2AP
 
         #region Networking
 
+        private static readonly TimeSpan SocketOpenTimeout = TimeSpan.FromSeconds(20);
+        private static readonly TimeSpan DataPackageTimeout = TimeSpan.FromMinutes(3);
+        private static readonly TimeSpan LoginTimeout = TimeSpan.FromSeconds(60);
+
         private static ReaderWriterLock ConnectionLock { get; } = new ReaderWriterLock();
         private static TaskCompletionSource<bool>? _pendingConnectionWarning;
         private static readonly object _connectionStateLock = new();
@@ -556,13 +561,10 @@ namespace StS2AP
                                 LoginResult loginResult;
                                 try
                                 {
-                                    loginResult = connectionSession.TryConnectAndLogin(
-                                        Game,
+                                    loginResult = ConnectAndLoginAfterDownload(
+                                        connectionSession,
                                         playerName,
-                                        ItemsHandlingFlags.AllItems,
-                                        new Version(APVersion),
-                                        password: password,
-                                        requestSlotData: true
+                                        password
                                     );
                                 }
                                 catch (Exception ex)
@@ -613,6 +615,92 @@ namespace StS2AP
                         _ = HandleConnectResult(connectionSession, new LoginFailure(e.ToString()))
                     )
                     .CallDeferred();
+            }
+        }
+
+        /// <summary>
+        /// Replaces TryConnectAndLogin, whose 4 second login timer also covers the data package
+        /// download because the server answers each client in order. That timer also gives up on
+        /// a busy server that is slow to answer the login, so this waits for the answer itself.
+        /// Blocks rather than awaits: the caller holds ConnectionLock, which belongs to its thread.
+        /// </summary>
+        private static LoginResult ConnectAndLoginAfterDownload(
+            ArchipelagoSession session,
+            string playerName,
+            string password
+        )
+        {
+            var downloadEnded = new TaskCompletionSource<LoginFailure?>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var loginAnswered = new TaskCompletionSource<LoginResult>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+
+            void Fail(string message)
+            {
+                var failure = new LoginFailure(message);
+                downloadEnded.TrySetResult(failure);
+                loginAnswered.TrySetResult(failure);
+            }
+            void OnPacket(ArchipelagoPacketBase packet)
+            {
+                // The SDK subscribed first and blocks until its GetDataPackage requests are written.
+                // MultiServer finishes each command before reading that client's next one, so this
+                // empty reply follows the real ones. The protocol docs don't promise that order; a
+                // server that breaks it only makes us send the login before the download ends.
+                if (packet is RoomInfoPacket)
+                    _ = session.Socket.SendPacketAsync(
+                        new GetDataPackagePacket { Games = Array.Empty<string>() });
+                else if (packet is DataPackagePacket { DataPackage.Games.Count: 0 })
+                    downloadEnded.TrySetResult(null);
+                else if (packet is ConnectedPacket or ConnectionRefusedPacket)
+                    loginAnswered.TrySetResult(LoginResult.FromPacket(packet));
+            }
+            void OnClosed(string reason) => Fail("The Archipelago connection closed during login.");
+            // A failed read may report only this error, but a bad packet leaves the socket usable.
+            void OnError(Exception error, string message)
+            {
+                if (!session.Socket.Connected)
+                    Fail($"The Archipelago connection closed during login: {message}");
+            }
+
+            session.Socket.PacketReceived += OnPacket;
+            session.Socket.SocketClosed += OnClosed;
+            session.Socket.ErrorReceived += OnError;
+            try
+            {
+                if (!session.Socket.ConnectAsync().Wait(SocketOpenTimeout))
+                    return new LoginFailure("Connection timed out.");
+
+                if (!downloadEnded.Task.Wait(DataPackageTimeout))
+                    LogUtility.Warn("No data package completion reply; attempting login anyway.");
+                else if (downloadEnded.Task.Result is { } problem)
+                    return problem;
+
+                // LoginAsync's own result gives up after 4 seconds, and the call can block forever
+                // if the socket has just closed. Send the login with it but wait for OnPacket instead.
+                _ = Task.Run(() => session.LoginAsync(
+                    Game,
+                    playerName,
+                    ItemsHandlingFlags.AllItems,
+                    new Version(APVersion),
+                    password: password,
+                    requestSlotData: true
+                )).ContinueWith(
+                    login => Fail(login.Exception!.GetBaseException().Message),
+                    TaskContinuationOptions.OnlyOnFaulted);
+                return loginAnswered.Task.Wait(LoginTimeout)
+                    ? loginAnswered.Task.Result
+                    : new LoginFailure("The Archipelago server did not answer the login.");
+            }
+            catch (AggregateException e)
+            {
+                return new LoginFailure(e.GetBaseException().Message);
+            }
+            finally
+            {
+                session.Socket.PacketReceived -= OnPacket;
+                session.Socket.SocketClosed -= OnClosed;
+                session.Socket.ErrorReceived -= OnError;
             }
         }
 
