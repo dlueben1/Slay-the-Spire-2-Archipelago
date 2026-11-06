@@ -43,82 +43,6 @@ public sealed class ApCardRevealTests
     }
 
     [Fact]
-    public void IndependentlyConstructedOffersAgreeWithoutCopyingCards()
-    {
-        var owner = Final();
-        var replica = Final();
-        // Dictionary/JSON property ordering is not gameplay order.
-        replica.SerializedModels[0] = """{"enchantment":{"id":"GLAM"},"upgrade":1,"id":"CARD.A"}""";
-        var local = ApCardRevealCodec.Encode(replica);
-        var remote = ApCardRevealCodec.Encode(owner);
-        ApCardRevealCodec.Verify(local, remote, "7:42");
-        Assert.Equal(8, remote.Count); // SHA-256 only, no final-model transport.
-    }
-
-    [Theory]
-    [InlineData("firstReveal")]
-    [InlineData("receipt")]
-    [InlineData("owner")]
-    [InlineData("act")]
-    [InlineData("slot")]
-    [InlineData("rare")]
-    [InlineData("order")]
-    [InlineData("card")]
-    [InlineData("upgrade")]
-    [InlineData("enchantment")]
-    [InlineData("reroll")]
-    public void DisagreementIsRejectedWithoutMutatingTheReplica(string change)
-    {
-        var owner = Final();
-        var replica = Final();
-        switch (change)
-        {
-            case "receipt": owner.ReceivedItemIndex++; break;
-            case "owner": owner.OwnerNetId++; break;
-            case "act": owner.CardRewardActIndex++; break;
-            case "slot": owner.ApSlotId++; break;
-            case "rare": owner.IsRareCardReward = true; owner.CardRewardActIndex = null; break;
-            case "order": owner.SerializedModels.Reverse(); break;
-            case "card": owner.SerializedModels[0] = """{"id":"CARD.C"}"""; break;
-            case "upgrade": owner.SerializedModels[1] = owner.SerializedModels[1].Replace("\"upgrade\":0", "\"upgrade\":1"); break;
-            case "enchantment": owner.SerializedModels[0] = owner.SerializedModels[0].Replace("GLAM", "NIMBLE"); break;
-            case "reroll": owner.CardCanReroll = true; break;
-        }
-        string original = JsonSerializer.Serialize(replica);
-        Assert.Throws<InvalidOperationException>(() => ApCardRevealCodec.Verify(
-            ApCardRevealCodec.Encode(replica),
-            ApCardRevealCodec.Encode(owner, firstReveal: change != "firstReveal"), "7:42"));
-        Assert.Equal(original, JsonSerializer.Serialize(replica));
-    }
-
-    [Fact]
-    public void VerificationRejectsIncompleteLegacyAndMalformedPayloads()
-    {
-        Assert.Throws<InvalidOperationException>(() => ApCardRevealCodec.Encode(Recipe()));
-        var legacy = Final();
-        legacy.MaterializationStrategyId = "ap_rng_owner_final_v1";
-        Assert.Throws<InvalidOperationException>(() => ApCardRevealCodec.Encode(legacy));
-        var digest = ApCardRevealCodec.Encode(Final());
-        Assert.Throws<InvalidOperationException>(() => ApCardRevealCodec.Verify(digest, digest.Take(7).ToList(), "7:42"));
-        var corrupted = digest.ToList();
-        corrupted[0] ^= 1;
-        Assert.Throws<InvalidOperationException>(() => ApCardRevealCodec.Verify(digest, corrupted, "7:42"));
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(7)]
-    [InlineData(9)]
-    public void VerificationRejectsMalformedDigestLengthsEvenWhenBothPeersAgree(int count)
-    {
-        var digest = ApCardRevealCodec.Encode(Final());
-        var malformed = Enumerable.Repeat(0, count).ToList();
-        Assert.Throws<InvalidOperationException>(() => ApCardRevealCodec.Verify(digest, malformed, "7:42"));
-        Assert.Throws<InvalidOperationException>(() => ApCardRevealCodec.Verify(malformed, digest, "7:42"));
-        Assert.Throws<InvalidOperationException>(() => ApCardRevealCodec.Verify(malformed, malformed, "7:42"));
-    }
-
-    [Fact]
     public void ModelsMatchAcrossOperatingSystemNewlinesAndPropertyOrder()
     {
         const string windows = "{\r\n  \"id\": \"CARD.A\",\r\n  \"upgrade\": 1\r\n}";
@@ -146,8 +70,6 @@ public sealed class ApCardRevealTests
         var owner = RoundTrip(before);
         owner.SerializedModels[1] = owner.SerializedModels[1].Replace("\"upgrade\":0", "\"upgrade\":1");
         var replica = RoundTrip(owner); // Represents independently refreshed final cards.
-        ApCardRevealCodec.Verify(ApCardRevealCodec.Encode(replica, firstReveal: false),
-            ApCardRevealCodec.Encode(owner, firstReveal: false), "7:42");
         var oldProgress = new ApRunProgressState { CardAssignments = { [42] = Assignment(before) } };
         var newProgress = new ApRunProgressState { CardAssignments = { [42] = Assignment(replica) } };
         ApProgressDelta delta = RoundTrip(ApProgressDelta.Between(oldProgress, newProgress));

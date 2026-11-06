@@ -1162,11 +1162,10 @@ public static class ApMirroredRewardDispatcher
             };
             try
             {
-                var synchronizer = RunManager.Instance.PlayerChoiceSynchronizer;
-                // Reserve verification and picker IDs before generation can await native callbacks.
-                bool multiplayer = MultiplayerSupport.IsRealMultiplayerRun;
-                uint verificationChoice = multiplayer ? synchronizer.ReserveChoiceId(Player) : 0;
-                _firstPickerChoice = multiplayer ? synchronizer.ReserveChoiceId(Player) : null;
+                // Reserve the picker ID before generation can await native callbacks.
+                _firstPickerChoice = MultiplayerSupport.IsRealMultiplayerRun
+                    ? RunManager.Instance.PlayerChoiceSynchronizer.ReserveChoiceId(Player)
+                    : null;
                 bool strictChain = !hasAssignment && UsesStrictCardChain;
                 List<CardCreationResult> preparedCards = hasAssignment
                     ? RefreshCardChoices(this)
@@ -1177,33 +1176,17 @@ public static class ApMirroredRewardDispatcher
                     ArchipelagoClient.Progress.StrictCardRevealCount++;
                 spec.CardHasBeenRevealed = true;
                 spec.SerializedModels = preparedCards.Select(result => SerializeCard(result.Card)).ToList();
-                if (multiplayer)
-                {
-                    // Check that picker indexes mean the same offered cards on every replica.
-                    // General gameplay-state divergence remains the native checksum system's job.
-                    List<int> verification = ApCardRevealCodec.Encode(spec, firstReveal: !hasAssignment);
-                    if (LocalContext.IsMe(Player))
-                    {
-                        synchronizer.SyncLocalChoice(Player, verificationChoice,
-                            PlayerChoiceResult.FromIndexes(verification));
-                    }
-                    else
-                    {
-                        PlayerChoiceResult ownerVerification = await synchronizer
-                            .WaitForRemoteChoice(Player, verificationChoice)
-                            .WaitAsync(TimeSpan.FromSeconds(15));
-                        if (RunManager.Instance.DebugOnlyGetState() != run)
-                            throw new OperationCanceledException("Run changed during AP card verification.");
-                        ApCardRevealCodec.Verify(verification, ownerVerification.AsIndexes(), spec.GrantId.ToString());
-                    }
-                }
                 _cards.Clear();
                 _cards.AddRange(preparedCards);
 
                 Configure(_origin, MirroredRewardAdapter.CardConfiguration(spec));
                 PublishRevealedAssignment();
+                // Replicas generate offers independently and the native checksum catches a mismatch.
+                // Listing the cards lets two players' logs show which offer it was.
+                string offer = string.Join(", ", preparedCards.Select(
+                    result => $"{result.Card.Id}+{result.Card.CurrentUpgradeLevel}"));
                 LogUtility.Info($"Prepared replicated AP card offer {_origin.ReceiptIdentity} for player {Player.NetId} "
-                    + $"(firstReveal={!hasAssignment}, localOwner={LocalContext.IsMe(Player)})");
+                    + $"(firstReveal={!hasAssignment}, localOwner={LocalContext.IsMe(Player)}, cards=[{offer}])");
             }
             catch (Exception ex)
             {

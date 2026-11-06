@@ -51,6 +51,9 @@ public static class Patches_APCardRewardUpgradeOdds
         return new ApRewardRngScope(previous);
     }
 
+    /// <summary>True only while the first reveal of an AP card reward generates its cards.</summary>
+    internal static bool IsGeneratingApReward => s_apRewardRng != null;
+
     internal static IDisposable EnterRewardAct(int? actIndex)
     {
         int? previous = s_rewardActIndex;
