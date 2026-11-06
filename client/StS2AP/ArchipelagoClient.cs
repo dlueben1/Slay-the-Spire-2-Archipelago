@@ -645,8 +645,10 @@ namespace StS2AP
                 TaskCreationOptions.RunContinuationsAsynchronously);
             var loginAnswered = new TaskCompletionSource<LoginResult>(
                 TaskCreationOptions.RunContinuationsAsynchronously);
+            // Games whose data package the SDK asked for, counted from the socket's send thread.
+            int gamesRequested = 0;
             // Only read and written by OnPacket, which the SDK calls from one thread.
-            bool downloadShown = false;
+            int gamesReceived = 0;
 
             void Fail(string message)
             {
@@ -673,13 +675,25 @@ namespace StS2AP
                     case DataPackagePacket { DataPackage.Games.Count: 0 }:
                         downloadEnded.TrySetResult(null);
                         break;
-                    case DataPackagePacket when !downloadShown:
-                        downloadShown = true;
-                        ShowProgress("Downloading game data...");
+                    case DataPackagePacket { DataPackage.Games: { } games }:
+                        gamesReceived += games.Count;
+                        // OnPacketsSent runs on another thread and can, rarely, count a request
+                        // after its reply has arrived; never show more received than requested.
+                        int requested = Math.Max(Volatile.Read(ref gamesRequested), gamesReceived);
+                        ShowProgress($"Downloading game data ({gamesReceived} of {requested})...");
                         break;
                     case ConnectedPacket or ConnectionRefusedPacket:
                         loginAnswered.TrySetResult(LoginResult.FromPacket(packet));
                         break;
+                }
+            }
+            void OnPacketsSent(ArchipelagoPacketBase[] packets)
+            {
+                foreach (var packet in packets)
+                {
+                    // Our own empty request asks for nothing, so it adds nothing.
+                    if (packet is GetDataPackagePacket { Games: { } games })
+                        Interlocked.Add(ref gamesRequested, games.Length);
                 }
             }
             void OnClosed(string reason) => Fail("The Archipelago connection closed during login.");
@@ -691,6 +705,7 @@ namespace StS2AP
             }
 
             session.Socket.PacketReceived += OnPacket;
+            session.Socket.PacketsSent += OnPacketsSent;
             session.Socket.SocketClosed += OnClosed;
             session.Socket.ErrorReceived += OnError;
             using var cancelRegistration = cancellation.Register(() => Fail(CancelledMessage));
@@ -743,6 +758,7 @@ namespace StS2AP
             finally
             {
                 session.Socket.PacketReceived -= OnPacket;
+                session.Socket.PacketsSent -= OnPacketsSent;
                 session.Socket.SocketClosed -= OnClosed;
                 session.Socket.ErrorReceived -= OnError;
             }
