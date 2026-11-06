@@ -24,12 +24,10 @@ public static class Patches_Splash
         Type? stateMachine = AccessTools.DeclaredMethod(typeof(Splash), "OnPlay")
             ?.GetCustomAttribute<AsyncStateMachineAttribute>()?.StateMachineType;
         MethodInfo? moveNext = stateMachine == null ? null : AccessTools.Method(stateMachine, "MoveNext");
-        if (moveNext == null)
-        {
-            LogUtility.Warn("Could not locate Splash card generation; leaving native behavior unchanged");
-            yield break;
-        }
-        yield return moveNext;
+        // A game update changed Splash; fail the mod's startup rather than keep AP's
+        // character locks on its choices without telling anyone.
+        yield return moveNext
+            ?? throw new MissingMethodException("Could not locate Splash's async OnPlay body to patch.");
     }
 
     [HarmonyTranspiler]
@@ -42,8 +40,8 @@ public static class Patches_Splash
         FieldInfo? cardField = AccessTools.Field(__originalMethod.DeclaringType, "<>4__this");
         if (lookups.Count != 1 || cardField?.FieldType != typeof(Splash))
         {
-            LogUtility.Warn($"Could not safely replace Splash card pools (lookups={lookups.Count}, cardField={cardField != null}); leaving native behavior unchanged");
-            return code;
+            throw new InvalidOperationException(
+                $"Could not safely replace Splash card pools (lookups={lookups.Count}, cardField={cardField != null}).");
         }
 
         // As with Kaleidoscope, pass the effect's owner rather than resolving a player
