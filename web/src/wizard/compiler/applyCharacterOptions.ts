@@ -11,6 +11,7 @@
 import type { OptionCatalog, OptionValue } from "../../generated/optionCatalog";
 import {
   getAscensionModifier,
+  hasAscensionDown,
   isAscensionLevel,
   type AscensionLevel,
 } from "../AscensionModifier";
@@ -90,34 +91,6 @@ function getSequentialAscensionMaximum(
 }
 
 /**
- * Checks whether every active Ascension also has its matching Down selected.
- *
- * @param enabledLevels - Active Ascension modifiers for the configuration.
- * @param downLevels - Modifiers whose Ascension Down items are shuffled.
- * @returns Whether both non-empty sets contain exactly the same levels.
- * @remarks Python interprets a lone numeric Ascension Down as the highest N active
- * modifiers, so using the active count is exact when every active modifier is selected.
- */
-function hasDownForEveryEnabledAscension(
-  enabledLevels: ReadonlySet<AscensionLevel>,
-  downLevels: ReadonlySet<AscensionLevel>,
-): boolean {
-  // Empty Down selections should remain an empty YAML list.
-  if (!downLevels.size || downLevels.size !== enabledLevels.size) {
-    return false;
-  }
-
-  // Equal sizes need only one membership pass to prove set equality.
-  for (const level of enabledLevels) {
-    if (!downLevels.has(level)) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-/**
  * Compiles explicit Ascension checkbox levels to generated canonical names.
  *
  * @param configuration - Player-facing Ascension, Down-mode, and checkbox selections.
@@ -175,12 +148,16 @@ function compileAscensionConfiguration(
       );
     }
 
+    if (!hasAscensionDown(level)) {
+      throw new Error(`Ascension A${level} has no Ascension Down.`);
+    }
+
     downLevels.add(level);
   }
 
   // Emit names in level order regardless of the order controls were toggled.
   let ascension: Array<string | number> = [];
-  let ascensionDown: Array<string | number> = [];
+  const ascensionDown: Array<string | number> = [];
 
   for (let level = 1; level <= 10; level += 1) {
     const ascensionLevel = level as AscensionLevel;
@@ -217,13 +194,8 @@ function compileAscensionConfiguration(
     ascension = [sequentialMaximum];
   }
 
-  // A numeric Down is a count of the highest active modifiers, not a level threshold.
-  if (
-    hasDownForEveryEnabledAscension(enabledLevels, downLevels) &&
-    validAscensionDowns.has(String(downLevels.size))
-  ) {
-    ascensionDown = [downLevels.size];
-  }
+  // Downs stay as names: a numeric Down counts the highest active modifiers, which
+  // reads like a level threshold and invites copying the Ascension number into it.
 
   return {
     ascension,

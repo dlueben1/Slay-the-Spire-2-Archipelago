@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   ASCENSION_MODIFIERS,
+  hasAscensionDown,
   type AscensionLevel,
 } from "../../../wizard/AscensionModifier";
 import type { AscensionConfigurationAnswers } from "../../../wizard/WizardAnswers";
@@ -84,7 +85,9 @@ function setAscensionDownsEnabled(value: unknown): void {
 function setAscensionThreshold(maximumLevel: AscensionLevel): void {
   // A numbered preset enables its complete prefix and disables all later levels.
   const enabled = getLevelsThrough(maximumLevel);
-  const downs = props.modelValue.ascensionDownsEnabled ? [...enabled] : [];
+  const downs = props.modelValue.ascensionDownsEnabled
+    ? enabled.filter(hasAscensionDown)
+    : [];
 
   // Keep the two visible columns aligned when Ascension Downs are in use.
   emit("update:modelValue", {
@@ -139,7 +142,8 @@ function setAscensionDown(level: AscensionLevel, value: unknown): void {
   if (
     typeof value !== "boolean" ||
     !props.modelValue.ascensionDownsEnabled ||
-    !props.modelValue.enabled.includes(level)
+    !props.modelValue.enabled.includes(level) ||
+    !hasAscensionDown(level)
   ) {
     return;
   }
@@ -194,6 +198,8 @@ function setAscensionDown(level: AscensionLevel, value: unknown): void {
       </p>
       <p v-if="modelValue.ascensionDownsEnabled">
         Ascension Down items disable their matching modifier when obtained.
+        Swarming Elites has no Ascension Down, because Relic Checks rely on its
+        extra Elites.
       </p>
     </div>
 
@@ -254,6 +260,7 @@ function setAscensionDown(level: AscensionLevel, value: unknown): void {
           role="cell"
         >
           <UCheckbox
+            v-if="hasAscensionDown(modifier.level)"
             :model-value="modelValue.downs.includes(modifier.level)"
             :disabled="!modelValue.enabled.includes(modifier.level)"
             :aria-label="`Shuffle the A${modifier.level} Ascension Down`"
@@ -261,6 +268,13 @@ function setAscensionDown(level: AscensionLevel, value: unknown): void {
             class="cursor-pointer"
             @update:model-value="setAscensionDown(modifier.level, $event)"
           />
+          <span
+            v-else
+            class="ascension-table__no-down"
+            title="Relic Checks rely on the extra Elites, so this has no Ascension Down."
+          >
+            None
+          </span>
         </div>
       </div>
     </div>
@@ -376,6 +390,11 @@ function setAscensionDown(level: AscensionLevel, value: unknown): void {
 .ascension-table__checkbox {
   display: flex;
   justify-content: center;
+}
+
+.ascension-table__no-down {
+  color: var(--ui-text-dimmed);
+  font-size: 0.78rem;
 }
 
 @media (max-width: 42rem) {

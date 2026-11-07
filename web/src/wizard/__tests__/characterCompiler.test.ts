@@ -154,16 +154,22 @@ function compilesSequentialAscensionShorthand(): void {
   answers.characters.sharedAscensions = {
     enabled: [1, 2, 3, 4, 5],
     ascensionDownsEnabled: true,
-    downs: [1, 2, 3, 4, 5],
+    downs: [2, 3, 4, 5],
   };
 
   // Compile through the complete path so numeric OptionSet validation is exercised.
   const result = compileWizardAnswers(answers, optionCatalog);
   const yaml = optionsToYaml(selectGuidedOptions(result));
 
-  // One number expands to the complete prefix, and five Downs cover all five actives.
+  // One number expands to the complete prefix; Downs stay named so they cannot be
+  // mistaken for a level threshold, and A1 never has one.
   expect(result.ascension).toEqual([5]);
-  expect(result.ascension_down).toEqual([5]);
+  expect(result.ascension_down).toEqual([
+    "WearyTraveler",
+    "Poverty",
+    "TightBelt",
+    "AscendersBane",
+  ]);
   expect(yaml).toContain("  - 5");
 }
 
@@ -220,7 +226,7 @@ function compilesIndividualAscensionSetup(): void {
     },
     HermitMod: {
       ascension: ["DoubleBoss"],
-      ascension_down: [1],
+      ascension_down: ["DoubleBoss"],
     },
   });
 
@@ -355,6 +361,20 @@ function rejectsInvalidModdedAndAscensionAnswers(): void {
 
   expect(compileOrphanedAscensionDown).toThrow("requires Ascension A1");
 
+  // Swarming Elites never has an Ascension Down, even when A1 is enabled.
+  answers.characters.sharedAscensions = {
+    enabled: [1],
+    ascensionDownsEnabled: true,
+    downs: [1],
+  };
+
+  /** Compiles the unavailable A1 Ascension Down. */
+  function compileSwarmingElitesDown(): void {
+    compileWizardAnswers(answers, optionCatalog);
+  }
+
+  expect(compileSwarmingElitesDown).toThrow("A1 has no Ascension Down");
+
   // A generated roster supports at most twenty characters without a predefined name.
   answers.characters.sharedAscensions = {
     enabled: [1],
@@ -405,7 +425,7 @@ function registerCharacterCompilerTests(): void {
     compilesSharedModdedCharacterSetup,
   );
   it(
-    "compacts sequential Ascension and Ascension Down selections",
+    "compacts sequential Ascensions and keeps Ascension Downs named",
     compilesSequentialAscensionShorthand,
   );
   it(
@@ -525,7 +545,7 @@ describe("per-character progressive starters", () => {
     answers.characters.sharedAscensions = {
       enabled: [1, 2],
       ascensionDownsEnabled: true,
-      downs: [1],
+      downs: [2],
     };
     answers.characters.moddedCharacters = [
       {
@@ -549,13 +569,13 @@ describe("per-character progressive starters", () => {
     expect(result.advanced_characters).toEqual({
       Ironclad: {
         ascension: [2],
-        ascension_down: ["SwarmingElites"],
+        ascension_down: ["WearyTraveler"],
         progressive_starter_card: false,
       },
-      Silent: { ascension: [2], ascension_down: ["SwarmingElites"] },
+      Silent: { ascension: [2], ascension_down: ["WearyTraveler"] },
       "INTOTHESPIREVERSE-SHADOW_IRONCLAD": {
         ascension: [2],
-        ascension_down: ["SwarmingElites"],
+        ascension_down: ["WearyTraveler"],
         progressive_starter_card: true,
         progressive_starter_relic: false,
       },

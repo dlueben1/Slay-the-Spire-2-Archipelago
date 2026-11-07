@@ -18,7 +18,7 @@ from .web_world import SlayTheSpire2Web
 from .characters import (CharacterConfig, character_list, vanilla_character_ids, character_registry,
                          registered_character_blocks, unique_character_ids, character_identity,
                          needs_generic_block)
-from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET, GENERIC_CHARACTER_BLOCKS
+from .constants import NUM_CUSTOM, ASCENSION_LIST, ASCENSION_WITHOUT_DOWN, CHAR_OFFSET, GENERIC_CHARACTER_BLOCKS
 from .items import (item_table, chars_to_items, bonus_item_table, ItemType, base_event_item_pairs, ItemData,
                     item_groups)
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
@@ -317,29 +317,28 @@ class SlayTheSpire2World(World):
 
     @staticmethod
     def _to_ascension_downs(ascension_downs: typing.Set[str], ascensions: typing.Set[str]) -> typing.Set[str]:
-        ret = set()
+        # Swarming Elites is never removed: relic-check logic relies on the elites it adds, so its Down
+        # would make checks harder rather than help. Its item keeps its ID but is never placed.
+        no_down = ASCENSION_WITHOUT_DOWN.lower()
         if len(ascension_downs) == 1:
             try:
                 number = int(next(iter(ascension_downs)))
-                asc_list = ASCENSION_LIST[::-1]
-                count = 0
-                for i in range(0, len(asc_list)):
-                    asc = asc_list[i].lower()
-                    if asc in ascensions:
-                        ret.add(asc_list[i].lower())
-                        count += 1
-                    if count >= len(ascensions) or count >= number:
-                        break
-                return ret
-            except (TypeError, ValueError, IndexError):
-                return {asc.lower() for asc in ascension_downs}
+            except (TypeError, ValueError):
+                pass
+            else:
+                # A single number selects the highest N enabled Ascensions that can have a Down.
+                eligible = [asc.lower() for asc in reversed(ASCENSION_LIST)
+                            if asc.lower() in ascensions and asc.lower() != no_down]
+                return set(eligible[:max(number, 0)])
 
+        ret = set()
         for asc in ascension_downs:
             try:
                 number = int(asc)
                 ret.add(ASCENSION_LIST[number - 1].lower())
             except (TypeError, ValueError, IndexError):
                 ret.add(asc.lower())
+        ret.discard(no_down)
         return ret
 
 

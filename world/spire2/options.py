@@ -510,13 +510,13 @@ class BonusItems(OptionList):
 
 class AscensionDown(OptionSet):
     """Ascension Down items to add for each character.
-    Only enabled Ascensions can receive a corresponding Ascension Down.
+    Only enabled Ascensions can receive a corresponding Ascension Down. Ascension 1 (SwarmingElites)
+    never gets one, because relic checks rely on its extra elites.
 
     A single number N selects the highest N enabled Ascensions. When multiple values are supplied, each
     number selects only that numbered Ascension. Names are case-sensitive.
     Supports both numbers and names.
 
-    - 'SwarmingElites'
     - 'WearyTraveler'
     - 'Poverty'
     - 'TightBelt'

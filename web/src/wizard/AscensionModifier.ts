@@ -86,6 +86,18 @@ export const ASCENSION_MODIFIERS: readonly AscensionModifier[] = [
 ];
 
 /**
+ * Checks whether an Ascension can have its Ascension Down item shuffled.
+ *
+ * @param level - Ascension level to check.
+ * @returns Whether the APWorld places a Down for this level.
+ * @remarks The APWorld never places the A1 Swarming Elites Down: relic-check logic
+ * relies on the extra elites, so removing them would make checks harder.
+ */
+export function hasAscensionDown(level: AscensionLevel): boolean {
+  return level !== 1;
+}
+
+/**
  * Checks whether an unknown value is one of the ten supported Ascension levels.
  *
  * @param value - Candidate numeric value to narrow.

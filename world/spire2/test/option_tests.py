@@ -159,6 +159,35 @@ class TestAscensionDownNumbers(Spire2TestBase):
                 raise Exception("Found Swarming Elites")
 
 
+class TestNoSwarmingElitesDown(Spire2TestBase):
+    options = {
+        "characters": [
+            "silent"
+        ],
+        "ascension": [10],
+        "ascension_down": [10],
+    }
+
+    def test_count_skips_swarming_elites(self):
+        downs = [item.name for item in self.world.multiworld.itempool if item.name.startswith("Silent Disable")]
+        self.assertEqual(9, len(downs))
+        self.assertNotIn("Silent Disable Swarming Elites", downs)
+
+
+class TestNamedSwarmingElitesDownIgnored(Spire2TestBase):
+    options = {
+        "characters": [
+            "silent"
+        ],
+        "ascension": [3],
+        "ascension_down": ["SwarmingElites", "Poverty"],
+    }
+
+    def test_only_poverty_down(self):
+        downs = [item.name for item in self.world.multiworld.itempool if item.name.startswith("Silent Disable")]
+        self.assertEqual(["Silent Disable Poverty"], downs)
+
+
 class TestBasicModdedChars(Spire2TestBase):
     options = {
         "characters": {

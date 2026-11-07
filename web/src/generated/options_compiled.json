@@ -8,11 +8,11 @@
     },
     "constants": {
       "path": "world/spire2/constants.py",
-      "sha256": "157cfe23568604a27a8b3ee11a9f38c5dbaa373c86faa3e112d23e0745355f5f"
+      "sha256": "ef22b9c2e6cc9094f71b11b184ba101a0108b0fdcc0bc239bf96509637cb98f0"
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "3e9e2a05fd3b22fc53a99d4915ba0d3b3edabed9b298387682c153e9f94aa413"
+      "sha256": "779be472ef9aa1f69c6a214a1fa9952bc5f5fff1e0660d41b59390e271e45e60"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
@@ -931,7 +931,7 @@
       "module": "worlds.spire2.options",
       "kind": "set",
       "display_name": "Ascension Down",
-      "description": "Ascension Down items to add for each character.\nOnly enabled Ascensions can receive a corresponding Ascension Down.\n\nA single number N selects the highest N enabled Ascensions. When multiple values are supplied, each\nnumber selects only that numbered Ascension. Names are case-sensitive.\nSupports both numbers and names.\n\n- 'SwarmingElites'\n- 'WearyTraveler'\n- 'Poverty'\n- 'TightBelt'\n- 'AscendersBane'\n- 'Inflation'\n- 'Scarcity'\n- 'ToughEnemies'\n- 'DeadlyEnemies'\n- 'DoubleBoss'\n\nLogic does not account for receiving these items.",
+      "description": "Ascension Down items to add for each character.\nOnly enabled Ascensions can receive a corresponding Ascension Down. Ascension 1 (SwarmingElites)\nnever gets one, because relic checks rely on its extra elites.\n\nA single number N selects the highest N enabled Ascensions. When multiple values are supplied, each\nnumber selects only that numbered Ascension. Names are case-sensitive.\nSupports both numbers and names.\n\n- 'WearyTraveler'\n- 'Poverty'\n- 'TightBelt'\n- 'AscendersBane'\n- 'Inflation'\n- 'Scarcity'\n- 'ToughEnemies'\n- 'DeadlyEnemies'\n- 'DoubleBoss'\n\nLogic does not account for receiving these items.",
       "default": [],
       "raw_default": [],
       "visibility": {

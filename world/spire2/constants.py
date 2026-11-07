@@ -35,3 +35,6 @@ ASCENSIONS = {
 }
 
 ASCENSION_LIST = list(ASCENSIONS.keys())
+
+# The one Ascension whose Ascension Down item is never placed in the pool.
+ASCENSION_WITHOUT_DOWN = 'SwarmingElites'
