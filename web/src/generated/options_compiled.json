@@ -12,7 +12,7 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "3e9e2a05fd3b22fc53a99d4915ba0d3b3edabed9b298387682c153e9f94aa413"
+      "sha256": "1e024308305cfce7bd49d0de4c45eba7c4987debf9baeccfb0c8a0476baa631f"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
@@ -1351,8 +1351,8 @@
       "kind": "toggle",
       "display_name": "Campfire Sanity",
       "description": "Whether to shuffle being able to rest and smith at each campsite per act.  Also adds\nnew locations at campsites per act.",
-      "default": false,
-      "raw_default": 0,
+      "default": true,
+      "raw_default": 1,
       "visibility": {
         "name": "all",
         "value": 15,
@@ -1387,8 +1387,8 @@
       "kind": "toggle",
       "display_name": "Gold Sanity",
       "description": "Whether to replace combat, elite, and boss gold rewards with AP locations. Adds 22 locations per character.\n    ",
-      "default": false,
-      "raw_default": 0,
+      "default": true,
+      "raw_default": 1,
       "visibility": {
         "name": "all",
         "value": 15,
@@ -1423,8 +1423,8 @@
       "kind": "toggle",
       "display_name": "Potion Sanity",
       "description": "Whether to replace potion rewards with AP locations. Adds 9 locations per character.",
-      "default": false,
-      "raw_default": 0,
+      "default": true,
+      "raw_default": 1,
       "visibility": {
         "name": "all",
         "value": 15,
@@ -1459,8 +1459,8 @@
       "kind": "toggle",
       "display_name": "Shop Sanity",
       "description": "Move the configured shop slots to a separate AP shop page as purchasable location checks and\nshuffle items that progressively restore the corresponding slots on the normal shop page.\nShop Sanity is turned off if every slot count below is 0 and Shop Remove Slots is off.",
-      "default": false,
-      "raw_default": 0,
+      "default": true,
+      "raw_default": 1,
       "visibility": {
         "name": "all",
         "value": 15,

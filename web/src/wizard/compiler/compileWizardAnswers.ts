@@ -10,6 +10,7 @@
 
 import type { OptionCatalog, OptionValue } from "../../generated/optionCatalog";
 import type { WizardAnswers } from "../WizardAnswers";
+import { validateFillerBudget } from "../fillerBudget";
 import { validateOptions } from "../validation/validateOptions";
 import {
   applyCharacterOptions,
@@ -66,6 +67,8 @@ export function compileWizardAnswers(
 
   // Validation is deliberately last: it checks the final product, not player intent.
   validateOptions(options, catalog);
+  // Generation fails when Bonus Items and Sight items outnumber free filler slots.
+  validateFillerBudget(answers);
 
   // Return the newly constructed snapshot for display or YAML serialization.
   return options;

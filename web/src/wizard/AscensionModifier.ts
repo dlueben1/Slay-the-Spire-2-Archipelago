@@ -19,6 +19,11 @@ export interface AscensionModifier {
   optionName: string;
   name: string;
   effect: string;
+  /**
+   * Leaves this modifier's Ascension Down unticked when a shortcut selects Downs in
+   * bulk, so the player has to choose it on purpose.
+   */
+  excludeFromBulkDowns?: boolean;
 }
 
 /** Ordered Ascension rows shared by standard and per-character configuration. */
@@ -28,6 +33,9 @@ export const ASCENSION_MODIFIERS: readonly AscensionModifier[] = [
     optionName: "SwarmingElites",
     name: "Swarming Elites",
     effect: "Adds more elite encounters to the map.",
+    // Logic counts on these extra elites for Relic checks, so removing them mid-run
+    // makes those checks harder to reach. That is easy to pick by accident in bulk.
+    excludeFromBulkDowns: true,
   },
   {
     level: 2,
@@ -84,6 +92,21 @@ export const ASCENSION_MODIFIERS: readonly AscensionModifier[] = [
     effect: "Adds a second boss to the end of the final act.",
   },
 ];
+
+/**
+ * Chooses the Ascension Downs a bulk shortcut should tick for a set of Ascensions.
+ *
+ * @param enabledLevels - Active Ascensions; a Down only exists for an active level.
+ * @returns The enabled levels in canonical order, minus those excluded from bulk Downs.
+ */
+export function getBulkAscensionDowns(
+  enabledLevels: readonly AscensionLevel[],
+): AscensionLevel[] {
+  return ASCENSION_MODIFIERS.filter(
+    (modifier) =>
+      enabledLevels.includes(modifier.level) && !modifier.excludeFromBulkDowns,
+  ).map((modifier) => modifier.level);
+}
 
 /**
  * Checks whether an unknown value is one of the ten supported Ascension levels.

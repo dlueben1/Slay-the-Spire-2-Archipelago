@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import {
   ASCENSION_MODIFIERS,
+  getBulkAscensionDowns,
   type AscensionLevel,
 } from "../../../wizard/AscensionModifier";
 import type { AscensionConfigurationAnswers } from "../../../wizard/WizardAnswers";
@@ -84,7 +86,9 @@ function setAscensionDownsEnabled(value: unknown): void {
 function setAscensionThreshold(maximumLevel: AscensionLevel): void {
   // A numbered preset enables its complete prefix and disables all later levels.
   const enabled = getLevelsThrough(maximumLevel);
-  const downs = props.modelValue.ascensionDownsEnabled ? [...enabled] : [];
+  const downs = props.modelValue.ascensionDownsEnabled
+    ? getBulkAscensionDowns(enabled)
+    : [];
 
   // Keep the two visible columns aligned when Ascension Downs are in use.
   emit("update:modelValue", {
@@ -93,6 +97,90 @@ function setAscensionThreshold(maximumLevel: AscensionLevel): void {
     downs,
   });
 }
+
+/** Header checkbox state: ticked, unticked, or indeterminate for a partial column. */
+type ColumnState = boolean | "indeterminate";
+
+function getColumnState(selected: number, total: number): ColumnState {
+  if (selected === 0) return false;
+  return selected >= total ? true : "indeterminate";
+}
+
+const ascensionColumnState = computed(() =>
+  getColumnState(props.modelValue.enabled.length, ASCENSION_MODIFIERS.length),
+);
+
+/** Downs the header checkbox ticks: every active Ascension's, minus bulk exclusions. */
+const bulkDowns = computed(() =>
+  getBulkAscensionDowns(props.modelValue.enabled),
+);
+
+const downColumnState = computed(() =>
+  getColumnState(
+    bulkDowns.value.filter((level) => props.modelValue.downs.includes(level))
+      .length,
+    bulkDowns.value.length,
+  ),
+);
+
+/**
+ * Handles the Enabled column's header checkbox: a full column clears, anything else
+ * selects every Ascension. Clearing also clears the Downs, which need their Ascension.
+ */
+function toggleAllAscensions(): void {
+  const selectAll = ascensionColumnState.value !== true;
+  emit("update:modelValue", {
+    enabled: selectAll ? getLevelsThrough(10) : [],
+    ascensionDownsEnabled: props.modelValue.ascensionDownsEnabled,
+    downs: selectAll ? [...props.modelValue.downs] : [],
+  });
+}
+
+/**
+ * Handles the Downs column's header checkbox: a full column clears every Down,
+ * anything else ticks the Down of every active Ascension.
+ *
+ * @remarks Bulk selection skips modifiers marked `excludeFromBulkDowns`, but keeps
+ * one the player already ticked by hand.
+ */
+function toggleAllAscensionDowns(): void {
+  const selectAll = downColumnState.value !== true;
+  const downs = new Set<AscensionLevel>(
+    selectAll ? props.modelValue.downs : [],
+  );
+  if (selectAll) {
+    for (const level of bulkDowns.value) downs.add(level);
+  }
+  emit("update:modelValue", {
+    enabled: [...props.modelValue.enabled],
+    ascensionDownsEnabled: props.modelValue.ascensionDownsEnabled,
+    downs: getOrderedLevels(downs),
+  });
+}
+
+/**
+ * Swarming Elites (A1) adds the extra elites that relic-check logic counts on, so
+ * turning it off, or shuffling its Down, makes those checks harder to reach.
+ */
+const SWARMING_ELITES_LEVEL: AscensionLevel = 1;
+
+const isSwarmingElitesOff = computed(
+  () => !props.modelValue.enabled.includes(SWARMING_ELITES_LEVEL),
+);
+
+const isSwarmingElitesDowned = computed(
+  () =>
+    props.modelValue.ascensionDownsEnabled &&
+    props.modelValue.enabled.includes(SWARMING_ELITES_LEVEL) &&
+    props.modelValue.downs.includes(SWARMING_ELITES_LEVEL),
+);
+
+/** Names of the Downs bulk selection leaves for the player to tick by hand. */
+const bulkExcludedDownNames = ASCENSION_MODIFIERS.filter(
+  (modifier) => modifier.excludeFromBulkDowns,
+)
+  .map((modifier) => modifier.name)
+  .join(", ");
 
 /**
  * Updates whether one Ascension modifier is active for this configuration.
@@ -182,9 +270,10 @@ function setAscensionDown(level: AscensionLevel, value: unknown): void {
 
     <div class="ascension-editor__help">
       <p>
-        You can turn on any combination of Ascension Levels, or you can select
-        an A-level button on the left-hand side to enable every modifier up to
-        that level. Leaving every Ascension unchecked is valid.
+        You can turn on any combination of Ascension Levels, select an A-level
+        button on the left-hand side to enable every modifier up to that level,
+        or tick a column's header box to select or clear the whole column.
+        Leaving every Ascension unchecked is valid.
       </p>
       <p>
         We recommend enabling Ascension Level 1, since it provides more
@@ -194,8 +283,30 @@ function setAscensionDown(level: AscensionLevel, value: unknown): void {
       </p>
       <p v-if="modelValue.ascensionDownsEnabled">
         Ascension Down items disable their matching modifier when obtained.
+        Selecting Downs in bulk, with the header box or an A-level button,
+        leaves out {{ bulkExcludedDownNames }}: without the extra elites, Relic
+        checks are harder to reach. Tick it yourself if you want it.
       </p>
     </div>
+
+    <UAlert
+      v-if="isSwarmingElitesOff"
+      color="error"
+      variant="subtle"
+      icon="i-glyphs-exclamation-circle-bold"
+      title="Swarming Elites is off"
+      description="Logic expects its extra elites for Relic checks. Without it, you may not be able to reach every in-logic Relic until you've beaten the game as this character."
+      :ui="{ title: 'font-bold' }"
+    />
+    <UAlert
+      v-if="isSwarmingElitesDowned"
+      color="error"
+      variant="subtle"
+      icon="i-glyphs-exclamation-circle-bold"
+      title="Swarming Elites Down is shuffled"
+      description="Receiving it removes the extra elites that logic expects for Relic checks, so those checks become harder to reach. Untick it unless you want that."
+      :ui="{ title: 'font-bold' }"
+    />
 
     <div
       class="ascension-table"
@@ -207,9 +318,30 @@ function setAscensionDown(level: AscensionLevel, value: unknown): void {
     >
       <div class="ascension-table__header" role="row">
         <span role="columnheader">Modifier</span>
-        <span role="columnheader">Enabled</span>
-        <span v-if="modelValue.ascensionDownsEnabled" role="columnheader">
-          Add Item to Disable
+        <span class="ascension-table__column-header" role="columnheader">
+          <span>Enabled</span>
+          <UCheckbox
+            :model-value="ascensionColumnState"
+            aria-label="Select or clear every Ascension"
+            color="primary"
+            class="cursor-pointer"
+            @update:model-value="toggleAllAscensions"
+          />
+        </span>
+        <span
+          v-if="modelValue.ascensionDownsEnabled"
+          class="ascension-table__column-header"
+          role="columnheader"
+        >
+          <span>Add Item to Disable</span>
+          <UCheckbox
+            :model-value="downColumnState"
+            :disabled="bulkDowns.length === 0"
+            aria-label="Select or clear every Ascension Down"
+            color="primary"
+            class="cursor-pointer"
+            @update:model-value="toggleAllAscensionDowns"
+          />
         </span>
       </div>
 
@@ -289,17 +421,6 @@ function setAscensionDown(level: AscensionLevel, value: unknown): void {
   gap: 1rem;
 }
 
-.ascension-editor__bulk-actions {
-  display: flex;
-  padding: 0.75rem;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  border: 1px solid var(--ui-border-muted);
-  border-radius: 0.5rem;
-  background: color-mix(in oklab, var(--ui-bg-elevated) 78%, transparent);
-}
-
 .ascension-table {
   overflow: hidden;
   border: 1px solid var(--ui-border-muted);
@@ -331,8 +452,19 @@ function setAscensionDown(level: AscensionLevel, value: unknown): void {
   background: rgba(8, 13, 24, 0.88);
 }
 
-.ascension-table__header span:not(:first-child) {
+.ascension-table__header > span:not(:first-child) {
   text-align: center;
+}
+
+/* Column label above a header checkbox that selects or clears the column. */
+.ascension-table__column-header {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  align-items: center;
+  /* Keep the checkboxes level when one label wraps onto two lines. */
+  justify-content: flex-end;
+  gap: 0.4rem;
 }
 
 .ascension-table__row {

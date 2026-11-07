@@ -39,6 +39,14 @@ Challenges sits just before Progression, and its keys come after Death Link's in
 
 The player name is not a game option and must never be added to a section compiler or `GuidedOption.ts`. `buildWizardYaml` validates it, adds the fixed builder description and `Slay the Spire II` game identifier, and nests the selected guided settings under the game-name mapping. `WizardView.vue` computes one shared document, and Review uses that exact string for preview, clipboard, and download behavior.
 
+`answerPersistence.ts` saves the answer model and the current step to `localStorage` on every change, and `WizardView.vue` restores them on load. A save from an older deployment is merged into fresh defaults one value at a time: a value whose type no longer matches the default is dropped, so changing the answer model never breaks the page. Bump the storage key's version when a change keeps a field's type but changes its meaning. Start over clears the save and every answer.
+
+Import YAML loads a Slay the Spire II YAML, from the builder or hand-edited, into the answers. `import/importWizardYaml.ts` reads it the way Archipelago would (YAML 1.1, weighted values, the first document that plays Slay the Spire II), overlays it on the generated defaults and inverts each section compiler (`import/readCharacterAnswers.ts`, `import/readSectionAnswers.ts`). Problems that leave nothing to load throw; everything else, such as random values or options the builder does not cover, becomes a warning shown above the builder. When a compiler changes, change its reader too: the round-trip tests in `__tests__/importWizardYaml.test.ts` compile answers, import the YAML and expect identical options.
+
+`fillerBudget.ts` repeats the Python world's floor-check filler count (`create_items` in `world/spire2/world.py`): 48 slots per character, minus one per Ascension Down and two per progressive starter option, plus one while Double Boss is active and not downed. Bonus Items and Sight items each take one. `FillerBudgetNote.vue` shows what is left in Bonus Items and Challenges, and `compileWizardAnswers` refuses answers that would fail generation for lack of slots. With random character selection it counts the pick with the fewest slots. Keep it in step with `create_items`.
+
+In the Ascension editor, Select all, Clear and the A-level shortcuts change several rows at once. Bulk Down selection skips modifiers marked `excludeFromBulkDowns` in `AscensionModifier.ts` (Swarming Elites, whose extra elites the relic logic relies on); players tick those Downs by hand.
+
 Inherited Archipelago template fields such as item links, plando, start inventory, and location overrides remain generated defaults because the guided UI does not ask about them yet.
 
 ## Adding a guided question
