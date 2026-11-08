@@ -361,6 +361,67 @@ class ShopColorlessWeight(ShopCardWeight):
     """How often a random shop card slot holds a colorless card, Uncommon or Rare."""
     display_name = "Shop Colorless Weight"
 
+class RandomShopRelics(Toggle):
+    """Each of the shop's 3 relic slots holds a random kind of relic, picked with the weights below,
+    instead of 2 random relics and a Shop relic. Event and Ancient relics can appear.
+    If every weight is none, the shop keeps its usual relics. Does not change logic."""
+    display_name = "Random Shop Relics"
+    default = 0
+
+class ShopRelicCommonWeight(ShopCardWeight):
+    """How often a random shop relic slot holds a Common relic."""
+    display_name = "Shop Relic Common Weight"
+
+class ShopRelicUncommonWeight(ShopCardWeight):
+    """How often a random shop relic slot holds an Uncommon relic."""
+    display_name = "Shop Relic Uncommon Weight"
+
+class ShopRelicRareWeight(ShopCardWeight):
+    """How often a random shop relic slot holds a Rare relic."""
+    display_name = "Shop Relic Rare Weight"
+
+class ShopRelicShopWeight(ShopCardWeight):
+    """How often a random shop relic slot holds a Shop relic."""
+    display_name = "Shop Relic Shop Weight"
+
+class ShopRelicEventWeight(ShopCardWeight):
+    """How often a random shop relic slot holds an Event relic."""
+    display_name = "Shop Relic Event Weight"
+    default = ShopCardWeight.option_low
+
+class ShopRelicAncientWeight(ShopCardWeight):
+    """How often a random shop relic slot holds an Ancient relic."""
+    display_name = "Shop Relic Ancient Weight"
+    default = ShopCardWeight.option_low
+
+class RandomShopPotions(Toggle):
+    """Each of the shop's 3 potion slots holds a random kind of potion, picked with the weights below.
+    Potions from other classes and from events can appear.
+    If every weight is none, the shop keeps its usual potions. Does not change logic."""
+    display_name = "Random Shop Potions"
+    default = 0
+
+class ShopPotionCommonWeight(ShopCardWeight):
+    """How often a random shop potion slot holds a Common potion."""
+    display_name = "Shop Potion Common Weight"
+
+class ShopPotionUncommonWeight(ShopCardWeight):
+    """How often a random shop potion slot holds an Uncommon potion."""
+    display_name = "Shop Potion Uncommon Weight"
+
+class ShopPotionRareWeight(ShopCardWeight):
+    """How often a random shop potion slot holds a Rare potion."""
+    display_name = "Shop Potion Rare Weight"
+
+class ShopPotionOtherClassWeight(ShopCardWeight):
+    """How often a random shop potion slot holds a potion from another class."""
+    display_name = "Shop Potion Other Class Weight"
+
+class ShopPotionEventWeight(ShopCardWeight):
+    """How often a random shop potion slot holds an Event potion."""
+    display_name = "Shop Potion Event Weight"
+    default = ShopCardWeight.option_low
+
 class GoldSanity(Toggle):
     """Whether to replace combat, elite, and boss gold rewards with AP locations. Adds 22 locations per character.
     """
@@ -942,6 +1003,23 @@ class Spire2Options(PerGameCommonOptions):
     shop_uncommon_weight: ShopUncommonWeight
     shop_rare_weight: ShopRareWeight
     shop_colorless_weight: ShopColorlessWeight
+
+    # Shop relics
+    random_shop_relics: RandomShopRelics
+    shop_relic_common_weight: ShopRelicCommonWeight
+    shop_relic_uncommon_weight: ShopRelicUncommonWeight
+    shop_relic_rare_weight: ShopRelicRareWeight
+    shop_relic_shop_weight: ShopRelicShopWeight
+    shop_relic_event_weight: ShopRelicEventWeight
+    shop_relic_ancient_weight: ShopRelicAncientWeight
+
+    # Shop potions
+    random_shop_potions: RandomShopPotions
+    shop_potion_common_weight: ShopPotionCommonWeight
+    shop_potion_uncommon_weight: ShopPotionUncommonWeight
+    shop_potion_rare_weight: ShopPotionRareWeight
+    shop_potion_other_class_weight: ShopPotionOtherClassWeight
+    shop_potion_event_weight: ShopPotionEventWeight
 
     # Death Link
     death_link: DeathLink

@@ -1844,13 +1844,21 @@ namespace StS2AP
             {
                 LogUtility.Warn("ShopSanity is enabled but 'shop_sanity_options' was missing or not the expected object shape — all shop slots will read as unlocked.");
             }
-            // Older APWorlds omit this key, and an empty object means the vanilla layout.
-            if (slotData.GetValueOrDefault("shop_card_weights") is JObject shopCardWeights)
+            settings.ShopCardWeights = ReadShopWeights("shop_card_weights", "Random Shop Cards");
+            settings.ShopRelicWeights = ReadShopWeights("shop_relic_weights", "Random Shop Relics");
+            settings.ShopPotionWeights = ReadShopWeights("shop_potion_weights", "Random Shop Potions");
+
+            // Older APWorlds omit these keys, and an empty object means the vanilla layout.
+            Dictionary<string, int> ReadShopWeights(string key, string optionName)
             {
-                settings.ShopCardWeights = shopCardWeights.Properties()
+                if (slotData.GetValueOrDefault(key) is not JObject weightsToken)
+                    return new Dictionary<string, int>();
+
+                var weights = weightsToken.Properties()
                     .ToDictionary(property => property.Name, property => Convert.ToInt32(property.Value));
-                if (settings.ShopCardWeights.Count > 0)
-                    LogUtility.Info($"SLOT - Random Shop Cards: {string.Join(", ", settings.ShopCardWeights.Select(pair => $"{pair.Key}={pair.Value}"))}");
+                if (weights.Count > 0)
+                    LogUtility.Info($"SLOT - {optionName}: {string.Join(", ", weights.Select(pair => $"{pair.Key}={pair.Value}"))}");
+                return weights;
             }
 
             // And return it

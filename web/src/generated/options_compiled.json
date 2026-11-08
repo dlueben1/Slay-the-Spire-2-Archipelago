@@ -12,11 +12,11 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "86d41731def394b2ee6a74e7a1a21259a561c347b8d980d33ec9a12f4d7803be"
+      "sha256": "d94873af9d176fa4476b581777f245b1e6a476696a49d5f6425f46d1827d389d"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "fd3d2cf577070d90ac29558a46108923b3feb2e59239321a8a0d6e112f3e0090"
+      "sha256": "eef02096a2a4621ea6616f2d0077d315c087ff4090ed1ff95621e5cb1583a331"
     }
   },
   "characters": {
@@ -165,6 +165,19 @@
     "shop_uncommon_weight",
     "shop_rare_weight",
     "shop_colorless_weight",
+    "random_shop_relics",
+    "shop_relic_common_weight",
+    "shop_relic_uncommon_weight",
+    "shop_relic_rare_weight",
+    "shop_relic_shop_weight",
+    "shop_relic_event_weight",
+    "shop_relic_ancient_weight",
+    "random_shop_potions",
+    "shop_potion_common_weight",
+    "shop_potion_uncommon_weight",
+    "shop_potion_rare_weight",
+    "shop_potion_other_class_weight",
+    "shop_potion_event_weight",
     "death_link",
     "enable_death_fragments",
     "death_link_damage_percent",
@@ -270,6 +283,33 @@
         "shop_uncommon_weight",
         "shop_rare_weight",
         "shop_colorless_weight"
+      ],
+      "start_collapsed": false,
+      "source": "web_world"
+    },
+    {
+      "name": "Shop Relics",
+      "option_keys": [
+        "random_shop_relics",
+        "shop_relic_common_weight",
+        "shop_relic_uncommon_weight",
+        "shop_relic_rare_weight",
+        "shop_relic_shop_weight",
+        "shop_relic_event_weight",
+        "shop_relic_ancient_weight"
+      ],
+      "start_collapsed": false,
+      "source": "web_world"
+    },
+    {
+      "name": "Shop Potions",
+      "option_keys": [
+        "random_shop_potions",
+        "shop_potion_common_weight",
+        "shop_potion_uncommon_weight",
+        "shop_potion_rare_weight",
+        "shop_potion_other_class_weight",
+        "shop_potion_event_weight"
       ],
       "start_collapsed": false,
       "source": "web_world"
@@ -2054,6 +2094,584 @@
       ],
       "supports_weighting": true,
       "group": "Shop Cards"
+    },
+    "random_shop_relics": {
+      "key": "random_shop_relics",
+      "class_name": "RandomShopRelics",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Random Shop Relics",
+      "description": "Each of the shop's 3 relic slots holds a random kind of relic, picked with the weights below,\ninstead of 2 random relics and a Shop relic. Event and Ancient relics can appear.\nIf every weight is none, the shop keeps its usual relics. Does not change logic.",
+      "default": false,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Relics"
+    },
+    "shop_relic_common_weight": {
+      "key": "shop_relic_common_weight",
+      "class_name": "ShopRelicCommonWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Relic Common Weight",
+      "description": "How often a random shop relic slot holds a Common relic.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Relics"
+    },
+    "shop_relic_uncommon_weight": {
+      "key": "shop_relic_uncommon_weight",
+      "class_name": "ShopRelicUncommonWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Relic Uncommon Weight",
+      "description": "How often a random shop relic slot holds an Uncommon relic.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Relics"
+    },
+    "shop_relic_rare_weight": {
+      "key": "shop_relic_rare_weight",
+      "class_name": "ShopRelicRareWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Relic Rare Weight",
+      "description": "How often a random shop relic slot holds a Rare relic.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Relics"
+    },
+    "shop_relic_shop_weight": {
+      "key": "shop_relic_shop_weight",
+      "class_name": "ShopRelicShopWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Relic Shop Weight",
+      "description": "How often a random shop relic slot holds a Shop relic.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Relics"
+    },
+    "shop_relic_event_weight": {
+      "key": "shop_relic_event_weight",
+      "class_name": "ShopRelicEventWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Relic Event Weight",
+      "description": "How often a random shop relic slot holds an Event relic.",
+      "default": "low",
+      "raw_default": 1,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Relics"
+    },
+    "shop_relic_ancient_weight": {
+      "key": "shop_relic_ancient_weight",
+      "class_name": "ShopRelicAncientWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Relic Ancient Weight",
+      "description": "How often a random shop relic slot holds an Ancient relic.",
+      "default": "low",
+      "raw_default": 1,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Relics"
+    },
+    "random_shop_potions": {
+      "key": "random_shop_potions",
+      "class_name": "RandomShopPotions",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Random Shop Potions",
+      "description": "Each of the shop's 3 potion slots holds a random kind of potion, picked with the weights below.\nPotions from other classes and from events can appear.\nIf every weight is none, the shop keeps its usual potions. Does not change logic.",
+      "default": false,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Potions"
+    },
+    "shop_potion_common_weight": {
+      "key": "shop_potion_common_weight",
+      "class_name": "ShopPotionCommonWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Potion Common Weight",
+      "description": "How often a random shop potion slot holds a Common potion.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Potions"
+    },
+    "shop_potion_uncommon_weight": {
+      "key": "shop_potion_uncommon_weight",
+      "class_name": "ShopPotionUncommonWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Potion Uncommon Weight",
+      "description": "How often a random shop potion slot holds an Uncommon potion.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Potions"
+    },
+    "shop_potion_rare_weight": {
+      "key": "shop_potion_rare_weight",
+      "class_name": "ShopPotionRareWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Potion Rare Weight",
+      "description": "How often a random shop potion slot holds a Rare potion.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Potions"
+    },
+    "shop_potion_other_class_weight": {
+      "key": "shop_potion_other_class_weight",
+      "class_name": "ShopPotionOtherClassWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Potion Other Class Weight",
+      "description": "How often a random shop potion slot holds a potion from another class.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Potions"
+    },
+    "shop_potion_event_weight": {
+      "key": "shop_potion_event_weight",
+      "class_name": "ShopPotionEventWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Potion Event Weight",
+      "description": "How often a random shop potion slot holds an Event potion.",
+      "default": "low",
+      "raw_default": 1,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Potions"
     },
     "death_link": {
       "key": "death_link",

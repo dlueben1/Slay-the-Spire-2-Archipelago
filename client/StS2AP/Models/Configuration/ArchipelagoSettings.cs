@@ -192,6 +192,18 @@ namespace StS2AP.Models
         public Dictionary<string, int> ShopCardWeights { get; set; } = new();
 
         /// <summary>
+        /// Random Shop Relics weights by kind name ("common", "uncommon", "rare", "shop", "event",
+        /// "ancient"). Empty keeps the vanilla shop relic layout.
+        /// </summary>
+        public Dictionary<string, int> ShopRelicWeights { get; set; } = new();
+
+        /// <summary>
+        /// Random Shop Potions weights by kind name ("common", "uncommon", "rare", "otherclass",
+        /// "event"). Empty keeps the vanilla shop potion layout.
+        /// </summary>
+        public Dictionary<string, int> ShopPotionWeights { get; set; } = new();
+
+        /// <summary>
         /// Total number of generic Shop Slot locations generated per character. Enabling card
         /// removal adds three locations, matching its three progressive act unlock items.
         /// </summary>

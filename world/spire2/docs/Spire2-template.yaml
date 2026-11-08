@@ -195,6 +195,34 @@ Slay the Spire II:
   shop_rare_weight: "medium"       # Rare, any type
   shop_colorless_weight: "medium"  # Colorless, Uncommon or Rare
 
+  ###############
+  # Shop Relics #
+  ###############
+
+  # Each of the shop's 3 relic slots holds a random kind of relic instead of the usual
+  # 2 random relics and a Shop relic.
+  random_shop_relics: false
+  # How often a slot holds each kind: none, low, medium or high
+  shop_relic_common_weight: "medium"
+  shop_relic_uncommon_weight: "medium"
+  shop_relic_rare_weight: "medium"
+  shop_relic_shop_weight: "medium"
+  shop_relic_event_weight: "low"
+  shop_relic_ancient_weight: "low"
+
+  ################
+  # Shop Potions #
+  ################
+
+  # Each of the shop's 3 potion slots holds a random kind of potion.
+  random_shop_potions: false
+  # How often a slot holds each kind: none, low, medium or high
+  shop_potion_common_weight: "medium"
+  shop_potion_uncommon_weight: "medium"
+  shop_potion_rare_weight: "medium"
+  shop_potion_other_class_weight: "medium"  # A potion from another class, any rarity
+  shop_potion_event_weight: "low"
+
   ##############
   # Death Link #
   ##############
