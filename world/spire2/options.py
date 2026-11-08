@@ -321,9 +321,9 @@ class ShopSanityCosts(Choice):
 
 class RandomShopCards(Toggle):
     """Each of the shop's 7 card slots holds a random kind of card, picked with the weights below,
-    instead of 2 Attacks, 2 Skills, a Power and 2 colorless cards. Any of the 7 can be on sale.
-    If every weight is none, the shop keeps its usual cards. Does not change logic."""
-    display_name = "Random Shop Cards"
+    instead of 2 Attacks, 2 Skills, a Power and 2 colorless cards.
+    If every weight is none, the shop keeps its usual cards."""
+    display_name = "Custom Shop Cards"
     default = 0
 
 class ShopCardWeight(Choice):
@@ -362,10 +362,8 @@ class ShopColorlessWeight(ShopCardWeight):
     display_name = "Shop Colorless Weight"
 
 class RandomShopRelics(Toggle):
-    """Each of the shop's 3 relic slots holds a random kind of relic, picked with the weights below,
-    instead of 2 random relics and a Shop relic. Event and Ancient relics can appear.
-    If every weight is none, the shop keeps its usual relics. Does not change logic."""
-    display_name = "Random Shop Relics"
+    """If enabled, allows you to override the default shop relics randomness."""
+    display_name = "Custom Shop Relics"
     default = 0
 
 class ShopRelicCommonWeight(ShopCardWeight):
@@ -395,10 +393,8 @@ class ShopRelicAncientWeight(ShopCardWeight):
     default = ShopCardWeight.option_low
 
 class RandomShopPotions(Toggle):
-    """Each of the shop's 3 potion slots holds a random kind of potion, picked with the weights below.
-    Potions from other classes and from events can appear.
-    If every weight is none, the shop keeps its usual potions. Does not change logic."""
-    display_name = "Random Shop Potions"
+    """If enabled, allows you to override the default shop potions randomness."""
+    display_name = "Custom Shop Potions"
     default = 0
 
 class ShopPotionCommonWeight(ShopCardWeight):

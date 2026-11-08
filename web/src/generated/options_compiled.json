@@ -12,7 +12,7 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "d94873af9d176fa4476b581777f245b1e6a476696a49d5f6425f46d1827d389d"
+      "sha256": "78bd4340206c29eb68c4bd995ba9579e16516c0fe7eaef41da1db455c403b91e"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
@@ -1742,8 +1742,8 @@
       "class_name": "RandomShopCards",
       "module": "worlds.spire2.options",
       "kind": "toggle",
-      "display_name": "Random Shop Cards",
-      "description": "Each of the shop's 7 card slots holds a random kind of card, picked with the weights below,\ninstead of 2 Attacks, 2 Skills, a Power and 2 colorless cards. Any of the 7 can be on sale.\nIf every weight is none, the shop keeps its usual cards. Does not change logic.",
+      "display_name": "Custom Shop Cards",
+      "description": "Each of the shop's 7 card slots holds a random kind of card, picked with the weights below,\ninstead of 2 Attacks, 2 Skills, a Power and 2 colorless cards.\nIf every weight is none, the shop keeps its usual cards.",
       "default": false,
       "raw_default": 0,
       "visibility": {
@@ -2100,8 +2100,8 @@
       "class_name": "RandomShopRelics",
       "module": "worlds.spire2.options",
       "kind": "toggle",
-      "display_name": "Random Shop Relics",
-      "description": "Each of the shop's 3 relic slots holds a random kind of relic, picked with the weights below,\ninstead of 2 random relics and a Shop relic. Event and Ancient relics can appear.\nIf every weight is none, the shop keeps its usual relics. Does not change logic.",
+      "display_name": "Custom Shop Relics",
+      "description": "If enabled, allows you to override the default shop relics randomness.",
       "default": false,
       "raw_default": 0,
       "visibility": {
@@ -2412,8 +2412,8 @@
       "class_name": "RandomShopPotions",
       "module": "worlds.spire2.options",
       "kind": "toggle",
-      "display_name": "Random Shop Potions",
-      "description": "Each of the shop's 3 potion slots holds a random kind of potion, picked with the weights below.\nPotions from other classes and from events can appear.\nIf every weight is none, the shop keeps its usual potions. Does not change logic.",
+      "display_name": "Custom Shop Potions",
+      "description": "If enabled, allows you to override the default shop potions randomness.",
       "default": false,
       "raw_default": 0,
       "visibility": {

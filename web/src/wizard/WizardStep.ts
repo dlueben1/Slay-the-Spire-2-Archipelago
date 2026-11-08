@@ -458,7 +458,10 @@ export const challengeSetupStep: WizardStep = {
       control: {
         kind: "radio",
         field: "hiddenIntents",
-        choices: sightCopyChoices("Intent Sight", "Intents are shown as normal."),
+        choices: sightCopyChoices(
+          "Intent Sight",
+          "Intents are shown as normal.",
+        ),
       },
     },
     {
@@ -731,16 +734,16 @@ export const checkSetupStep: WizardStep = {
     },
     {
       id: "random-shop-cards",
-      title: "Should shops sell random kinds of cards?",
+      title: "Do you want to customize which cards shops sell?",
       description:
-        "A shop normally sells 2 Attacks, 2 Skills, a Power and 2 colorless cards.",
-      help: "Works with or without Shop Slots. Does not change logic.",
+        "By default, a shop sells 2 Attacks, 2 Skills, a Power and 2 colorless cards.",
+      help: "Works with or without Shop Slots.",
       control: {
         kind: "checkbox",
         field: "shopCards.enabled",
-        label: "Random Shop Cards",
+        label: "Custom Shop Cards",
         description:
-          "Each of the 7 card slots holds a random kind of card, picked with the weights below. Any of the 7 can be on sale.",
+          "Choose how often each of the 7 card slots holds each kind of card.",
       },
     },
     {
@@ -750,15 +753,15 @@ export const checkSetupStep: WizardStep = {
     },
     {
       id: "random-shop-relics",
-      title: "Should shops sell random kinds of relics?",
-      description: "A shop normally sells 2 random relics and a Shop relic.",
-      help: "Works with or without Shop Slots. Does not change logic.",
+      title: "Do you want to customize which relics shops sell?",
+      description: "By default, a shop sells 2 random relics and a Shop relic.",
+      help: "Works with or without Shop Slots.",
       control: {
         kind: "checkbox",
         field: "shopRelics.enabled",
-        label: "Random Shop Relics",
+        label: "Custom Shop Relics",
         description:
-          "Each of the 3 relic slots holds a random kind of relic, picked with the weights below. Event and Ancient relics can appear.",
+          "Choose how often each of the 3 relic slots holds each kind of relic. Event and Ancient relics can appear.",
       },
     },
     {
@@ -768,16 +771,16 @@ export const checkSetupStep: WizardStep = {
     },
     {
       id: "random-shop-potions",
-      title: "Should shops sell random kinds of potions?",
+      title: "Do you want to customize which potions shops sell?",
       description:
-        "A shop normally sells 3 random potions from your class and the shared pool.",
-      help: "Works with or without Shop Slots. Does not change logic.",
+        "By default, a shop sells 3 random potions from your class and the shared pool.",
+      help: "Works with or without Shop Slots.",
       control: {
         kind: "checkbox",
         field: "shopPotions.enabled",
-        label: "Random Shop Potions",
+        label: "Custom Shop Potions",
         description:
-          "Each of the 3 potion slots holds a random kind of potion, picked with the weights below. Potions from other classes and from events can appear.",
+          "Choose how often each of the 3 potion slots holds each kind of potion. Potions from other classes and from events can appear.",
       },
     },
     {

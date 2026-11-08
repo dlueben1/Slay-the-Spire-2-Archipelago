@@ -184,7 +184,7 @@ Slay the Spire II:
   ##############
 
   # Each of the shop's 7 card slots holds a random kind of card instead of the usual
-  # 2 Attacks, 2 Skills, a Power and 2 colorless cards. Any of the 7 can be on sale.
+  # 2 Attacks, 2 Skills, a Power and 2 colorless cards.
   random_shop_cards: false
   # How often a slot holds each kind: none, low, medium or high
   shop_attack_weight: "medium"     # Attack, any rarity
@@ -199,8 +199,7 @@ Slay the Spire II:
   # Shop Relics #
   ###############
 
-  # Each of the shop's 3 relic slots holds a random kind of relic instead of the usual
-  # 2 random relics and a Shop relic.
+  # If enabled, allows you to override the default shop relics randomness.
   random_shop_relics: false
   # How often a slot holds each kind: none, low, medium or high
   shop_relic_common_weight: "medium"
@@ -214,7 +213,7 @@ Slay the Spire II:
   # Shop Potions #
   ################
 
-  # Each of the shop's 3 potion slots holds a random kind of potion.
+  # If enabled, allows you to override the default shop potions randomness.
   random_shop_potions: false
   # How often a slot holds each kind: none, low, medium or high
   shop_potion_common_weight: "medium"
