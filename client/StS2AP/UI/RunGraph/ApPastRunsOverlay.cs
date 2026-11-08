@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using Godot;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Runs;
+using MegaCrit.Sts2.Core.Runs.History;
 using MegaCrit.Sts2.Core.Saves;
 using StS2AP.Utils;
 using StS2AP.Utils.RunGraph;
@@ -21,7 +22,7 @@ internal sealed partial class ApPastRunsOverlay : Control
     private readonly ApRunGraphStore _store = ApRunGraphRecorder.Store;
     private List<SeedGroup> _seeds = new();
     private string? _selectedSeed;
-    private bool _showUnfinished;
+    private bool _showRestarts;
     private Label _subtitle = null!;
     private VBoxContainer _seedList = null!;
     private VBoxContainer _detail = null!;
@@ -29,20 +30,28 @@ internal sealed partial class ApPastRunsOverlay : Control
 
     /// <summary>
     /// A logged run with the game's saved history for it, and how many locations the slot gained
-    /// during it. Unfinished runs never reached a game-over screen, so the game saved no history.
+    /// during it. Unfinished runs never reached a game-over screen, so the game saved no history;
+    /// their recap comes from the last snapshot of the run, read only when a card needs it.
     /// </summary>
-    private sealed record PastRun(ApRunGraphLog Log, RunHistory? History, int SlotGain)
+    private sealed record PastRun(ApRunGraphLog Log, RunHistory? History, int SlotGain, ApPastRunStatus Status)
     {
+        private readonly Lazy<SerializableRun?> _snapshot = new(() => ApRunGraphRecorder.LoadSnapshot(Log.StartTime));
+
         internal int ChecksSent => Log.Events.Count(e => e.Kind == ApRunGraphEventKind.CheckSent);
         internal bool Unfinished => History == null;
+        internal SerializableRun? Snapshot => Unfinished ? _snapshot.Value : null;
+        internal IReadOnlyList<IReadOnlyList<MapPointHistoryEntry>>? MapHistory =>
+            History?.MapPointHistory ?? Snapshot?.MapPointHistory;
     }
 
     /// <summary>The runs played on one AP seed, newest first.</summary>
     private sealed record SeedGroup(string Seed, List<PastRun> Runs)
     {
         internal ApRunGraphLog Newest => Runs[0].Log;
-        internal IEnumerable<PastRun> Finished => Runs.Where(r => !r.Unfinished);
-        internal List<PastRun> Unfinished => Runs.Where(r => r.Unfinished).ToList();
+        internal IEnumerable<PastRun> Finished => Runs.Where(r => r.Status == ApPastRunStatus.Finished);
+        /// <summary>Every run with its own card: finished ones and unfinished ones worth a recap.</summary>
+        internal IEnumerable<PastRun> WithCards => Runs.Where(r => r.Status != ApPastRunStatus.Restart);
+        internal List<PastRun> Restarts => Runs.Where(r => r.Status == ApPastRunStatus.Restart).ToList();
         internal int Checked => Runs.Max(r => r.Log.SlotChecksAtStart + r.SlotGain);
         internal int Total => Math.Max(Checked, Runs.Max(r => r.Log.SlotLocationCount));
     }
@@ -138,20 +147,29 @@ internal sealed partial class ApPastRunsOverlay : Control
     /// <summary>Reads every log and its history again, keeping the selected seed when it still exists.</summary>
     private void Reload()
     {
-        _seeds = LoadLogs()
+        var logs = LoadLogs().ToList();
+        var histories = logs.ToDictionary(log => log.StartTime, log => LoadHistory(log.StartTime));
+        var statuses = ApPastRunRules.Classify(logs, log => histories[log.StartTime] != null);
+        _seeds = logs
             .GroupBy(log => log.Seed)
-            .Select(group => new SeedGroup(group.Key, WithSlotGains(group).OrderByDescending(r => r.Log.StartTime).ToList()))
+            .Select(group => new SeedGroup(group.Key, WithSlotGains(group, histories, statuses)
+                .OrderByDescending(r => r.Log.StartTime).ToList()))
             .OrderByDescending(group => group.Newest.StartTime)
             .ToList();
         if (_selectedSeed == null || _seeds.All(s => s.Seed != _selectedSeed))
             _selectedSeed = _seeds.FirstOrDefault()?.Seed;
 
         int finished = _seeds.Sum(seed => seed.Finished.Count());
-        int unfinished = _seeds.Sum(seed => seed.Unfinished.Count);
-        _subtitle.Text = finished + unfinished == 0
+        int unfinished = _seeds.Sum(seed => seed.WithCards.Count()) - finished;
+        int restarts = _seeds.Sum(seed => seed.Restarts.Count);
+        var parts = new List<string> { $"{finished} finished {(finished == 1 ? "run" : "runs")}" };
+        if (unfinished > 0)
+            parts.Add($"{unfinished} unfinished");
+        if (restarts > 0)
+            parts.Add($"{restarts} {(restarts == 1 ? "restart" : "restarts")}");
+        _subtitle.Text = logs.Count == 0
             ? "Every Archipelago run recorded on this profile"
-            : $"{finished} finished {(finished == 1 ? "run" : "runs")}"
-                + (unfinished > 0 ? $" and {unfinished} unfinished" : "")
+            : string.Join(", ", parts.Take(parts.Count - 1)) + (parts.Count > 1 ? " and " : "") + parts[^1]
                 + $" on this profile, across {_seeds.Count} Archipelago {(_seeds.Count == 1 ? "seed" : "seeds")}";
         ShowSeeds();
         ShowSelectedSeed();
@@ -162,7 +180,10 @@ internal sealed partial class ApPastRunsOverlay : Control
     /// A finished run recorded the slot's count at its end. An unfinished one did not, so the next
     /// run's starting count stands in; for the newest run, its own distinct checks sent do.
     /// </summary>
-    private static IEnumerable<PastRun> WithSlotGains(IEnumerable<ApRunGraphLog> logs)
+    private static IEnumerable<PastRun> WithSlotGains(
+        IEnumerable<ApRunGraphLog> logs,
+        IReadOnlyDictionary<long, RunHistory?> histories,
+        IReadOnlyDictionary<long, ApPastRunStatus> statuses)
     {
         var ordered = logs.OrderBy(log => log.StartTime).ToList();
         for (int i = 0; i < ordered.Count; i++)
@@ -176,7 +197,8 @@ internal sealed partial class ApPastRunsOverlay : Control
                         .Select(e => e.LocationId)
                         .Distinct()
                         .Count());
-            yield return new PastRun(log, LoadHistory(log.StartTime), Math.Max(0, end - log.SlotChecksAtStart));
+            yield return new PastRun(log, histories[log.StartTime], Math.Max(0, end - log.SlotChecksAtStart),
+                statuses[log.StartTime]);
         }
     }
 
@@ -200,7 +222,7 @@ internal sealed partial class ApPastRunsOverlay : Control
         button.Pressed += () =>
         {
             if (_selectedSeed != seed.Seed)
-                _showUnfinished = false;
+                _showRestarts = false;
             _selectedSeed = seed.Seed;
             ShowSeeds();
             ShowSelectedSeed();
@@ -223,11 +245,11 @@ internal sealed partial class ApPastRunsOverlay : Control
         top.AddChild(Label(LocalDate(seed.Newest.StartTime).ToString("MMM d"), 14, TextMuted));
         box.AddChild(top);
         int wins = seed.Runs.Count(r => r.Log.Outcome == ApRunOutcome.Won);
-        int finished = seed.Finished.Count();
+        int cards = seed.WithCards.Count();
         string winText = wins == 0 ? "no wins yet" : wins == 1 ? "1 win" : $"{wins} wins";
-        string runsText = finished > 0
-            ? $"{finished} {(finished == 1 ? "run" : "runs")} · {winText}"
-            : $"{seed.Unfinished.Count} unfinished";
+        string runsText = cards > 0
+            ? $"{cards} {(cards == 1 ? "run" : "runs")} · {winText}"
+            : $"{seed.Restarts.Count} {(seed.Restarts.Count == 1 ? "restart" : "restarts")}";
         var summary = Label($"{seed.Newest.SlotName} · {runsText}", 14, TextMuted);
         summary.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
         summary.ClipText = true;
@@ -267,23 +289,24 @@ internal sealed partial class ApPastRunsOverlay : Control
         var grid = new GridContainer { Columns = 3, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         grid.AddThemeConstantOverride("h_separation", 14);
         grid.AddThemeConstantOverride("v_separation", 14);
-        foreach (var run in seed.Finished)
+        foreach (var run in seed.WithCards)
             grid.AddChild(RunCard(run));
         if (grid.GetChildCount() > 0)
             column.AddChild(grid);
         else
-            column.AddChild(Label("No finished runs on this seed yet.", 16, TextMuted));
+            column.AddChild(Label("No runs on this seed got past a restart yet.", 16, TextMuted));
 
-        var unfinished = seed.Unfinished;
-        if (unfinished.Count > 0)
-            column.AddChild(UnfinishedFold(unfinished));
+        var restarts = seed.Restarts;
+        if (restarts.Count > 0)
+            column.AddChild(RestartFold(restarts));
     }
 
     /// <summary>
-    /// Runs that never reached a game-over screen, folded into one row: most are restarts on the
-    /// first floors, but some sent checks or can still be reloaded from a checkpoint.
+    /// Unfinished runs that a later run of the same character replaced before floor
+    /// <see cref="ApPastRunRules.KeepReplacedFromFloor"/>, folded into one row: most are restarts
+    /// to reroll the first rewards. They stay as data for a future seed overview.
     /// </summary>
-    private Control UnfinishedFold(List<PastRun> runs)
+    private Control RestartFold(List<PastRun> runs)
     {
         var panel = ApRunRecapView.Panel(PanelColor with { A = 0.6f }, PanelBorder, 14, 16f);
         var box = new VBoxContainer();
@@ -294,35 +317,34 @@ internal sealed partial class ApPastRunsOverlay : Control
         header.AddThemeConstantOverride("separation", 14);
         var text = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
         text.AddThemeConstantOverride("separation", 2);
-        text.AddChild(Label($"{runs.Count} unfinished {(runs.Count == 1 ? "run" : "runs")}", 19, Text, bold: true));
+        text.AddChild(Label($"{runs.Count} {(runs.Count == 1 ? "restart" : "restarts")}", 19, Text, bold: true));
         int sent = runs.Sum(run => run.ChecksSent);
-        int furthest = runs.Max(FurthestFloor);
-        text.AddChild(Label($"Never reached a game-over screen · {sent} checks sent · furthest floor {furthest}", 14, TextMuted));
+        text.AddChild(Label($"Replaced by a later run before floor {ApPastRunRules.KeepReplacedFromFloor} · {sent} checks sent", 14, TextMuted));
         header.AddChild(text);
 
-        var toggle = ActionButton(_showUnfinished ? "Hide" : "Show");
+        var toggle = ActionButton(_showRestarts ? "Hide" : "Show");
         toggle.CustomMinimumSize = new Vector2(110f, 42f);
         toggle.Pressed += () =>
         {
-            _showUnfinished = !_showUnfinished;
+            _showRestarts = !_showRestarts;
             ShowSelectedSeed();
         };
         header.AddChild(toggle);
         var deleteAll = CreateDeleteButton(runs.Select(run => run.Log).ToList(), "Delete all",
-            "Delete the AP logs of every unfinished run on this seed. Finished runs are kept.");
+            "Delete the AP logs of every restart on this seed. Runs with their own card are kept.");
         deleteAll.CustomMinimumSize = new Vector2(130f, 42f);
         header.AddChild(deleteAll);
         box.AddChild(header);
 
-        if (_showUnfinished)
+        if (_showRestarts)
         {
             foreach (var run in runs)
-                box.AddChild(UnfinishedRow(run));
+                box.AddChild(RestartRow(run));
         }
         return panel;
     }
 
-    private Control UnfinishedRow(PastRun run)
+    private Control RestartRow(PastRun run)
     {
         var log = run.Log;
         var row = new HBoxContainer();
@@ -332,7 +354,7 @@ internal sealed partial class ApPastRunsOverlay : Control
         row.AddChild(ApRunRecapView.CharacterIcon(character, Pretty(log.Character), color, 38f));
         row.AddChild(Centered(Label(character?.Title.GetFormattedText() ?? Pretty(log.Character), 16, Text, bold: true), 150f));
         row.AddChild(Centered(Label(LocalDate(log.StartTime).ToString("MMM d · HH:mm"), 14, TextMuted), 130f));
-        row.AddChild(Centered(Label($"floor {FurthestFloor(run)}", 14, TextMuted), 80f));
+        row.AddChild(Centered(Label($"floor {run.Log.FurthestFloor}", 14, TextMuted), 80f));
         var checks = Label(run.ChecksSent == 0 ? "no checks" : $"{run.ChecksSent} checks", 14, run.ChecksSent == 0 ? TextFaint : Gold);
         checks.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         row.AddChild(Centered(checks, 0f));
@@ -346,9 +368,6 @@ internal sealed partial class ApPastRunsOverlay : Control
         row.AddChild(delete);
         return row;
     }
-
-    /// <summary>The highest floor any of the run's AP events happened on.</summary>
-    private static int FurthestFloor(PastRun run) => run.Log.Events.Select(e => e.Floor).DefaultIfEmpty(1).Max();
 
     private static Label Centered(Label label, float width)
     {
@@ -404,7 +423,7 @@ internal sealed partial class ApPastRunsOverlay : Control
         var nameRow = new HBoxContainer();
         nameRow.AddThemeConstantOverride("separation", 8);
         nameRow.AddChild(Label(character?.Title.GetFormattedText() ?? Pretty(log.Character), 19, Text, bold: true));
-        nameRow.AddChild(OutcomePill(log.Outcome));
+        nameRow.AddChild(OutcomePill(run));
         names.AddChild(nameRow);
         var detail = Label(RunDetail(run), 13, TextMuted);
         detail.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
@@ -414,15 +433,16 @@ internal sealed partial class ApPastRunsOverlay : Control
         top.AddChild(Label(LocalDate(log.StartTime).ToString("MMM d · HH:mm"), 13, TextMuted));
         box.AddChild(top);
 
-        if (run.History != null)
+        if (run.MapHistory != null)
             box.AddChild(new HpSparkline(HpSeries(run), won ? Gold : TextMuted));
 
         var stats = new HBoxContainer();
         stats.AddThemeConstantOverride("separation", 16);
-        int floors = run.History?.MapPointHistory.Sum(act => act.Count) ?? 0;
+        int floors = run.MapHistory?.Sum(act => act.Count) ?? log.SavedFloor ?? 0;
         stats.AddChild(Label(floors > 0 ? $"{floors} floors" : "no floors saved", 14, TextMuted));
-        if (run.History != null)
-            stats.AddChild(Label(ApRunRecapView.FormatTime((long)run.History.RunTime), 14, TextMuted));
+        long? seconds = run.History != null ? (long)run.History.RunTime : run.Snapshot?.RunTime;
+        if (seconds != null)
+            stats.AddChild(Label(ApRunRecapView.FormatTime(seconds.Value), 14, TextMuted));
         var checks = Label($"{run.ChecksSent} checks", 14, Gold);
         checks.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         stats.AddChild(checks);
@@ -445,24 +465,32 @@ internal sealed partial class ApPastRunsOverlay : Control
         open.CustomMinimumSize = new Vector2(0f, 42f);
         open.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         open.Pressed += () => OpenRecap(run);
+        if (run.MapHistory == null)
+        {
+            // Logs from before snapshots were kept, or a snapshot that could not be read.
+            open.Disabled = true;
+            open.TooltipText = "The game saved nothing for this run that a recap can be drawn from.";
+        }
         buttons.AddChild(open);
         var export = ActionButton("Export");
         export.CustomMinimumSize = new Vector2(96f, 42f);
         export.TooltipText = "Write this run's AP log and the game's history for it into one JSON file.";
         export.Pressed += () => ExportRun(run.Log);
         buttons.AddChild(export);
-        buttons.AddChild(CreateDeleteButton(new[] { run.Log }, "Delete",
-            "Delete this run's AP log. The game's own Run History keeps the run."));
+        buttons.AddChild(CreateDeleteButton(new[] { run.Log }, "Delete", run.Unfinished
+            ? "Delete this run's AP log and snapshot. Its checkpoints are kept."
+            : "Delete this run's AP log. The game's own Run History keeps the run."));
         box.AddChild(buttons);
         return card;
     }
 
-    private static Control OutcomePill(ApRunOutcome? outcome)
+    private static Control OutcomePill(PastRun run)
     {
-        var (text, color) = outcome switch
+        var (text, color) = run.Status switch
         {
-            ApRunOutcome.Won => ("Victory", Gold),
-            ApRunOutcome.Lost => ("Defeat", DeathText),
+            ApPastRunStatus.Finished when run.Log.Outcome == ApRunOutcome.Won => ("Victory", Gold),
+            ApPastRunStatus.Finished => ("Defeat", DeathText),
+            ApPastRunStatus.InProgress => ("In progress", Progression),
             _ => ("Unfinished", TextMuted),
         };
         var pill = ApRunRecapView.Panel(color with { A = 0.16f }, color with { A = 0.16f }, 999, 2f);
@@ -477,7 +505,11 @@ internal sealed partial class ApPastRunsOverlay : Control
     {
         var history = run.History;
         if (history == null)
-            return "Ended before the game saved it";
+        {
+            int? floor = run.Snapshot?.FloorReached ?? run.Log.SavedFloor;
+            string saved = floor is { } f ? $"Last saved on floor {f}" : "Never saved";
+            return run.Status == ApPastRunStatus.InProgress ? saved : $"{saved}, then replaced";
+        }
         if (history.Win)
             return $"Beat the final act, Ascension {history.Ascension}";
         int floors = history.MapPointHistory.Sum(act => act.Count);
@@ -500,9 +532,9 @@ internal sealed partial class ApPastRunsOverlay : Control
     /// <summary>HP as a fraction of max HP at each floor, read straight from the saved history.</summary>
     private static IReadOnlyList<float> HpSeries(PastRun run)
     {
-        if (run.History == null)
+        if (run.MapHistory == null)
             return Array.Empty<float>();
-        return run.History.MapPointHistory
+        return run.MapHistory
             .SelectMany(act => act)
             .Select(entry => entry.PlayerStats.FirstOrDefault(p => p.PlayerId == run.Log.LocalNetId) ?? entry.PlayerStats.FirstOrDefault())
             .Select(stats => stats == null || stats.MaxHp <= 0 ? 0f : Math.Clamp((float)stats.CurrentHp / stats.MaxHp, 0f, 1f))
@@ -513,6 +545,9 @@ internal sealed partial class ApPastRunsOverlay : Control
     {
         if (run.History is { } history)
             ApRunRecapOverlay.Open(this, run.Log.StartTime, log => ApRunRecapData.FromHistory(history, log));
+        else if (run.Snapshot is { } snapshot)
+            ApRunRecapOverlay.Open(this, run.Log.StartTime,
+                log => ApRunRecapData.FromRun(snapshot, log, inProgress: run.Status == ApPastRunStatus.InProgress));
     }
 
     private IEnumerable<ApRunGraphLog> LoadLogs()
