@@ -12,11 +12,11 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "9710ad0d5e0acff3e17c2f49e4947551ee4e7896bec38b5d4bf9a353a3d8baa6"
+      "sha256": "59a9ef20644b9fcfcb11d48c492ade4be0b18162897d21589d5250d365377d92"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "8a5503f4ef3ceff4a3998102c7f07a448f47215689bc93fdfb3eb968bdf7852e"
+      "sha256": "e40f501a70da20db5c46f8142f5cddbf8d2055a81d91ee20f4379021a332309a"
     }
   },
   "characters": {
@@ -219,6 +219,7 @@
     "hidden_health",
     "hidden_piles",
     "hidden_map",
+    "hidden_cards",
     "strict_card_rewards"
   ],
   "groups": [
@@ -395,6 +396,7 @@
         "hidden_health",
         "hidden_piles",
         "hidden_map",
+        "hidden_cards",
         "strict_card_rewards"
       ],
       "start_collapsed": false,
@@ -4309,6 +4311,32 @@
       "kind": "range",
       "display_name": "Hidden Map",
       "description": "The map only shows the rooms you can move to next. Rooms further ahead show a closed eye \nuntil you can reach them.\nThe value is how many Map Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows the whole map again for every character, so a second copy makes it easier to find. Does not change logic.",
+      "default": 0,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "minimum": 0,
+      "maximum": 2,
+      "supports_weighting": true,
+      "group": "Challenges"
+    },
+    "hidden_cards": {
+      "key": "hidden_cards",
+      "class_name": "HiddenCards",
+      "module": "worlds.spire2.options",
+      "kind": "range",
+      "display_name": "Hidden Cards",
+      "description": "Cards are unknown: their name, text and energy cost are hidden, their art is blurred and they\nshow no tooltips.\nThe value is how many Card Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows cards again for every character, so a second copy makes it easier to find. Does not change logic.",
       "default": 0,
       "raw_default": 0,
       "visibility": {

@@ -177,6 +177,7 @@ export interface ChallengeAnswers {
   hiddenHealth: SightCopies;
   hiddenPiles: SightCopies;
   hiddenMap: SightCopies;
+  hiddenCards: SightCopies;
   strictCardRewards: boolean;
 }
 
@@ -516,6 +517,10 @@ export function createDefaultWizardAnswers(
       hiddenMap: getSightCopiesDefault(
         catalog,
         CHALLENGE_OPTION_KEYS.hiddenMap,
+      ),
+      hiddenCards: getSightCopiesDefault(
+        catalog,
+        CHALLENGE_OPTION_KEYS.hiddenCards,
       ),
       strictCardRewards: getBooleanDefault(
         catalog,

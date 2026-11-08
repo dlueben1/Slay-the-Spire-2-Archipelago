@@ -404,6 +404,7 @@ export function readChallengeAnswers(
     hiddenHealth: readSightCopies(options[CHALLENGE_OPTION_KEYS.hiddenHealth]),
     hiddenPiles: readSightCopies(options[CHALLENGE_OPTION_KEYS.hiddenPiles]),
     hiddenMap: readSightCopies(options[CHALLENGE_OPTION_KEYS.hiddenMap]),
+    hiddenCards: readSightCopies(options[CHALLENGE_OPTION_KEYS.hiddenCards]),
     strictCardRewards: options[
       CHALLENGE_OPTION_KEYS.strictCardRewards
     ] as boolean,
