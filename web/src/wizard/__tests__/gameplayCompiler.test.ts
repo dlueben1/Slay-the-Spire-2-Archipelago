@@ -320,8 +320,10 @@ function rejectsFractionalRangeAnswers(): void {
  * @returns Nothing; Vitest records assertion failures.
  */
 function revealsDependentGameplayQuestions(): void {
-  // Defaults disable both sections, leaving only their controlling questions visible.
+  // With both sections off, only their controlling questions are visible.
   const answers = createTestAnswers();
+  answers.checksAndRewards.shop.enabled = false;
+  answers.deathLink.enabled = false;
   expect(getVisibleQuestionIds(checkSetupStep, answers)).toEqual([
     "starting-equipment",
     "ancient-location",

@@ -256,7 +256,7 @@ class CampfireSanity(Toggle):
     """Whether to shuffle being able to rest and smith at each campsite per act.  Also adds
     new locations at campsites per act."""
     display_name = "Campfire Sanity"
-    default = 0
+    default = 1
 
 class ShopSanity(Toggle):
     """Move the configured shop slots to a separate AP shop page as purchasable location checks and
@@ -265,7 +265,7 @@ class ShopSanity(Toggle):
     display_name = "Shop Sanity"
     option_true = 1
     option_false = 0
-    default = 0
+    default = 1
 
 class ShopCardSlots(Range):
     """When shop_sanity is enabled, the number of colored card slots to shuffle."""
@@ -323,12 +323,12 @@ class GoldSanity(Toggle):
     """Whether to replace combat, elite, and boss gold rewards with AP locations. Adds 22 locations per character.
     """
     display_name = "Gold Sanity"
-    default = 0
+    default = 1
 
 class PotionSanity(Toggle):
     """Whether to replace potion rewards with AP locations. Adds 9 locations per character."""
     display_name = "Potion Sanity"
-    default = 0
+    default = 1
 
 class CardReward(Toggle):
     """Whether every card reward is shuffled.  If false, then every other card reward is shuffled

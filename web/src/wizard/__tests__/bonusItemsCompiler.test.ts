@@ -239,15 +239,16 @@ function compilesDuplicatesAndManyRows(): void {
     mode: "specific",
     relicId: STANDARD_RELIC_ID,
   };
-  answers.checksAndRewards.bonusItems = Array.from({ length: 60 }, () => ({
+  answers.checksAndRewards.bonusItems = Array.from({ length: 40 }, () => ({
     ...duplicate,
   }));
 
   const options = compileWizardAnswers(answers, optionCatalog);
   const compiled = options[BONUS_ITEM_OPTION_KEY] as unknown[];
 
-  // All sixty identical rows compile in order; slot capacity is not checked here.
-  expect(compiled).toHaveLength(60);
+  // All forty identical rows compile in order. They fit one character's filler
+  // slots; fillerBudget.test.ts covers capacity.
+  expect(compiled).toHaveLength(40);
   expect(compiled[0]).toEqual({ WAX_RELIC: { Value: STANDARD_RELIC_ID } });
   expect(compiled.at(-1)).toEqual({ WAX_RELIC: { Value: STANDARD_RELIC_ID } });
 }
