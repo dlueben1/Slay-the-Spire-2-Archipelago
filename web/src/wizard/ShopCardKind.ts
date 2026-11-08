@@ -29,6 +29,7 @@ export const SHOP_CARD_KIND_DEFINITIONS: readonly ShopCardKindDefinition[] = [
   { id: "uncommon", optionKey: "shop_uncommon_weight" },
   { id: "rare", optionKey: "shop_rare_weight" },
   { id: "colorless", optionKey: "shop_colorless_weight" },
+  { id: "event", optionKey: "shop_event_weight" },
 ];
 
 /**

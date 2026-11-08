@@ -361,6 +361,11 @@ class ShopColorlessWeight(ShopCardWeight):
     """How often a random shop card slot holds a colorless card, Uncommon or Rare."""
     display_name = "Shop Colorless Weight"
 
+class ShopEventWeight(ShopCardWeight):
+    """How often a random shop card slot holds an Event card."""
+    display_name = "Shop Event Weight"
+    default = ShopCardWeight.option_low
+
 class RandomShopRelics(Toggle):
     """If enabled, allows you to override the default shop relics randomness."""
     display_name = "Custom Shop Relics"
@@ -999,6 +1004,7 @@ class Spire2Options(PerGameCommonOptions):
     shop_uncommon_weight: ShopUncommonWeight
     shop_rare_weight: ShopRareWeight
     shop_colorless_weight: ShopColorlessWeight
+    shop_event_weight: ShopEventWeight
 
     # Shop relics
     random_shop_relics: RandomShopRelics

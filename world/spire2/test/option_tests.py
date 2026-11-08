@@ -142,6 +142,7 @@ class TestRandomShopCardsOn(Spire2TestBase):
             "uncommon": 3,
             "rare": 5,
             "colorless": 1,
+            "event": 1,
         }, self.world.fill_slot_data()["shop_card_weights"])
 
 
@@ -155,6 +156,7 @@ class TestRandomShopCardsWithoutWeights(Spire2TestBase):
         "shop_uncommon_weight": "none",
         "shop_rare_weight": "none",
         "shop_colorless_weight": "none",
+        "shop_event_weight": "none",
     }
 
     def test_all_none_keeps_vanilla_layout(self):

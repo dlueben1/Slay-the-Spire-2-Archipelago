@@ -126,6 +126,7 @@ function compilesConfiguredGameplaySections(): void {
       uncommon: 0,
       rare: 3,
       colorless: 1,
+      event: 2,
     },
   };
   answers.deathLink = {
@@ -153,6 +154,7 @@ function compilesConfiguredGameplaySections(): void {
   expect(options.shop_power_weight).toBe("medium");
   expect(options.shop_rare_weight).toBe("high");
   expect(options.shop_colorless_weight).toBe("low");
+  expect(options.shop_event_weight).toBe("medium");
   expect(options.progression_balancing).toBe(99);
   expect(options.accessibility).toBe("minimal");
   expect(options.include_floor_checks).toBe(true);
@@ -200,7 +202,7 @@ function showsShopCardWeightsOnlyWhenRandom(): void {
   expect(random.shop_attack_weight).toBe("none");
   expect(random.shop_rare_weight).toBe("medium");
   expect(summarizeShopCardAnswers(answers.checksAndRewards.shopCards)).toBe(
-    "Each shop card slot holds a random kind of card: Skills, Powers, Commons, Uncommons, Rares, colorless cards.",
+    "Each shop card slot holds a random kind of card: Skills, Powers, Commons, Uncommons, Rares, colorless cards, Event cards.",
   );
 }
 

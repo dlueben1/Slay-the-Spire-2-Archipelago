@@ -12,11 +12,11 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "78bd4340206c29eb68c4bd995ba9579e16516c0fe7eaef41da1db455c403b91e"
+      "sha256": "9710ad0d5e0acff3e17c2f49e4947551ee4e7896bec38b5d4bf9a353a3d8baa6"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "eef02096a2a4621ea6616f2d0077d315c087ff4090ed1ff95621e5cb1583a331"
+      "sha256": "8a5503f4ef3ceff4a3998102c7f07a448f47215689bc93fdfb3eb968bdf7852e"
     }
   },
   "characters": {
@@ -165,6 +165,7 @@
     "shop_uncommon_weight",
     "shop_rare_weight",
     "shop_colorless_weight",
+    "shop_event_weight",
     "random_shop_relics",
     "shop_relic_common_weight",
     "shop_relic_uncommon_weight",
@@ -282,7 +283,8 @@
         "shop_common_weight",
         "shop_uncommon_weight",
         "shop_rare_weight",
-        "shop_colorless_weight"
+        "shop_colorless_weight",
+        "shop_event_weight"
       ],
       "start_collapsed": false,
       "source": "web_world"
@@ -2058,6 +2060,52 @@
       "description": "How often a random shop card slot holds a colorless card, Uncommon or Rare.",
       "default": "medium",
       "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Cards"
+    },
+    "shop_event_weight": {
+      "key": "shop_event_weight",
+      "class_name": "ShopEventWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Event Weight",
+      "description": "How often a random shop card slot holds an Event card.",
+      "default": "low",
+      "raw_default": 1,
       "visibility": {
         "name": "all",
         "value": 15,

@@ -764,6 +764,7 @@ class SlayTheSpire2World(World):
             "uncommon": self.options.shop_uncommon_weight.value,
             "rare": self.options.shop_rare_weight.value,
             "colorless": self.options.shop_colorless_weight.value,
+            "event": self.options.shop_event_weight.value,
         })
 
     def shop_relic_weights(self) -> dict[str, int]:

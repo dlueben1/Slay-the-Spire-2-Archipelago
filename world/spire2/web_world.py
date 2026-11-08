@@ -8,7 +8,7 @@ from .options import (
     IncludeFloorChecks, NeowSanity, CampfireSanity, GoldSanity, PotionSanity,
     ShopSanity, ShopCardSlots, ShopNeutralSlots, ShopRelicSlots, ShopPotionSlots, ShopRemoveSlots, ShopSanityCosts,
     RandomShopCards, ShopAttackWeight, ShopSkillWeight, ShopPowerWeight, ShopCommonWeight, ShopUncommonWeight,
-    ShopRareWeight, ShopColorlessWeight,
+    ShopRareWeight, ShopColorlessWeight, ShopEventWeight,
     RandomShopRelics, ShopRelicCommonWeight, ShopRelicUncommonWeight, ShopRelicRareWeight, ShopRelicShopWeight,
     ShopRelicEventWeight, ShopRelicAncientWeight,
     RandomShopPotions, ShopPotionCommonWeight, ShopPotionUncommonWeight, ShopPotionRareWeight,
@@ -81,6 +81,7 @@ class SlayTheSpire2Web(WebWorld):
             ShopUncommonWeight,
             ShopRareWeight,
             ShopColorlessWeight,
+            ShopEventWeight,
         ]),
         OptionGroup("Shop Relics", [
             RandomShopRelics,

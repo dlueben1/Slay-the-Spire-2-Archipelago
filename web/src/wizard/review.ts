@@ -309,6 +309,7 @@ const SHOP_CARD_KIND_LABELS: readonly [ShopCardKindId, string][] = [
   ["uncommon", "Uncommons"],
   ["rare", "Rares"],
   ["colorless", "colorless cards"],
+  ["event", "Event cards"],
 ];
 
 /**

@@ -146,7 +146,7 @@ export type ShopPotionKindId =
 
 /** Kinds of card a Random Shop Cards slot can hold, in option order. */
 export type ShopCardKindId =
-  "attack" | "skill" | "power" | "common" | "uncommon" | "rare" | "colorless";
+  "attack" | "skill" | "power" | "common" | "uncommon" | "rare" | "colorless" | "event";
 
 export interface RunAnswers {
   relicRewardsAvailableAnytime: number;

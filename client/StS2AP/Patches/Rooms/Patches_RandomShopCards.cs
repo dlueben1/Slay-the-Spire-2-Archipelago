@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Merchant;
@@ -7,6 +8,7 @@ using MegaCrit.Sts2.Core.Factories;
 using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.CardPools;
+using MegaCrit.Sts2.Core.Models.Cards;
 using StS2AP.Models;
 using StS2AP.Multiplayer;
 using StS2AP.Utils;
@@ -28,6 +30,8 @@ public static class Patches_RandomShopCards
     private const int CharacterSlotCount = 5;
     private const int ColorlessSlotCount = 2;
 
+    private const int EventCardPrice = 100;
+
     private enum ShopCardKind
     {
         Attack,
@@ -37,6 +41,14 @@ public static class Patches_RandomShopCards
         Uncommon,
         Rare,
         Colorless,
+        Event,
+    }
+
+    private enum ShopCardPool
+    {
+        Character,
+        Colorless,
+        Event,
     }
 
     private static readonly ShopCardKind[] Kinds = Enum.GetValues<ShopCardKind>();
@@ -45,31 +57,34 @@ public static class Patches_RandomShopCards
     /// A merchant card entry's constructor arguments: a pool plus either a card type (with the
     /// shop's rarity roll) or a fixed rarity.
     /// </summary>
-    private sealed record CardRequest(bool Colorless, CardType? Type, CardRarity? Rarity)
+    private sealed record CardRequest(ShopCardPool Pool, CardType? Type, CardRarity? Rarity)
     {
         public override string ToString() =>
-            (Colorless ? "colorless " : "") + (Type?.ToString() ?? Rarity?.ToString());
+            (Pool == ShopCardPool.Colorless ? "colorless " : "") + (Type?.ToString() ?? Rarity?.ToString());
     }
 
     private static readonly CardRequest[] CharacterTypeRequests =
     {
-        new(false, CardType.Attack, null),
-        new(false, CardType.Skill, null),
-        new(false, CardType.Power, null),
+        new(ShopCardPool.Character, CardType.Attack, null),
+        new(ShopCardPool.Character, CardType.Skill, null),
+        new(ShopCardPool.Character, CardType.Power, null),
     };
 
     private static readonly CardRequest[] CharacterRarityRequests =
     {
-        new(false, null, CardRarity.Common),
-        new(false, null, CardRarity.Uncommon),
-        new(false, null, CardRarity.Rare),
+        new(ShopCardPool.Character, null, CardRarity.Common),
+        new(ShopCardPool.Character, null, CardRarity.Uncommon),
+        new(ShopCardPool.Character, null, CardRarity.Rare),
     };
 
     private static readonly CardRequest[] ColorlessRequests =
     {
-        new(true, null, CardRarity.Uncommon),
-        new(true, null, CardRarity.Rare),
+        new(ShopCardPool.Colorless, null, CardRarity.Uncommon),
+        new(ShopCardPool.Colorless, null, CardRarity.Rare),
     };
+
+    /// <summary>The event pool's Event-rarity cards; its Ancient cards stay out of shops.</summary>
+    private static readonly CardRequest EventRequest = new(ShopCardPool.Event, null, CardRarity.Event);
 
     /// <summary>Inventories whose cards this patch rolled, so the colorless pass is skipped.</summary>
     private static readonly ConditionalWeakTable<MerchantInventory, object> RandomInventories = new();
@@ -119,6 +134,27 @@ public static class Patches_RandomShopCards
 
             LogUtility.Info($"Random Shop Cards: no {request} card left to restock; the slot stays empty.");
             __instance.CreationResult = null;
+            return false;
+        }
+    }
+
+    /// <summary>Vanilla never sells Event cards and would charge a Common's price.</summary>
+    [HarmonyPatch(typeof(MerchantCardEntry), nameof(MerchantCardEntry.CalcCost))]
+    private static class PriceEventCards
+    {
+        [HarmonyPrefix]
+        private static bool Prefix(MerchantCardEntry __instance)
+        {
+            if (__instance.CreationResult?.Card is not { Rarity: CardRarity.Event }
+                || !RandomEntries.TryGetValue(__instance, out _))
+            {
+                return true;
+            }
+
+            // The same spread and sale discount as vanilla card prices.
+            __instance._cost = Mathf.RoundToInt(EventCardPrice * __instance._player.PlayerRng.Shops.NextFloat(0.95f, 1.05f));
+            if (__instance.IsOnSale)
+                __instance._cost /= 2;
             return false;
         }
     }
@@ -208,6 +244,7 @@ public static class Patches_RandomShopCards
         ShopCardKind.Colorless => player.PlayerRng.Shops.NextBool()
             ? ColorlessRequests[0]
             : ColorlessRequests[1],
+        ShopCardKind.Event => EventRequest,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
 
@@ -219,7 +256,7 @@ public static class Patches_RandomShopCards
     {
         IEnumerable<CardRequest> samePool = preferred switch
         {
-            { Colorless: true } => ColorlessRequests,
+            { Pool: ShopCardPool.Colorless or ShopCardPool.Event } => ColorlessRequests,
             { Type: not null } => CharacterTypeRequests,
             // The nearest rarity first: Common and Uncommon move up, Rare moves down.
             { Rarity: CardRarity.Rare } =>
@@ -247,8 +284,16 @@ public static class Patches_RandomShopCards
 
     private static List<CardModel> Pool(Player player, CardRequest request)
     {
-        CardPoolModel pool = request.Colorless ? ModelDb.CardPool<ColorlessCardPool>() : player.Character.CardPool;
-        return pool.GetUnlockedCards(player.UnlockState, player.RunState.CardMultiplayerConstraint).ToList();
+        CardPoolModel pool = request.Pool switch
+        {
+            ShopCardPool.Colorless => ModelDb.CardPool<ColorlessCardPool>(),
+            ShopCardPool.Event => ModelDb.CardPool<EventCardPool>(),
+            _ => player.Character.CardPool,
+        };
+        return pool.GetUnlockedCards(player.UnlockState, player.RunState.CardMultiplayerConstraint)
+            // Tinker Time sets this card's type and effect when it builds one; a plain copy has neither.
+            .Where(card => card is not MadScience)
+            .ToList();
     }
 
     /// <summary>
