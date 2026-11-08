@@ -30,6 +30,17 @@ namespace StS2AP.Patches
             public static void Postfix(RunState __result) => ApRunGraphRecorder.BeginRun(__result);
         }
 
+        /// <summary>
+        /// Save and quit, a disconnect, or any other way out of a run that is not a game over ends
+        /// in CleanUp. A prefix, while the run still exists.
+        /// </summary>
+        [HarmonyPatch(typeof(RunManager), nameof(RunManager.CleanUp))]
+        public static class SnapshotAtQuit
+        {
+            [HarmonyPrefix]
+            public static void Prefix() => ApRunGraphRecorder.CaptureAtQuit();
+        }
+
         [HarmonyPatch(typeof(NRun), nameof(NRun.ShowGameOverScreen))]
         public static class FinishRunGraph
         {
