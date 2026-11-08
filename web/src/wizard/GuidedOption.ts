@@ -12,6 +12,10 @@ import { TRAP_ITEM_DEFINITIONS } from "./TrapItem";
 import { FILLER_ITEM_DEFINITIONS } from "./FillerItem";
 import { SHOP_CARD_KIND_DEFINITIONS } from "./ShopCardKind";
 import {
+  SHOP_POTION_KIND_DEFINITIONS,
+  SHOP_RELIC_KIND_DEFINITIONS,
+} from "./ShopStockKind";
+import {
   CHALLENGE_OPTION_KEYS,
   CHARACTER_OPTION_KEYS,
   ANCIENT_OPTION_KEYS,
@@ -22,6 +26,8 @@ import {
   RUN_OPTION_KEYS,
   SHOP_CARD_OPTION_KEY,
   SHOP_OPTION_KEYS,
+  SHOP_POTION_OPTION_KEY,
+  SHOP_RELIC_OPTION_KEY,
   STARTING_EQUIPMENT_OPTION_KEYS,
   TRAP_CHANCE_OPTION_KEY,
 } from "./WizardOptionKey";
@@ -55,6 +61,10 @@ export function getGuidedOptionKeys(): string[] {
     ...Object.values(SHOP_OPTION_KEYS),
     SHOP_CARD_OPTION_KEY,
     ...SHOP_CARD_KIND_DEFINITIONS.map((definition) => definition.optionKey),
+    SHOP_RELIC_OPTION_KEY,
+    ...SHOP_RELIC_KIND_DEFINITIONS.map((definition) => definition.optionKey),
+    SHOP_POTION_OPTION_KEY,
+    ...SHOP_POTION_KIND_DEFINITIONS.map((definition) => definition.optionKey),
     BONUS_ITEM_OPTION_KEY,
   ];
 
@@ -124,6 +134,12 @@ export function selectGuidedOptions(
   const shopCardWeightKeys = new Set(
     SHOP_CARD_KIND_DEFINITIONS.map((definition) => definition.optionKey),
   );
+  const shopRelicWeightKeys = new Set(
+    SHOP_RELIC_KIND_DEFINITIONS.map((definition) => definition.optionKey),
+  );
+  const shopPotionWeightKeys = new Set(
+    SHOP_POTION_KIND_DEFINITIONS.map((definition) => definition.optionKey),
+  );
 
   for (const optionKey of getGuidedOptionKeys()) {
     // Omit technical character fields that the selected YAML mode ignores.
@@ -135,6 +151,16 @@ export function selectGuidedOptions(
     if (
       shopCardWeightKeys.has(optionKey) &&
       compiled[SHOP_CARD_OPTION_KEY] !== true
+    ) {
+      continue;
+    }
+
+    // So do the relic and potion weights while their switches are off.
+    if (
+      (shopRelicWeightKeys.has(optionKey) &&
+        compiled[SHOP_RELIC_OPTION_KEY] !== true) ||
+      (shopPotionWeightKeys.has(optionKey) &&
+        compiled[SHOP_POTION_OPTION_KEY] !== true)
     ) {
       continue;
     }

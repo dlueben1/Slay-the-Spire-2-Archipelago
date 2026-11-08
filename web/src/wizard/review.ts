@@ -22,6 +22,9 @@ import type {
   RunAnswers,
   ShopCardAnswers,
   ShopCardKindId,
+  ShopPotionKindId,
+  ShopRelicKindId,
+  ShopStockAnswers,
   ShopAnswers,
   SightCopies,
   StartingEquipmentAnswers,
@@ -306,6 +309,61 @@ const SHOP_CARD_KIND_LABELS: readonly [ShopCardKindId, string][] = [
   ["uncommon", "Uncommons"],
   ["rare", "Rares"],
   ["colorless", "colorless cards"],
+];
+
+/**
+ * Describes the shop's relic layout.
+ *
+ * @param answers - Valid current Random Shop Relics answers.
+ * @returns One sentence naming the kinds a random shop relic slot can hold.
+ */
+export function summarizeShopRelicAnswers(
+  answers: ShopStockAnswers<ShopRelicKindId>,
+): string {
+  const kinds = SHOP_RELIC_KIND_LABELS.filter(
+    ([id]) => answers.weights[id] > 0,
+  ).map(([, label]) => label);
+  if (!answers.enabled || kinds.length === 0) {
+    return "Shops sell their usual relics.";
+  }
+  return `Each shop relic slot holds a random kind of relic: ${kinds.join(", ")}.`;
+}
+
+/**
+ * Describes the shop's potion layout.
+ *
+ * @param answers - Valid current Random Shop Potions answers.
+ * @returns One sentence naming the kinds a random shop potion slot can hold.
+ */
+export function summarizeShopPotionAnswers(
+  answers: ShopStockAnswers<ShopPotionKindId>,
+): string {
+  const kinds = SHOP_POTION_KIND_LABELS.filter(
+    ([id]) => answers.weights[id] > 0,
+  ).map(([, label]) => label);
+  if (!answers.enabled || kinds.length === 0) {
+    return "Shops sell their usual potions.";
+  }
+  return `Each shop potion slot holds a random kind of potion: ${kinds.join(", ")}.`;
+}
+
+/** Plural labels for the review sentence, in option order. */
+const SHOP_RELIC_KIND_LABELS: readonly [ShopRelicKindId, string][] = [
+  ["common", "Commons"],
+  ["uncommon", "Uncommons"],
+  ["rare", "Rares"],
+  ["shop", "Shop relics"],
+  ["event", "Event relics"],
+  ["ancient", "Ancient relics"],
+];
+
+/** Plural labels for the review sentence, in option order. */
+const SHOP_POTION_KIND_LABELS: readonly [ShopPotionKindId, string][] = [
+  ["common", "Commons"],
+  ["uncommon", "Uncommons"],
+  ["rare", "Rares"],
+  ["otherClass", "other classes' potions"],
+  ["event", "Event potions"],
 ];
 
 /**
@@ -637,6 +695,8 @@ export function summarizeChecksAndRewardsAnswers(
   const ancients = summarizeAncientAnswers(answers.ancients);
   const shop = summarizeShopAnswers(answers.shop);
   const shopCards = summarizeShopCardAnswers(answers.shopCards);
+  const shopRelics = summarizeShopRelicAnswers(answers.shopRelics);
+  const shopPotions = summarizeShopPotionAnswers(answers.shopPotions);
   const bonusItems = summarizeBonusItemAnswers(answers.bonusItems);
   const filler = summarizeFillerAnswers(answers.filler);
   const traps =
@@ -645,7 +705,7 @@ export function summarizeChecksAndRewardsAnswers(
       : `${answers.traps.chance}% of filler slots become traps, with ${Object.values(answers.traps.weights).filter((weight) => weight !== "none").length} trap types enabled. At most one queued trap applies per player per turn.`;
 
   // Preserve the visible subsection order in the final combined review paragraph.
-  return `${startingEquipment} ${ancients} ${checks} ${shop} ${shopCards} ${bonusItems} ${filler} ${traps}`;
+  return `${startingEquipment} ${ancients} ${checks} ${shop} ${shopCards} ${shopRelics} ${shopPotions} ${bonusItems} ${filler} ${traps}`;
 }
 
 /**

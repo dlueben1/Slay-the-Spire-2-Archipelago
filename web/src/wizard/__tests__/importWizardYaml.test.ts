@@ -217,6 +217,11 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
       rewards.shopCards.enabled = true;
       rewards.shopCards.weights.attack = 0;
       rewards.shopCards.weights.rare = 3;
+      rewards.shopRelics.enabled = true;
+      rewards.shopRelics.weights.ancient = 3;
+      rewards.shopRelics.weights.common = 0;
+      rewards.shopPotions.enabled = true;
+      rewards.shopPotions.weights.otherClass = 1;
       answers.run = {
         relicRewardsAvailableAnytime: 7,
         removeOpRelics: { ancient: true, rare: true },

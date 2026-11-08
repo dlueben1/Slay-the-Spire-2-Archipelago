@@ -26,7 +26,12 @@ import {
   getVisibleQuestionIds,
 } from "../WizardStep";
 import { compileWizardAnswers } from "../compiler/compileWizardAnswers";
-import { summarizeRunAnswers, summarizeShopCardAnswers } from "../review";
+import {
+  summarizeRunAnswers,
+  summarizeShopCardAnswers,
+  summarizeShopPotionAnswers,
+  summarizeShopRelicAnswers,
+} from "../review";
 
 /**
  * Creates complete schema-derived answers for gameplay-section tests.
@@ -196,6 +201,59 @@ function showsShopCardWeightsOnlyWhenRandom(): void {
   expect(random.shop_rare_weight).toBe("medium");
   expect(summarizeShopCardAnswers(answers.checksAndRewards.shopCards)).toBe(
     "Each shop card slot holds a random kind of card: Skills, Powers, Commons, Uncommons, Rares, colorless cards.",
+  );
+}
+
+/**
+ * Verifies relic and potion weights reach the YAML only while their own switch is on.
+ *
+ * @returns Nothing; Vitest records assertion failures.
+ */
+function showsShopStockWeightsOnlyWhenRandom(): void {
+  const answers = createTestAnswers();
+  const { shopRelics, shopPotions } = answers.checksAndRewards;
+
+  const vanilla = selectGuidedOptions(
+    compileWizardAnswers(answers, optionCatalog),
+  );
+  expect(vanilla.random_shop_relics).toBe(false);
+  expect(vanilla.random_shop_potions).toBe(false);
+  expect(vanilla).not.toHaveProperty("shop_relic_ancient_weight");
+  expect(vanilla).not.toHaveProperty("shop_potion_event_weight");
+  expect(summarizeShopRelicAnswers(shopRelics)).toBe(
+    "Shops sell their usual relics.",
+  );
+  expect(summarizeShopPotionAnswers(shopPotions)).toBe(
+    "Shops sell their usual potions.",
+  );
+
+  // Only the relic switch: the potion weights must stay out of the YAML.
+  shopRelics.enabled = true;
+  shopRelics.weights.common = 0;
+  shopRelics.weights.ancient = 3;
+  const relicsOnly = selectGuidedOptions(
+    compileWizardAnswers(answers, optionCatalog),
+  );
+  expect(relicsOnly.random_shop_relics).toBe(true);
+  expect(relicsOnly.shop_relic_common_weight).toBe("none");
+  expect(relicsOnly.shop_relic_uncommon_weight).toBe("medium");
+  expect(relicsOnly.shop_relic_event_weight).toBe("low");
+  expect(relicsOnly.shop_relic_ancient_weight).toBe("high");
+  expect(relicsOnly).not.toHaveProperty("shop_potion_event_weight");
+  expect(summarizeShopRelicAnswers(shopRelics)).toBe(
+    "Each shop relic slot holds a random kind of relic: Uncommons, Rares, Shop relics, Event relics, Ancient relics.",
+  );
+
+  shopPotions.enabled = true;
+  shopPotions.weights.otherClass = 3;
+  const both = selectGuidedOptions(
+    compileWizardAnswers(answers, optionCatalog),
+  );
+  expect(both.random_shop_potions).toBe(true);
+  expect(both.shop_potion_other_class_weight).toBe("high");
+  expect(both.shop_potion_event_weight).toBe("low");
+  expect(summarizeShopPotionAnswers(shopPotions)).toBe(
+    "Each shop potion slot holds a random kind of potion: Commons, Uncommons, Rares, other classes' potions, Event potions.",
   );
 }
 
@@ -378,6 +436,8 @@ function revealsDependentGameplayQuestions(): void {
     "ancient-pool",
     "check-types",
     "random-shop-cards",
+    "random-shop-relics",
+    "random-shop-potions",
     "bonus-items",
     "filler-weights",
     "trap-chance",
@@ -389,6 +449,8 @@ function revealsDependentGameplayQuestions(): void {
   // Enabling each section should reveal every dependent configuration question.
   answers.checksAndRewards.shop.enabled = true;
   answers.checksAndRewards.shopCards.enabled = true;
+  answers.checksAndRewards.shopRelics.enabled = true;
+  answers.checksAndRewards.shopPotions.enabled = true;
   answers.deathLink.enabled = true;
   expect(getVisibleQuestionIds(checkSetupStep, answers)).toEqual([
     "starting-equipment",
@@ -400,6 +462,10 @@ function revealsDependentGameplayQuestions(): void {
     "shop-costs",
     "random-shop-cards",
     "shop-card-weights",
+    "random-shop-relics",
+    "shop-relic-weights",
+    "random-shop-potions",
+    "shop-potion-weights",
     "bonus-items",
     "filler-weights",
     "trap-chance",
@@ -488,6 +554,10 @@ function registerGameplayCompilerTests(): void {
   it(
     "shows shop card weights only with Random Shop Cards",
     showsShopCardWeightsOnlyWhenRandom,
+  );
+  it(
+    "shows relic and potion weights only with their own switch",
+    showsShopStockWeightsOnlyWhenRandom,
   );
   it(
     "compiles configured gameplay sections",

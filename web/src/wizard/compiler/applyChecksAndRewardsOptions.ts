@@ -18,6 +18,7 @@ import { applyCheckOptions } from "./applyCheckOptions";
 import { applyFillerOptions } from "./applyFillerOptions";
 import { applyShopCardOptions } from "./applyShopCardOptions";
 import { applyShopOptions } from "./applyShopOptions";
+import { applyShopStockOptions } from "./applyShopStockOptions";
 import { applyStartingEquipmentOptions } from "./applyStartingEquipmentOptions";
 
 /**
@@ -55,6 +56,7 @@ export function applyChecksAndRewardsOptions(
 
   // Random Shop Cards changes the shop's stock, independently of Shop Sanity.
   applyShopCardOptions(target, answers.shopCards, catalog);
+  applyShopStockOptions(target, answers, catalog);
 
   // Compile guaranteed Bonus Items between Shop and filler, mirroring the UI order.
   applyBonusItemOptions(target, answers.bonusItems, catalog);
