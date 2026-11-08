@@ -89,6 +89,7 @@ function compilesConfiguredChallenges(): void {
     hiddenHealth: "two",
     hiddenPiles: "one",
     hiddenMap: "two",
+    hiddenCards: "one",
     strictCardRewards: true,
   };
 
@@ -104,6 +105,7 @@ function compilesConfiguredChallenges(): void {
   expect(options[CHALLENGE_OPTION_KEYS.hiddenHealth]).toBe(2);
   expect(options[CHALLENGE_OPTION_KEYS.hiddenPiles]).toBe(1);
   expect(options[CHALLENGE_OPTION_KEYS.hiddenMap]).toBe(2);
+  expect(options[CHALLENGE_OPTION_KEYS.hiddenCards]).toBe(1);
   expect(options[CHALLENGE_OPTION_KEYS.strictCardRewards]).toBe(true);
 }
 
@@ -126,6 +128,7 @@ function ignoresChallengesUntilOptedIn(): void {
     hiddenHealth: "one",
     hiddenPiles: "two",
     hiddenMap: "one",
+    hiddenCards: "two",
     strictCardRewards: true,
   };
 
@@ -162,6 +165,7 @@ function showsQuestionsOnlyAfterOptingIn(): void {
     "hidden-health",
     "hidden-piles",
     "hidden-map",
+    "hidden-cards",
     "strict-card-rewards",
   ]);
 }
@@ -240,11 +244,13 @@ function reviewWarnsOnlyWithActiveChallenges(): void {
 
   answers.challenges.hiddenPiles = "one";
   answers.challenges.hiddenMap = "two";
+  answers.challenges.hiddenCards = "two";
 
   const summary = summarizeChallengeAnswers(answers.challenges);
 
   expect(summary).toContain("until Pile Sight is found");
   expect(summary).toContain("either of two Map Sights");
+  expect(summary).toContain("Cards are unknown until either of two Card Sights");
 }
 
 /**

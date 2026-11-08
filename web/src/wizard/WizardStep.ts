@@ -501,6 +501,18 @@ export const challengeSetupStep: WizardStep = {
       },
     },
     {
+      id: "hidden-cards",
+      isVisible: usesChallenges,
+      title: "Should cards be hidden?",
+      description:
+        "Hidden Cards makes every card unknown: its name, text and energy cost are hidden, its art is blurred and it shows no tooltips, until a Card Sight is found. Finding one shows cards again, for every character.",
+      control: {
+        kind: "radio",
+        field: "hiddenCards",
+        choices: sightCopyChoices("Card Sight", "Cards are shown as normal."),
+      },
+    },
+    {
       id: "strict-card-rewards",
       isVisible: usesChallenges,
       title: "Should Card Rewards in the AP Menu be picked one at a time?",

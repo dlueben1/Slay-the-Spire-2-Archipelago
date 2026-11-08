@@ -85,6 +85,10 @@ Slay the Spire II:
   # The value (0-2) is how many Map Sight items the slot gets; 0 is off, and any one of them shows the whole map again.
   hidden_map: 0
 
+  # Cards are unknown: name, text, energy cost and tooltips are hidden and the art is blurred.
+  # The value (0-2) is how many Card Sight items the slot gets; 0 is off, and any one of them shows cards again.
+  hidden_cards: 0
+
   # Extra difficulty modifiers for every run, on top of Ascension; logic ignores them. Most leave Act 1
   # as it is and grow harder in Acts 2 and 3. Names (case-sensitive):
   #   RisingStrength, EscalatingBuffs, ShrinkingRests, MountingCurses,

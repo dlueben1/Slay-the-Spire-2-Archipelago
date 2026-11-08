@@ -337,6 +337,7 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
         hiddenHealth: "two",
         hiddenPiles: "one",
         hiddenMap: "two",
+        hiddenCards: "one",
         strictCardRewards: true,
       };
       answers.checksAndRewards.checks.includeFloorChecks = true;

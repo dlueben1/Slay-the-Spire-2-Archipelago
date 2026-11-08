@@ -305,7 +305,8 @@ public static class MultiplayerSupport
     private static MultiplayerFeature GetFeatureForUniversalItem(ItemInfo item)
     {
         APItem universalItem = item.GetUniversalItemId();
-        if (universalItem is APItem.IntentSight or APItem.HealthSight or APItem.PileSight or APItem.MapSight)
+        if (universalItem is APItem.IntentSight or APItem.HealthSight or APItem.PileSight or APItem.MapSight
+            or APItem.CardSight)
             return MultiplayerFeature.ChallengeSight;
 
         // In multiplayer, Bonus Wax Relics arrive as gold unless the experimental Bonus Items
@@ -919,6 +920,7 @@ public static class MultiplayerSupport
             HiddenHealth = source.HiddenHealth,
             HiddenPiles = source.HiddenPiles,
             HiddenMap = source.HiddenMap,
+            HiddenCards = source.HiddenCards,
             ReleaseOnVictory = source.ReleaseOnVictory,
             RemovedOpRelics = source.RemovedOpRelics,
             CampfireSanity = source.CampfireSanity,

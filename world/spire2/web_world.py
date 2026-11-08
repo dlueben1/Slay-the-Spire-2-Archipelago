@@ -14,7 +14,7 @@ from .options import (
     RandomShopPotions, ShopPotionCommonWeight, ShopPotionUncommonWeight, ShopPotionRareWeight,
     ShopPotionOtherClassWeight, ShopPotionEventWeight,
     AncientRelicLocation, AncientRelicPool, RelicRewardsAvailableAnytime, RemoveOPRelics, ReleaseOnVictory,
-    CardReward, StrictCardRewards, HiddenIntents, HiddenHealth, HiddenPiles, HiddenMap, ProgressiveStarterCard, ProgressiveStarterRelic, BonusItems, SeededRun,
+    CardReward, StrictCardRewards, HiddenIntents, HiddenHealth, HiddenPiles, HiddenMap, HiddenCards, ProgressiveStarterCard, ProgressiveStarterRelic, BonusItems, SeededRun,
     OneGoldFillerWeight, FiveGoldFillerWeight,
     FreeAttackFillerWeight, FreePowerFillerWeight, FreeSkillFillerWeight,
     DexterityFillerWeight, StrengthFillerWeight, PlatingFillerWeight,
@@ -153,6 +153,7 @@ class SlayTheSpire2Web(WebWorld):
             HiddenHealth,
             HiddenPiles,
             HiddenMap,
+            HiddenCards,
             StrictCardRewards,
         ]),
     ]
