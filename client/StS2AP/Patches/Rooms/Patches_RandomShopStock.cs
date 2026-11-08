@@ -35,7 +35,7 @@ public static class Patches_RandomShopStock
     /// </summary>
     private const int UnsoldRelicCost = 999999999;
 
-    private const int AncientRelicPrice = 350;
+    private const int AncientRelicPrice = 400;
     private const int EventRelicPrice = 250;
     private const int EventPotionPrice = 100;
 
