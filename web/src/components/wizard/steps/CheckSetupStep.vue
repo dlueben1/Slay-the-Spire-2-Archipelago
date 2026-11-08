@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { optionCatalog } from "../../../generated/optionCatalog";
 import type { FillerDisplayItem } from "../../../wizard/FillerItem";
+import { createShopCardKindDisplayItems } from "../../../wizard/ShopCardKind";
 import type {
   BonusItemAnswer,
   ChecksAndRewardsAnswers,
   FillerAnswers,
+  FillerWeightLevel,
+  ShopCardKindId,
 } from "../../../wizard/WizardAnswers";
 import {
   checkSetupStep,
@@ -16,6 +20,7 @@ import {
 import BonusItemsStep from "../bespoke/BonusItemsStep.vue";
 import TrapStep from "../bespoke/TrapStep.vue";
 import FillerStep from "../bespoke/FillerStep.vue";
+import ItemWeightTable from "../bespoke/ItemWeightTable.vue";
 import WizardControl from "../core/WizardControl.vue";
 import WizardQuestion from "../core/WizardQuestion.vue";
 import { useWizardAnswers } from "../core/wizardAnswersContext";
@@ -26,9 +31,9 @@ import { useWizardAnswers } from "../core/wizardAnswersContext";
  * Every standard question — Starting Equipment, Ancients, the check-types grid, and
  * the dependent Shop Sanity family — renders through `WizardControl` from its
  * definition in `checkSetupStep`; the Floor Checks dependency rule lives in
- * `wizard/checksTransitions.ts`. Only the Bonus Items table and the Filler odds
- * table remain bespoke child components, and this shell owns the subsection
- * headers that group everything for the player.
+ * `wizard/checksTransitions.ts`. Only the Bonus Items table, the Random Shop Cards
+ * weights and the Filler odds table remain bespoke child components, and this shell
+ * owns the subsection headers that group everything for the player.
  */
 const props = defineProps<{
   modelValue: ChecksAndRewardsAnswers;
@@ -100,6 +105,26 @@ function setBonusItems(bonusItems: BonusItemAnswer[]): void {
 function setFillerAnswers(filler: FillerAnswers): void {
   // Delegate combined-section ownership to the shared immutable update helper.
   updateAnswers({ filler });
+}
+
+const shopCardKinds = createShopCardKindDisplayItems(optionCatalog);
+const SHOP_CARD_WEIGHT_LABELS = ["Never", "Low", "Medium", "High"] as const;
+
+/**
+ * Replaces one Random Shop Cards kind's weight level.
+ *
+ * @param id - Kind whose slider moved.
+ * @param level - New slider level from zero through three.
+ * @returns Nothing; replaces the nested Shop Cards answer immutably.
+ */
+function setShopCardWeight(id: ShopCardKindId, level: number): void {
+  const shopCards = props.modelValue.shopCards;
+  updateAnswers({
+    shopCards: {
+      ...shopCards,
+      weights: { ...shopCards.weights, [id]: level as FillerWeightLevel },
+    },
+  });
 }
 </script>
 
@@ -209,6 +234,44 @@ function setFillerAnswers(filler: FillerAnswers): void {
             :question="question('shop-costs')"
             :model-value="modelValue"
             @update:model-value="forwardUpdate"
+          />
+        </WizardQuestion>
+      </div>
+    </section>
+
+    <section class="wizard-subsection">
+      <div class="wizard-subsection__header">
+        <h3>Shop Cards</h3>
+        <p>
+          Change which cards the shop sells. This is separate from Shop Slots
+          and adds no checks.
+        </p>
+      </div>
+
+      <div class="space-y-8">
+        <WizardQuestion
+          :question="question('random-shop-cards')"
+          :help-text="
+            resolveQuestionHelp(question('random-shop-cards'), answers)
+          "
+        >
+          <WizardControl
+            :question="question('random-shop-cards')"
+            :model-value="modelValue"
+            @update:model-value="forwardUpdate"
+          />
+        </WizardQuestion>
+
+        <WizardQuestion
+          v-if="visibleQuestionIds.has('shop-card-weights')"
+          :question="question('shop-card-weights')"
+        >
+          <ItemWeightTable
+            heading="Card"
+            :items="shopCardKinds"
+            :weights="modelValue.shopCards.weights"
+            :labels="SHOP_CARD_WEIGHT_LABELS"
+            @update:weight="setShopCardWeight"
           />
         </WizardQuestion>
       </div>

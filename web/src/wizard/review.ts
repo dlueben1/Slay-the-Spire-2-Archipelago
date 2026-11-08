@@ -20,6 +20,8 @@ import type {
   FillerAnswers,
   ProgressionAnswers,
   RunAnswers,
+  ShopCardAnswers,
+  ShopCardKindId,
   ShopAnswers,
   SightCopies,
   StartingEquipmentAnswers,
@@ -278,6 +280,33 @@ export function summarizeFillerAnswers(answers: FillerAnswers): string {
   // Explain the relative distribution without promising exact random percentages.
   return `Your filler pool enables ${enabledCount} of ${totalCount} reward types: ${lowCount} at low odds, ${mediumCount} at medium odds, and ${highCount} at high odds.`;
 }
+
+/**
+ * Describes the shop's card layout.
+ *
+ * @param answers - Valid current Random Shop Cards answers.
+ * @returns One sentence naming the kinds a random shop card slot can hold.
+ */
+export function summarizeShopCardAnswers(answers: ShopCardAnswers): string {
+  const kinds = SHOP_CARD_KIND_LABELS.filter(
+    ([id]) => answers.weights[id] > 0,
+  ).map(([, label]) => label);
+  if (!answers.enabled || kinds.length === 0) {
+    return "Shops sell their usual cards.";
+  }
+  return `Each shop card slot holds a random kind of card: ${kinds.join(", ")}.`;
+}
+
+/** Plural labels for the review sentence, in option order. */
+const SHOP_CARD_KIND_LABELS: readonly [ShopCardKindId, string][] = [
+  ["attack", "Attacks"],
+  ["skill", "Skills"],
+  ["power", "Powers"],
+  ["common", "Commons"],
+  ["uncommon", "Uncommons"],
+  ["rare", "Rares"],
+  ["colorless", "colorless cards"],
+];
 
 /**
  * Summarizes the run settings that affect an individual climb.
@@ -607,6 +636,7 @@ export function summarizeChecksAndRewardsAnswers(
   const checks = summarizeCheckAnswers(answers.checks);
   const ancients = summarizeAncientAnswers(answers.ancients);
   const shop = summarizeShopAnswers(answers.shop);
+  const shopCards = summarizeShopCardAnswers(answers.shopCards);
   const bonusItems = summarizeBonusItemAnswers(answers.bonusItems);
   const filler = summarizeFillerAnswers(answers.filler);
   const traps =
@@ -615,7 +645,7 @@ export function summarizeChecksAndRewardsAnswers(
       : `${answers.traps.chance}% of filler slots become traps, with ${Object.values(answers.traps.weights).filter((weight) => weight !== "none").length} trap types enabled. At most one queued trap applies per player per turn.`;
 
   // Preserve the visible subsection order in the final combined review paragraph.
-  return `${startingEquipment} ${ancients} ${checks} ${shop} ${bonusItems} ${filler} ${traps}`;
+  return `${startingEquipment} ${ancients} ${checks} ${shop} ${shopCards} ${bonusItems} ${filler} ${traps}`;
 }
 
 /**
