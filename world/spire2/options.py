@@ -497,6 +497,17 @@ class HiddenMap(Range):
     range_end = 2
     default = 0
 
+class HiddenCards(Range):
+    """Cards are unknown: their name, text and energy cost are hidden, their art is blurred and they
+    show no tooltips.
+    The value is how many Card Sight items are added to the item pool, and 0 turns it off. Finding any one of them
+    shows cards again for every character, so a second copy makes it easier to find. Does not change logic.
+    """
+    display_name = "Hidden Cards"
+    range_start = 0
+    range_end = 2
+    default = 0
+
 class SeededRun(Toggle):
     """Whether each character should have a fixed seed to climb the spire with or not."""
     display_name = "Seeded Run"
@@ -1072,4 +1083,5 @@ class Spire2Options(PerGameCommonOptions):
     hidden_health: HiddenHealth
     hidden_piles: HiddenPiles
     hidden_map: HiddenMap
+    hidden_cards: HiddenCards
     strict_card_rewards: StrictCardRewards

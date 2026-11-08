@@ -31,6 +31,7 @@ class ItemType(Enum):
     HEALTH_SIGHT = auto()
     PILE_SIGHT = auto()
     MAP_SIGHT = auto()
+    CARD_SIGHT = auto()
     TRAP = auto()
     CAW_CAW = auto()
     BUFF = auto()
@@ -142,6 +143,7 @@ challenge_item_table: Dict[str, ItemData] = {
     "Health Sight": ItemData(801, ItemType.HEALTH_SIGHT, ItemClassification.useful),
     "Pile Sight": ItemData(802, ItemType.PILE_SIGHT, ItemClassification.useful),
     "Map Sight": ItemData(803, ItemType.MAP_SIGHT, ItemClassification.useful),
+    "Card Sight": ItemData(804, ItemType.CARD_SIGHT, ItemClassification.useful),
 }
 
 # `universal_bonus_items` is keyed by the actual Archipelago item name (like "Bonus Wax Relic").

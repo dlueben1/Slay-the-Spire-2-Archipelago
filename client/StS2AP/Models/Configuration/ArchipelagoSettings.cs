@@ -100,6 +100,12 @@ namespace StS2AP.Models
         /// </summary>
         public bool HiddenMap { get; set; }
 
+        /// <summary>
+        /// Whether the slot enabled the Hidden Cards challenge. When it is on, cards look unseen
+        /// until <see cref="StS2AP.Utils.Combat.CardSight"/> sees a Card Sight item.
+        /// </summary>
+        public bool HiddenCards { get; set; }
+
         /// <summary>Whether a victory releases the winning character's remaining checks.</summary>
         public bool ReleaseOnVictory { get; set; } = true;
 

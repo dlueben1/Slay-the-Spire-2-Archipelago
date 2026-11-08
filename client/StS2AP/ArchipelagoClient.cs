@@ -1721,6 +1721,8 @@ namespace StS2AP
                 settings.HiddenPiles = Convert.ToInt32(slotData["hidden_piles"]) > 0;
             if (slotData.ContainsKey("hidden_map"))
                 settings.HiddenMap = Convert.ToInt32(slotData["hidden_map"]) > 0;
+            if (slotData.ContainsKey("hidden_cards"))
+                settings.HiddenCards = Convert.ToInt32(slotData["hidden_cards"]) > 0;
             if (slotData.ContainsKey("lock_characters"))
                 settings.NoCharactersLocked = Convert.ToInt32(slotData["lock_characters"]) == 0;
             if (slotData.ContainsKey("enable_death_fragments"))

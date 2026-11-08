@@ -626,6 +626,7 @@ class SlayTheSpire2World(World):
         bonus_item_names += ["Health Sight"] * self.options.hidden_health.value
         bonus_item_names += ["Pile Sight"] * self.options.hidden_piles.value
         bonus_item_names += ["Map Sight"] * self.options.hidden_map.value
+        bonus_item_names += ["Card Sight"] * self.options.hidden_cards.value
 
         available_filler_slots = sum(count for _, count in filler_counts)
         if len(bonus_item_names) > available_filler_slots:
@@ -734,6 +735,7 @@ class SlayTheSpire2World(World):
             "hidden_health",
             "hidden_piles",
             "hidden_map",
+            "hidden_cards",
             "include_floor_checks",
             "neow_sanity",
             "ancient_relic_location",
