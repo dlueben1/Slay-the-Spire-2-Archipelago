@@ -90,6 +90,9 @@ export const SHOP_OPTION_KEYS = {
   costs: "shop_sanity_costs",
 } as const;
 
+/** Generated switch owned by the Shop Cards compiler; its weights live in `ShopCardKind.ts`. */
+export const SHOP_CARD_OPTION_KEY = "random_shop_cards" as const;
+
 /** Generated option key owned by the Bonus Items compiler. */
 export const BONUS_ITEM_OPTION_KEY = "bonus_items" as const;
 

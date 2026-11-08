@@ -9,7 +9,7 @@
 import { describe, expect, it } from "vitest";
 import { optionCatalog } from "../../generated/optionCatalog";
 import { createDefaultFillerAnswers } from "../FillerItem";
-import { getGuidedOptionKeys } from "../GuidedOption";
+import { getGuidedOptionKeys, selectGuidedOptions } from "../GuidedOption";
 import { createDefaultWizardAnswers } from "../WizardAnswers";
 import {
   ANCIENT_OPTION_KEYS,
@@ -26,7 +26,7 @@ import {
   getVisibleQuestionIds,
 } from "../WizardStep";
 import { compileWizardAnswers } from "../compiler/compileWizardAnswers";
-import { summarizeRunAnswers } from "../review";
+import { summarizeRunAnswers, summarizeShopCardAnswers } from "../review";
 
 /**
  * Creates complete schema-derived answers for gameplay-section tests.
@@ -111,6 +111,18 @@ function compilesConfiguredGameplaySections(): void {
     removeSlots: true,
     costs: "Tiered",
   };
+  answers.checksAndRewards.shopCards = {
+    enabled: true,
+    weights: {
+      attack: 0,
+      skill: 1,
+      power: 2,
+      common: 3,
+      uncommon: 0,
+      rare: 3,
+      colorless: 1,
+    },
+  };
   answers.deathLink = {
     enabled: true,
     receiveFragment: false,
@@ -130,6 +142,12 @@ function compilesConfiguredGameplaySections(): void {
   expect(options.release_on_victory).toBe(false);
   expect(options.neow_sanity).toBe(true);
   expect(options.seeded).toBe(true);
+  expect(options.random_shop_cards).toBe(true);
+  expect(options.shop_attack_weight).toBe("none");
+  expect(options.shop_skill_weight).toBe("low");
+  expect(options.shop_power_weight).toBe("medium");
+  expect(options.shop_rare_weight).toBe("high");
+  expect(options.shop_colorless_weight).toBe("low");
   expect(options.progression_balancing).toBe(99);
   expect(options.accessibility).toBe("minimal");
   expect(options.include_floor_checks).toBe(true);
@@ -149,6 +167,36 @@ function compilesConfiguredGameplaySections(): void {
   expect(options.death_link).toBe(true);
   expect(options.enable_death_fragments).toBe(false);
   expect(options.death_link_damage_percent).toBe(37);
+}
+
+/**
+ * Verifies Random Shop Cards weights reach the YAML only while the switch is on.
+ *
+ * @returns Nothing; Vitest records assertion failures.
+ */
+function showsShopCardWeightsOnlyWhenRandom(): void {
+  const answers = createTestAnswers();
+
+  const vanilla = selectGuidedOptions(
+    compileWizardAnswers(answers, optionCatalog),
+  );
+  expect(vanilla.random_shop_cards).toBe(false);
+  expect(vanilla).not.toHaveProperty("shop_rare_weight");
+  expect(summarizeShopCardAnswers(answers.checksAndRewards.shopCards)).toBe(
+    "Shops sell their usual cards.",
+  );
+
+  answers.checksAndRewards.shopCards.enabled = true;
+  answers.checksAndRewards.shopCards.weights.attack = 0;
+  const random = selectGuidedOptions(
+    compileWizardAnswers(answers, optionCatalog),
+  );
+  expect(random.random_shop_cards).toBe(true);
+  expect(random.shop_attack_weight).toBe("none");
+  expect(random.shop_rare_weight).toBe("medium");
+  expect(summarizeShopCardAnswers(answers.checksAndRewards.shopCards)).toBe(
+    "Each shop card slot holds a random kind of card: Skills, Powers, Commons, Uncommons, Rares, colorless cards.",
+  );
 }
 
 /**
@@ -329,6 +377,7 @@ function revealsDependentGameplayQuestions(): void {
     "ancient-location",
     "ancient-pool",
     "check-types",
+    "random-shop-cards",
     "bonus-items",
     "filler-weights",
     "trap-chance",
@@ -339,6 +388,7 @@ function revealsDependentGameplayQuestions(): void {
 
   // Enabling each section should reveal every dependent configuration question.
   answers.checksAndRewards.shop.enabled = true;
+  answers.checksAndRewards.shopCards.enabled = true;
   answers.deathLink.enabled = true;
   expect(getVisibleQuestionIds(checkSetupStep, answers)).toEqual([
     "starting-equipment",
@@ -348,6 +398,8 @@ function revealsDependentGameplayQuestions(): void {
     "shop-slots",
     "shop-removal",
     "shop-costs",
+    "random-shop-cards",
+    "shop-card-weights",
     "bonus-items",
     "filler-weights",
     "trap-chance",
@@ -432,6 +484,10 @@ function registerGameplayCompilerTests(): void {
   it(
     "compiles one overpowered-relic category on its own",
     compilesSingleOpRelicCategory,
+  );
+  it(
+    "shows shop card weights only with Random Shop Cards",
+    showsShopCardWeightsOnlyWhenRandom,
   );
   it(
     "compiles configured gameplay sections",

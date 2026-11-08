@@ -189,7 +189,7 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
     },
   ],
   [
-    "every check, Shop Sanity and Run Settings changed",
+    "every check, Shop Sanity, Random Shop Cards and Run Settings changed",
     (answers) => {
       const rewards = answers.checksAndRewards;
       const checks = rewards.checks;
@@ -214,6 +214,9 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
         removeSlots: true,
         costs: "Tiered",
       };
+      rewards.shopCards.enabled = true;
+      rewards.shopCards.weights.attack = 0;
+      rewards.shopCards.weights.rare = 3;
       answers.run = {
         relicRewardsAvailableAnytime: 7,
         removeOpRelics: { ancient: true, rare: true },

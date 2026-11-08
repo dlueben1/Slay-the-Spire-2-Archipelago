@@ -16,6 +16,7 @@ import {
 } from "../BonusRelicData";
 import { FILLER_ITEM_DEFINITIONS, FILLER_WEIGHT_NAMES } from "../FillerItem";
 import { getOrderedRunModifiers } from "../RunModifier";
+import { SHOP_CARD_KIND_DEFINITIONS } from "../ShopCardKind";
 import { TRAP_ITEM_DEFINITIONS, type TrapWeight } from "../TrapItem";
 import {
   SIGHT_COPY_COUNTS,
@@ -27,6 +28,7 @@ import {
   type FillerWeightLevel,
   type ProgressionAnswers,
   type RunAnswers,
+  type ShopCardAnswers,
   type SightCopies,
 } from "../WizardAnswers";
 import {
@@ -38,6 +40,7 @@ import {
   OP_RELIC_CATEGORY_KEYS,
   PROGRESSION_OPTION_KEYS,
   RUN_OPTION_KEYS,
+  SHOP_CARD_OPTION_KEY,
   SHOP_OPTION_KEYS,
   STARTING_EQUIPMENT_OPTION_KEYS,
   TRAP_CHANCE_OPTION_KEY,
@@ -183,6 +186,22 @@ function readFillerAnswers(options: CompiledOptions): FillerAnswers {
 }
 
 /**
+ * Reads the Random Shop Cards switch and each card kind's weight as a slider level.
+ *
+ * @param options - Resolved option values holding canonical weight names.
+ * @returns The switch plus one level per card kind.
+ */
+function readShopCardAnswers(options: CompiledOptions): ShopCardAnswers {
+  const weights = {} as ShopCardAnswers["weights"];
+  for (const definition of SHOP_CARD_KIND_DEFINITIONS) {
+    weights[definition.id] = FILLER_WEIGHT_NAMES.indexOf(
+      options[definition.optionKey] as (typeof FILLER_WEIGHT_NAMES)[number],
+    ) as FillerWeightLevel;
+  }
+  return { enabled: options[SHOP_CARD_OPTION_KEY] as boolean, weights };
+}
+
+/**
  * Reads Checks & Rewards answers.
  *
  * @param options - Resolved option values.
@@ -261,6 +280,7 @@ export function readChecksAndRewardsAnswers(
       shuffleAllCards: options[CHECK_OPTION_KEYS.shuffleAllCards] as boolean,
     },
     shop,
+    shopCards: readShopCardAnswers(options),
     bonusItems,
     filler: readFillerAnswers(options),
     traps: {
