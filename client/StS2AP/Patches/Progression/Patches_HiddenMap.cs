@@ -39,19 +39,20 @@ public static class Patches_HiddenMap
     }
 
     /// <summary>
-    /// Hovering a map legend entry animates every room of that type, which would point out the
-    /// hidden shops and elites. Hidden rooms match no legend entry.
+    /// Hovering a map legend entry enlarges every room of that type, which would point out the
+    /// hidden shops and elites, so hidden rooms only enlarge while the pointer is on them.
     /// </summary>
-    [HarmonyPatch(typeof(NNormalMapPoint), nameof(NNormalMapPoint.OnHighlightPointType))]
+    /// <remarks>
+    /// This blocks the animation itself rather than the legend's highlight event because other
+    /// mods call it too: MintySpire2's Sticky Map Legend Highlights pins a type on click and
+    /// enlarges its rooms again from its own postfixes, which run even when a prefix skips the
+    /// game's handler.
+    /// </remarks>
+    [HarmonyPatch(typeof(NNormalMapPoint), nameof(NNormalMapPoint.AnimHover))]
     public static class HideLegendHighlight
     {
         [HarmonyPrefix]
-        public static bool Prefix(NNormalMapPoint __instance)
-        {
-            if (!MapSight.IsHidden(__instance))
-                return true;
-            __instance.AnimUnhover();
-            return false;
-        }
+        public static bool Prefix(NNormalMapPoint __instance) =>
+            __instance.IsFocused || !MapSight.IsHidden(__instance);
     }
 }
