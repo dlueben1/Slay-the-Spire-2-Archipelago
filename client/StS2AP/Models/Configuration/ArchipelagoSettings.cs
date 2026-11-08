@@ -186,6 +186,12 @@ namespace StS2AP.Models
         public int ShopSanityCosts { get; set; }
 
         /// <summary>
+        /// Random Shop Cards weights by kind name ("attack", "skill", "power", "common",
+        /// "uncommon", "rare", "colorless"). Empty keeps the vanilla shop card layout.
+        /// </summary>
+        public Dictionary<string, int> ShopCardWeights { get; set; } = new();
+
+        /// <summary>
         /// Total number of generic Shop Slot locations generated per character. Enabling card
         /// removal adds three locations, matching its three progressive act unlock items.
         /// </summary>

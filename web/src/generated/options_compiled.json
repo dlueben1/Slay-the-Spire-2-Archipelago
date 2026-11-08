@@ -12,11 +12,11 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "3e9e2a05fd3b22fc53a99d4915ba0d3b3edabed9b298387682c153e9f94aa413"
+      "sha256": "cf64e539c6ba6fc16230445dbfa779ec1b65c5948cebbdff212eff607e9d5e3f"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "3bd273962230a131b3083d2bb28f8205dabd3a43efbcd4ae829503ed05c16167"
+      "sha256": "fd3d2cf577070d90ac29558a46108923b3feb2e59239321a8a0d6e112f3e0090"
     }
   },
   "characters": {
@@ -157,6 +157,14 @@
     "shop_potion_slots",
     "shop_remove_slots",
     "shop_sanity_costs",
+    "random_shop_cards",
+    "shop_attack_weight",
+    "shop_skill_weight",
+    "shop_power_weight",
+    "shop_common_weight",
+    "shop_uncommon_weight",
+    "shop_rare_weight",
+    "shop_colorless_weight",
     "death_link",
     "enable_death_fragments",
     "death_link_damage_percent",
@@ -247,6 +255,21 @@
         "shop_potion_slots",
         "shop_remove_slots",
         "shop_sanity_costs"
+      ],
+      "start_collapsed": false,
+      "source": "web_world"
+    },
+    {
+      "name": "Shop Cards",
+      "option_keys": [
+        "random_shop_cards",
+        "shop_attack_weight",
+        "shop_skill_weight",
+        "shop_power_weight",
+        "shop_common_weight",
+        "shop_uncommon_weight",
+        "shop_rare_weight",
+        "shop_colorless_weight"
       ],
       "start_collapsed": false,
       "source": "web_world"
@@ -1673,6 +1696,364 @@
       ],
       "supports_weighting": true,
       "group": "Sanities"
+    },
+    "random_shop_cards": {
+      "key": "random_shop_cards",
+      "class_name": "RandomShopCards",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Random Shop Cards",
+      "description": "Each of the shop's 7 card slots holds a random kind of card, picked with the weights below,\ninstead of 2 Attacks, 2 Skills, a Power and 2 colorless cards. Any of the 7 can be on sale.\nIf every weight is none, the shop keeps its usual cards. Does not change logic.",
+      "default": false,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Cards"
+    },
+    "shop_attack_weight": {
+      "key": "shop_attack_weight",
+      "class_name": "ShopAttackWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Attack Weight",
+      "description": "How often a random shop card slot holds an Attack.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Cards"
+    },
+    "shop_skill_weight": {
+      "key": "shop_skill_weight",
+      "class_name": "ShopSkillWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Skill Weight",
+      "description": "How often a random shop card slot holds a Skill.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Cards"
+    },
+    "shop_power_weight": {
+      "key": "shop_power_weight",
+      "class_name": "ShopPowerWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Power Weight",
+      "description": "How often a random shop card slot holds a Power.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Cards"
+    },
+    "shop_common_weight": {
+      "key": "shop_common_weight",
+      "class_name": "ShopCommonWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Common Weight",
+      "description": "How often a random shop card slot holds a Common card.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Cards"
+    },
+    "shop_uncommon_weight": {
+      "key": "shop_uncommon_weight",
+      "class_name": "ShopUncommonWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Uncommon Weight",
+      "description": "How often a random shop card slot holds an Uncommon card.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Cards"
+    },
+    "shop_rare_weight": {
+      "key": "shop_rare_weight",
+      "class_name": "ShopRareWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Rare Weight",
+      "description": "How often a random shop card slot holds a Rare card.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Cards"
+    },
+    "shop_colorless_weight": {
+      "key": "shop_colorless_weight",
+      "class_name": "ShopColorlessWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Colorless Weight",
+      "description": "How often a random shop card slot holds a colorless card, Uncommon or Rare.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Cards"
     },
     "death_link": {
       "key": "death_link",

@@ -319,6 +319,48 @@ class ShopSanityCosts(Choice):
     option_Tiered = 3
     default = 2
 
+class RandomShopCards(Toggle):
+    """Each of the shop's 7 card slots holds a random kind of card, picked with the weights below,
+    instead of 2 Attacks, 2 Skills, a Power and 2 colorless cards. Any of the 7 can be on sale.
+    If every weight is none, the shop keeps its usual cards. Does not change logic."""
+    display_name = "Random Shop Cards"
+    default = 0
+
+class ShopCardWeight(Choice):
+    option_none = 0
+    option_low = 1
+    option_medium = 3
+    option_high = 5
+    default = option_medium
+
+class ShopAttackWeight(ShopCardWeight):
+    """How often a random shop card slot holds an Attack."""
+    display_name = "Shop Attack Weight"
+
+class ShopSkillWeight(ShopCardWeight):
+    """How often a random shop card slot holds a Skill."""
+    display_name = "Shop Skill Weight"
+
+class ShopPowerWeight(ShopCardWeight):
+    """How often a random shop card slot holds a Power."""
+    display_name = "Shop Power Weight"
+
+class ShopCommonWeight(ShopCardWeight):
+    """How often a random shop card slot holds a Common card."""
+    display_name = "Shop Common Weight"
+
+class ShopUncommonWeight(ShopCardWeight):
+    """How often a random shop card slot holds an Uncommon card."""
+    display_name = "Shop Uncommon Weight"
+
+class ShopRareWeight(ShopCardWeight):
+    """How often a random shop card slot holds a Rare card."""
+    display_name = "Shop Rare Weight"
+
+class ShopColorlessWeight(ShopCardWeight):
+    """How often a random shop card slot holds a colorless card, Uncommon or Rare."""
+    display_name = "Shop Colorless Weight"
+
 class GoldSanity(Toggle):
     """Whether to replace combat, elite, and boss gold rewards with AP locations. Adds 22 locations per character.
     """
@@ -890,6 +932,16 @@ class Spire2Options(PerGameCommonOptions):
     shop_potion_slots: ShopPotionSlots
     shop_remove_slots: ShopRemoveSlots
     shop_sanity_costs: ShopSanityCosts
+
+    # Shop cards
+    random_shop_cards: RandomShopCards
+    shop_attack_weight: ShopAttackWeight
+    shop_skill_weight: ShopSkillWeight
+    shop_power_weight: ShopPowerWeight
+    shop_common_weight: ShopCommonWeight
+    shop_uncommon_weight: ShopUncommonWeight
+    shop_rare_weight: ShopRareWeight
+    shop_colorless_weight: ShopColorlessWeight
 
     # Death Link
     death_link: DeathLink

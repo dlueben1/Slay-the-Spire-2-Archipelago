@@ -713,6 +713,7 @@ class SlayTheSpire2World(World):
                 "card_remove": self.options.shop_remove_slots != 0,
                 "costs": self.options.shop_sanity_costs.value,
             },
+            "shop_card_weights": self.shop_card_weights(),
             # Keep the wire key for clients; Archipelago loads world_version from archipelago.json.
             "mod_compat_version": self.world_version.as_simple_string(),
             "CompatFlag": self.compat_flag,
@@ -750,6 +751,22 @@ class SlayTheSpire2World(World):
             "death_link_damage_percent",
         ))
         return slot_data
+
+    def shop_card_weights(self) -> dict[str, int]:
+        """Weights for the kinds of card a random shop slot can hold. Empty keeps the vanilla
+        layout, including when Random Shop Cards is on but every weight is none."""
+        if not self.options.random_shop_cards:
+            return {}
+        weights = {
+            "attack": self.options.shop_attack_weight.value,
+            "skill": self.options.shop_skill_weight.value,
+            "power": self.options.shop_power_weight.value,
+            "common": self.options.shop_common_weight.value,
+            "uncommon": self.options.shop_uncommon_weight.value,
+            "rare": self.options.shop_rare_weight.value,
+            "colorless": self.options.shop_colorless_weight.value,
+        }
+        return weights if any(weights.values()) else {}
 
     @staticmethod
     def interpret_slot_data(slot_data: dict[str, Any]) -> Any:

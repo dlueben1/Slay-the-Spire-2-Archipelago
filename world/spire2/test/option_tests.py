@@ -120,6 +120,47 @@ class TestProgressiveRelicOptionsConfigured(Spire2TestBase):
         self.assertEqual(1, slot_data["strict_card_rewards"])
 
 
+class TestRandomShopCardsOff(Spire2TestBase):
+    def test_vanilla_layout_sends_no_weights(self):
+        self.assertEqual({}, self.world.fill_slot_data()["shop_card_weights"])
+
+
+class TestRandomShopCardsOn(Spire2TestBase):
+    options = {
+        "random_shop_cards": 1,
+        "shop_attack_weight": "none",
+        "shop_rare_weight": "high",
+        "shop_colorless_weight": "low",
+    }
+
+    def test_weights_are_sent_in_slot_data(self):
+        self.assertEqual({
+            "attack": 0,
+            "skill": 3,
+            "power": 3,
+            "common": 3,
+            "uncommon": 3,
+            "rare": 5,
+            "colorless": 1,
+        }, self.world.fill_slot_data()["shop_card_weights"])
+
+
+class TestRandomShopCardsWithoutWeights(Spire2TestBase):
+    options = {
+        "random_shop_cards": 1,
+        "shop_attack_weight": "none",
+        "shop_skill_weight": "none",
+        "shop_power_weight": "none",
+        "shop_common_weight": "none",
+        "shop_uncommon_weight": "none",
+        "shop_rare_weight": "none",
+        "shop_colorless_weight": "none",
+    }
+
+    def test_all_none_keeps_vanilla_layout(self):
+        self.assertEqual({}, self.world.fill_slot_data()["shop_card_weights"])
+
+
 class TestAscensionDowns(Spire2TestBase):
     options = {
         "characters": [

@@ -938,6 +938,7 @@ public static class MultiplayerSupport
             ShopPotionSlots = source.ShopPotionSlots,
             ShopRemoveSlots = source.ShopRemoveSlots,
             ShopSanityCosts = source.ShopSanityCosts,
+            ShopCardWeights = new Dictionary<string, int>(source.ShopCardWeights),
             IsDeathLinkEnabled = local.OverrideDeathLinkOptions
                 ? local.EnableDeathLink
                 : source.IsDeathLinkEnabled,

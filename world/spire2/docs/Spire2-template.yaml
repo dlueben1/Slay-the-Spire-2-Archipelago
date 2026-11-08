@@ -180,6 +180,22 @@ Slay the Spire II:
   shop_sanity_costs: "discount_tiered"
 
   ##############
+  # Shop Cards #
+  ##############
+
+  # Each of the shop's 7 card slots holds a random kind of card instead of the usual
+  # 2 Attacks, 2 Skills, a Power and 2 colorless cards. Any of the 7 can be on sale.
+  random_shop_cards: false
+  # How often a slot holds each kind: none, low, medium or high
+  shop_attack_weight: "medium"     # Attack, any rarity
+  shop_skill_weight: "medium"      # Skill, any rarity
+  shop_power_weight: "medium"      # Power, any rarity
+  shop_common_weight: "medium"     # Common, any type
+  shop_uncommon_weight: "medium"   # Uncommon, any type
+  shop_rare_weight: "medium"       # Rare, any type
+  shop_colorless_weight: "medium"  # Colorless, Uncommon or Rare
+
+  ##############
   # Death Link #
   ##############
 

@@ -1844,6 +1844,15 @@ namespace StS2AP
             {
                 LogUtility.Warn("ShopSanity is enabled but 'shop_sanity_options' was missing or not the expected object shape — all shop slots will read as unlocked.");
             }
+            // Older APWorlds omit this key, and an empty object means the vanilla layout.
+            if (slotData.GetValueOrDefault("shop_card_weights") is JObject shopCardWeights)
+            {
+                settings.ShopCardWeights = shopCardWeights.Properties()
+                    .ToDictionary(property => property.Name, property => Convert.ToInt32(property.Value));
+                if (settings.ShopCardWeights.Count > 0)
+                    LogUtility.Info($"SLOT - Random Shop Cards: {string.Join(", ", settings.ShopCardWeights.Select(pair => $"{pair.Key}={pair.Value}"))}");
+            }
+
             // And return it
             return settings;
         }
