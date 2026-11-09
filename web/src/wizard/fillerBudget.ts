@@ -132,7 +132,8 @@ function getUsedSlots(answers: WizardAnswers): number {
       SIGHT_COPY_COUNTS[challenges.hiddenIntents] +
       SIGHT_COPY_COUNTS[challenges.hiddenHealth] +
       SIGHT_COPY_COUNTS[challenges.hiddenPiles] +
-      SIGHT_COPY_COUNTS[challenges.hiddenMap];
+      SIGHT_COPY_COUNTS[challenges.hiddenMap] +
+      SIGHT_COPY_COUNTS[challenges.hiddenCards];
   }
   return used;
 }

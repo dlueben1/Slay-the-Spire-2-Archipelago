@@ -1,3 +1,6 @@
+from test.general import setup_solo_multiworld
+from worlds.AutoWorld import call_all
+from worlds.spire2 import SlayTheSpire2World
 from worlds.spire2.items import challenge_item_table
 from worlds.spire2.test import Spire2TestBase
 
@@ -22,6 +25,38 @@ class TestHiddenIntents(Spire2TestBase):
 
     def test_option_is_sent_in_slot_data(self):
         self.assertEqual(1, self.world.fill_slot_data()["hidden_intents"])
+
+
+class TestHiddenOptionsNeedFloorChecks(Spire2TestBase):
+    options = {
+        "characters": ["ironclad", "silent"],
+        "include_floor_checks": False,
+        "hidden_intents": 2,
+        "hidden_health": 1,
+        "hidden_piles": 2,
+        "hidden_map": 1,
+        "hidden_cards": 2,
+    }
+
+    def test_no_sight_items_are_added(self):
+        self.assertFalse(any(item.name.endswith(" Sight") for item in self.multiworld.itempool))
+
+    def test_challenges_are_off_in_slot_data(self):
+        slot_data = self.world.fill_slot_data()
+        for option in ("hidden_intents", "hidden_health", "hidden_piles", "hidden_map", "hidden_cards"):
+            self.assertEqual(0, slot_data[option])
+
+    def test_tracker_ignores_hidden_values_from_the_yaml(self):
+        regenerated = setup_solo_multiworld(SlayTheSpire2World, steps=())
+        # Universal Tracker attaches this extension to MultiWorld dynamically.
+        # noinspection PyUnresolvedReferences
+        regenerated.re_gen_passthrough = {self.game: self.world.fill_slot_data()}
+        tracker_options = regenerated.worlds[1].options
+        tracker_options.hidden_intents.value = 2
+        tracker_options.hidden_cards.value = 2
+        for step in ("generate_early", "create_regions", "create_items", "set_rules"):
+            call_all(regenerated, step)
+        self.assertFalse(any(item.name.endswith(" Sight") for item in regenerated.itempool))
 
 
 class TestChallengeItemsOff(Spire2TestBase):

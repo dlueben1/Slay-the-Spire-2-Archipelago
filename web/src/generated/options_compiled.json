@@ -12,7 +12,7 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "59a9ef20644b9fcfcb11d48c492ade4be0b18162897d21589d5250d365377d92"
+      "sha256": "dc241194639032248f8db9fe86e18f7af36213cb6ce2aab73f7a6385246467d0"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
@@ -1345,7 +1345,7 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Include Floor Checks",
-      "description": "Add locations for reaching new floors and fill the corresponding item-pool space with\nconfigurable filler. Ascension Down and Progressive Starter options require these locations.",
+      "description": "Add locations for reaching new floors and fill the corresponding item-pool space with\nconfigurable filler. Ascension Down, Progressive Starter and Hidden options require these locations.",
       "default": true,
       "raw_default": 1,
       "visibility": {

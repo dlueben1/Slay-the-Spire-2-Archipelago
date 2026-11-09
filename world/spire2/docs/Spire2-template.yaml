@@ -70,23 +70,27 @@ Slay the Spire II:
   strict_card_rewards: false
 
   # Hides enemy intents. The value (0-2) is how many Intent Sight items the slot gets;
-  # 0 is off, and any one of them shows intents again for the whole slot.
+  # 0 is off, and any one of them shows intents again for the whole slot. Requires include_floor_checks.
   hidden_intents: 0
 
   # Hides health. Bars stay full and show "?" instead of numbers; block still shows. The value
   # (0-2) is how many Health Sight items the slot gets; 0 is off, and any one of them shows health again.
+  # Requires include_floor_checks.
   hidden_health: 0
 
   # Hides your combat piles. The draw, discard and exhaust piles show "?" and can't be opened.
   # The value (0-2) is how many Pile Sight items the slot gets; 0 is off, and any one of them shows the piles again.
+  # Requires include_floor_checks.
   hidden_piles: 0
 
   # The map only shows the rooms you can move to next; rooms further ahead show a closed eye.
   # The value (0-2) is how many Map Sight items the slot gets; 0 is off, and any one of them shows the whole map again.
+  # Requires include_floor_checks.
   hidden_map: 0
 
   # Cards are unknown: name, text, energy cost and tooltips are hidden and the art is blurred.
   # The value (0-2) is how many Card Sight items the slot gets; 0 is off, and any one of them shows cards again.
+  # Requires include_floor_checks.
   hidden_cards: 0
 
   # Extra difficulty modifiers for every run, on top of Ascension; logic ignores them. Most leave Act 1
