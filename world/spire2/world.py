@@ -120,6 +120,13 @@ class SlayTheSpire2World(World):
             for config in self.characters:
                 config.progressive_starter_card = False
                 config.progressive_starter_relic = False
+            # Sight items take the same filler budget. Turn the challenges off rather than only
+            # leaving the items out, because slot data would otherwise hide things for good.
+            self.options.hidden_intents.value = 0
+            self.options.hidden_health.value = 0
+            self.options.hidden_piles.value = 0
+            self.options.hidden_map.value = 0
+            self.options.hidden_cards.value = 0
         names = {config.official_name for config in self.characters}
         if len(names) != len(self.characters):
             raise OptionError(f"Found duplicate characters: {[c.official_name for c in self.characters]}")
@@ -457,8 +464,8 @@ class SlayTheSpire2World(World):
         }
         self.trap_weights = {name: weight for name, weight in trap_weights.items() if weight > 0}
         if self.options.trap_chance.value > 0 and not self.trap_weights:
-            raise ValueError("Trap Chance is greater than 0, but all trap weights are None. "
-                             "Enable a trap weight or set Trap Chance to 0.")
+            raise OptionError("Trap Chance is greater than 0, but all trap weights are None. "
+                              "Enable a trap weight or set Trap Chance to 0.")
 
         # --- Universal (buff) item pools ---
         # Map each universal item name to its configured option weight value.
@@ -850,6 +857,12 @@ class SlayTheSpire2World(World):
         self.options.progressive_starter_card.value = slot_data['progressive_starter_card']
         self.options.progressive_starter_relic.value = slot_data['progressive_starter_relic']
         self.options.bonus_items.value = deepcopy(slot_data.get('bonus_items', []))
+        # Sight items take filler slots, so a YAML's values could exceed what the seed generated with.
+        self.options.hidden_intents.value = slot_data.get('hidden_intents', 0)
+        self.options.hidden_health.value = slot_data.get('hidden_health', 0)
+        self.options.hidden_piles.value = slot_data.get('hidden_piles', 0)
+        self.options.hidden_map.value = slot_data.get('hidden_map', 0)
+        self.options.hidden_cards.value = slot_data.get('hidden_cards', 0)
         if self.options.include_floor_checks.value == 0:
             self.options.progressive_starter_card.value = 0
             self.options.progressive_starter_relic.value = 0

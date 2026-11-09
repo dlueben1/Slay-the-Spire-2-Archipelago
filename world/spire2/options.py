@@ -248,7 +248,7 @@ class ProgressiveStarterRelic(Toggle):
 
 class IncludeFloorChecks(Toggle):
     """Add locations for reaching new floors and fill the corresponding item-pool space with
-    configurable filler. Ascension Down and Progressive Starter options require these locations."""
+    configurable filler. Ascension Down, Progressive Starter and Hidden options require these locations."""
     display_name = "Include Floor Checks"
     default = 1
 
