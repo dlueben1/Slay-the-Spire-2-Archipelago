@@ -85,6 +85,17 @@ describe("filler budget", () => {
     expect(getFillerBudget(answers).used).toBe(4);
   });
 
+  it("counts every kind of Sight item", () => {
+    const answers = createAnswers(["Ironclad"]);
+    answers.challenges.enabled = true;
+    answers.challenges.hiddenIntents = "one";
+    answers.challenges.hiddenHealth = "one";
+    answers.challenges.hiddenPiles = "one";
+    answers.challenges.hiddenMap = "one";
+    answers.challenges.hiddenCards = "two";
+    expect(getFillerBudget(answers).used).toBe(6);
+  });
+
   it("uses the smallest pick when characters are drawn at random", () => {
     const answers = createAnswers(["Ironclad", "Silent", "Defect"]);
     answers.characters.ascensionMode = "individual";
