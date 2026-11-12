@@ -237,7 +237,7 @@ class LogicTests(unittest.TestCase):
                 self.assertEqual(before, rule.strength(state))
 
     def test_restored_starters_match_unshuffled_loadout(self):
-        for character in ("Ironclad", "Silent", "Defect", "Necrobinder", "Regent"):
+        for character in character_list:
             baseline = self.make_world(characters=[character],
                                        progressive_starter_card=False, progressive_starter_relic=False)
             expected = self.power_rule(baseline).strength(CollectionState(baseline.multiworld))

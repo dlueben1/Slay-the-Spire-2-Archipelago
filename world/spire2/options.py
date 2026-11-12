@@ -31,7 +31,8 @@ class Characters(OptionSet):
         'Silent'
         'Defect'
         'Regent'
-        'Necrobinder'"""
+        'Necrobinder'
+        'Fool' (game beta branch only)"""
     display_name = "Characters"
     valid_keys = character_list
     default = ["Ironclad"]

@@ -542,6 +542,12 @@ compiled = {
             {"name": definition.name, "internal_id": definition.internal_id}
             for definition in characters_module.PREDEFINED_CHARACTERS
         ],
+        # Built-in characters only the game's beta branch has; the wizard labels them.
+        "beta_only": [
+            definition.name
+            for definition in characters_module.VANILLA_CHARACTERS
+            if definition.beta_only
+        ],
     },
     "option_order": option_order,
     "groups": compiled_groups,

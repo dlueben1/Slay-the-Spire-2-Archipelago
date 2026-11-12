@@ -4,7 +4,7 @@
   "sources": {
     "characters": {
       "path": "world/spire2/characters.py",
-      "sha256": "596e22b811de233f0ec3f2a62dc6ad691f70d82872dc6a2f47ea72bb762437bb"
+      "sha256": "b4823b1de0ce40c6d05f5aaa5f3515188842e8e6a8b2b8fb6aafe6e7c75f189c"
     },
     "constants": {
       "path": "world/spire2/constants.py",
@@ -12,7 +12,7 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "dc241194639032248f8db9fe86e18f7af36213cb6ce2aab73f7a6385246467d0"
+      "sha256": "b0fa754ae0e945b1660d3600d28365de0327e92069df0af6e8d1ab367baf690a"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
@@ -114,6 +114,9 @@
         "name": "Fae Sorceress",
         "internal_id": "FAESORCERESS-FAE_SORCERESS"
       }
+    ],
+    "beta_only": [
+      "Fool"
     ]
   },
   "option_order": [
@@ -738,7 +741,7 @@
       "module": "worlds.spire2.options",
       "kind": "set",
       "display_name": "Characters",
-      "description": "Enter the list of characters to play as.  Valid characters are:\n'Ironclad'\n'Silent'\n'Defect'\n'Regent'\n'Necrobinder'",
+      "description": "Enter the list of characters to play as.  Valid characters are:\n'Ironclad'\n'Silent'\n'Defect'\n'Regent'\n'Necrobinder'\n'Fool' (game beta branch only)",
       "default": [
         "Ironclad"
       ],
@@ -762,7 +765,8 @@
         "Silent",
         "Defect",
         "Regent",
-        "Necrobinder"
+        "Necrobinder",
+        "Fool"
       ],
       "valid_keys_casefold": false,
       "allow_custom_values": false,
@@ -817,7 +821,7 @@
       },
       "source": "game",
       "minimum": 0,
-      "maximum": 48,
+      "maximum": 49,
       "supports_weighting": true,
       "group": "Character Options"
     },
@@ -843,7 +847,7 @@
       },
       "source": "game",
       "minimum": 0,
-      "maximum": 48,
+      "maximum": 49,
       "supports_weighting": true,
       "group": "Character Options"
     },
@@ -934,6 +938,11 @@
           "name": "necrobinder",
           "display_name": "Necrobinder",
           "value": 4
+        },
+        {
+          "name": "fool",
+          "display_name": "Fool",
+          "value": 5
         }
       ],
       "allow_custom_values": true,

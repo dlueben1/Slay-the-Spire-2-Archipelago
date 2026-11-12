@@ -3,7 +3,7 @@ Slay the Spire II:
   fuzz_constraints:
     # Add one random character only if the roster is empty.
     - option: characters
-      ensure_any: [Ironclad, Silent, Defect, Regent, Necrobinder]
+      ensure_any: [Ironclad, Silent, Defect, Regent, Necrobinder, Fool]
     # The fuzzer rolls the fixed starter without looking at the roster. "" starts with a random
     # character from the roster.
     - option: lock_characters

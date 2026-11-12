@@ -54,6 +54,8 @@ export interface CharacterRegistry {
   generic_character_limit: number;
   /** Modded characters with their own ID blocks; they do not use a generic slot. */
   predefined: PredefinedCharacter[];
+  /** Built-in characters that only the game's beta branch has. */
+  beta_only: string[];
 }
 
 export interface OptionCatalog {

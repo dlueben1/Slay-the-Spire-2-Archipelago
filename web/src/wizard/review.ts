@@ -34,7 +34,10 @@ import {
   getBonusItemDisplayRows,
   type BonusItemDisplayRow,
 } from "./BonusItemDisplay";
-import { getConfiguredCharacterNames } from "./CharacterRoster";
+import {
+  getConfiguredCharacterNames,
+  getSelectedBetaOnlyCharacters,
+} from "./CharacterRoster";
 import { RUN_MODIFIERS } from "./RunModifier";
 
 export interface WizardReviewSection {
@@ -164,6 +167,26 @@ function summarizeCharacterAscensions(answers: CharacterAnswers): string {
   }
 
   return `Ascensions are configured separately — ${summaries.join("; ")}.`;
+}
+
+/**
+ * Warns when the roster includes a character only the game's beta branch has.
+ *
+ * @param answers - Valid current Character Setup answers.
+ * @returns The caution to show with the Character Setup summary, if any.
+ */
+export function describeBetaOnlyCharacters(
+  answers: CharacterAnswers,
+): string | undefined {
+  const names = getSelectedBetaOnlyCharacters(answers);
+
+  if (!names.length) {
+    return undefined;
+  }
+
+  const verb = names.length === 1 ? "is" : "are";
+
+  return `${joinNames(names)} ${verb} only in the game's beta branch, so this YAML needs Slay the Spire II on the beta branch.`;
 }
 
 /**
@@ -772,6 +795,7 @@ export function buildWizardReviewSections(
         answers.characters,
         answers.checksAndRewards.checks.includeFloorChecks,
       ),
+      warning: describeBetaOnlyCharacters(answers.characters),
     },
     { title: "Run Settings", summary: summarizeRunAnswers(answers.run) },
     {

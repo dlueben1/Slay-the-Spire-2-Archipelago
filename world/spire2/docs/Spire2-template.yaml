@@ -21,6 +21,7 @@ Slay the Spire II:
   #####################
 
   # Characters to play: Ironclad, Silent, Defect, Regent, Necrobinder (case-sensitive).
+  # Fool is also valid, on the game's beta branch only.
   characters:
     - "Ironclad"
     - "Silent"
