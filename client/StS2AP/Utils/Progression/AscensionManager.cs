@@ -88,7 +88,7 @@ namespace StS2AP.Utils
             {
                 if(CurrentAscension.Contains((AscensionLevel) i))
                 {
-                    ascensions.Add(AscensionHelper.GetTitle(i).GetFormattedText());
+                    ascensions.Add(GameApiCompat.GetAscensionTitle(i).GetFormattedText());
                 }
             }
             description.Add("ascensions", ascensions);

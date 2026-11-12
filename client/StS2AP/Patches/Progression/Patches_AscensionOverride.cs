@@ -37,11 +37,13 @@ namespace StS2AP.Patches
                         MultiplayerFeature.AscensionEffects))
                     return true;
 
-                if(__instance.ShowTip)
-                {
-                    NHoverTipSet.CreateAndShow(__instance, ArchipelagoClient.Progress.Ascensions.HoverTip)
-                        ?.SetGlobalPosition(__instance.GlobalPosition + new Vector2(0f, __instance.Size.Y + 20f));
-                }
+#if !STS2_AT_LEAST_0_113_0
+                // Older versions show no portrait tip at Ascension 0; 0.113 always shows one.
+                if (!__instance.ShowTip)
+                    return false;
+#endif
+                NHoverTipSet.CreateAndShow(__instance, ArchipelagoClient.Progress.Ascensions.HoverTip)
+                    ?.SetGlobalPosition(__instance.GlobalPosition + new Vector2(0f, __instance.Size.Y + 20f));
                 return false;
             }
         }

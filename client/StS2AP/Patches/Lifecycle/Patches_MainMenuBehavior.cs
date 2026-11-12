@@ -599,7 +599,11 @@ namespace StS2AP.Patches
         [HarmonyPatch(
             typeof(NMultiplayerSubmenu),
             nameof(NMultiplayerSubmenu.FastHost),
+#if STS2_AT_LEAST_0_113_0
+            new[] { typeof(GameMode), typeof(bool) }
+#else
             new[] { typeof(GameMode) }
+#endif
         )]
         private static class RequireApSlotForFastHost
         {
@@ -621,15 +625,29 @@ namespace StS2AP.Patches
         [HarmonyPatch(
             typeof(NMultiplayerHostSubmenu),
             nameof(NMultiplayerHostSubmenu.StartHost),
+#if STS2_AT_LEAST_0_113_0
+            new[] { typeof(GameMode), typeof(bool) }
+#else
             new[] { typeof(GameMode) }
+#endif
         )]
         private static class RequireApSlotForHostMode
         {
             [HarmonyPrefix]
+#if STS2_AT_LEAST_0_113_0
+            private static bool Prefix(
+                NMultiplayerHostSubmenu __instance,
+                GameMode gameMode,
+                bool isCustom)
+            {
+#else
             private static bool Prefix(
                 NMultiplayerHostSubmenu __instance,
                 GameMode gameMode)
             {
+                // A custom run is its own game mode on these versions.
+                const bool isCustom = false;
+#endif
                 if (!AllowHostCreation())
                     return false;
                 if (ApMultiplayerCampaignFlow.IsResumingNativeStart)
@@ -637,7 +655,7 @@ namespace StS2AP.Patches
 
                 try
                 {
-                    ApMultiplayerCampaignFlow.OpenPicker(__instance, gameMode);
+                    ApMultiplayerCampaignFlow.OpenPicker(__instance, gameMode, isCustom);
                 }
                 catch (Exception ex)
                 {

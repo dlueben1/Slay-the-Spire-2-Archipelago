@@ -86,11 +86,95 @@ public static class Patches_RandomShopCards
     /// <summary>The event pool's Event-rarity cards; its Ancient cards stay out of shops.</summary>
     private static readonly CardRequest EventRequest = new(ShopCardPool.Event, null, CardRarity.Event);
 
-    /// <summary>Inventories whose cards this patch rolled, so the colorless pass is skipped.</summary>
-    private static readonly ConditionalWeakTable<MerchantInventory, object> RandomInventories = new();
-
     /// <summary>Entries this patch created, which may restock from a pool that has run dry.</summary>
     private static readonly ConditionalWeakTable<MerchantCardEntry, CardRequest> RandomEntries = new();
+
+#if STS2_AT_LEAST_0_113_0
+    // From 0.113 a normal merchant's inventory is made in two steps: static methods build its
+    // entry lists, then Setup() numbers the entries, fills every card entry and puts one of the
+    // five character entries on sale. The patches below hand over empty card lists, fill them at
+    // the start of Setup(), and keep Setup() from rolling those cards and the sale again.
+
+    /// <summary>Character card lists this patch emptied, with the weights to fill them from.</summary>
+    private static readonly ConditionalWeakTable<List<MerchantCardEntry>, Dictionary<ShopCardKind, int>> PendingCardLists = new();
+
+    /// <summary>The inventory whose Setup() is running with cards this patch already rolled.</summary>
+    private static MerchantInventory? _inventoryInSetup;
+
+    [HarmonyPatch(typeof(MerchantInventory), nameof(MerchantInventory.GetDefaultCharacterCardEntries))]
+    private static class SkipCharacterPass
+    {
+        [HarmonyPrefix]
+        private static bool Prefix(Player player, ref List<MerchantCardEntry> __result)
+        {
+            if (!TryGetWeights(player, out Dictionary<ShopCardKind, int> weights))
+                return true;
+
+            __result = new List<MerchantCardEntry>();
+            PendingCardLists.AddOrUpdate(__result, weights);
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(MerchantInventory), nameof(MerchantInventory.GetDefaultColorlessCardEntries))]
+    private static class SkipColorlessPass
+    {
+        [HarmonyPrefix]
+        private static bool Prefix(Player player, ref List<MerchantCardEntry> __result)
+        {
+            if (!TryGetWeights(player, out _))
+                return true;
+
+            __result = new List<MerchantCardEntry>();
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(MerchantInventory), nameof(MerchantInventory.Setup))]
+    private static class PopulateRandomCards
+    {
+        [HarmonyPrefix]
+        private static void Prefix(MerchantInventory __instance)
+        {
+            if (!PendingCardLists.TryGetValue(__instance._characterCardEntries, out Dictionary<ShopCardKind, int>? weights))
+                return;
+
+            PendingCardLists.Remove(__instance._characterCardEntries);
+            PopulateAll(__instance, weights);
+            _inventoryInSetup = __instance;
+        }
+
+        [HarmonyFinalizer]
+        private static void Finalizer(MerchantInventory __instance)
+        {
+            if (ReferenceEquals(_inventoryInSetup, __instance))
+                _inventoryInSetup = null;
+        }
+    }
+
+    /// <summary>The sale slot was rolled with the cards, from all 7 slots.</summary>
+    [HarmonyPatch(typeof(MerchantCardEntry), nameof(MerchantCardEntry.SetOnSale))]
+    private static class KeepRolledSaleSlot
+    {
+        [HarmonyPrefix]
+        private static bool Prefix() => _inventoryInSetup == null;
+    }
+
+    [HarmonyPatch(typeof(MerchantCardEntry), nameof(MerchantCardEntry.Populate))]
+    private static class EmptyExhaustedRestock
+    {
+        [HarmonyPrefix]
+        private static bool Prefix(MerchantCardEntry __instance, MerchantInventory? inventory)
+        {
+            if (inventory != null && ReferenceEquals(inventory, _inventoryInSetup))
+                return false;
+
+            return !LeaveExhaustedSlotEmpty(__instance, inventory);
+        }
+    }
+#else
+    /// <summary>Inventories whose cards this patch rolled, so the colorless pass is skipped.</summary>
+    private static readonly ConditionalWeakTable<MerchantInventory, object> RandomInventories = new();
 
     [HarmonyPatch(typeof(MerchantInventory), nameof(MerchantInventory.PopulateCharacterCardEntries))]
     private static class PopulateRandomCards
@@ -115,27 +199,31 @@ public static class Patches_RandomShopCards
             !RandomInventories.TryGetValue(__instance, out _);
     }
 
-    /// <summary>
-    /// The vanilla restock after a purchase (The Courier) rolls the same request again and throws
-    /// or picks from nothing when no card is left. Leave the slot empty instead.
-    /// </summary>
     [HarmonyPatch(typeof(MerchantCardEntry), nameof(MerchantCardEntry.Populate))]
     private static class EmptyExhaustedRestock
     {
         [HarmonyPrefix]
-        private static bool Prefix(MerchantCardEntry __instance)
-        {
-            if (!RandomEntries.TryGetValue(__instance, out CardRequest? request)
-                || __instance._inventory is not MerchantInventory inventory
-                || HasCandidates(inventory, request))
-            {
-                return true;
-            }
+        private static bool Prefix(MerchantCardEntry __instance) =>
+            !LeaveExhaustedSlotEmpty(__instance, __instance._inventory);
+    }
+#endif
 
-            LogUtility.Info($"Random Shop Cards: no {request} card left to restock; the slot stays empty.");
-            __instance.CreationResult = null;
+    /// <summary>
+    /// The vanilla restock after a purchase (The Courier) rolls the same request again and throws
+    /// or picks from nothing when no card is left. Leave the slot empty instead.
+    /// </summary>
+    private static bool LeaveExhaustedSlotEmpty(MerchantCardEntry entry, MerchantInventory? inventory)
+    {
+        if (!RandomEntries.TryGetValue(entry, out CardRequest? request)
+            || inventory == null
+            || HasCandidates(inventory, request))
+        {
             return false;
         }
+
+        LogUtility.Info($"Random Shop Cards: no {request} card left to restock; the slot stays empty.");
+        entry.CreationResult = null;
+        return true;
     }
 
     /// <summary>Vanilla never sells Event cards and would charge a Common's price.</summary>
@@ -195,26 +283,35 @@ public static class Patches_RandomShopCards
             {
                 // Nothing at all is left to sell, which only a tiny modded pool can reach.
                 entry = CreateEntry(inventory, preferred);
+                AddEntry(inventory, entry, slot);
                 rolled.Add($"{kind}->empty");
             }
             else
             {
                 entry = CreateEntry(inventory, request);
                 RandomEntries.AddOrUpdate(entry, request);
+#if STS2_AT_LEAST_0_113_0
+                entry.Populate(inventory);
+#else
                 entry.Populate();
+#endif
                 if (slot == saleSlot)
                     entry.SetOnSale();
+                AddEntry(inventory, entry, slot);
                 rolled.Add(request == preferred ? $"{kind}" : $"{kind}->{request}");
             }
-
-            if (slot < CharacterSlotCount)
-                inventory._characterCardEntries.Add(entry);
-            else
-                inventory._colorlessCardEntries.Add(entry);
         }
 
         LogUtility.Info(
             $"Random Shop Cards: player={player.NetId} sale={saleSlot} [{string.Join(", ", rolled)}]");
+    }
+
+    private static void AddEntry(MerchantInventory inventory, MerchantCardEntry entry, int slot)
+    {
+        if (slot < CharacterSlotCount)
+            inventory._characterCardEntries.Add(entry);
+        else
+            inventory._colorlessCardEntries.Add(entry);
     }
 
     private static ShopCardKind RollKind(Player player, Dictionary<ShopCardKind, int> weights)
@@ -277,9 +374,15 @@ public static class Patches_RandomShopCards
     {
         Player player = inventory.Player;
         List<CardModel> pool = Pool(player, request);
+#if STS2_AT_LEAST_0_113_0
+        return request.Type is CardType type
+            ? new MerchantCardEntry(player, pool, type)
+            : new MerchantCardEntry(player, pool, request.Rarity!.Value);
+#else
         return request.Type is CardType type
             ? new MerchantCardEntry(player, inventory, pool, type)
             : new MerchantCardEntry(player, inventory, pool, request.Rarity!.Value);
+#endif
     }
 
     private static List<CardModel> Pool(Player player, CardRequest request)
@@ -308,6 +411,16 @@ public static class Patches_RandomShopCards
             .Select(entry => entry.CreationResult?.Card.CanonicalInstance)
             .OfType<CardModel>()
             .ToHashSet();
+#if STS2_AT_LEAST_0_113_0
+        IEnumerable<CardModel> options = Hook.ModifyMerchantCardPool(
+            player.RunState,
+            player,
+            Pool(player, request));
+        options = CardFactory.FilterForRun(
+                player.RunState,
+                options.Where(card => card.Rarity != CardRarity.Basic))
+            .Except(onSale);
+#else
         IEnumerable<CardModel> options = Hook.ModifyMerchantCardPool(
             player.RunState,
             player,
@@ -315,6 +428,7 @@ public static class Patches_RandomShopCards
         options = CardFactory.FilterForPlayerCount(
             player.RunState,
             options.Where(card => card.Rarity != CardRarity.Basic));
+#endif
 
         if (request.Type is CardType type)
             return options.Any(card => card.Type == type

@@ -15,7 +15,7 @@ public static class ApMultiplayerCampaignFlow
 
     public static bool IsResumingNativeStart => _resumingNativeStart;
 
-    internal static void OpenPicker(NMultiplayerHostSubmenu hostSubmenu, GameMode gameMode)
+    internal static void OpenPicker(NMultiplayerHostSubmenu hostSubmenu, GameMode gameMode, bool isCustom)
     {
         ApMultiplayerCampaignStore.CancelPendingNewCampaign();
         try
@@ -26,17 +26,18 @@ public static class ApMultiplayerCampaignFlow
         {
             LogUtility.Warn($"Could not import the existing multiplayer host save: {ex.Message}");
         }
-        ApMultiplayerCampaignPicker.Show(hostSubmenu, gameMode);
+        ApMultiplayerCampaignPicker.Show(hostSubmenu, gameMode, isCustom);
     }
 
     internal static void ResumeNewCampaign(
         NMultiplayerHostSubmenu hostSubmenu,
-        GameMode gameMode)
+        GameMode gameMode,
+        bool isCustom)
     {
         _resumingNativeStart = true;
         try
         {
-            hostSubmenu.StartHost(gameMode);
+            GameApiCompat.StartHost(hostSubmenu, gameMode, isCustom);
         }
         finally
         {

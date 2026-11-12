@@ -182,7 +182,7 @@ internal static class ApFastMpLaunchController
             switch (_role)
             {
                 case LaunchRole.HostStandard:
-                    submenu.FastHost(GameMode.Standard);
+                    GameApiCompat.FastHostStandard(submenu);
                     break;
                 case LaunchRole.Join:
                     submenu.OnJoinFriendsPressed();

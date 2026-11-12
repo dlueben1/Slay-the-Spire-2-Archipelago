@@ -12,6 +12,9 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
+#if STS2_AT_LEAST_0_113_0
+using MegaCrit.Sts2.Core.Multiplayer.Game;
+#endif
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Potions;
 using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
@@ -674,7 +677,7 @@ namespace StS2AP.Patches
         /// are redirected into DoApPurchase() (sends the location check instead
         /// of granting a real item) everything else falls through to vanilla
         /// </summary>
-        [HarmonyPatch(typeof(MerchantEntry), nameof(MerchantEntry.OnTryPurchaseWrapper))]
+        [HarmonyPatch(typeof(MerchantEntry), GameApiCompat.MerchantEntryPurchaseMethod)]
         public static class InterceptApPurchase
         {
             [HarmonyPrefix]
@@ -756,6 +759,33 @@ namespace StS2AP.Patches
                 return true;
             }
         }
+
+#if STS2_AT_LEAST_0_113_0
+        /// <summary>
+        /// From 0.113 a clicked slot goes to the MerchantSynchronizer, which sends the entry's ID to
+        /// the other players and buys the entry with that ID from the owner's synchronized
+        /// inventory. The AP page's entries are clones that exist only on their owner's machine
+        /// and share their IDs with the vanilla entries they were cloned from, so that path would
+        /// buy the vanilla item instead, on every machine. Buy AP entries directly;
+        /// InterceptApPurchase sends the check and synchronizes the gold spent.
+        /// </summary>
+        [HarmonyPatch(typeof(MerchantSynchronizer), nameof(MerchantSynchronizer.PurchaseLocalEntry))]
+        public static class KeepApPurchasesLocal
+        {
+            [HarmonyPrefix]
+            public static bool Prefix(MerchantEntry entry, ref Task<bool> __result)
+            {
+                if (!MultiplayerSupport.IsFeatureEnabled(MultiplayerFeature.Shops)
+                    || !IsApSlot(entry))
+                {
+                    return true;
+                }
+
+                __result = entry.OnTryPurchaseUnsynchronized(null);
+                return false;
+            }
+        }
+#endif
 
         #endregion
 

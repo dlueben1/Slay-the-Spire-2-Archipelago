@@ -60,6 +60,38 @@ public static class Patches_RandomShopStock
 
     private static readonly ShopPotionKind[] PotionKinds = Enum.GetValues<ShopPotionKind>();
 
+#if STS2_AT_LEAST_0_113_0
+    // From 0.113 static methods build a normal merchant's entry lists before the inventory exists.
+    [HarmonyPatch(typeof(MerchantInventory), nameof(MerchantInventory.GetDefaultRelicEntries))]
+    private static class PopulateRandomRelics
+    {
+        [HarmonyPrefix]
+        private static bool Prefix(Player player, ref List<MerchantRelicEntry> __result)
+        {
+            if (!TryGetRelicWeights(player, out Dictionary<ShopRelicKind, int> weights, out ArchipelagoSettings settings))
+                return true;
+
+            __result = new List<MerchantRelicEntry>();
+            PopulateRelics(player, __result, weights, settings);
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(MerchantInventory), nameof(MerchantInventory.GetDefaultPotionEntries))]
+    private static class PopulateRandomPotions
+    {
+        [HarmonyPrefix]
+        private static bool Prefix(Player player, ref List<MerchantPotionEntry> __result)
+        {
+            if (!TryGetPotionWeights(player, out Dictionary<ShopPotionKind, int> weights))
+                return true;
+
+            __result = new List<MerchantPotionEntry>();
+            PopulatePotions(player, __result, weights);
+            return false;
+        }
+    }
+#else
     [HarmonyPatch(typeof(MerchantInventory), nameof(MerchantInventory.PopulateRelicEntries))]
     private static class PopulateRandomRelics
     {
@@ -69,7 +101,7 @@ public static class Patches_RandomShopStock
             if (!TryGetRelicWeights(__instance.Player, out Dictionary<ShopRelicKind, int> weights, out ArchipelagoSettings settings))
                 return true;
 
-            PopulateRelics(__instance, weights, settings);
+            PopulateRelics(__instance.Player, __instance._relicEntries, weights, settings);
             return false;
         }
     }
@@ -83,10 +115,11 @@ public static class Patches_RandomShopStock
             if (!TryGetPotionWeights(__instance.Player, out Dictionary<ShopPotionKind, int> weights))
                 return true;
 
-            PopulatePotions(__instance, weights);
+            PopulatePotions(__instance.Player, __instance._potionEntries, weights);
             return false;
         }
     }
+#endif
 
     /// <summary>Ancient and Event relics have no real shop price, so this mod supplies one.</summary>
     [HarmonyPatch(typeof(MerchantRelicEntry), nameof(MerchantRelicEntry.CalcCost))]
@@ -194,19 +227,20 @@ public static class Patches_RandomShopStock
         throw new InvalidOperationException("Random shop stock: weighted roll fell outside the weights.");
     }
 
+    /// <summary>Fills an inventory's empty relic entry list.</summary>
     private static void PopulateRelics(
-        MerchantInventory inventory,
+        Player player,
+        List<MerchantRelicEntry> entries,
         Dictionary<ShopRelicKind, int> weights,
         ArchipelagoSettings settings)
     {
-        Player player = inventory.Player;
         var rolled = new List<string>();
 
         for (int slot = 0; slot < RelicSlotCount; slot++)
         {
             ShopRelicKind kind = RollKind(player, weights);
-            MerchantRelicEntry entry = CreateRelicEntry(inventory, kind, slot, settings);
-            inventory.AddRelicEntry(entry);
+            MerchantRelicEntry entry = CreateRelicEntry(player, entries, kind, slot, settings);
+            entries.Add(entry);
             rolled.Add($"{kind}:{entry.Model?.Id.Entry}");
         }
 
@@ -214,13 +248,13 @@ public static class Patches_RandomShopStock
     }
 
     private static MerchantRelicEntry CreateRelicEntry(
-        MerchantInventory inventory,
+        Player player,
+        List<MerchantRelicEntry> entries,
         ShopRelicKind kind,
         int slot,
         ArchipelagoSettings settings)
     {
-        Player player = inventory.Player;
-        HashSet<ModelId> onSale = inventory.RelicEntries
+        HashSet<ModelId> onSale = entries
             .Select(entry => entry.Model?.Id)
             .OfType<ModelId>()
             .ToHashSet();
@@ -267,15 +301,18 @@ public static class Patches_RandomShopStock
         return player.PlayerRng.Shops.NextItem(candidates)?.ToMutable();
     }
 
-    private static void PopulatePotions(MerchantInventory inventory, Dictionary<ShopPotionKind, int> weights)
+    /// <summary>Fills an inventory's empty potion entry list.</summary>
+    private static void PopulatePotions(
+        Player player,
+        List<MerchantPotionEntry> entries,
+        Dictionary<ShopPotionKind, int> weights)
     {
-        Player player = inventory.Player;
         var rolled = new List<string>();
 
         for (int slot = 0; slot < PotionSlotCount; slot++)
         {
             ShopPotionKind kind = RollKind(player, weights);
-            HashSet<PotionModel> onSale = inventory.PotionEntries
+            HashSet<PotionModel> onSale = entries
                 .Select(entry => entry.Model?.CanonicalInstance)
                 .OfType<PotionModel>()
                 .ToHashSet();
@@ -287,7 +324,7 @@ public static class Patches_RandomShopStock
                 .First(pool => pool.Count > 0);
 
             PotionModel potion = player.PlayerRng.Shops.NextItem(candidates)!.ToMutable();
-            inventory._potionEntries.Add(new MerchantPotionEntry(potion, player));
+            entries.Add(new MerchantPotionEntry(potion, player));
             rolled.Add($"{kind}:{potion.Id.Entry}");
         }
 

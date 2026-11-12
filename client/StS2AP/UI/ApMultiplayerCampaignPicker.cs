@@ -20,6 +20,7 @@ public sealed partial class ApMultiplayerCampaignPicker : Control, IScreenContex
 {
     private readonly NMultiplayerHostSubmenu _hostSubmenu;
     private readonly GameMode _gameMode;
+    private readonly bool _isCustom;
     private readonly IReadOnlyList<ApMultiplayerCampaignStore.CampaignEntry> _entries;
     private readonly Func<CampaignMetadata, bool> _isCurrentSlot;
     private bool _built;
@@ -30,30 +31,33 @@ public sealed partial class ApMultiplayerCampaignPicker : Control, IScreenContex
     private ApMultiplayerCampaignPicker(
         NMultiplayerHostSubmenu hostSubmenu,
         GameMode gameMode,
+        bool isCustom,
         IReadOnlyList<ApMultiplayerCampaignStore.CampaignEntry> entries,
         Func<CampaignMetadata, bool> isCurrentSlot)
     {
         _hostSubmenu = hostSubmenu;
         _gameMode = gameMode;
+        _isCustom = isCustom;
         _entries = entries;
         _isCurrentSlot = isCurrentSlot;
         Name = "ApMultiplayerCampaignPicker";
     }
 
-    public static void Show(NMultiplayerHostSubmenu hostSubmenu, GameMode gameMode) =>
-        Show(hostSubmenu, gameMode, ApMultiplayerCampaignStore.ListCampaigns(),
+    public static void Show(NMultiplayerHostSubmenu hostSubmenu, GameMode gameMode, bool isCustom) =>
+        Show(hostSubmenu, gameMode, isCustom, ApMultiplayerCampaignStore.ListCampaigns(),
             ApMultiplayerCampaignStore.IsCurrentApIdentity);
 
     /// <summary>Shows <paramref name="entries"/>, with <paramref name="isCurrentSlot"/> picking the connected slot's own.</summary>
     internal static void Show(
         NMultiplayerHostSubmenu hostSubmenu,
         GameMode gameMode,
+        bool isCustom,
         IReadOnlyList<ApMultiplayerCampaignStore.CampaignEntry> entries,
         Func<CampaignMetadata, bool> isCurrentSlot)
     {
         NModalContainer container = NModalContainer.Instance
             ?? throw new InvalidOperationException("The modal container is unavailable.");
-        var picker = new ApMultiplayerCampaignPicker(hostSubmenu, gameMode, entries, isCurrentSlot);
+        var picker = new ApMultiplayerCampaignPicker(hostSubmenu, gameMode, isCustom, entries, isCurrentSlot);
         picker.BuildUi();
         container.Clear();
         container.Add(picker, true);
@@ -367,7 +371,7 @@ public sealed partial class ApMultiplayerCampaignPicker : Control, IScreenContex
     {
         ApMultiplayerCampaignStore.BeginNewCampaign();
         Close();
-        ApMultiplayerCampaignFlow.ResumeNewCampaign(_hostSubmenu, _gameMode);
+        ApMultiplayerCampaignFlow.ResumeNewCampaign(_hostSubmenu, _gameMode, _isCustom);
     }
 
     private void ContinueCampaign(
@@ -484,7 +488,7 @@ public sealed partial class ApMultiplayerCampaignPicker : Control, IScreenContex
     private void Refresh()
     {
         Close();
-        Show(_hostSubmenu, _gameMode);
+        Show(_hostSubmenu, _gameMode, _isCustom);
     }
 
     private static string FormatLineup(CampaignMetadata campaign) =>

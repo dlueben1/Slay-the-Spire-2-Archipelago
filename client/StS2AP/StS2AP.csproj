@@ -82,6 +82,21 @@
     -->
     <DefineConstants Condition="$([MSBuild]::VersionGreaterThanOrEquals('$(Sts2ApiCompat)', '0.111.0'))"
       >$(DefineConstants);STS2_AT_LEAST_0_111_0</DefineConstants>
+    <DefineConstants Condition="$([MSBuild]::VersionGreaterThanOrEquals('$(Sts2ApiCompat)', '0.113.0'))"
+      >$(DefineConstants);STS2_AT_LEAST_0_113_0</DefineConstants>
+
+    <!--
+      RitsuLib publishes one compile-time package per game API: STS2.RitsuLib follows its newest
+      supported API (0.113.0 at RitsuLib 0.6.11), and STS2.RitsuLib.Compat.<version> covers older
+      ones. Its public types differ between them (HookedSingletonModel is a RunModel from 0.113.0),
+      so each variant must compile against the package for its own game API.
+    -->
+    <RitsuLibPackageVersion>0.6.11</RitsuLibPackageVersion>
+    <RitsuLibPackageId>STS2.RitsuLib.Compat.0.107.1</RitsuLibPackageId>
+    <RitsuLibPackageId Condition="$([MSBuild]::VersionGreaterThanOrEquals('$(Sts2ApiCompat)', '0.111.0'))"
+      >STS2.RitsuLib.Compat.0.111.0</RitsuLibPackageId>
+    <RitsuLibPackageId Condition="$([MSBuild]::VersionGreaterThanOrEquals('$(Sts2ApiCompat)', '0.113.0'))"
+      >STS2.RitsuLib</RitsuLibPackageId>
 
     <!-- The reference package generates the access-check attribute, so Publicizer must not add its own. -->
     <PublicizerRuntimeStrategies Condition="'$(UseSts2RefLib)' == 'true'">Unsafe</PublicizerRuntimeStrategies>
@@ -101,7 +116,7 @@
       PrivateAssets="all"
       Condition="'$(UseSts2RefLib)' == 'true' and '$(Sts2RefLibPackageVersion)' != ''"
     />
-    <PackageReference Include="STS2.RitsuLib.Compat.0.107.1" Version="0.6.10" />
+    <PackageReference Include="$(RitsuLibPackageId)" Version="$(RitsuLibPackageVersion)" />
     <PackageReference Include="Krafs.Publicizer" Version="2.3.2" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>

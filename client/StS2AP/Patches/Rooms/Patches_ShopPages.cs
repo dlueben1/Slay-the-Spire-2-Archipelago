@@ -426,7 +426,12 @@ namespace StS2AP.Patches
 
         #region Open with vanilla
 
+        // 0.113 split the room into a standard and a Blitz one; AP pages exist only in the standard shop.
+#if STS2_AT_LEAST_0_113_0
+        [HarmonyPatch(typeof(NStandardMerchantRoom), nameof(NStandardMerchantRoom.OpenInventory))]
+#else
         [HarmonyPatch(typeof(NMerchantRoom), nameof(NMerchantRoom.OpenInventory))]
+#endif
         public static class OpenApPageAlongsideVanilla
         {
             [HarmonyPostfix]

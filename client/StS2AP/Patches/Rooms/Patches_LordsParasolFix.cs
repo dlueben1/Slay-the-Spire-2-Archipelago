@@ -1,10 +1,11 @@
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Merchant;
 using MegaCrit.Sts2.Core.Models.Relics;
+using StS2AP.Utils;
 
 namespace StS2AP.Patches
 {
-    [HarmonyPatch(typeof(MerchantEntry), nameof(MerchantEntry.OnTryPurchaseWrapper))]
+    [HarmonyPatch(typeof(MerchantEntry), GameApiCompat.MerchantEntryPurchaseMethod)]
     public static class SkipUnstockedPurchaseAttempts
     {
         [HarmonyPrefix]

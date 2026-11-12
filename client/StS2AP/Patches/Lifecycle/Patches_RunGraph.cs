@@ -58,7 +58,7 @@ namespace StS2AP.Patches
             {
                 try
                 {
-                    var run = __instance._serializableRun;
+                    var run = GameApiCompat.GetRun(__instance);
                     if (run == null || !ApRunGraphRecorder.Store.Exists(run.StartTime))
                         return;
 
