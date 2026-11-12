@@ -47,6 +47,7 @@ export const CHALLENGE_OPTION_KEYS = {
   hiddenHealth: "hidden_health",
   hiddenPiles: "hidden_piles",
   hiddenMap: "hidden_map",
+  hiddenCards: "hidden_cards",
   strictCardRewards: "strict_card_rewards",
 } as const;
 
@@ -89,6 +90,15 @@ export const SHOP_OPTION_KEYS = {
   removeSlots: "shop_remove_slots",
   costs: "shop_sanity_costs",
 } as const;
+
+/** Generated switch owned by the Shop Cards compiler; its weights live in `ShopCardKind.ts`. */
+export const SHOP_CARD_OPTION_KEY = "random_shop_cards" as const;
+
+/** Generated switch owned by the Shop Stock compiler; its weights live in `ShopStockKind.ts`. */
+export const SHOP_RELIC_OPTION_KEY = "random_shop_relics" as const;
+
+/** Generated switch owned by the Shop Stock compiler; its weights live in `ShopStockKind.ts`. */
+export const SHOP_POTION_OPTION_KEY = "random_shop_potions" as const;
 
 /** Generated option key owned by the Bonus Items compiler. */
 export const BONUS_ITEM_OPTION_KEY = "bonus_items" as const;

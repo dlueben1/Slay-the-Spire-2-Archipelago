@@ -120,6 +120,13 @@ class SlayTheSpire2World(World):
             for config in self.characters:
                 config.progressive_starter_card = False
                 config.progressive_starter_relic = False
+            # Sight items take the same filler budget. Turn the challenges off rather than only
+            # leaving the items out, because slot data would otherwise hide things for good.
+            self.options.hidden_intents.value = 0
+            self.options.hidden_health.value = 0
+            self.options.hidden_piles.value = 0
+            self.options.hidden_map.value = 0
+            self.options.hidden_cards.value = 0
         names = {config.official_name for config in self.characters}
         if len(names) != len(self.characters):
             raise OptionError(f"Found duplicate characters: {[c.official_name for c in self.characters]}")
@@ -457,8 +464,8 @@ class SlayTheSpire2World(World):
         }
         self.trap_weights = {name: weight for name, weight in trap_weights.items() if weight > 0}
         if self.options.trap_chance.value > 0 and not self.trap_weights:
-            raise ValueError("Trap Chance is greater than 0, but all trap weights are None. "
-                             "Enable a trap weight or set Trap Chance to 0.")
+            raise OptionError("Trap Chance is greater than 0, but all trap weights are None. "
+                              "Enable a trap weight or set Trap Chance to 0.")
 
         # --- Universal (buff) item pools ---
         # Map each universal item name to its configured option weight value.
@@ -626,6 +633,7 @@ class SlayTheSpire2World(World):
         bonus_item_names += ["Health Sight"] * self.options.hidden_health.value
         bonus_item_names += ["Pile Sight"] * self.options.hidden_piles.value
         bonus_item_names += ["Map Sight"] * self.options.hidden_map.value
+        bonus_item_names += ["Card Sight"] * self.options.hidden_cards.value
 
         available_filler_slots = sum(count for _, count in filler_counts)
         if len(bonus_item_names) > available_filler_slots:
@@ -713,6 +721,9 @@ class SlayTheSpire2World(World):
                 "card_remove": self.options.shop_remove_slots != 0,
                 "costs": self.options.shop_sanity_costs.value,
             },
+            "shop_card_weights": self.shop_card_weights(),
+            "shop_relic_weights": self.shop_relic_weights(),
+            "shop_potion_weights": self.shop_potion_weights(),
             # Keep the wire key for clients; Archipelago loads world_version from archipelago.json.
             "mod_compat_version": self.world_version.as_simple_string(),
             "CompatFlag": self.compat_flag,
@@ -731,6 +742,7 @@ class SlayTheSpire2World(World):
             "hidden_health",
             "hidden_piles",
             "hidden_map",
+            "hidden_cards",
             "include_floor_checks",
             "neow_sanity",
             "ancient_relic_location",
@@ -750,6 +762,46 @@ class SlayTheSpire2World(World):
             "death_link_damage_percent",
         ))
         return slot_data
+
+    def shop_card_weights(self) -> dict[str, int]:
+        """Weights for the kinds of card a random shop slot can hold."""
+        return self.active_shop_weights(self.options.random_shop_cards, {
+            "attack": self.options.shop_attack_weight.value,
+            "skill": self.options.shop_skill_weight.value,
+            "power": self.options.shop_power_weight.value,
+            "common": self.options.shop_common_weight.value,
+            "uncommon": self.options.shop_uncommon_weight.value,
+            "rare": self.options.shop_rare_weight.value,
+            "colorless": self.options.shop_colorless_weight.value,
+            "event": self.options.shop_event_weight.value,
+        })
+
+    def shop_relic_weights(self) -> dict[str, int]:
+        """Weights for the kinds of relic a random shop slot can hold."""
+        return self.active_shop_weights(self.options.random_shop_relics, {
+            "common": self.options.shop_relic_common_weight.value,
+            "uncommon": self.options.shop_relic_uncommon_weight.value,
+            "rare": self.options.shop_relic_rare_weight.value,
+            "shop": self.options.shop_relic_shop_weight.value,
+            "event": self.options.shop_relic_event_weight.value,
+            "ancient": self.options.shop_relic_ancient_weight.value,
+        })
+
+    def shop_potion_weights(self) -> dict[str, int]:
+        """Weights for the kinds of potion a random shop slot can hold."""
+        return self.active_shop_weights(self.options.random_shop_potions, {
+            "common": self.options.shop_potion_common_weight.value,
+            "uncommon": self.options.shop_potion_uncommon_weight.value,
+            "rare": self.options.shop_potion_rare_weight.value,
+            "otherclass": self.options.shop_potion_other_class_weight.value,
+            "event": self.options.shop_potion_event_weight.value,
+        })
+
+    @staticmethod
+    def active_shop_weights(enabled: Any, weights: dict[str, int]) -> dict[str, int]:
+        """Empty keeps the vanilla shop layout, including when the option is on but every
+        weight is none."""
+        return weights if enabled and any(weights.values()) else {}
 
     @staticmethod
     def interpret_slot_data(slot_data: dict[str, Any]) -> Any:
@@ -805,6 +857,12 @@ class SlayTheSpire2World(World):
         self.options.progressive_starter_card.value = slot_data['progressive_starter_card']
         self.options.progressive_starter_relic.value = slot_data['progressive_starter_relic']
         self.options.bonus_items.value = deepcopy(slot_data.get('bonus_items', []))
+        # Sight items take filler slots, so a YAML's values could exceed what the seed generated with.
+        self.options.hidden_intents.value = slot_data.get('hidden_intents', 0)
+        self.options.hidden_health.value = slot_data.get('hidden_health', 0)
+        self.options.hidden_piles.value = slot_data.get('hidden_piles', 0)
+        self.options.hidden_map.value = slot_data.get('hidden_map', 0)
+        self.options.hidden_cards.value = slot_data.get('hidden_cards', 0)
         if self.options.include_floor_checks.value == 0:
             self.options.progressive_starter_card.value = 0
             self.options.progressive_starter_relic.value = 0

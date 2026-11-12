@@ -458,7 +458,10 @@ export const challengeSetupStep: WizardStep = {
       control: {
         kind: "radio",
         field: "hiddenIntents",
-        choices: sightCopyChoices("Intent Sight", "Intents are shown as normal."),
+        choices: sightCopyChoices(
+          "Intent Sight",
+          "Intents are shown as normal.",
+        ),
       },
     },
     {
@@ -495,6 +498,18 @@ export const challengeSetupStep: WizardStep = {
         kind: "radio",
         field: "hiddenMap",
         choices: sightCopyChoices("Map Sight", "The map is shown as normal."),
+      },
+    },
+    {
+      id: "hidden-cards",
+      isVisible: usesChallenges,
+      title: "Should cards be hidden?",
+      description:
+        "Hidden Cards makes every card unknown: its name, text and energy cost are hidden, its art is blurred and it shows no tooltips, until a Card Sight is found. Finding one shows cards again, for every character.",
+      control: {
+        kind: "radio",
+        field: "hiddenCards",
+        choices: sightCopyChoices("Card Sight", "Cards are shown as normal."),
       },
     },
     {
@@ -728,6 +743,62 @@ export const checkSetupStep: WizardStep = {
           },
         ],
       },
+    },
+    {
+      id: "random-shop-cards",
+      title: "Do you want to customize which cards shops sell?",
+      description:
+        "By default, a shop sells 2 Attacks, 2 Skills, a Power and 2 colorless cards.",
+      help: "Works with or without Shop Slots.",
+      control: {
+        kind: "checkbox",
+        field: "shopCards.enabled",
+        label: "Custom Shop Cards",
+        description:
+          "Choose how often each of the 7 card slots holds each kind of card.",
+      },
+    },
+    {
+      id: "shop-card-weights",
+      title: "How often should a shop card slot hold each kind of card?",
+      isVisible: (answers) => answers.checksAndRewards.shopCards.enabled,
+    },
+    {
+      id: "random-shop-relics",
+      title: "Do you want to customize which relics shops sell?",
+      description: "By default, a shop sells 2 random relics and a Shop relic.",
+      help: "Works with or without Shop Slots.",
+      control: {
+        kind: "checkbox",
+        field: "shopRelics.enabled",
+        label: "Custom Shop Relics",
+        description:
+          "Choose how often each of the 3 relic slots holds each kind of relic. Event and Ancient relics can appear.",
+      },
+    },
+    {
+      id: "shop-relic-weights",
+      title: "How often should a shop relic slot hold each kind of relic?",
+      isVisible: (answers) => answers.checksAndRewards.shopRelics.enabled,
+    },
+    {
+      id: "random-shop-potions",
+      title: "Do you want to customize which potions shops sell?",
+      description:
+        "By default, a shop sells 3 random potions from your class and the shared pool.",
+      help: "Works with or without Shop Slots.",
+      control: {
+        kind: "checkbox",
+        field: "shopPotions.enabled",
+        label: "Custom Shop Potions",
+        description:
+          "Choose how often each of the 3 potion slots holds each kind of potion. Potions from other classes and from events can appear.",
+      },
+    },
+    {
+      id: "shop-potion-weights",
+      title: "How often should a shop potion slot hold each kind of potion?",
+      isVisible: (answers) => answers.checksAndRewards.shopPotions.enabled,
     },
     {
       id: "bonus-items",

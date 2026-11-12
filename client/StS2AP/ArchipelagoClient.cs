@@ -1721,6 +1721,8 @@ namespace StS2AP
                 settings.HiddenPiles = Convert.ToInt32(slotData["hidden_piles"]) > 0;
             if (slotData.ContainsKey("hidden_map"))
                 settings.HiddenMap = Convert.ToInt32(slotData["hidden_map"]) > 0;
+            if (slotData.ContainsKey("hidden_cards"))
+                settings.HiddenCards = Convert.ToInt32(slotData["hidden_cards"]) > 0;
             if (slotData.ContainsKey("lock_characters"))
                 settings.NoCharactersLocked = Convert.ToInt32(slotData["lock_characters"]) == 0;
             if (slotData.ContainsKey("enable_death_fragments"))
@@ -1844,6 +1846,23 @@ namespace StS2AP
             {
                 LogUtility.Warn("ShopSanity is enabled but 'shop_sanity_options' was missing or not the expected object shape — all shop slots will read as unlocked.");
             }
+            settings.ShopCardWeights = ReadShopWeights("shop_card_weights", "Random Shop Cards");
+            settings.ShopRelicWeights = ReadShopWeights("shop_relic_weights", "Random Shop Relics");
+            settings.ShopPotionWeights = ReadShopWeights("shop_potion_weights", "Random Shop Potions");
+
+            // Older APWorlds omit these keys, and an empty object means the vanilla layout.
+            Dictionary<string, int> ReadShopWeights(string key, string optionName)
+            {
+                if (slotData.GetValueOrDefault(key) is not JObject weightsToken)
+                    return new Dictionary<string, int>();
+
+                var weights = weightsToken.Properties()
+                    .ToDictionary(property => property.Name, property => Convert.ToInt32(property.Value));
+                if (weights.Count > 0)
+                    LogUtility.Info($"SLOT - {optionName}: {string.Join(", ", weights.Select(pair => $"{pair.Key}={pair.Value}"))}");
+                return weights;
+            }
+
             // And return it
             return settings;
         }

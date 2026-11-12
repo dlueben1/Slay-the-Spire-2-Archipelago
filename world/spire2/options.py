@@ -248,7 +248,7 @@ class ProgressiveStarterRelic(Toggle):
 
 class IncludeFloorChecks(Toggle):
     """Add locations for reaching new floors and fill the corresponding item-pool space with
-    configurable filler. Ascension Down and Progressive Starter options require these locations."""
+    configurable filler. Ascension Down, Progressive Starter and Hidden options require these locations."""
     display_name = "Include Floor Checks"
     default = 1
 
@@ -256,7 +256,7 @@ class CampfireSanity(Toggle):
     """Whether to shuffle being able to rest and smith at each campsite per act.  Also adds
     new locations at campsites per act."""
     display_name = "Campfire Sanity"
-    default = 0
+    default = 1
 
 class ShopSanity(Toggle):
     """Move the configured shop slots to a separate AP shop page as purchasable location checks and
@@ -265,7 +265,7 @@ class ShopSanity(Toggle):
     display_name = "Shop Sanity"
     option_true = 1
     option_false = 0
-    default = 0
+    default = 1
 
 class ShopCardSlots(Range):
     """When shop_sanity is enabled, the number of colored card slots to shuffle."""
@@ -319,16 +319,120 @@ class ShopSanityCosts(Choice):
     option_Tiered = 3
     default = 2
 
+class RandomShopCards(Toggle):
+    """Each of the shop's 7 card slots holds a random kind of card, picked with the weights below,
+    instead of 2 Attacks, 2 Skills, a Power and 2 colorless cards.
+    If every weight is none, the shop keeps its usual cards."""
+    display_name = "Custom Shop Cards"
+    default = 0
+
+class ShopCardWeight(Choice):
+    option_none = 0
+    option_low = 1
+    option_medium = 3
+    option_high = 5
+    default = option_medium
+
+class ShopAttackWeight(ShopCardWeight):
+    """How often a random shop card slot holds an Attack."""
+    display_name = "Shop Attack Weight"
+
+class ShopSkillWeight(ShopCardWeight):
+    """How often a random shop card slot holds a Skill."""
+    display_name = "Shop Skill Weight"
+
+class ShopPowerWeight(ShopCardWeight):
+    """How often a random shop card slot holds a Power."""
+    display_name = "Shop Power Weight"
+
+class ShopCommonWeight(ShopCardWeight):
+    """How often a random shop card slot holds a Common card."""
+    display_name = "Shop Common Weight"
+
+class ShopUncommonWeight(ShopCardWeight):
+    """How often a random shop card slot holds an Uncommon card."""
+    display_name = "Shop Uncommon Weight"
+
+class ShopRareWeight(ShopCardWeight):
+    """How often a random shop card slot holds a Rare card."""
+    display_name = "Shop Rare Weight"
+
+class ShopColorlessWeight(ShopCardWeight):
+    """How often a random shop card slot holds a colorless card, Uncommon or Rare."""
+    display_name = "Shop Colorless Weight"
+
+class ShopEventWeight(ShopCardWeight):
+    """How often a random shop card slot holds an Event card."""
+    display_name = "Shop Event Weight"
+    default = ShopCardWeight.option_low
+
+class RandomShopRelics(Toggle):
+    """If enabled, allows you to override the default shop relics randomness."""
+    display_name = "Custom Shop Relics"
+    default = 0
+
+class ShopRelicCommonWeight(ShopCardWeight):
+    """How often a random shop relic slot holds a Common relic."""
+    display_name = "Shop Relic Common Weight"
+
+class ShopRelicUncommonWeight(ShopCardWeight):
+    """How often a random shop relic slot holds an Uncommon relic."""
+    display_name = "Shop Relic Uncommon Weight"
+
+class ShopRelicRareWeight(ShopCardWeight):
+    """How often a random shop relic slot holds a Rare relic."""
+    display_name = "Shop Relic Rare Weight"
+
+class ShopRelicShopWeight(ShopCardWeight):
+    """How often a random shop relic slot holds a Shop relic."""
+    display_name = "Shop Relic Shop Weight"
+
+class ShopRelicEventWeight(ShopCardWeight):
+    """How often a random shop relic slot holds an Event relic."""
+    display_name = "Shop Relic Event Weight"
+    default = ShopCardWeight.option_low
+
+class ShopRelicAncientWeight(ShopCardWeight):
+    """How often a random shop relic slot holds an Ancient relic."""
+    display_name = "Shop Relic Ancient Weight"
+    default = ShopCardWeight.option_low
+
+class RandomShopPotions(Toggle):
+    """If enabled, allows you to override the default shop potions randomness."""
+    display_name = "Custom Shop Potions"
+    default = 0
+
+class ShopPotionCommonWeight(ShopCardWeight):
+    """How often a random shop potion slot holds a Common potion."""
+    display_name = "Shop Potion Common Weight"
+
+class ShopPotionUncommonWeight(ShopCardWeight):
+    """How often a random shop potion slot holds an Uncommon potion."""
+    display_name = "Shop Potion Uncommon Weight"
+
+class ShopPotionRareWeight(ShopCardWeight):
+    """How often a random shop potion slot holds a Rare potion."""
+    display_name = "Shop Potion Rare Weight"
+
+class ShopPotionOtherClassWeight(ShopCardWeight):
+    """How often a random shop potion slot holds a potion from another class."""
+    display_name = "Shop Potion Other Class Weight"
+
+class ShopPotionEventWeight(ShopCardWeight):
+    """How often a random shop potion slot holds an Event potion."""
+    display_name = "Shop Potion Event Weight"
+    default = ShopCardWeight.option_low
+
 class GoldSanity(Toggle):
     """Whether to replace combat, elite, and boss gold rewards with AP locations. Adds 22 locations per character.
     """
     display_name = "Gold Sanity"
-    default = 0
+    default = 1
 
 class PotionSanity(Toggle):
     """Whether to replace potion rewards with AP locations. Adds 9 locations per character."""
     display_name = "Potion Sanity"
-    default = 0
+    default = 1
 
 class CardReward(Toggle):
     """Whether every card reward is shuffled.  If false, then every other card reward is shuffled
@@ -389,6 +493,17 @@ class HiddenMap(Range):
     shows the whole map again for every character, so a second copy makes it easier to find. Does not change logic.
     """
     display_name = "Hidden Map"
+    range_start = 0
+    range_end = 2
+    default = 0
+
+class HiddenCards(Range):
+    """Cards are unknown: their name, text and energy cost are hidden, their art is blurred and they
+    show no tooltips.
+    The value is how many Card Sight items are added to the item pool, and 0 turns it off. Finding any one of them
+    shows cards again for every character, so a second copy makes it easier to find. Does not change logic.
+    """
+    display_name = "Hidden Cards"
     range_start = 0
     range_end = 2
     default = 0
@@ -891,6 +1006,34 @@ class Spire2Options(PerGameCommonOptions):
     shop_remove_slots: ShopRemoveSlots
     shop_sanity_costs: ShopSanityCosts
 
+    # Shop cards
+    random_shop_cards: RandomShopCards
+    shop_attack_weight: ShopAttackWeight
+    shop_skill_weight: ShopSkillWeight
+    shop_power_weight: ShopPowerWeight
+    shop_common_weight: ShopCommonWeight
+    shop_uncommon_weight: ShopUncommonWeight
+    shop_rare_weight: ShopRareWeight
+    shop_colorless_weight: ShopColorlessWeight
+    shop_event_weight: ShopEventWeight
+
+    # Shop relics
+    random_shop_relics: RandomShopRelics
+    shop_relic_common_weight: ShopRelicCommonWeight
+    shop_relic_uncommon_weight: ShopRelicUncommonWeight
+    shop_relic_rare_weight: ShopRelicRareWeight
+    shop_relic_shop_weight: ShopRelicShopWeight
+    shop_relic_event_weight: ShopRelicEventWeight
+    shop_relic_ancient_weight: ShopRelicAncientWeight
+
+    # Shop potions
+    random_shop_potions: RandomShopPotions
+    shop_potion_common_weight: ShopPotionCommonWeight
+    shop_potion_uncommon_weight: ShopPotionUncommonWeight
+    shop_potion_rare_weight: ShopPotionRareWeight
+    shop_potion_other_class_weight: ShopPotionOtherClassWeight
+    shop_potion_event_weight: ShopPotionEventWeight
+
     # Death Link
     death_link: DeathLink
     enable_death_fragments: EnableDeathFragments
@@ -940,4 +1083,5 @@ class Spire2Options(PerGameCommonOptions):
     hidden_health: HiddenHealth
     hidden_piles: HiddenPiles
     hidden_map: HiddenMap
+    hidden_cards: HiddenCards
     strict_card_rewards: StrictCardRewards

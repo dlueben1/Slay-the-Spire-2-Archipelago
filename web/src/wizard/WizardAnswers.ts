@@ -15,6 +15,12 @@ import {
   type AscensionLevel,
 } from "./AscensionModifier";
 import { getOrderedRunModifiers } from "./RunModifier";
+import { createDefaultShopCardWeights } from "./ShopCardKind";
+import {
+  createDefaultShopStockWeights,
+  SHOP_POTION_KIND_DEFINITIONS,
+  SHOP_RELIC_KIND_DEFINITIONS,
+} from "./ShopStockKind";
 import {
   CHALLENGE_OPTION_KEYS,
   CHECK_OPTION_KEYS,
@@ -23,7 +29,10 @@ import {
   OP_RELIC_CATEGORY_KEYS,
   PROGRESSION_OPTION_KEYS,
   RUN_OPTION_KEYS,
+  SHOP_CARD_OPTION_KEY,
   SHOP_OPTION_KEYS,
+  SHOP_POTION_OPTION_KEY,
+  SHOP_RELIC_OPTION_KEY,
   STARTING_EQUIPMENT_OPTION_KEYS,
 } from "./WizardOptionKey";
 
@@ -127,6 +136,18 @@ export interface OpRelicRemovalAnswers {
   rare: boolean;
 }
 
+/** Kinds of relic a Random Shop Relics slot can hold, in option order. */
+export type ShopRelicKindId =
+  "common" | "uncommon" | "rare" | "shop" | "event" | "ancient";
+
+/** Kinds of potion a Random Shop Potions slot can hold, in option order. */
+export type ShopPotionKindId =
+  "common" | "uncommon" | "rare" | "otherClass" | "event";
+
+/** Kinds of card a Random Shop Cards slot can hold, in option order. */
+export type ShopCardKindId =
+  "attack" | "skill" | "power" | "common" | "uncommon" | "rare" | "colorless" | "event";
+
 export interface RunAnswers {
   relicRewardsAvailableAnytime: number;
   removeOpRelics: OpRelicRemovalAnswers;
@@ -156,6 +177,7 @@ export interface ChallengeAnswers {
   hiddenHealth: SightCopies;
   hiddenPiles: SightCopies;
   hiddenMap: SightCopies;
+  hiddenCards: SightCopies;
   strictCardRewards: boolean;
 }
 
@@ -195,11 +217,28 @@ export interface ShopAnswers {
   costs: ShopCostMode;
 }
 
+/** Random Shop Cards, which works with or without Shop Sanity. */
+export interface ShopCardAnswers {
+  enabled: boolean;
+  /** Same four levels as filler weights: none, low, medium, high. */
+  weights: Record<ShopCardKindId, FillerWeightLevel>;
+}
+
+/** Random Shop Relics or Potions, which work with or without Shop Sanity. */
+export interface ShopStockAnswers<KindId extends string> {
+  enabled: boolean;
+  /** Same four levels as filler weights: none, low, medium, high. */
+  weights: Record<KindId, FillerWeightLevel>;
+}
+
 export interface ChecksAndRewardsAnswers {
   startingEquipment: StartingEquipmentAnswers;
   ancients: AncientAnswers;
   checks: CheckAnswers;
   shop: ShopAnswers;
+  shopCards: ShopCardAnswers;
+  shopRelics: ShopStockAnswers<ShopRelicKindId>;
+  shopPotions: ShopStockAnswers<ShopPotionKindId>;
   bonusItems: BonusItemAnswer[];
   filler: FillerAnswers;
   traps: TrapAnswers;
@@ -479,6 +518,10 @@ export function createDefaultWizardAnswers(
         catalog,
         CHALLENGE_OPTION_KEYS.hiddenMap,
       ),
+      hiddenCards: getSightCopiesDefault(
+        catalog,
+        CHALLENGE_OPTION_KEYS.hiddenCards,
+      ),
       strictCardRewards: getBooleanDefault(
         catalog,
         CHALLENGE_OPTION_KEYS.strictCardRewards,
@@ -543,6 +586,24 @@ export function createDefaultWizardAnswers(
           "Discount_Tiered",
           "Tiered",
         ]),
+      },
+      shopCards: {
+        enabled: getBooleanDefault(catalog, SHOP_CARD_OPTION_KEY),
+        weights: createDefaultShopCardWeights(catalog),
+      },
+      shopRelics: {
+        enabled: getBooleanDefault(catalog, SHOP_RELIC_OPTION_KEY),
+        weights: createDefaultShopStockWeights(
+          SHOP_RELIC_KIND_DEFINITIONS,
+          catalog,
+        ),
+      },
+      shopPotions: {
+        enabled: getBooleanDefault(catalog, SHOP_POTION_OPTION_KEY),
+        weights: createDefaultShopStockWeights(
+          SHOP_POTION_KIND_DEFINITIONS,
+          catalog,
+        ),
       },
       // Bonus Items start empty; each one is added deliberately through the table UI.
       bonusItems: [],

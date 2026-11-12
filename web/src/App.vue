@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppBar from "./components/AppBar.vue";
+import AppFooter from "./components/AppFooter.vue";
 </script>
 
 <template>
@@ -9,5 +10,7 @@ import AppBar from "./components/AppBar.vue";
 
     <!-- Content -->
     <RouterView class="mb-4" />
+
+    <AppFooter />
   </UApp>
 </template>

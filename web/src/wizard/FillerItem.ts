@@ -127,7 +127,7 @@ export const FILLER_ITEM_DEFINITIONS: readonly FillerItemDefinition[] = [
  * @returns A slider level from zero through three.
  * @throws When the generated default is not one of the four supported weight names.
  */
-function weightNameToLevel(
+export function weightNameToLevel(
   value: unknown,
   optionKey: string,
 ): FillerWeightLevel {

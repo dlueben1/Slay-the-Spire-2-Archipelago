@@ -26,6 +26,8 @@ class LogicTests(unittest.TestCase):
         "shop_relic_slots": 3,
         "shop_potion_slots": 3,
         "shop_remove_slots": True,
+        # Gold Sanity adds a shop-gold penalty; the shop tests measure slot penalties alone.
+        "gold_sanity": False,
     }
     shop_slots = (
         ("shop_card_slots", "Shop Card Slot", 5),

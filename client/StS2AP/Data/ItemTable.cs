@@ -81,6 +81,7 @@
             HealthSight = 801,
             PileSight = 802,
             MapSight = 803,
+            CardSight = 804,
         }
 
         public static Dictionary<int, string> Items = new Dictionary<int, string>
@@ -142,6 +143,9 @@
             { 708, "Dazed Trap" },
             { 800, "Intent Sight" },
             { 801, "Health Sight" },
+            { 802, "Pile Sight" },
+            { 803, "Map Sight" },
+            { 804, "Card Sight" },
         };
 
         /// <summary>
