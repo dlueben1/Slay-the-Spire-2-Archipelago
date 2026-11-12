@@ -107,6 +107,11 @@ Slay the Spire II:
   # Extra enemy damage in Acts 2 and 3, in percent (0-15); Act 1 is unchanged. Logic ignores it.
   enemy_damage_scaling: 0
 
+  # Every singleplayer run is a Dread run: a Dominion (an extra combat rule from the act's boss) in
+  # each act, stronger bosses, and an Ascender's Bane at the start of Acts 2 and 3, on top of your
+  # Ascension settings. Needs the game's beta branch. Logic ignores it.
+  dread_mode: false
+
   ################
   # Game Options #
   ################

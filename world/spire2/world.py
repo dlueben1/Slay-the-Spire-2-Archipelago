@@ -727,6 +727,7 @@ class SlayTheSpire2World(World):
             # Keep the wire key for clients; Archipelago loads world_version from archipelago.json.
             "mod_compat_version": self.world_version.as_simple_string(),
             "CompatFlag": self.compat_flag,
+            "required_game_features": self.required_game_features(),
         }
         slot_data.update(self.options.as_dict(
             "use_new_logic",
@@ -735,6 +736,7 @@ class SlayTheSpire2World(World):
             "run_modifiers",
             "enemy_hp_scaling",
             "enemy_damage_scaling",
+            "dread_mode",
             "num_chars_goal",
             "shuffle_all_cards",
             "strict_card_rewards",
@@ -762,6 +764,20 @@ class SlayTheSpire2World(World):
             "death_link_damage_percent",
         ))
         return slot_data
+
+    def required_game_features(self) -> list[str]:
+        """Game features this slot's settings need that only some supported game versions have.
+
+        A client refuses the slot when its game build lacks one of them. An option names its
+        feature in a required_game_feature attribute, and counts while its value is set.
+        """
+        features = set()
+        for option_name in self.options_dataclass.type_hints:
+            option = getattr(self.options, option_name)
+            feature = getattr(option, "required_game_feature", None)
+            if feature and option.value:
+                features.add(feature)
+        return sorted(features)
 
     def shop_card_weights(self) -> dict[str, int]:
         """Weights for the kinds of card a random shop slot can hold."""

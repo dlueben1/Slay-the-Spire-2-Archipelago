@@ -280,3 +280,21 @@ class TestEnsureShopWithNoGoldWorks(Spire2TestBase):
         "shop_sanity": True,
         "gold_sanity": False,
     }
+
+
+class TestDreadModeOff(Spire2TestBase):
+    def test_slot_needs_no_game_features(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(0, slot_data["dread_mode"])
+        self.assertEqual([], slot_data["required_game_features"])
+
+
+class TestDreadModeOn(Spire2TestBase):
+    options = {
+        "dread_mode": 1,
+    }
+
+    def test_slot_requires_the_dread_game_feature(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(1, slot_data["dread_mode"])
+        self.assertEqual(["dread"], slot_data["required_game_features"])

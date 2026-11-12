@@ -58,6 +58,7 @@ export function applyChallengeOptions(
   target[CHALLENGE_OPTION_KEYS.runModifiers] = runModifiers;
   target[CHALLENGE_OPTION_KEYS.enemyHpScaling] = answers.enemyHpScaling;
   target[CHALLENGE_OPTION_KEYS.enemyDamageScaling] = answers.enemyDamageScaling;
+  target[CHALLENGE_OPTION_KEYS.dreadMode] = answers.dreadMode;
   target[CHALLENGE_OPTION_KEYS.hiddenIntents] =
     SIGHT_COPY_COUNTS[answers.hiddenIntents];
   target[CHALLENGE_OPTION_KEYS.hiddenHealth] =

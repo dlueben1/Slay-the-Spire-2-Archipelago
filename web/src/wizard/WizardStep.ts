@@ -9,6 +9,7 @@
  * translation, and numeric bounds arrive through semantic names in `optionRanges.ts`.
  */
 
+import { isBetaOnlyOption } from "./betaOnlyOptions";
 import { MAX_GENERIC_CHARACTERS } from "./CharacterRoster";
 import { includeFloorChecksTransition } from "./checksTransitions";
 import {
@@ -23,6 +24,7 @@ import type {
   WizardControlDescriptor,
 } from "./QuestionControl";
 import type { SightCopies, WizardAnswers } from "./WizardAnswers";
+import { CHALLENGE_OPTION_KEYS } from "./WizardOptionKey";
 
 export interface WizardQuestion {
   id: string;
@@ -354,6 +356,17 @@ export const runSetupStep: WizardStep = {
 };
 
 /**
+ * Explains Dread Mode's game-branch requirement while the APWorld still marks it beta-only.
+ *
+ * @returns The note for the question's help area, or nothing once every branch has Dread.
+ */
+function describeDreadModeRequirements(): string | null {
+  return isBetaOnlyOption(CHALLENGE_OPTION_KEYS.dreadMode)
+    ? "Beta branch only. The mod refuses to connect to this slot on a game version without Dread."
+    : null;
+}
+
+/**
  * Checks whether the player opted in to challenges.
  *
  * @param answers - Current player-facing wizard answers.
@@ -447,6 +460,21 @@ export const challengeSetupStep: WizardStep = {
         range: generatedRange("enemyDamageScaling"),
         unit: "%",
         ariaLabel: "Enemy damage scaling percent",
+      },
+    },
+    {
+      id: "dread-mode",
+      isVisible: usesChallenges,
+      title: "Should singleplayer runs be Dread runs?",
+      description:
+        "Dread is a game mode from the base game. Each act has a Dominion, an extra combat rule set by that act's boss. Bosses are stronger, and you gain an Ascender's Bane at the start of Act 2 and of Act 3.",
+      help: describeDreadModeRequirements,
+      control: {
+        kind: "checkbox",
+        field: "dreadMode",
+        label: "Dread Mode",
+        description:
+          "Your Ascension settings and Ascension Down items still apply. Multiplayer runs stay standard for now.",
       },
     },
     {

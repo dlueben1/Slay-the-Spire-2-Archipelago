@@ -28,7 +28,11 @@ namespace StS2AP.Patches
         {
             [HarmonyPrefix]
 #if STS2_AT_LEAST_0_113_0
-            public static void Prefix(Player player, ref int ascensionLevel, ref string seed)
+            public static void Prefix(
+                Player player,
+                ref int ascensionLevel,
+                ref string seed,
+                ref GameMode gameMode)
             {
                 CharacterModel character = player.Character;
 #else
@@ -62,6 +66,15 @@ namespace StS2AP.Patches
                     seed = configuredSeed;
                 }
 #if STS2_AT_LEAST_0_113_0
+                // The standard character select starts this run, so the Dread Mode option only
+                // has to change the mode the run is created with. The Ascension level above
+                // stays as it is: Ascension queries read the slot's own set, not this number.
+                if (gameMode == GameMode.Standard && DreadRuns.IsRequestedForSingleplayer)
+                {
+                    gameMode = GameMode.Dread;
+                    LogUtility.Info($"Starting the AP run for '{officialName}' as a Dread run.");
+                }
+
                 // From 0.113 the caller creates the player before this method, so the player is
                 // bound here, once the character's settings are in place.
                 BindSingleplayerPlayer(player);

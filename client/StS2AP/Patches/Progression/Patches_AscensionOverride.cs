@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.HoverTips;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
+using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves.Runs;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
@@ -77,7 +78,7 @@ namespace StS2AP.Patches
         public static class CaptureAscensionLabel
         {
             [HarmonyPostfix]
-            public static void PostFix(NTopBar __instance, MegaLabel ____ascensionLabel)
+            public static void PostFix(NTopBar __instance, MegaLabel ____ascensionLabel, IRunState runState)
             {
                 // AP_MP: Ascension UI overrides require a host-authoritative shared set.
                 if (!MultiplayerSupport.ShouldRunReplicatedConstruction(
@@ -87,6 +88,10 @@ namespace StS2AP.Patches
                 _ascensionLabel = ____ascensionLabel;
                 // Initialize is already on the UI thread. Replace the native 10 before drawing.
                 ____ascensionLabel.SetTextAutoSize(AscensionMultiplayer.GetCurrentCount().ToString());
+                // A Dread run hides the label while the base game's Dread streak is zero.
+                ____ascensionLabel.Visible = true;
+                if (DreadRuns.IsDreadRun(runState))
+                    ArchipelagoClient.Progress.Ascensions.InvalidateHoverTip();
                 __instance._ascensionIcon.Visible = true;
             }
         }
@@ -250,6 +255,11 @@ namespace StS2AP.Patches
 
             var effectiveAscensions = GetEffectiveAscensions(config);
             SetPanelLevels(panel, effectiveAscensions.Select(level => (int)level));
+            if (DreadRuns.IsRequestedForSingleplayer
+                && screen.Lobby?.NetService.Type == NetGameType.Singleplayer)
+            {
+                panel._info.Text += "\n[aqua]Dread Mode[/aqua]";
+            }
         }
 
         private static void SetPanelLevels(NAscensionPanel panel, IEnumerable<int> levels)

@@ -716,6 +716,18 @@ class EnemyDamageScaling(Range):
     range_end = 15
     default = 0
 
+class DreadMode(Toggle):
+    """Every singleplayer run is a Dread run, the game's Dread mode on top of your Ascension settings.
+    Each act has a Dominion, an extra combat rule set by that act's boss. Bosses are stronger, and you
+    gain an Ascender's Bane at the start of Act 2 and of Act 3. Needs the game's beta branch; multiplayer
+    runs stay standard for now. Does not change logic.
+    """
+    display_name = "Dread Mode"
+    default = 0
+    # Only some supported game versions have Dread. A set option sends this name in the slot's
+    # required_game_features, which clients check when connecting, and the builder labels it.
+    required_game_feature = "dread"
+
 # Death Link Options
 
 class DeathLink(ArchipelagoDeathLink):
@@ -1080,6 +1092,7 @@ class Spire2Options(PerGameCommonOptions):
     run_modifiers: RunModifiers
     enemy_hp_scaling: EnemyHpScaling
     enemy_damage_scaling: EnemyDamageScaling
+    dread_mode: DreadMode
     hidden_intents: HiddenIntents
     hidden_health: HiddenHealth
     hidden_piles: HiddenPiles

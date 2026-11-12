@@ -149,6 +149,12 @@ namespace StS2AP.Models
         /// <summary>Extra enemy damage in Acts 2 and 3, in percent (0-15).</summary>
         public int EnemyDamageScaling { get; set; }
 
+        /// <summary>
+        /// Whether the slot's singleplayer runs start in the game's Dread mode. Only game versions
+        /// with <see cref="GameFeatures.Dread"/> can honour it.
+        /// </summary>
+        public bool DreadMode { get; set; }
+
         public bool CampfireSanity { get; set; }
         public bool GoldSanity { get; set; }
         public bool PotionSanity { get; set; }

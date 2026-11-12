@@ -398,6 +398,7 @@ export function readChallengeAnswers(
     enemyDamageScaling: options[
       CHALLENGE_OPTION_KEYS.enemyDamageScaling
     ] as number,
+    dreadMode: options[CHALLENGE_OPTION_KEYS.dreadMode] as boolean,
     hiddenIntents: readSightCopies(
       options[CHALLENGE_OPTION_KEYS.hiddenIntents],
     ),

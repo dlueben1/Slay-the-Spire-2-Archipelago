@@ -41,6 +41,8 @@ export interface GeneratedOption {
   valid_keys?: string[];
   allow_custom_values?: boolean;
   group?: string;
+  /** A game feature the option needs that only the game's beta branch has. */
+  required_game_feature?: string;
 }
 
 export interface PredefinedCharacter {

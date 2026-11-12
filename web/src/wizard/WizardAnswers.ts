@@ -173,6 +173,8 @@ export interface ChallengeAnswers {
   runModifiers: string[];
   enemyHpScaling: number;
   enemyDamageScaling: number;
+  /** Singleplayer runs use the game's Dread mode, which only its beta branch has. */
+  dreadMode: boolean;
   hiddenIntents: SightCopies;
   hiddenHealth: SightCopies;
   hiddenPiles: SightCopies;
@@ -502,6 +504,7 @@ export function createDefaultWizardAnswers(
         catalog,
         CHALLENGE_OPTION_KEYS.enemyDamageScaling,
       ),
+      dreadMode: getBooleanDefault(catalog, CHALLENGE_OPTION_KEYS.dreadMode),
       hiddenIntents: getSightCopiesDefault(
         catalog,
         CHALLENGE_OPTION_KEYS.hiddenIntents,

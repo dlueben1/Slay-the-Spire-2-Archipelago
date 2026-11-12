@@ -38,6 +38,7 @@ import {
   getConfiguredCharacterNames,
   getSelectedBetaOnlyCharacters,
 } from "./CharacterRoster";
+import { getActiveBetaOnlyChallenges } from "./betaOnlyOptions";
 import { RUN_MODIFIERS } from "./RunModifier";
 
 export interface WizardReviewSection {
@@ -437,6 +438,7 @@ export function hasActiveChallenges(answers: ChallengeAnswers): boolean {
     (answers.runModifiers.length > 0 ||
       answers.enemyHpScaling > 0 ||
       answers.enemyDamageScaling > 0 ||
+      answers.dreadMode ||
       answers.hiddenIntents !== "off" ||
       answers.hiddenHealth !== "off" ||
       answers.hiddenPiles !== "off" ||
@@ -444,6 +446,34 @@ export function hasActiveChallenges(answers: ChallengeAnswers): boolean {
       answers.hiddenCards !== "off" ||
       answers.strictCardRewards)
   );
+}
+
+/**
+ * Builds the cautions shown with the Challenges summary.
+ *
+ * @param answers - Current Challenges answers.
+ * @returns The warning text, or nothing while no challenge is on.
+ */
+export function describeChallengeWarnings(
+  answers: ChallengeAnswers,
+): string | undefined {
+  if (!hasActiveChallenges(answers)) {
+    return undefined;
+  }
+
+  const warnings = [
+    "Challenges are on. Logic doesn't account for them, so a seed can get stuck if runs become too hard to win.",
+  ];
+  const betaOnly = getActiveBetaOnlyChallenges(answers);
+
+  if (betaOnly.length) {
+    const verb = betaOnly.length === 1 ? "is" : "are";
+    warnings.push(
+      `${joinNames(betaOnly)} ${verb} only in the game's beta branch, so this YAML needs Slay the Spire II on the beta branch.`,
+    );
+  }
+
+  return warnings.join(" ");
 }
 
 /**
@@ -490,6 +520,10 @@ export function summarizeChallengeAnswers(answers: ChallengeAnswers): string {
     sentences.push(
       `Enemies deal ${answers.enemyDamageScaling}% more damage in Acts 2 and 3.`,
     );
+  }
+
+  if (answers.dreadMode) {
+    sentences.push("Singleplayer runs are Dread runs.");
   }
 
   if (answers.hiddenIntents !== "off") {
@@ -810,9 +844,7 @@ export function buildWizardReviewSections(
     {
       title: "Challenges",
       summary: summarizeChallengeAnswers(answers.challenges),
-      warning: hasActiveChallenges(answers.challenges)
-        ? "Challenges are on. Logic doesn't account for them, so a seed can get stuck if runs become too hard to win."
-        : undefined,
+      warning: describeChallengeWarnings(answers.challenges),
     },
     {
       title: "Progression",

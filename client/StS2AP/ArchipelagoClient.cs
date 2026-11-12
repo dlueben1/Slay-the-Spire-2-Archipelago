@@ -880,6 +880,21 @@ namespace StS2AP
                     return;
                 }
 
+                // A setting that needs a game feature this build lacks cannot be honoured, and
+                // playing without it would quietly change the slot's difficulty.
+                IReadOnlyList<string> missingGameFeatures = GameFeatures.FindMissing(
+                    ApSlotData.ReadRequiredGameFeatures(ApSlotData.Normalize(SlotData)),
+                    GameFeatures.Supported
+                );
+                if (missingGameFeatures.Count > 0)
+                {
+                    RejectIncompatibleConnection(
+                        GameFeatures.DescribeMissing(missingGameFeatures),
+                        wasAutomaticReconnect
+                    );
+                    return;
+                }
+
                 // These metadata fields cannot predict whether this client understands every
                 // enabled item and location. Treat discrepancies as visible diagnostics and let
                 // the concrete runtime behavior decide whether the combination actually works.
@@ -1889,6 +1904,9 @@ namespace StS2AP
                 settings.EnemyHpScaling = Convert.ToInt32(slotData["enemy_hp_scaling"]);
             if (slotData.ContainsKey("enemy_damage_scaling"))
                 settings.EnemyDamageScaling = Convert.ToInt32(slotData["enemy_damage_scaling"]);
+            // Older APWorlds omit this key; their slots play standard runs.
+            if (slotData.ContainsKey("dread_mode"))
+                settings.DreadMode = Convert.ToInt32(slotData["dread_mode"]) != 0;
 
             if (slotData.ContainsKey("campfire_sanity"))
                 settings.CampfireSanity = Convert.ToInt32(slotData["campfire_sanity"]) != 0;
