@@ -946,7 +946,7 @@ namespace StS2AP
                     {
                         CancelConnectionAfterWarning(
                             "Missing character mods warning declined",
-                            "Connection cancelled. Enable the missing character mods, or connect again and play Defect in their place."
+                            "Connection cancelled. Enable the missing characters' mods or switch to the game branch that has them, or connect again and play Defect in their place."
                         );
                         return;
                     }

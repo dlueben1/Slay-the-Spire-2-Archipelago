@@ -36,7 +36,7 @@ Place them in ignored `.local-tools/sts2-references/` with this layout:
 │   ├── sts2.dll
 │   ├── 0Harmony.dll
 │   └── GodotSharp.dll
-└── 0.111.0/             # beta game version
+└── 0.113.0/             # beta game version
     ├── sts2.dll
     ├── 0Harmony.dll
     └── GodotSharp.dll
@@ -46,7 +46,7 @@ After switching Steam to the version you want, copy the files from that installa
 
 ```bash
 game_data_dir="/path/to/Slay the Spire 2/data_sts2_windows_x86_64"
-api_version="0.111.0"  # use 0.107.1 for the main version
+api_version="0.113.0"  # use 0.107.1 for the main version
 mkdir -p ".local-tools/sts2-references/$api_version"
 cp "$game_data_dir/sts2.dll" "$game_data_dir/0Harmony.dll" "$game_data_dir/GodotSharp.dll" \
   ".local-tools/sts2-references/$api_version/"
@@ -71,7 +71,7 @@ Copy `client/StS2AP/local.props.template` to ignored `client/StS2AP/local.props`
 ```xml
 <Project>
   <PropertyGroup>
-    <Sts2ApiCompat>0.111.0</Sts2ApiCompat>
+    <Sts2ApiCompat>0.113.0</Sts2ApiCompat>
     <UseSts2RefLib>false</UseSts2RefLib>
     <Sts2ApiSignatureRoot>$(MSBuildThisFileDirectory)../../.local-tools/sts2-references</Sts2ApiSignatureRoot>
     <GodotExePath>$(MSBuildThisFileDirectory)../../.local-tools/godot/Godot_v4.5.1-stable_mono_linux_x86_64/Godot_v4.5.1-stable_mono_linux.x86_64</GodotExePath>
@@ -88,8 +88,8 @@ Check both APIs and build the package in WSL:
 
 ```bash
 dotnet build client/StS2AP/StS2AP.csproj -c Release -p:Sts2ApiCompat=0.107.1 -p:BuildMode=CompileOnly
-dotnet build client/StS2AP/StS2AP.csproj -c Release -p:Sts2ApiCompat=0.111.0 -p:BuildMode=CompileOnly
-dotnet build client/StS2AP/StS2AP.csproj -c Release -p:Sts2ApiCompat=0.111.0 -p:BuildMode=Package
+dotnet build client/StS2AP/StS2AP.csproj -c Release -p:Sts2ApiCompat=0.113.0 -p:BuildMode=CompileOnly
+dotnet build client/StS2AP/StS2AP.csproj -c Release -p:Sts2ApiCompat=0.113.0 -p:BuildMode=Package
 ```
 
 The package is written to `dist/Archipelago/`, ready to install in the Windows game's `mods` directory. If Godot reports missing shared libraries on a minimal WSL installation, install your distribution's `fontconfig`, `freetype`, and `libpng` packages.

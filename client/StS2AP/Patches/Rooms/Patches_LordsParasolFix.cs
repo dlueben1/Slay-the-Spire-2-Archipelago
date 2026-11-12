@@ -1,4 +1,5 @@
 using HarmonyLib;
+using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Entities.Merchant;
 using MegaCrit.Sts2.Core.Models.Relics;
 using StS2AP.Utils;
@@ -30,15 +31,20 @@ namespace StS2AP.Patches
     public static class BlockShopPageNavigationForLordsParasol
     {
         [HarmonyPrefix]
-        public static void Prefix()
+        public static void Prefix(LordsParasol __instance, out bool __state)
         {
-            Patches_ShopPages.BeginNavigationBlock();
+            // From 0.113 every machine replays every player's Parasol; only the owner's own
+            // shop pages are involved.
+            __state = LocalContext.IsMe(__instance.Owner);
+            if (__state)
+                Patches_ShopPages.BeginNavigationBlock();
         }
 
         [HarmonyPostfix]
-        public static void Postfix(ref Task __result)
+        public static void Postfix(ref Task __result, bool __state)
         {
-            __result = AwaitPurchaseCompletion(__result);
+            if (__state)
+                __result = AwaitPurchaseCompletion(__result);
         }
 
         private static async Task AwaitPurchaseCompletion(Task purchaseTask)

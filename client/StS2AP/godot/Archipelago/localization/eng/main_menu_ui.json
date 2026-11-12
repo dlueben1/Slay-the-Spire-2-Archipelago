@@ -5,7 +5,7 @@
   "CONTINUE_RUN.body": "Would you like to resume your last AP save for this character? (Yes, AP keeps the save even if you die.)",
   "APWORLD_MISMATCH.header": "APWorld Compatibility Warning",
   "APWORLD_MISMATCH.body": "The server uses APWorld {server}; this client bundles APWorld {bundled}.\n\nServer compatibility flag: {server_flag}. Client compatibility flag: {client_flag}.\n\nUpdating the APWorld or client is recommended.\n\nConnect anyway?",
-  "MISSING_CHARACTERS.header": "Character Mods Missing",
-  "MISSING_CHARACTERS.body_borrowed": "This slot includes characters whose mods are not loaded: [b]{missing}[/b].\n\nEvery character's checks and victories will also count for them. [b]Defect[/b] will be playable too, using {borrowed}'s items.\n\nCheckpoints saved with a different set of mods may not load; start a new run if one fails.\n\nConnect anyway?",
-  "MISSING_CHARACTERS.body_own": "This slot includes characters whose mods are not loaded: [b]{missing}[/b].\n\nEvery character's checks and victories will also count for them, and [b]Defect[/b] will be playable.\n\nCheckpoints saved with a different set of mods may not load; start a new run if one fails.\n\nConnect anyway?"
+  "MISSING_CHARACTERS.header": "Characters Not Loaded",
+  "MISSING_CHARACTERS.body_borrowed": "This slot includes characters that are not loaded: [b]{missing}[/b]. A modded character needs its mod enabled; a new base-game character needs the game branch that has it.\n\nEvery character's checks and victories will also count for them. [b]Defect[/b] will be playable too, using {borrowed}'s items.\n\nCheckpoints saved with a different set of mods may not load; start a new run if one fails.\n\nConnect anyway?",
+  "MISSING_CHARACTERS.body_own": "This slot includes characters that are not loaded: [b]{missing}[/b]. A modded character needs its mod enabled; a new base-game character needs the game branch that has it.\n\nEvery character's checks and victories will also count for them, and [b]Defect[/b] will be playable.\n\nCheckpoints saved with a different set of mods may not load; start a new run if one fails.\n\nConnect anyway?"
 }

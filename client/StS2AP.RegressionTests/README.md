@@ -48,7 +48,7 @@ xUnit reports them as skipped. A supplied path that is missing or invalid fails 
 
 ```powershell
 # Check an intermediate or output client DLL. Repeat for each compatibility variant.
-$env:STS2AP_TEST_ASSEMBLY = (Resolve-Path 'client/StS2AP/obj/Windows_NT/0.111.0/Debug/net9.0/Archipelago.dll').Path
+$env:STS2AP_TEST_ASSEMBLY = (Resolve-Path 'client/StS2AP/obj/Windows_NT/0.113.0/Debug/net9.0/Archipelago.dll').Path
 dotnet test client/StS2AP.RegressionTests/StS2AP.RegressionTests.csproj -c Release --filter 'Category=Manifest'
 
 # Check a complete bundle from a full client build, including both variants and the loader.
@@ -73,7 +73,7 @@ for both game API versions. The complete bundle test runs locally against a full
 ## Runtime validation kept separate
 
 These checks require the installed supported game and matching RitsuLib. Run multiplayer
-checks with two processes on beta 0.111.0; repeat affected singleplayer behavior on the main
+checks with two processes on beta 0.113.0; repeat affected singleplayer behavior on the main
 variant. Unit tests establish the behavior of our policies, not native callbacks or network timing.
 
 | In-game scenario | Expected result |
@@ -119,7 +119,7 @@ The owner publishes a digest; it does not await an acknowledgment from every rep
 replica verifies before its own native picker execution. The eight-integer SHA-256 digest covers receipt identity,
 offer configuration, first-reveal status, and ordered serialized cards. Singleplayer does not
 calculate a verification digest. General gameplay state (including before/after relic counters
-and RNG snapshots) is left to the game's native checksum system. In beta 0.111.0,
+and RNG snapshots) is left to the game's native checksum system. In beta 0.113.0,
 RewardsSetSynchronizer.SelectRewardForPlayer does not request a checksum, and
 RunManager.SendPostActionChecksum runs during combat; this is not an immediate reward-side-effect
 check. NetFullCombatState includes saved relic properties but explicitly excludes the Rewards

@@ -426,16 +426,10 @@ namespace StS2AP.Patches
                 MultiplayerSupport.SelectDestination(ApPlayDestination.Singleplayer);
                 Patches_ItemProcessor.ProcessDeferredItemsForSingleplayer();
 
-                // Hide the actual sub-menu options
-                var standardButton = __result.GetNode<NSubmenuButton>("StandardButton");
-                var dailyButton = __result.GetNode<NSubmenuButton>("DailyButton");
-                var customButton = __result.GetNode<NSubmenuButton>("CustomRunButton");
-                var backButton = __result.GetNode<NBackButton>("BackButton");
-
-                standardButton.Visible = false;
-                dailyButton.Visible = false;
-                customButton.Visible = false;
-                backButton.Visible = false;
+                // Hide the actual sub-menu options. The mode buttons are found by type, not by
+                // path: 0.113 moved them into a container and added Blitz and Dread.
+                HideModeButtons(__result);
+                __result.GetNode<NBackButton>("BackButton").Visible = false;
 
                 // If we are connected, dive directly into the game
                 if (ArchipelagoClient.IsConnected)
@@ -448,6 +442,17 @@ namespace StS2AP.Patches
                         "Connect to Archipelago from the main menu before starting AP Singleplayer."
                     );
                 }
+            }
+        }
+
+        private static void HideModeButtons(Node node)
+        {
+            foreach (Node child in node.GetChildren())
+            {
+                if (child is NSubmenuButton button)
+                    button.Visible = false;
+                else
+                    HideModeButtons(child);
             }
         }
 
@@ -650,6 +655,15 @@ namespace StS2AP.Patches
 #endif
                 if (!AllowHostCreation())
                     return false;
+#if STS2_AT_LEAST_0_113_0
+                if (gameMode is GameMode.Blitz or GameMode.Dread)
+                {
+                    // Both modes replace maps, shops and rewards that AP checks are placed on.
+                    LogUtility.Warn($"Blocked multiplayer host creation: {gameMode} is not supported in AP runs.");
+                    NotificationUtility.ShowRawText($"{gameMode} is not supported in Archipelago runs yet.");
+                    return false;
+                }
+#endif
                 if (ApMultiplayerCampaignFlow.IsResumingNativeStart)
                     return true;
 
@@ -667,6 +681,20 @@ namespace StS2AP.Patches
                 return false;
             }
         }
+
+#if STS2_AT_LEAST_0_113_0
+        /// <summary>Hides the modes RequireApSlotForHostMode refuses. Every host is an AP host.</summary>
+        [HarmonyPatch(typeof(NMultiplayerHostSubmenu), nameof(NMultiplayerHostSubmenu.OnSubmenuOpened))]
+        private static class HideUnsupportedHostModes
+        {
+            [HarmonyPostfix]
+            private static void Postfix(NMultiplayerHostSubmenu __instance)
+            {
+                __instance._blitzButton.Visible = false;
+                __instance._dreadButton.Visible = false;
+            }
+        }
+#endif
 
         /// <summary>
         /// AP owns multiplayer save selection. Keep Host available and remove the native
