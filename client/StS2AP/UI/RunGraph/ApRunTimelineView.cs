@@ -262,7 +262,7 @@ internal sealed partial class ApRunTimelineView : VBoxContainer
         {
             ApRunOutcome.Won => ("Victory", Gold),
             ApRunOutcome.Lost => (_data.KilledBy.Length > 0 ? $"Died to {_data.KilledBy}" : "Died here", DeathText),
-            _ => ("", TextMuted),
+            _ => ("Last saved here", TextMuted),
         };
         if (text.Length > 0)
             content.AddChild(Label(text, 16, color, bold: true));
