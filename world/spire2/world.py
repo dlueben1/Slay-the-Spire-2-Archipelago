@@ -22,7 +22,7 @@ from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET, GENERIC_CHARACTE
 from .items import (item_table, chars_to_items, bonus_item_table, ItemType, base_event_item_pairs, ItemData,
                     item_groups)
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
-from .options import GameMode, Spire2Options
+from .options import Spire2Options
 
 # PLACEHOLDER (balance): the highest Blitz Merchant Chance a slot with Shop Sanity keeps. Logic
 # counts on shop visits for shop checks and does not know that some shops sell none.
@@ -109,7 +109,7 @@ class SlayTheSpire2World(World):
         if hasattr(self.multiworld, 're_gen_passthrough'):
             self._setup_ut(self.multiworld.re_gen_passthrough[self.game])
             return
-        if self.options.game_mode == GameMode.option_dread:
+        if self.options.dread_mode:
             self._apply_dread_ascensions()
         if self.options.use_advanced_characters.value == 0:
             self._handle_basic_chars()
@@ -275,7 +275,7 @@ class SlayTheSpire2World(World):
             yield option_name, character_registry[block].name, block, mod_num
 
     def _apply_dread_ascensions(self) -> None:
-        """Dread is the game's mode above Ascension 10: every Ascension on, and none to take back."""
+        """Replaces the slot's Ascension settings: the game only plays Dread with every Ascension on."""
         self.options.ascension.value = set(ASCENSION_LIST)
         self.options.ascension_down.value = set()
         for character_options in self.options.advanced_characters.value.values():
@@ -754,7 +754,7 @@ class SlayTheSpire2World(World):
             "run_modifiers",
             "enemy_hp_scaling",
             "enemy_damage_scaling",
-            "game_mode",
+            "dread_mode",
             "blitz_merchant_chance",
             "num_chars_goal",
             "shuffle_all_cards",
@@ -787,9 +787,8 @@ class SlayTheSpire2World(World):
     def required_game_features(self) -> list[str]:
         """Game features this slot's settings need that only some supported game versions have.
 
-        A client refuses the slot when its game build lacks one of them. An option class names a
-        feature it needs at any set value in required_game_feature, or maps the values that need
-        one to its name in required_game_features.
+        A client refuses the slot when its game build lacks one of them. An option names its
+        feature in a required_game_feature attribute, and counts while its value is set.
         """
         features = set()
         for option_name in self.options_dataclass.type_hints:
@@ -797,9 +796,6 @@ class SlayTheSpire2World(World):
             feature = getattr(option, "required_game_feature", None)
             if feature and option.value:
                 features.add(feature)
-            by_value = getattr(option, "required_game_features", None)
-            if by_value and option.value in by_value:
-                features.add(by_value[option.value])
         return sorted(features)
 
     def shop_card_weights(self) -> dict[str, int]:

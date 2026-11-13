@@ -69,7 +69,7 @@ namespace StS2AP.Patches
                 // The standard character select starts this run, so a Dread slot only has to
                 // change the mode the run is created with. The APWorld turns every Ascension on
                 // for a Dread slot, so the level above is already 10.
-                if (gameMode == GameMode.Standard && DreadRuns.IsSlotGameMode)
+                if (gameMode == GameMode.Standard && DreadRuns.IsSlotSetting)
                 {
                     gameMode = GameMode.Dread;
                     LogUtility.Info($"Starting the AP run for '{officialName}' as a Dread run.");

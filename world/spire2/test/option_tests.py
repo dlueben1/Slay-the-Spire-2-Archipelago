@@ -283,7 +283,7 @@ class TestEnsureShopWithNoGoldWorks(Spire2TestBase):
     }
 
 
-class TestStandardGameMode(Spire2TestBase):
+class TestDreadModeOff(Spire2TestBase):
     options = {
         "ascension": ["3"],
         "ascension_down": ["2"],
@@ -291,7 +291,7 @@ class TestStandardGameMode(Spire2TestBase):
 
     def test_slot_needs_no_game_features(self):
         slot_data = self.world.fill_slot_data()
-        self.assertEqual(0, slot_data["game_mode"])
+        self.assertEqual(0, slot_data["dread_mode"])
         self.assertEqual([], slot_data["required_game_features"])
 
     def test_ascension_options_are_kept(self):
@@ -300,16 +300,16 @@ class TestStandardGameMode(Spire2TestBase):
             self.assertEqual(2, len(config.ascension_down))
 
 
-class TestDreadGameMode(Spire2TestBase):
+class TestDreadModeOn(Spire2TestBase):
     options = {
-        "game_mode": "dread",
+        "dread_mode": True,
         "ascension": ["3"],
         "ascension_down": ["2"],
     }
 
     def test_slot_requires_the_dread_game_feature(self):
         slot_data = self.world.fill_slot_data()
-        self.assertEqual(1, slot_data["game_mode"])
+        self.assertEqual(1, slot_data["dread_mode"])
         self.assertEqual(["dread"], slot_data["required_game_features"])
 
     def test_every_ascension_is_on_without_downs(self):
@@ -320,9 +320,9 @@ class TestDreadGameMode(Spire2TestBase):
         self.assertFalse([item.name for item in self.multiworld.get_items() if item.name in downs])
 
 
-class TestDreadGameModeWithAdvancedCharacters(Spire2TestBase):
+class TestDreadModeWithAdvancedCharacters(Spire2TestBase):
     options = {
-        "game_mode": "dread",
+        "dread_mode": True,
         "use_advanced_characters": True,
         "advanced_characters": {
             "Ironclad": {"ascension": [1], "ascension_down": [1]},
@@ -360,7 +360,7 @@ class TestBlitzMerchantChanceWithShopSanity(Spire2TestBase):
     options = {
         "blitz_merchant_chance": 100,
         "shop_sanity": True,
-        "game_mode": "dread",
+        "dread_mode": True,
     }
 
     def test_some_shops_stay_normal(self):

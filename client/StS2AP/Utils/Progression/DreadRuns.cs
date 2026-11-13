@@ -12,7 +12,7 @@ using StS2AP.Models;
 namespace StS2AP.Utils;
 
 /// <summary>
-/// The Dread value of the slot's Game Mode option. A Dread AP run starts from the standard
+/// The slot's Dread Mode option. A Dread AP run starts from the standard
 /// character select or lobby, so character locks, checkpoints and the AP panel stay as they are;
 /// only the run's game mode changes. The game then adds its own Dread rules: a Dominion in each
 /// act, stronger bosses and an Ascender's Bane on entering Acts 2 and 3. The APWorld turns every
@@ -23,12 +23,12 @@ namespace StS2AP.Utils;
 internal static class DreadRuns
 {
     /// <summary>
-    /// Whether this slot's Game Mode is Dread. Its singleplayer runs are Dread runs, and so are
-    /// the multiplayer runs it hosts.
+    /// Whether this slot has Dread Mode on. Its singleplayer runs are Dread runs, and so are the
+    /// multiplayer runs it hosts.
     /// </summary>
-    public static bool IsSlotGameMode =>
+    public static bool IsSlotSetting =>
 #if STS2_AT_LEAST_0_113_0
-        ArchipelagoClient.Settings?.SlotGameMode == ApGameMode.Dread;
+        ArchipelagoClient.Settings?.DreadMode == true;
 #else
         false;
 #endif
@@ -41,17 +41,17 @@ internal static class DreadRuns
 #endif
 
     /// <summary>
-    /// Turns a new multiplayer run into a Dread run when the host's Game Mode is Dread. The AP
+    /// Turns a new multiplayer run into a Dread run when the host has Dread Mode on. The AP
     /// lobby is a standard one, and guests first learn the host's settings from the run payload,
     /// after the game has created the run as a standard run. So every peer makes the same
     /// change here, before the game initializes the run: the mode, and the Dread run model the
     /// game would have added on creation. Nothing the game builds in between depends on
     /// the difference between a standard and a Dread run.
     /// </summary>
-    public static void ApplyHostGameMode(RunState runState, ArchipelagoSettings? hostSettings)
+    public static void ApplyHostSetting(RunState runState, ArchipelagoSettings? hostSettings)
     {
 #if STS2_AT_LEAST_0_113_0
-        if (hostSettings?.SlotGameMode != ApGameMode.Dread || runState.GameMode != GameMode.Standard)
+        if (hostSettings?.DreadMode != true || runState.GameMode != GameMode.Standard)
             return;
         if (GameModeSetter == null || RunModelsSetter == null)
         {
@@ -63,7 +63,7 @@ internal static class DreadRuns
         runModels.Add((RunModel)ModelDb.RunModel<DreadRunModel>().MutableClone());
         GameModeSetter.Invoke(runState, [GameMode.Dread]);
         RunModelsSetter.Invoke(runState, [runModels]);
-        LogUtility.Info("Starting the AP multiplayer run as a Dread run, as the host's Game Mode says.");
+        LogUtility.Info("Starting the AP multiplayer run as a Dread run: the host has Dread Mode on.");
 #endif
     }
 

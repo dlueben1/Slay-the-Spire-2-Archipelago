@@ -12,11 +12,11 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "c79a2f03ce95229824b5b87c5ce0e97f6deb7a48914b796cd39015e0dce5f309"
+      "sha256": "7c49d396ab489c68200944355ee12650fb17e14e98c940a6af0415a02a4346ca"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "7f1ad1f020b1d115aae44177b05f9d81a739ab5debb32d9f5681ce8d59fdb29c"
+      "sha256": "bdd0493f789b2de6543a49ced36e9e9759e892c4f5ab57728a3e218c95d4bca4"
     }
   },
   "characters": {
@@ -218,7 +218,7 @@
     "run_modifiers",
     "enemy_hp_scaling",
     "enemy_damage_scaling",
-    "game_mode",
+    "dread_mode",
     "blitz_merchant_chance",
     "hidden_intents",
     "hidden_health",
@@ -246,7 +246,6 @@
     {
       "name": "Game Options",
       "option_keys": [
-        "game_mode",
         "use_new_logic",
         "progression_balancing",
         "accessibility",
@@ -399,6 +398,7 @@
         "run_modifiers",
         "enemy_hp_scaling",
         "enemy_damage_scaling",
+        "dread_mode",
         "hidden_intents",
         "hidden_health",
         "hidden_piles",
@@ -4239,14 +4239,14 @@
       "supports_weighting": true,
       "group": "Challenges"
     },
-    "game_mode": {
-      "key": "game_mode",
-      "class_name": "GameMode",
+    "dread_mode": {
+      "key": "dread_mode",
+      "class_name": "DreadMode",
       "module": "worlds.spire2.options",
-      "kind": "choice",
-      "display_name": "Game Mode",
-      "description": "Which of the game's modes this slot's runs use.\n\n- standard: the normal game.\n- dread: the game's Dread mode, which needs the game's beta branch. Each act has a Dominion, an\n  extra combat rule set by that act's boss. Bosses are stronger, and you gain an Ascender's Bane\n  at the start of Act 2 and of Act 3. All ten Ascensions are on and there are no Ascension Down\n  items, whatever those options say. Logic does not account for it. In multiplayer, the host's\n  mode applies to the whole run.",
-      "default": "standard",
+      "kind": "toggle",
+      "display_name": "Dread Mode",
+      "description": "Every run is a Dread run, the game's Dread mode. Each act has a Dominion, an extra combat rule\nset by that act's boss. Bosses are stronger, and you gain an Ascender's Bane at the start of Act 2\nand of Act 3. Dread replaces your Ascension settings: all ten Ascensions are on and there are no\nAscension Down items, and the Ascension and Ascension Down options are ignored. Needs the game's\nbeta branch. Logic does not account for it. In multiplayer, the host's setting applies to the\nwhole run.",
+      "default": false,
       "raw_default": 0,
       "visibility": {
         "name": "all",
@@ -4262,21 +4262,19 @@
       "source": "game",
       "choices": [
         {
-          "name": "standard",
-          "display_name": "Standard",
+          "name": "false",
+          "display_name": "False",
           "value": 0
         },
         {
-          "name": "dread",
-          "display_name": "Dread",
+          "name": "true",
+          "display_name": "True",
           "value": 1
         }
       ],
-      "required_game_features": {
-        "dread": "dread"
-      },
+      "required_game_feature": "dread",
       "supports_weighting": true,
-      "group": "Game Options"
+      "group": "Challenges"
     },
     "blitz_merchant_chance": {
       "key": "blitz_merchant_chance",

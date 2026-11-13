@@ -97,8 +97,7 @@ const DREAD_ASCENSIONS: AscensionConfigurationAnswers = {
 /** Filler slots per configured character, keyed by the name used in the roster. */
 function getSlotsByCharacter(answers: WizardAnswers): Map<string, number> {
   const characters = answers.characters;
-  const isDread =
-    answers.challenges.enabled && answers.challenges.gameMode === "dread";
+  const isDread = answers.challenges.enabled && answers.challenges.dreadMode;
   const shared = characters.ascensionMode === "shared" || isDread;
   const sharedAscensions = isDread
     ? DREAD_ASCENSIONS

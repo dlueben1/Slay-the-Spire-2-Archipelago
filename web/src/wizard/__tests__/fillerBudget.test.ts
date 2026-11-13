@@ -50,7 +50,7 @@ describe("filler budget", () => {
       downs: [2, 3],
     };
     answers.challenges.enabled = true;
-    answers.challenges.gameMode = "dread";
+    answers.challenges.dreadMode = true;
     // 48 + 1 Double Boss, and the two Downs are gone.
     expect(getFillerBudget(answers).available).toBe(
       FLOOR_CHECK_FILLER_SLOTS + 1,

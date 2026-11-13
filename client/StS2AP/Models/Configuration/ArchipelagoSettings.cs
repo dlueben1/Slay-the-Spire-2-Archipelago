@@ -150,9 +150,10 @@ namespace StS2AP.Models
         public int EnemyDamageScaling { get; set; }
 
         /// <summary>
-        /// The slot's Game Mode option. In multiplayer, the host's value applies to the whole run.
+        /// Whether the slot's runs are Dread runs. In multiplayer, the host's value applies to
+        /// the whole run. Only game versions with <see cref="GameFeatures.Dread"/> can honour it.
         /// </summary>
-        public ApGameMode SlotGameMode { get; set; }
+        public bool DreadMode { get; set; }
 
         /// <summary>
         /// Chance, in percent, for each shop of a singleplayer run to be a Blitz merchant. See

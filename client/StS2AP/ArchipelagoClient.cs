@@ -1904,17 +1904,9 @@ namespace StS2AP
                 settings.EnemyHpScaling = Convert.ToInt32(slotData["enemy_hp_scaling"]);
             if (slotData.ContainsKey("enemy_damage_scaling"))
                 settings.EnemyDamageScaling = Convert.ToInt32(slotData["enemy_damage_scaling"]);
-            // Older APWorlds omit this key; their slots play standard runs. A mode this build
-            // cannot play names a game feature, and the connection is refused before this matters.
-            if (slotData.ContainsKey("game_mode"))
-            {
-                int gameMode = Convert.ToInt32(slotData["game_mode"]);
-                if (Enum.IsDefined(typeof(ApGameMode), gameMode))
-                    settings.SlotGameMode = (ApGameMode)gameMode;
-                else
-                    LogUtility.Warn($"Unknown game_mode {gameMode} in slot data; playing standard runs.");
-                LogUtility.Info($"SLOT - Game Mode: {settings.SlotGameMode}");
-            }
+            // Older APWorlds omit this key; their slots play standard runs.
+            if (slotData.ContainsKey("dread_mode"))
+                settings.DreadMode = Convert.ToInt32(slotData["dread_mode"]) != 0;
             if (slotData.ContainsKey("blitz_merchant_chance"))
                 settings.BlitzMerchantChance = Convert.ToInt32(slotData["blitz_merchant_chance"]);
 

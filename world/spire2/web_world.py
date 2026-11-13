@@ -20,7 +20,7 @@ from .options import (
     DexterityFillerWeight, StrengthFillerWeight, PlatingFillerWeight,
     FriendshipFillerWeight, PostCombatCardUpgradeFillerWeight, PostCombatCardRemovalFillerWeight,
     AdditionalCardRewardFillerWeight, BufferFillerWeight, VigorFillerWeight, ThornsFillerWeight, ArtifactFillerWeight,
-    GameMode, BlitzMerchantChance,
+    DreadMode, BlitzMerchantChance,
 )
 
 # The info needed for the Archipelago Website, not the actual `apworld`
@@ -48,7 +48,6 @@ class SlayTheSpire2Web(WebWorld):
             AscensionDown,
         ]),
         OptionGroup("Game Options", [
-            GameMode,
             UseNewLogic,
             ProgressionBalancing,
             Accessibility,
@@ -152,6 +151,7 @@ class SlayTheSpire2Web(WebWorld):
             RunModifiers,
             EnemyHpScaling,
             EnemyDamageScaling,
+            DreadMode,
             HiddenIntents,
             HiddenHealth,
             HiddenPiles,

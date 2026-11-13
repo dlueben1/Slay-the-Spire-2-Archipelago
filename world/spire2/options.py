@@ -716,24 +716,19 @@ class EnemyDamageScaling(Range):
     range_end = 15
     default = 0
 
-class GameMode(Choice):
-    """Which of the game's modes this slot's runs use.
-
-    - standard: the normal game.
-    - dread: the game's Dread mode, which needs the game's beta branch. Each act has a Dominion, an
-      extra combat rule set by that act's boss. Bosses are stronger, and you gain an Ascender's Bane
-      at the start of Act 2 and of Act 3. All ten Ascensions are on and there are no Ascension Down
-      items, whatever those options say. Logic does not account for it. In multiplayer, the host's
-      mode applies to the whole run.
+class DreadMode(Toggle):
+    """Every run is a Dread run, the game's Dread mode. Each act has a Dominion, an extra combat rule
+    set by that act's boss. Bosses are stronger, and you gain an Ascender's Bane at the start of Act 2
+    and of Act 3. Dread replaces your Ascension settings: all ten Ascensions are on and there are no
+    Ascension Down items, and the Ascension and Ascension Down options are ignored. Needs the game's
+    beta branch. Logic does not account for it. In multiplayer, the host's setting applies to the
+    whole run.
     """
-    display_name = "Game Mode"
-    option_standard = 0
-    option_dread = 1
+    display_name = "Dread Mode"
     default = 0
-    # Game features only some supported game versions have, by the value that needs them. The
-    # slot's required_game_features lists the chosen value's feature, which clients check when
-    # connecting, and the builder labels that choice.
-    required_game_features = {option_dread: "dread"}
+    # Only some supported game versions have Dread. A set option sends this name in the slot's
+    # required_game_features, which clients check when connecting, and the builder labels it.
+    required_game_feature = "dread"
 
 class BlitzMerchantChance(Range):
     """Chance, in percent, for each shop to be a Blitz merchant instead: six offers and three free
@@ -745,7 +740,7 @@ class BlitzMerchantChance(Range):
     range_start = 0
     range_end = 100
     default = 0
-    # Needed whenever the option is above 0; see GameMode.required_game_features.
+    # Needed whenever the option is above 0; see DreadMode.required_game_feature.
     required_game_feature = "blitz_merchant"
 
 # Death Link Options
@@ -1112,7 +1107,7 @@ class Spire2Options(PerGameCommonOptions):
     run_modifiers: RunModifiers
     enemy_hp_scaling: EnemyHpScaling
     enemy_damage_scaling: EnemyDamageScaling
-    game_mode: GameMode
+    dread_mode: DreadMode
     blitz_merchant_chance: BlitzMerchantChance
     hidden_intents: HiddenIntents
     hidden_health: HiddenHealth

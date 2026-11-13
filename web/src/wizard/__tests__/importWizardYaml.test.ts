@@ -334,7 +334,7 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
         runModifiers: ["RisingStrength", "CursedRun", "DangerousUnknowns"],
         enemyHpScaling: 10,
         enemyDamageScaling: 15,
-        gameMode: "dread",
+        dreadMode: true,
         hiddenIntents: "one",
         hiddenHealth: "two",
         hiddenPiles: "one",

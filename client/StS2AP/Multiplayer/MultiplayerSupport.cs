@@ -929,7 +929,7 @@ public static class MultiplayerSupport
             RunModifiers = source.RunModifiers.ToList(),
             EnemyHpScaling = source.EnemyHpScaling,
             EnemyDamageScaling = source.EnemyDamageScaling,
-            SlotGameMode = source.SlotGameMode,
+            DreadMode = source.DreadMode,
             PotionSanity = source.PotionSanity,
             Floorsanity = source.Floorsanity,
             ProgressiveStarterCard = source.ProgressiveStarterCard,

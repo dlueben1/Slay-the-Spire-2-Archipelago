@@ -442,7 +442,7 @@ export function hasActiveChallenges(answers: ChallengeAnswers): boolean {
     (answers.runModifiers.length > 0 ||
       answers.enemyHpScaling > 0 ||
       answers.enemyDamageScaling > 0 ||
-      answers.gameMode !== "standard" ||
+      answers.dreadMode ||
       answers.hiddenIntents !== "off" ||
       answers.hiddenHealth !== "off" ||
       answers.hiddenPiles !== "off" ||
@@ -526,7 +526,7 @@ export function summarizeChallengeAnswers(answers: ChallengeAnswers): string {
     );
   }
 
-  if (answers.gameMode === "dread") {
+  if (answers.dreadMode) {
     sentences.push(
       "Runs are Dread runs, with every Ascension on and no Ascension Down items.",
     );
