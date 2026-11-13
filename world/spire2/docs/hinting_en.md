@@ -111,7 +111,7 @@ You claim these from the Archipelago reward menu during each run.
 | `Unlock` | Lets you play that character, for example `Defect Unlock`. |
 | `Progressive Rest` | Lets you rest at campfires. Each copy unlocks one more act: you need 1 for Act 1, 2 for Act 2 and 3 for Act 3. |
 | `Progressive Smith` | Lets you smith (upgrade a card) at campfires, unlocked by act like Progressive Rest. |
-| `Shop Card Slot`, `Neutral Shop Card Slot`, `Shop Relic Slot`, `Shop Potion Slot` | Brings back one slot of that kind on the normal shop page. |
+| `Shop Card Slot`, `Shop Colorless Card Slot`, `Shop Relic Slot`, `Shop Potion Slot` | Brings back one slot of that kind on the normal shop page. |
 | `Progressive Shop Remove` | Lets you remove cards at shops, one act per copy like Progressive Rest. |
 | `Progressive Starter Card` | The first copy gives back your special starter card (Bash, Neutralize, ...); the second upgrades it the way Archaic Tooth would. |
 | `Progressive Starter Relic` | The first copy gives back your starter relic (Burning Blood, ...); the second refines it the way Touch of Orobas would. |
