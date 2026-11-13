@@ -119,9 +119,10 @@ Slay the Spire II:
   # Game Options #
   ################
 
-  # Chance, in percent (0-100), for each shop to be a Blitz merchant instead: six offers and three
-  # free picks in place of a shop's stock. Shop Sanity checks are still sold there. Singleplayer
-  # only for now; beta branch only, and every shop is normal on the main branch. Logic ignores it.
+  # Chance (0-100%) for each shop to be a Blitz merchant: six offers and three free picks in
+  # place of its stock; Shop Sanity checks are still sold there. Very strong and ignored by
+  # logic, and gold has little use at high values: pair it with harder Challenges. Singleplayer
+  # only; beta branch only (normal shops on the main branch).
   blitz_merchant_chance: 0
 
   # true uses the current "power"-based logic; false uses the older logic

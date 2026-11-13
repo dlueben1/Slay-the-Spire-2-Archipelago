@@ -424,7 +424,7 @@ export function summarizeRunAnswers(answers: RunAnswers): string {
     : "Runs are not assigned fixed seeds.";
 
   const blitzMerchants = answers.blitzMerchantChance
-    ? ` ${answers.blitzMerchantChance}% of shops are Blitz merchants, which needs the game's beta branch.`
+    ? ` ${answers.blitzMerchantChance}% of shops are Blitz merchants. They are very strong and logic ignores them; they need the game's beta branch.`
     : "";
 
   return `${immediateRelics} ${opRelics} ${victoryRelease} ${seeded}${blitzMerchants}`;
