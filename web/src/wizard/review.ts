@@ -529,7 +529,7 @@ export function summarizeChallengeAnswers(answers: ChallengeAnswers): string {
 
   if (answers.dreadMode) {
     sentences.push(
-      "Runs are Dread runs, with every Ascension on and no Ascension Down items.",
+      "Runs are Dread runs, with the Ascensions from Character Setup.",
     );
   }
 

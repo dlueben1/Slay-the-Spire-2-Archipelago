@@ -42,27 +42,6 @@ const waxRelic: BonusItemAnswer = {
 };
 
 describe("filler budget", () => {
-  it("counts a Dread slot with every Ascension and no Downs", () => {
-    const answers = createAnswers(["Ironclad"]);
-    answers.characters.sharedAscensions = {
-      enabled: [1, 2, 3],
-      ascensionDownsEnabled: true,
-      downs: [2, 3],
-    };
-    answers.challenges.enabled = true;
-    answers.challenges.dreadMode = true;
-    // 48 + 1 Double Boss, and the two Downs are gone.
-    expect(getFillerBudget(answers).available).toBe(
-      FLOOR_CHECK_FILLER_SLOTS + 1,
-    );
-
-    // The opt-in switch is off, so the YAML stays a standard slot.
-    answers.challenges.enabled = false;
-    expect(getFillerBudget(answers).available).toBe(
-      FLOOR_CHECK_FILLER_SLOTS - 2,
-    );
-  });
-
   it("gives each character the floor-check filler slots", () => {
     const budget = getFillerBudget(createAnswers(["Ironclad", "Silent"]));
     expect(budget.available).toBe(2 * FLOOR_CHECK_FILLER_SLOTS);

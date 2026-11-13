@@ -15,9 +15,9 @@ namespace StS2AP.Utils;
 /// The slot's Dread Mode option. A Dread AP run starts from the standard
 /// character select or lobby, so character locks, checkpoints and the AP panel stay as they are;
 /// only the run's game mode changes. The game then adds its own Dread rules: a Dominion in each
-/// act, stronger bosses and an Ascender's Bane on entering Acts 2 and 3. The APWorld turns every
-/// Ascension on for a Dread slot and gives it no Ascension Down items, as the game's Dread screen
-/// always plays Ascension 10.
+/// act, stronger bosses and an Ascender's Bane on entering Acts 2 and 3. The slot's Ascension set
+/// and Ascension Down items apply as in any AP run; the game's own Dread screen always plays
+/// Ascension 10, which a slot gets by turning all ten Ascensions on.
 /// Game versions before 0.113 have no Dread; there every member answers "no".
 /// </summary>
 internal static class DreadRuns

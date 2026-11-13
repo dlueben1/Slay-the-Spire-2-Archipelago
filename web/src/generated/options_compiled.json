@@ -12,7 +12,7 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "617c3f9b1b86e9c07fcf16df587d8119f2b838b4310149f70a2b5b092409d469"
+      "sha256": "61282d91fda35bdbfba5a96a8f39618a823f999dff63b86843149ad92e8c8394"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
@@ -4245,7 +4245,7 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Dread Mode",
-      "description": "Every run is a Dread run, the game's Dread mode. Each act has a Dominion, an extra combat rule\nset by that act's boss. Bosses are stronger, and you gain an Ascender's Bane at the start of Act 2\nand of Act 3. Dread replaces your Ascension settings: all ten Ascensions are on and there are no\nAscension Down items, and the Ascension and Ascension Down options are ignored. Needs the game's\nbeta branch; on the main branch runs are standard runs with those Ascensions. Logic does not\naccount for it. In multiplayer, the host's setting applies to the whole run.",
+      "description": "Every run is a Dread run, the game's Dread mode. Each act has a Dominion, an extra combat rule\nset by that act's boss. Bosses are stronger, and you gain an Ascender's Bane at the start of Act 2\nand of Act 3. Your Ascension and Ascension Down settings apply as usual; the base game plays\nDread at Ascension 10. Needs the game's beta branch; on the main branch runs are standard runs.\nLogic does not account for it. In multiplayer, the host's setting applies to the whole run.",
       "default": false,
       "raw_default": 0,
       "visibility": {

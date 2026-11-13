@@ -376,7 +376,7 @@ export const runSetupStep: WizardStep = {
  */
 function describeDreadModeRequirements(): string | null {
   return isBetaOnlyOption(CHALLENGE_OPTION_KEYS.dreadMode)
-    ? "Beta branch only. On the game's main branch the mod says so when connecting, and runs are standard runs with all ten Ascensions."
+    ? "Beta branch only. On the game's main branch the mod says so when connecting, and runs are standard runs."
     : null;
 }
 
@@ -488,7 +488,7 @@ export const challengeSetupStep: WizardStep = {
         field: "dreadMode",
         label: "Dread Mode",
         description:
-          "Replaces the Ascension settings from Character Setup: all ten Ascensions are on and there are no Ascension Down items.",
+          "Your Ascensions and Ascension Down items from Character Setup still apply. The base game only plays Dread at Ascension 10, so turn on all ten Ascensions for the same challenge.",
       },
     },
     {

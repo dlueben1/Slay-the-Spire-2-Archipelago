@@ -105,8 +105,6 @@ class SlayTheSpire2World(World):
         if hasattr(self.multiworld, 're_gen_passthrough'):
             self._setup_ut(self.multiworld.re_gen_passthrough[self.game])
             return
-        if self.options.dread_mode:
-            self._apply_dread_ascensions()
         if self.options.use_advanced_characters.value == 0:
             self._handle_basic_chars()
         else:
@@ -265,14 +263,6 @@ class SlayTheSpire2World(World):
                 generic_num += 1
                 block = GENERIC_CHARACTER_BLOCKS[generic_num - 1]
             yield option_name, character_registry[block].name, block, mod_num
-
-    def _apply_dread_ascensions(self) -> None:
-        """Replaces the slot's Ascension settings: the game only plays Dread with every Ascension on."""
-        self.options.ascension.value = set(ASCENSION_LIST)
-        self.options.ascension_down.value = set()
-        for character_options in self.options.advanced_characters.value.values():
-            character_options["ascension"] = list(ASCENSION_LIST)
-            character_options["ascension_down"] = []
 
     def _handle_basic_chars(self) -> None:
         char_options = unique_character_ids(

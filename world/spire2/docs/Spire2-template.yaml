@@ -110,10 +110,9 @@ Slay the Spire II:
 
   # Every run is a Dread run (beta branch only): a Dominion (an extra combat rule from the act's
   # boss) in each act, stronger bosses, and an Ascender's Bane at the start of Acts 2 and 3.
-  # Dread replaces your Ascension settings: all ten Ascensions are on and there are no Ascension
-  # Down items, and ascension and ascension_down above are ignored. On the game's main branch
-  # runs are standard runs with those Ascensions. Logic ignores it. In multiplayer, the host's
-  # setting applies to the whole run.
+  # ascension and ascension_down still apply; the base game plays Dread at Ascension 10. Standard
+  # runs on the game's main branch. Logic ignores it. In multiplayer, the host's setting applies
+  # to the whole run.
   dread_mode: false
 
   ################

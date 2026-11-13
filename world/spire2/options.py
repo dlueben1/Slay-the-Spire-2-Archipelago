@@ -719,10 +719,9 @@ class EnemyDamageScaling(Range):
 class DreadMode(Toggle):
     """Every run is a Dread run, the game's Dread mode. Each act has a Dominion, an extra combat rule
     set by that act's boss. Bosses are stronger, and you gain an Ascender's Bane at the start of Act 2
-    and of Act 3. Dread replaces your Ascension settings: all ten Ascensions are on and there are no
-    Ascension Down items, and the Ascension and Ascension Down options are ignored. Needs the game's
-    beta branch; on the main branch runs are standard runs with those Ascensions. Logic does not
-    account for it. In multiplayer, the host's setting applies to the whole run.
+    and of Act 3. Your Ascension and Ascension Down settings apply as usual; the base game plays
+    Dread at Ascension 10. Needs the game's beta branch; on the main branch runs are standard runs.
+    Logic does not account for it. In multiplayer, the host's setting applies to the whole run.
     """
     display_name = "Dread Mode"
     default = 0

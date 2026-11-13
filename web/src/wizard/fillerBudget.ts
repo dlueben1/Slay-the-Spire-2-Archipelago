@@ -87,27 +87,16 @@ function getCharacterSlots(
   return slots;
 }
 
-/** What the APWorld gives every character of a Dread slot, whatever Character Setup says. */
-const DREAD_ASCENSIONS: AscensionConfigurationAnswers = {
-  enabled: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-  ascensionDownsEnabled: false,
-  downs: [],
-};
-
 /** Filler slots per configured character, keyed by the name used in the roster. */
 function getSlotsByCharacter(answers: WizardAnswers): Map<string, number> {
   const characters = answers.characters;
-  const isDread = answers.challenges.enabled && answers.challenges.dreadMode;
-  const shared = characters.ascensionMode === "shared" || isDread;
-  const sharedAscensions = isDread
-    ? DREAD_ASCENSIONS
-    : characters.sharedAscensions;
+  const shared = characters.ascensionMode === "shared";
   const slots = new Map<string, number>();
 
   for (const name of characters.selectedCharacters) {
     const ascensions = shared
-      ? sharedAscensions
-      : (characters.individualAscensions[name] ?? sharedAscensions);
+      ? characters.sharedAscensions
+      : (characters.individualAscensions[name] ?? characters.sharedAscensions);
     slots.set(
       name,
       getCharacterSlots(
@@ -124,7 +113,7 @@ function getSlotsByCharacter(answers: WizardAnswers): Map<string, number> {
     slots.set(
       name,
       getCharacterSlots(
-        shared ? sharedAscensions : modded.ascensions,
+        shared ? characters.sharedAscensions : modded.ascensions,
         modded.starterOverrides,
         answers,
       ),
