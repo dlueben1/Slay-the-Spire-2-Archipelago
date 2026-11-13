@@ -472,8 +472,9 @@ export function describeChallengeWarnings(
 
   if (betaOnly.length) {
     const verb = betaOnly.length === 1 ? "is" : "are";
+    const pronoun = betaOnly.length === 1 ? "it" : "them";
     warnings.push(
-      `${joinNames(betaOnly)} ${verb} only in the game's beta branch, so this YAML needs Slay the Spire II on the beta branch.`,
+      `${joinNames(betaOnly)} ${verb} only in the game's beta branch. On the main branch the slot plays without ${pronoun}.`,
     );
   }
 

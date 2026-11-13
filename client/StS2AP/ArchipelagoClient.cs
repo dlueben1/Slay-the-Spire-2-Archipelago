@@ -880,19 +880,19 @@ namespace StS2AP
                     return;
                 }
 
-                // A setting that needs a game feature this build lacks cannot be honoured, and
-                // playing without it would quietly change the slot's difficulty.
+                // A setting that needs a game feature this build lacks is left off. Such settings
+                // change no checks, so the slot still plays; say so once, so the easier run is
+                // not a surprise.
                 IReadOnlyList<string> missingGameFeatures = GameFeatures.FindMissing(
                     ApSlotData.ReadRequiredGameFeatures(ApSlotData.Normalize(SlotData)),
                     GameFeatures.Supported
                 );
                 if (missingGameFeatures.Count > 0)
                 {
-                    RejectIncompatibleConnection(
-                        GameFeatures.DescribeMissing(missingGameFeatures),
-                        wasAutomaticReconnect
-                    );
-                    return;
+                    string missingFeaturesNote = GameFeatures.DescribeMissing(missingGameFeatures);
+                    LogUtility.Warn(missingFeaturesNote);
+                    if (!wasAutomaticReconnect)
+                        NotificationUtility.ShowRawText(missingFeaturesNote);
                 }
 
                 // These metadata fields cannot predict whether this client understands every

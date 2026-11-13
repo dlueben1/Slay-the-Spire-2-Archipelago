@@ -1,9 +1,10 @@
 /**
  * @file Finds options that need a game feature only the game's beta branch has.
  *
- * The APWorld cannot know which game branch a player runs, so it marks such options and
- * the mod refuses a slot that needs a feature its game version lacks. The wizard reads
- * the same marker from the generated schema to label those options and to warn on Review.
+ * The APWorld cannot know which game branch a player runs, so it marks such options. The
+ * mod plays a slot without a feature its game version lacks and tells the player when
+ * connecting. The wizard reads the same marker from the generated schema to label those
+ * options and to warn on Review.
  */
 
 import { optionCatalog, type OptionCatalog } from "../generated/optionCatalog";

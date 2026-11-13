@@ -110,8 +110,9 @@ Slay the Spire II:
   # Every run is a Dread run (beta branch only): a Dominion (an extra combat rule from the act's
   # boss) in each act, stronger bosses, and an Ascender's Bane at the start of Acts 2 and 3.
   # Dread replaces your Ascension settings: all ten Ascensions are on and there are no Ascension
-  # Down items, and ascension and ascension_down above are ignored. Logic ignores it. In
-  # multiplayer, the host's setting applies to the whole run.
+  # Down items, and ascension and ascension_down above are ignored. On the game's main branch
+  # runs are standard runs with those Ascensions. Logic ignores it. In multiplayer, the host's
+  # setting applies to the whole run.
   dread_mode: false
 
   ################
@@ -120,7 +121,7 @@ Slay the Spire II:
 
   # Chance, in percent (0-100), for each shop to be a Blitz merchant instead: six offers and three
   # free picks in place of a shop's stock. Shop Sanity checks are still sold there. Singleplayer
-  # only for now; beta branch only. Logic ignores it.
+  # only for now; beta branch only, and every shop is normal on the main branch. Logic ignores it.
   blitz_merchant_chance: 0
 
   # true uses the current "power"-based logic; false uses the older logic

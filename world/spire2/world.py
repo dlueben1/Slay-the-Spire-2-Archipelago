@@ -779,7 +779,8 @@ class SlayTheSpire2World(World):
     def required_game_features(self) -> list[str]:
         """Game features this slot's settings need that only some supported game versions have.
 
-        A client refuses the slot when its game build lacks one of them. An option names its
+        A client whose game build lacks one still connects, plays without that setting and
+        tells the player. An option names its
         feature in a required_game_feature attribute, and counts while its value is set.
         """
         features = set()

@@ -17,14 +17,16 @@ public sealed class GameFeaturesTests
     }
 
     [Fact]
-    public void ADreadSlotIsRefusedOnlyByABuildWithoutDread()
+    public void ADreadSlotLacksItsFeatureOnlyOnABuildWithoutDread()
     {
         var slot = new Dictionary<string, object> { ["required_game_features"] = JArray.Parse("[\"dread\"]") };
         IReadOnlyList<string> required = ApSlotData.ReadRequiredGameFeatures(slot);
         Assert.Equal(["dread"], required);
         Assert.Empty(GameFeatures.FindMissing(required, WithDread));
         Assert.Equal(["dread"], GameFeatures.FindMissing(required, NoFeatures));
-        Assert.Contains("dread", GameFeatures.DescribeMissing(["dread"]));
+        // The player reads what the slot plays without, not the feature's internal name.
+        Assert.Contains("Dread Mode (runs are standard runs)", GameFeatures.DescribeMissing(["dread"]));
+        Assert.Contains("future_feature", GameFeatures.DescribeMissing(["future_feature"]));
     }
 
     [Fact]

@@ -357,7 +357,7 @@ export const runSetupStep: WizardStep = {
       title: "How many shops should be Blitz merchants?",
       description:
         "A Blitz merchant replaces a shop's stock with six offers and three free picks. It comes from the base game's Blitz mode. Shop Sanity checks are still sold there. Singleplayer only for now, and logic doesn't account for it.",
-      help: "0% leaves every shop normal. Beta branch only: above 0%, the mod refuses to connect on a game version without Blitz merchants.",
+      help: "0% leaves every shop normal. Beta branch only: on the game's main branch every shop stays normal.",
       control: {
         kind: "slider",
         field: "blitzMerchantChance",
@@ -376,7 +376,7 @@ export const runSetupStep: WizardStep = {
  */
 function describeDreadModeRequirements(): string | null {
   return isBetaOnlyOption(CHALLENGE_OPTION_KEYS.dreadMode)
-    ? "Beta branch only. The mod refuses to connect to this slot on a game version without Dread."
+    ? "Beta branch only. On the game's main branch the mod says so when connecting, and runs are standard runs with all ten Ascensions."
     : null;
 }
 

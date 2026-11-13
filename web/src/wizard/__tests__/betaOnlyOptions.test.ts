@@ -2,8 +2,8 @@
  * @file Protects how the wizard handles options only the game's beta branch supports.
  *
  * The APWorld marks such an option with the game feature it needs, and the generated
- * catalog carries the marker. The mod refuses a slot that needs a feature its game
- * version lacks, so the Review step tells the player before they generate. The tests
+ * catalog carries the marker. The mod plays a slot without a feature its game version
+ * lacks, so the Review step tells the player before they generate. The tests
  * use their own catalog so they keep working once the marker is removed.
  */
 
