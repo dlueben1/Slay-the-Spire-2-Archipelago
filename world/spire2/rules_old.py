@@ -149,7 +149,7 @@ class LegacySpireHasShop(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
         @override
         def _evaluate(self, state: CollectionState) -> bool:
             return (state.count(f"{self.char} Shop Card Slot", self.player) +
-                    state.count(f"{self.char} Neutral Shop Card Slot", self.player) +
+                    state.count(f"{self.char} Shop Colorless Card Slot", self.player) +
                     state.count(f"{self.char} Shop Relic Slot", self.player) +
                     state.count(f"{self.char} Shop Potion Slot", self.player) >= min(self.shop, self.max_shop))
 

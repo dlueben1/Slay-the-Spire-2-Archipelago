@@ -264,7 +264,7 @@ ANCIENT_POWER_BY_TIER = (2.0, 4.5, 4.5)
 # more than a full page. Colored cards and relics total 1.5 each, neutral cards 0.5, potions 1.
 SHOP_SLOT_VALUES = (
     ("Shop Card Slot", (0.625, 0.375, 0.25, 0.125, 0.125)),
-    ("Neutral Shop Card Slot", (0.375, 0.125)),
+    ("Shop Colorless Card Slot", (0.375, 0.125)),
     ("Shop Relic Slot", (0.75, 0.5, 0.25)),
     ("Shop Potion Slot", (0.5, 0.375, 0.125)),
 )

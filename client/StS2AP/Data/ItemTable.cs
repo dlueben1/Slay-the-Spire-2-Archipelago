@@ -96,7 +96,7 @@
             { 7, "Progressive Rest" },
             { 8, "Progressive Smith" },
             { 9, "Shop Card Slot" },
-            { 10, "Neutral Shop Card Slot" },
+            { 10, "Shop Colorless Card Slot" },
             { 11, "Shop Relic Slot" },
             { 12, "Shop Potion Slot" },
             { 13, "Progressive Shop Remove" },

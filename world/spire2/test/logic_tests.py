@@ -31,7 +31,7 @@ class LogicTests(unittest.TestCase):
     }
     shop_slots = (
         ("shop_card_slots", "Shop Card Slot", 5),
-        ("shop_neutral_card_slots", "Neutral Shop Card Slot", 2),
+        ("shop_neutral_card_slots", "Shop Colorless Card Slot", 2),
         ("shop_relic_slots", "Shop Relic Slot", 3),
         ("shop_potion_slots", "Shop Potion Slot", 3),
     )
