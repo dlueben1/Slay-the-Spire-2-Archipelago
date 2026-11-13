@@ -735,6 +735,19 @@ class GameMode(Choice):
     # connecting, and the builder labels that choice.
     required_game_features = {option_dread: "dread"}
 
+class BlitzMerchantChance(Range):
+    """Chance, in percent, for each shop to be a Blitz merchant instead: six offers and three free
+    picks, with nothing to buy for gold. 0 turns it off. Singleplayer only for now, and needs the
+    game's beta branch. Shop Sanity checks are only sold in normal shops, so the chance is capped
+    at 50 with Shop Sanity on. Logic does not account for it.
+    """
+    display_name = "Blitz Merchant Chance"
+    range_start = 0
+    range_end = 100
+    default = 0
+    # Needed whenever the option is above 0; see GameMode.required_game_features.
+    required_game_feature = "blitz_merchant"
+
 # Death Link Options
 
 class DeathLink(ArchipelagoDeathLink):
@@ -1100,6 +1113,7 @@ class Spire2Options(PerGameCommonOptions):
     enemy_hp_scaling: EnemyHpScaling
     enemy_damage_scaling: EnemyDamageScaling
     game_mode: GameMode
+    blitz_merchant_chance: BlitzMerchantChance
     hidden_intents: HiddenIntents
     hidden_health: HiddenHealth
     hidden_piles: HiddenPiles

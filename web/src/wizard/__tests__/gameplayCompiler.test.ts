@@ -85,6 +85,7 @@ function compilesConfiguredGameplaySections(): void {
     removeOpRelics: { ancient: true, rare: true },
     releaseOnVictory: false,
     seeded: true,
+    blitzMerchantChance: 25,
   };
   answers.checksAndRewards.startingEquipment = {
     progressiveStarterCard: true,

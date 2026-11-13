@@ -1915,6 +1915,8 @@ namespace StS2AP
                     LogUtility.Warn($"Unknown game_mode {gameMode} in slot data; playing standard runs.");
                 LogUtility.Info($"SLOT - Game Mode: {settings.SlotGameMode}");
             }
+            if (slotData.ContainsKey("blitz_merchant_chance"))
+                settings.BlitzMerchantChance = Convert.ToInt32(slotData["blitz_merchant_chance"]);
 
             if (slotData.ContainsKey("campfire_sanity"))
                 settings.CampfireSanity = Convert.ToInt32(slotData["campfire_sanity"]) != 0;

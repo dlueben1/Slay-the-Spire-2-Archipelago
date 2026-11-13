@@ -375,8 +375,11 @@ def serialize_option(key: str, option_type: type, is_game_option: bool) -> dict:
     if kind == "dictionary":
         option_data["has_validation_schema"] = getattr(option_type, "schema", None) is not None
 
-    # Game features only some supported game versions have, by the choice that needs them; the
-    # wizard labels those choices.
+    # Game features only some supported game versions have. An option names one it needs at any
+    # set value, or maps the choices that need one; the wizard labels those.
+    required_game_feature = getattr(option_type, "required_game_feature", None)
+    if required_game_feature:
+        option_data["required_game_feature"] = str(required_game_feature)
     required_game_features = getattr(option_type, "required_game_features", None)
     if required_game_features:
         choice_names = {choice["value"]: choice["name"] for choice in choices}

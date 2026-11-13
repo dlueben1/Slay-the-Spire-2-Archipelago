@@ -12,11 +12,11 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "4052081c254b83f4c8fc5053da4f73622b6ba8deeec9959734086d04c6707527"
+      "sha256": "c79a2f03ce95229824b5b87c5ce0e97f6deb7a48914b796cd39015e0dce5f309"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "faa65afe35a11c0434ee683ee33a066415ddd10fcfd13d1eb8f74633585199e5"
+      "sha256": "7f1ad1f020b1d115aae44177b05f9d81a739ab5debb32d9f5681ce8d59fdb29c"
     }
   },
   "characters": {
@@ -219,6 +219,7 @@
     "enemy_hp_scaling",
     "enemy_damage_scaling",
     "game_mode",
+    "blitz_merchant_chance",
     "hidden_intents",
     "hidden_health",
     "hidden_piles",
@@ -255,7 +256,8 @@
         "remove_op_relics",
         "progressive_starter_card",
         "progressive_starter_relic",
-        "shuffle_all_cards"
+        "shuffle_all_cards",
+        "blitz_merchant_chance"
       ],
       "start_collapsed": false,
       "source": "web_world"
@@ -4273,6 +4275,33 @@
       "required_game_features": {
         "dread": "dread"
       },
+      "supports_weighting": true,
+      "group": "Game Options"
+    },
+    "blitz_merchant_chance": {
+      "key": "blitz_merchant_chance",
+      "class_name": "BlitzMerchantChance",
+      "module": "worlds.spire2.options",
+      "kind": "range",
+      "display_name": "Blitz Merchant Chance",
+      "description": "Chance, in percent, for each shop to be a Blitz merchant instead: six offers and three free\npicks, with nothing to buy for gold. 0 turns it off. Singleplayer only for now, and needs the\ngame's beta branch. Shop Sanity checks are only sold in normal shops, so the chance is capped\nat 50 with Shop Sanity on. Logic does not account for it.",
+      "default": 0,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "minimum": 0,
+      "maximum": 100,
+      "required_game_feature": "blitz_merchant",
       "supports_weighting": true,
       "group": "Game Options"
     },

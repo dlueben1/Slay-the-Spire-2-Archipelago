@@ -335,3 +335,35 @@ class TestDreadGameModeWithAdvancedCharacters(Spire2TestBase):
         for config in self.world.characters:
             self.assertEqual({name.lower() for name in ASCENSION_LIST}, set(config.ascension))
             self.assertEqual(set(), set(config.ascension_down))
+
+
+class TestBlitzMerchantChanceOff(Spire2TestBase):
+    def test_slot_needs_no_game_features(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(0, slot_data["blitz_merchant_chance"])
+        self.assertEqual([], slot_data["required_game_features"])
+
+
+class TestBlitzMerchantChance(Spire2TestBase):
+    options = {
+        "blitz_merchant_chance": 100,
+        "shop_sanity": False,
+    }
+
+    def test_slot_requires_the_blitz_merchant_game_feature(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(100, slot_data["blitz_merchant_chance"])
+        self.assertEqual(["blitz_merchant"], slot_data["required_game_features"])
+
+
+class TestBlitzMerchantChanceWithShopSanity(Spire2TestBase):
+    options = {
+        "blitz_merchant_chance": 100,
+        "shop_sanity": True,
+        "game_mode": "dread",
+    }
+
+    def test_some_shops_stay_normal(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(50, slot_data["blitz_merchant_chance"])
+        self.assertEqual(["blitz_merchant", "dread"], slot_data["required_game_features"])

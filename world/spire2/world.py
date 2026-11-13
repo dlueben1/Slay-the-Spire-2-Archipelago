@@ -24,6 +24,10 @@ from .items import (item_table, chars_to_items, bonus_item_table, ItemType, base
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
 from .options import GameMode, Spire2Options
 
+# PLACEHOLDER (balance): the highest Blitz Merchant Chance a slot with Shop Sanity keeps. Logic
+# counts on shop visits for shop checks and does not know that some shops sell none.
+BLITZ_MERCHANT_MAX_CHANCE_WITH_SHOP_SANITY = 50
+
 COMBAT_GOLD_ITEM_COUNT = COMBAT_GOLD_ITEMS
 ELITE_GOLD_ITEM_COUNT = 7
 BOSS_GOLD_ITEM_COUNT = 2
@@ -145,6 +149,10 @@ class SlayTheSpire2World(World):
         self.total_shop_locations = self.total_shop_items + (3 if self.options.shop_remove_slots else 0)
         if self.total_shop_locations <= 0:
             self.options.shop_sanity.value = 0
+        if self.options.shop_sanity.value:
+            # Shop checks are only sold in normal shops, so some shops have to stay normal.
+            self.options.blitz_merchant_chance.value = min(
+                self.options.blitz_merchant_chance.value, BLITZ_MERCHANT_MAX_CHANCE_WITH_SHOP_SANITY)
         select_logic(self)
         if self.logic_fallback_reason:
             logging.info("Slay the Spire II player %s: %s", self.player, self.logic_fallback_reason)
@@ -747,6 +755,7 @@ class SlayTheSpire2World(World):
             "enemy_hp_scaling",
             "enemy_damage_scaling",
             "game_mode",
+            "blitz_merchant_chance",
             "num_chars_goal",
             "shuffle_all_cards",
             "strict_card_rewards",
@@ -778,12 +787,16 @@ class SlayTheSpire2World(World):
     def required_game_features(self) -> list[str]:
         """Game features this slot's settings need that only some supported game versions have.
 
-        A client refuses the slot when its game build lacks one of them. An option class maps the
-        values that need a feature to its name in a required_game_features attribute.
+        A client refuses the slot when its game build lacks one of them. An option class names a
+        feature it needs at any set value in required_game_feature, or maps the values that need
+        one to its name in required_game_features.
         """
         features = set()
         for option_name in self.options_dataclass.type_hints:
             option = getattr(self.options, option_name)
+            feature = getattr(option, "required_game_feature", None)
+            if feature and option.value:
+                features.add(feature)
             by_value = getattr(option, "required_game_features", None)
             if by_value and option.value in by_value:
                 features.add(by_value[option.value])

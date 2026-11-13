@@ -154,6 +154,12 @@ namespace StS2AP.Models
         /// </summary>
         public ApGameMode SlotGameMode { get; set; }
 
+        /// <summary>
+        /// Chance, in percent, for each shop of a singleplayer run to be a Blitz merchant. See
+        /// <see cref="BlitzMerchantVisits"/>.
+        /// </summary>
+        public int BlitzMerchantChance { get; set; }
+
         public bool CampfireSanity { get; set; }
         public bool GoldSanity { get; set; }
         public bool PotionSanity { get; set; }

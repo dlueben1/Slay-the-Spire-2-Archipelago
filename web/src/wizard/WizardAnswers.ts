@@ -157,6 +157,8 @@ export interface RunAnswers {
   removeOpRelics: OpRelicRemovalAnswers;
   releaseOnVictory: boolean;
   seeded: boolean;
+  /** Percent of shops that are Blitz merchants. Only the game's beta branch has them. */
+  blitzMerchantChance: number;
 }
 
 /** How many Sight items a hidden-information challenge adds; `off` leaves it off. */
@@ -493,6 +495,10 @@ export function createDefaultWizardAnswers(
         RUN_OPTION_KEYS.releaseOnVictory,
       ),
       seeded: getBooleanDefault(catalog, RUN_OPTION_KEYS.seeded),
+      blitzMerchantChance: getNumberDefault(
+        catalog,
+        RUN_OPTION_KEYS.blitzMerchantChance,
+      ),
     },
     challenges: {
       // Challenges are opt-in regardless of their generated defaults.

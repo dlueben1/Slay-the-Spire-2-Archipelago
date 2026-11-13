@@ -227,6 +227,7 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
         removeOpRelics: { ancient: true, rare: true },
         releaseOnVictory: !answers.run.releaseOnVictory,
         seeded: !answers.run.seeded,
+        blitzMerchantChance: 40,
       };
     },
   ],

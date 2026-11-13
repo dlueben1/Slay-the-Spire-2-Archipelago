@@ -24,6 +24,7 @@ import {
 const WIZARD_RANGE_SOURCES = {
   trapChance: TRAP_CHANCE_OPTION_KEY,
   relicRewardsAvailableAnytime: RUN_OPTION_KEYS.relicRewardsAvailableAnytime,
+  blitzMerchantChance: RUN_OPTION_KEYS.blitzMerchantChance,
   enemyHpScaling: CHALLENGE_OPTION_KEYS.enemyHpScaling,
   enemyDamageScaling: CHALLENGE_OPTION_KEYS.enemyDamageScaling,
   progressionBalancing: PROGRESSION_OPTION_KEYS.progressionBalancing,

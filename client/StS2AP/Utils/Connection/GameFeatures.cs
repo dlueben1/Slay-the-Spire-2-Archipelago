@@ -11,11 +11,15 @@ internal static class GameFeatures
     /// <summary>The game's Dread mode, added in 0.113.0.</summary>
     public const string Dread = "dread";
 
+    /// <summary>The Blitz merchant room, added with Blitz mode in 0.113.0.</summary>
+    public const string BlitzMerchant = "blitz_merchant";
+
     /// <summary>The features of the game version this build was compiled against.</summary>
     public static readonly IReadOnlySet<string> Supported = new HashSet<string>(StringComparer.Ordinal)
     {
 #if STS2_AT_LEAST_0_113_0
         Dread,
+        BlitzMerchant,
 #endif
     };
 

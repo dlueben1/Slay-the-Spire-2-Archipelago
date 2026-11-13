@@ -352,6 +352,20 @@ export const runSetupStep: WizardStep = {
         ],
       },
     },
+    {
+      id: "blitz-merchant-chance",
+      title: "How many shops should be Blitz merchants?",
+      description:
+        "A Blitz merchant replaces a shop's stock with six offers and three free picks, with nothing to buy for gold. It comes from the base game's Blitz mode. Singleplayer only for now, and logic doesn't account for it.",
+      help: "0% leaves every shop normal. Beta branch only: above 0%, the mod refuses to connect on a game version without Blitz merchants. With Shop Sanity on, generation caps this at 50%, because shop checks are only sold in normal shops.",
+      control: {
+        kind: "slider",
+        field: "blitzMerchantChance",
+        range: generatedRange("blitzMerchantChance"),
+        unit: "%",
+        ariaLabel: "Blitz merchant chance percent",
+      },
+    },
   ],
 };
 
