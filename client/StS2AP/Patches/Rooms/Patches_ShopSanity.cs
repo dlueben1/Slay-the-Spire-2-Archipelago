@@ -290,13 +290,14 @@ namespace StS2AP.Patches
         /// Gives a merchant inventory with no stock of its own, such as a Blitz merchant's, the
         /// AP page a normal shop would have on this visit. AP slots are clones of a normal shop's
         /// rolled stock, so this rolls one just for them; nothing else of it is shown.
+        /// Call it for every player on every peer, whether or not that player has Shop Sanity:
+        /// the roll uses the player's shop RNG and takes relics from the run's shared relic bag,
+        /// so a roll made on only one peer would leave the peers' runs out of step.
         /// </summary>
         internal static bool AttachApInventory(Player player, MerchantInventory host)
         {
-            if (!TryGetLocalShopSettings(player, out ArchipelagoSettings settings) || !settings.ShopSanity)
-                return false;
-
-            // PopulateApShopSlots builds the AP inventory in its postfix on this call.
+            // PopulateApShopSlots builds the AP inventory in its postfix on this call, for the
+            // local player with Shop Sanity only.
             MerchantInventory stock = MerchantInventory.CreateForNormalMerchant(player);
             if (!ApInventories.TryGetValue(stock, out MerchantInventory? apInventory))
                 return false;

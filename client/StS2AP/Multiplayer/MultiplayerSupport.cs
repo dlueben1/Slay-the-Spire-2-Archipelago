@@ -930,6 +930,7 @@ public static class MultiplayerSupport
             EnemyHpScaling = source.EnemyHpScaling,
             EnemyDamageScaling = source.EnemyDamageScaling,
             DreadMode = source.DreadMode,
+            BlitzMerchantChance = source.BlitzMerchantChance,
             PotionSanity = source.PotionSanity,
             Floorsanity = source.Floorsanity,
             ProgressiveStarterCard = source.ProgressiveStarterCard,

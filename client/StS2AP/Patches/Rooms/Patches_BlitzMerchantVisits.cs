@@ -40,12 +40,14 @@ internal static class Patches_BlitzMerchantVisits
         private static async Task Enter(MerchantRoom room, IRunState runState)
         {
             // The game builds a Blitz inventory, and gives it its free picks, only in a Blitz run.
+            // Every peer builds every player's inventory, in the same order, as the game does.
             var inventories = new List<MerchantInventory>();
             foreach (var player in runState.Players)
             {
                 MerchantInventory inventory = MerchantInventory.CreateForBlitzMerchant(player);
                 inventory.BlitzChoicesRemaining = BlitzMerchantVisits.FreePicks;
-                // Shop Sanity checks are sold here as in any shop, on the same AP page.
+                // Shop Sanity checks are sold here as in any shop, on the same AP page. The
+                // stock it rolls for them must be rolled for every player on every peer.
                 Patches_ShopSanity.AttachApInventory(player, inventory);
                 inventories.Add(inventory);
             }

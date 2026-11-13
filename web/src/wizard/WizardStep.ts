@@ -357,7 +357,7 @@ export const runSetupStep: WizardStep = {
       title: "How many shops should be Blitz merchants?",
       description:
         "A Blitz merchant comes from the base game's Blitz mode. It replaces a shop's cards, relics and potions with six offers, such as a rare card reward, a relic, a card removal or a full heal with extra max HP (some come with a curse), and you take three of them for free. Shop Sanity checks are still sold on the shop's AP page.",
-      help: "This is very strong, and logic doesn't account for it at all. Three free picks are worth far more than a normal shop visit, and at high percentages there is little left to spend gold on, so gold becomes much less useful. Pair it with harder settings from the Challenges step, such as Run Modifiers, Enemy HP and Damage Scaling, or Dread Mode. 0% leaves every shop normal. Singleplayer only for now: multiplayer runs keep normal shops. Beta branch only: on the game's main branch every shop stays normal.",
+      help: "This is very strong, and logic doesn't account for it at all. Three free picks are worth far more than a normal shop visit, and at high percentages there is little left to spend gold on, so gold becomes much less useful. Pair it with harder settings from the Challenges step, such as Run Modifiers, Enemy HP and Damage Scaling, or Dread Mode. 0% leaves every shop normal. In multiplayer, the host's chance applies to everyone. Beta branch only: on the game's main branch every shop stays normal.",
       control: {
         kind: "slider",
         field: "blitzMerchantChance",

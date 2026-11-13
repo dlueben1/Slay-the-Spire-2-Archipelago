@@ -156,8 +156,8 @@ namespace StS2AP.Models
         public bool DreadMode { get; set; }
 
         /// <summary>
-        /// Chance, in percent, for each shop of a singleplayer run to be a Blitz merchant. See
-        /// <see cref="BlitzMerchantVisits"/>.
+        /// Chance, in percent, for each shop to be a Blitz merchant. In multiplayer, the host's
+        /// value applies to the whole run. See <see cref="BlitzMerchantVisits"/>.
         /// </summary>
         public int BlitzMerchantChance { get; set; }
 

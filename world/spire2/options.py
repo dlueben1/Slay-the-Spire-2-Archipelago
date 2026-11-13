@@ -734,8 +734,8 @@ class BlitzMerchantChance(Range):
     """Chance, in percent, for each shop to be a Blitz merchant instead: six offers and three free
     picks in place of a shop's stock. Shop Sanity checks are still sold there. Very strong, and
     logic ignores it entirely; at high values gold has little use. Pair it with harder Challenges.
-    Singleplayer only for now. Needs the game's beta branch; on the main branch every shop is
-    normal.
+    In multiplayer, the host's chance applies. Needs the game's beta branch; on the main branch
+    every shop is normal.
     """
     display_name = "Blitz Merchant Chance"
     range_start = 0

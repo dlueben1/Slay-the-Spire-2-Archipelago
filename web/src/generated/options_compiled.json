@@ -12,7 +12,7 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "61282d91fda35bdbfba5a96a8f39618a823f999dff63b86843149ad92e8c8394"
+      "sha256": "29794a2eae81ba4529473dca39ceefb38791b2e1ae908965b6520452be4f4d03"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
@@ -4282,7 +4282,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Blitz Merchant Chance",
-      "description": "Chance, in percent, for each shop to be a Blitz merchant instead: six offers and three free\npicks in place of a shop's stock. Shop Sanity checks are still sold there. Very strong, and\nlogic ignores it entirely; at high values gold has little use. Pair it with harder Challenges.\nSingleplayer only for now. Needs the game's beta branch; on the main branch every shop is\nnormal.",
+      "description": "Chance, in percent, for each shop to be a Blitz merchant instead: six offers and three free\npicks in place of a shop's stock. Shop Sanity checks are still sold there. Very strong, and\nlogic ignores it entirely; at high values gold has little use. Pair it with harder Challenges.\nIn multiplayer, the host's chance applies. Needs the game's beta branch; on the main branch\nevery shop is normal.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
