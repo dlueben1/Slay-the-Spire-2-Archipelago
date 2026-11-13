@@ -94,7 +94,7 @@ the lobby closes. To continue a campaign later, the host loads it from the
 campaign picker and the same players join again.
 
 Ascension and other run settings come from the host's slot, including Run
-Modifiers, enemy HP and damage scaling, and Dread Mode.
+Modifiers, enemy HP and damage scaling, Dread Mode and Blitz Merchant Chance.
 
 ## Joining a lobby
 
@@ -138,8 +138,6 @@ hosts again, copy a new link.
 - AP menu rewards, including potions, can only be claimed outside combat. Claim
   the potions you want before entering a fight.
 - DeathLink works, but Death Fragments are disabled in multiplayer.
-- Blitz Merchants are singleplayer only for now. In multiplayer, every shop is a
-  normal shop.
 - **Anytime** Ancient rewards are recommended. With **Start of Act**, Ancient
   rewards missed before a checkpoint cannot be claimed later in that run.
 
