@@ -45,10 +45,13 @@ internal static class Patches_BlitzMerchantVisits
             {
                 MerchantInventory inventory = MerchantInventory.CreateForBlitzMerchant(player);
                 inventory.BlitzChoicesRemaining = BlitzMerchantVisits.FreePicks;
+                // Shop Sanity checks are sold here as in any shop, on the same AP page.
+                Patches_ShopSanity.AttachApInventory(player, inventory);
                 inventories.Add(inventory);
             }
             RunManager.Instance.MerchantSynchronizer.OnMerchantEntered(inventories);
-            // No Shop Sanity page here: a page left over from an earlier shop must not take part.
+            // Without Shop Sanity there is no AP page, and one left over from an earlier shop
+            // must not take part. With it, the page is registered again when the room is ready.
             ShopPageUtility.Reset();
             LogUtility.Info(
                 $"This shop is a Blitz merchant (act {runState.CurrentActIndex + 1}, floor {runState.ActFloor})."

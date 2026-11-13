@@ -426,7 +426,7 @@ namespace StS2AP.Patches
 
         #region Open with vanilla
 
-        // 0.113 split the room into a standard and a Blitz one; AP pages exist only in the standard shop.
+        // 0.113 split the room into a standard and a Blitz one, each with its own OpenInventory.
 #if STS2_AT_LEAST_0_113_0
         [HarmonyPatch(typeof(NStandardMerchantRoom), nameof(NStandardMerchantRoom.OpenInventory))]
 #else
@@ -435,17 +435,32 @@ namespace StS2AP.Patches
         public static class OpenApPageAlongsideVanilla
         {
             [HarmonyPostfix]
-            public static void Postfix()
-            {
-                // AP_MP: AP shop presentation follows the synchronized purchase gate.
-                if (!MultiplayerSupport.IsFeatureEnabled(MultiplayerFeature.Shops))
-                    return;
+            public static void Postfix() => OpenApPage();
+        }
 
-                NMerchantInventory? apPage = ShopPageUtility.ApPageInstance;
-                if (ShopPageUtility.HasPages && apPage != null && GodotObject.IsInstanceValid(apPage) && !apPage.IsOpen)
-                {
-                    apPage.Open();
-                }
+#if STS2_AT_LEAST_0_113_0
+        /// <summary>
+        /// A Blitz merchant in a standard run (Blitz Merchant Chance) sells Shop Sanity checks on
+        /// the same AP page, beside its offers.
+        /// </summary>
+        [HarmonyPatch(typeof(NBlitzMerchantRoom), nameof(NBlitzMerchantRoom.OpenInventory))]
+        public static class OpenApPageAlongsideBlitzOffers
+        {
+            [HarmonyPostfix]
+            public static void Postfix() => OpenApPage();
+        }
+#endif
+
+        private static void OpenApPage()
+        {
+            // AP_MP: AP shop presentation follows the synchronized purchase gate.
+            if (!MultiplayerSupport.IsFeatureEnabled(MultiplayerFeature.Shops))
+                return;
+
+            NMerchantInventory? apPage = ShopPageUtility.ApPageInstance;
+            if (ShopPageUtility.HasPages && apPage != null && GodotObject.IsInstanceValid(apPage) && !apPage.IsOpen)
+            {
+                apPage.Open();
             }
         }
 

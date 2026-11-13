@@ -732,9 +732,8 @@ class DreadMode(Toggle):
 
 class BlitzMerchantChance(Range):
     """Chance, in percent, for each shop to be a Blitz merchant instead: six offers and three free
-    picks, with nothing to buy for gold. 0 turns it off. Singleplayer only for now, and needs the
-    game's beta branch. Shop Sanity checks are only sold in normal shops, so the chance is capped
-    at 50 with Shop Sanity on. Logic does not account for it.
+    picks in place of a shop's stock. Shop Sanity checks are still sold there. 0 turns it off.
+    Singleplayer only for now, and needs the game's beta branch. Logic does not account for it.
     """
     display_name = "Blitz Merchant Chance"
     range_start = 0

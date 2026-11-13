@@ -24,10 +24,6 @@ from .items import (item_table, chars_to_items, bonus_item_table, ItemType, base
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
 from .options import Spire2Options
 
-# PLACEHOLDER (balance): the highest Blitz Merchant Chance a slot with Shop Sanity keeps. Logic
-# counts on shop visits for shop checks and does not know that some shops sell none.
-BLITZ_MERCHANT_MAX_CHANCE_WITH_SHOP_SANITY = 50
-
 COMBAT_GOLD_ITEM_COUNT = COMBAT_GOLD_ITEMS
 ELITE_GOLD_ITEM_COUNT = 7
 BOSS_GOLD_ITEM_COUNT = 2
@@ -149,10 +145,6 @@ class SlayTheSpire2World(World):
         self.total_shop_locations = self.total_shop_items + (3 if self.options.shop_remove_slots else 0)
         if self.total_shop_locations <= 0:
             self.options.shop_sanity.value = 0
-        if self.options.shop_sanity.value:
-            # Shop checks are only sold in normal shops, so some shops have to stay normal.
-            self.options.blitz_merchant_chance.value = min(
-                self.options.blitz_merchant_chance.value, BLITZ_MERCHANT_MAX_CHANCE_WITH_SHOP_SANITY)
         select_logic(self)
         if self.logic_fallback_reason:
             logging.info("Slay the Spire II player %s: %s", self.player, self.logic_fallback_reason)

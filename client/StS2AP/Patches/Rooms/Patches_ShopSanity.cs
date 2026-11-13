@@ -286,6 +286,27 @@ namespace StS2AP.Patches
         internal static bool TryGetApInventory(MerchantInventory vanillaInventory, out MerchantInventory apInventory)
             => ApInventories.TryGetValue(vanillaInventory, out apInventory!);
 
+        /// <summary>
+        /// Gives a merchant inventory with no stock of its own, such as a Blitz merchant's, the
+        /// AP page a normal shop would have on this visit. AP slots are clones of a normal shop's
+        /// rolled stock, so this rolls one just for them; nothing else of it is shown.
+        /// </summary>
+        internal static bool AttachApInventory(Player player, MerchantInventory host)
+        {
+            if (!TryGetLocalShopSettings(player, out ArchipelagoSettings settings) || !settings.ShopSanity)
+                return false;
+
+            // PopulateApShopSlots builds the AP inventory in its postfix on this call.
+            MerchantInventory stock = MerchantInventory.CreateForNormalMerchant(player);
+            if (!ApInventories.TryGetValue(stock, out MerchantInventory? apInventory))
+                return false;
+
+            ApInventories.Remove(stock);
+            ApInventories.Remove(host);
+            ApInventories.Add(host, apInventory);
+            return true;
+        }
+
         private static MerchantInventory CreateApInventory(
             Player player,
             MerchantInventory vanillaInventory,

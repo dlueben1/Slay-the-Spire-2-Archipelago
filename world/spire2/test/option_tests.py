@@ -363,7 +363,7 @@ class TestBlitzMerchantChanceWithShopSanity(Spire2TestBase):
         "dread_mode": True,
     }
 
-    def test_some_shops_stay_normal(self):
+    def test_shop_sanity_does_not_limit_the_chance(self):
         slot_data = self.world.fill_slot_data()
-        self.assertEqual(50, slot_data["blitz_merchant_chance"])
+        self.assertEqual(100, slot_data["blitz_merchant_chance"])
         self.assertEqual(["blitz_merchant", "dread"], slot_data["required_game_features"])
