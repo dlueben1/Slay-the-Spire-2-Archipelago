@@ -47,8 +47,8 @@ public static class ApRunModifiers
             LogUtility.Info("Skipped run modifiers: no AP slot settings for this run.");
             return;
         }
-        // BALANCE PLACEHOLDER: Run Modifiers stack with a Dread run's own rules, so Mounting
-        // Banes adds a second Ascender's Bane in Acts 2 and 3. Whether they should is undecided.
+        // Run Modifiers stack with a Dread run's own rules, so Mounting Banes adds a second
+        // Ascender's Bane in Acts 2 and 3.
         if (runState.GameMode != GameMode.Standard && !DreadRuns.IsDreadRun(runState))
         {
             LogUtility.Info($"Skipped run modifiers: game mode is {runState.GameMode}.");

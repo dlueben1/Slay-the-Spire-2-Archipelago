@@ -22,7 +22,7 @@ from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET, GENERIC_CHARACTE
 from .items import (item_table, chars_to_items, bonus_item_table, ItemType, base_event_item_pairs, ItemData,
                     item_groups)
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
-from .options import Spire2Options
+from .options import GameMode, Spire2Options
 
 COMBAT_GOLD_ITEM_COUNT = COMBAT_GOLD_ITEMS
 ELITE_GOLD_ITEM_COUNT = 7
@@ -105,6 +105,8 @@ class SlayTheSpire2World(World):
         if hasattr(self.multiworld, 're_gen_passthrough'):
             self._setup_ut(self.multiworld.re_gen_passthrough[self.game])
             return
+        if self.options.game_mode == GameMode.option_dread:
+            self._apply_dread_ascensions()
         if self.options.use_advanced_characters.value == 0:
             self._handle_basic_chars()
         else:
@@ -263,6 +265,14 @@ class SlayTheSpire2World(World):
                 generic_num += 1
                 block = GENERIC_CHARACTER_BLOCKS[generic_num - 1]
             yield option_name, character_registry[block].name, block, mod_num
+
+    def _apply_dread_ascensions(self) -> None:
+        """Dread is the game's mode above Ascension 10: every Ascension on, and none to take back."""
+        self.options.ascension.value = set(ASCENSION_LIST)
+        self.options.ascension_down.value = set()
+        for character_options in self.options.advanced_characters.value.values():
+            character_options["ascension"] = list(ASCENSION_LIST)
+            character_options["ascension_down"] = []
 
     def _handle_basic_chars(self) -> None:
         char_options = unique_character_ids(
@@ -736,7 +746,7 @@ class SlayTheSpire2World(World):
             "run_modifiers",
             "enemy_hp_scaling",
             "enemy_damage_scaling",
-            "dread_mode",
+            "game_mode",
             "num_chars_goal",
             "shuffle_all_cards",
             "strict_card_rewards",
@@ -768,15 +778,15 @@ class SlayTheSpire2World(World):
     def required_game_features(self) -> list[str]:
         """Game features this slot's settings need that only some supported game versions have.
 
-        A client refuses the slot when its game build lacks one of them. An option names its
-        feature in a required_game_feature attribute, and counts while its value is set.
+        A client refuses the slot when its game build lacks one of them. An option class maps the
+        values that need a feature to its name in a required_game_features attribute.
         """
         features = set()
         for option_name in self.options_dataclass.type_hints:
             option = getattr(self.options, option_name)
-            feature = getattr(option, "required_game_feature", None)
-            if feature and option.value:
-                features.add(feature)
+            by_value = getattr(option, "required_game_features", None)
+            if by_value and option.value in by_value:
+                features.add(by_value[option.value])
         return sorted(features)
 
     def shop_card_weights(self) -> dict[str, int]:

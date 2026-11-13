@@ -43,7 +43,7 @@ export const CHALLENGE_OPTION_KEYS = {
   runModifiers: "run_modifiers",
   enemyHpScaling: "enemy_hp_scaling",
   enemyDamageScaling: "enemy_damage_scaling",
-  dreadMode: "dread_mode",
+  gameMode: "game_mode",
   hiddenIntents: "hidden_intents",
   hiddenHealth: "hidden_health",
   hiddenPiles: "hidden_piles",

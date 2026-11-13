@@ -255,8 +255,10 @@ namespace StS2AP.Patches
 
             var effectiveAscensions = GetEffectiveAscensions(config);
             SetPanelLevels(panel, effectiveAscensions.Select(level => (int)level));
-            if (DreadRuns.IsRequestedForSingleplayer
-                && screen.Lobby?.NetService.Type == NetGameType.Singleplayer)
+            // Guests learn the host's mode when the run starts, so only the slot that decides
+            // the mode shows it here.
+            if (DreadRuns.IsSlotGameMode
+                && screen.Lobby?.NetService.Type is NetGameType.Singleplayer or NetGameType.Host)
             {
                 panel._info.Text += "\n[aqua]Dread Mode[/aqua]";
             }

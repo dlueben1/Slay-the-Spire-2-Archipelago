@@ -150,10 +150,9 @@ namespace StS2AP.Models
         public int EnemyDamageScaling { get; set; }
 
         /// <summary>
-        /// Whether the slot's singleplayer runs start in the game's Dread mode. Only game versions
-        /// with <see cref="GameFeatures.Dread"/> can honour it.
+        /// The slot's Game Mode option. In multiplayer, the host's value applies to the whole run.
         /// </summary>
-        public bool DreadMode { get; set; }
+        public ApGameMode SlotGameMode { get; set; }
 
         public bool CampfireSanity { get; set; }
         public bool GoldSanity { get; set; }

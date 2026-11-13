@@ -716,17 +716,24 @@ class EnemyDamageScaling(Range):
     range_end = 15
     default = 0
 
-class DreadMode(Toggle):
-    """Every singleplayer run is a Dread run, the game's Dread mode on top of your Ascension settings.
-    Each act has a Dominion, an extra combat rule set by that act's boss. Bosses are stronger, and you
-    gain an Ascender's Bane at the start of Act 2 and of Act 3. Needs the game's beta branch; multiplayer
-    runs stay standard for now. Does not change logic.
+class GameMode(Choice):
+    """Which of the game's modes this slot's runs use.
+
+    - standard: the normal game.
+    - dread: the game's Dread mode, which needs the game's beta branch. Each act has a Dominion, an
+      extra combat rule set by that act's boss. Bosses are stronger, and you gain an Ascender's Bane
+      at the start of Act 2 and of Act 3. All ten Ascensions are on and there are no Ascension Down
+      items, whatever those options say. Logic does not account for it. In multiplayer, the host's
+      mode applies to the whole run.
     """
-    display_name = "Dread Mode"
+    display_name = "Game Mode"
+    option_standard = 0
+    option_dread = 1
     default = 0
-    # Only some supported game versions have Dread. A set option sends this name in the slot's
-    # required_game_features, which clients check when connecting, and the builder labels it.
-    required_game_feature = "dread"
+    # Game features only some supported game versions have, by the value that needs them. The
+    # slot's required_game_features lists the chosen value's feature, which clients check when
+    # connecting, and the builder labels that choice.
+    required_game_features = {option_dread: "dread"}
 
 # Death Link Options
 
@@ -1092,7 +1099,7 @@ class Spire2Options(PerGameCommonOptions):
     run_modifiers: RunModifiers
     enemy_hp_scaling: EnemyHpScaling
     enemy_damage_scaling: EnemyDamageScaling
-    dread_mode: DreadMode
+    game_mode: GameMode
     hidden_intents: HiddenIntents
     hidden_health: HiddenHealth
     hidden_piles: HiddenPiles

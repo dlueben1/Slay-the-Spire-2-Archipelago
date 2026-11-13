@@ -9,7 +9,7 @@
  * translation, and numeric bounds arrive through semantic names in `optionRanges.ts`.
  */
 
-import { isBetaOnlyOption } from "./betaOnlyOptions";
+import { isBetaOnlyChoice } from "./betaOnlyOptions";
 import { MAX_GENERIC_CHARACTERS } from "./CharacterRoster";
 import { includeFloorChecksTransition } from "./checksTransitions";
 import {
@@ -356,13 +356,13 @@ export const runSetupStep: WizardStep = {
 };
 
 /**
- * Explains Dread Mode's game-branch requirement while the APWorld still marks it beta-only.
+ * Explains Dread's game-branch requirement while the APWorld still marks it beta-only.
  *
  * @returns The note for the question's help area, or nothing once every branch has Dread.
  */
-function describeDreadModeRequirements(): string | null {
-  return isBetaOnlyOption(CHALLENGE_OPTION_KEYS.dreadMode)
-    ? "Beta branch only. The mod refuses to connect to this slot on a game version without Dread."
+function describeDreadRequirements(): string | null {
+  return isBetaOnlyChoice(CHALLENGE_OPTION_KEYS.gameMode, "dread")
+    ? "Dread is beta branch only. The mod refuses to connect to a Dread slot on a game version without it."
     : null;
 }
 
@@ -463,18 +463,28 @@ export const challengeSetupStep: WizardStep = {
       },
     },
     {
-      id: "dread-mode",
+      id: "game-mode",
       isVisible: usesChallenges,
-      title: "Should singleplayer runs be Dread runs?",
+      title: "Which game mode should runs use?",
       description:
-        "Dread is a game mode from the base game. Each act has a Dominion, an extra combat rule set by that act's boss. Bosses are stronger, and you gain an Ascender's Bane at the start of Act 2 and of Act 3.",
-      help: describeDreadModeRequirements,
+        "Dread is a harder game mode from the base game. In multiplayer, the host's mode applies to the whole run.",
+      help: describeDreadRequirements,
       control: {
-        kind: "checkbox",
-        field: "dreadMode",
-        label: "Dread Mode",
-        description:
-          "Your Ascension settings and Ascension Down items still apply. Multiplayer runs stay standard for now.",
+        kind: "radio",
+        field: "gameMode",
+        choices: [
+          {
+            label: "Standard",
+            description: "The normal game.",
+            value: "standard",
+          },
+          {
+            label: "Dread",
+            description:
+              "Each act has a Dominion, an extra combat rule set by that act's boss. Bosses are stronger, and you gain an Ascender's Bane at the start of Act 2 and of Act 3. Every Ascension is on and there are no Ascension Down items, whatever Character Setup says.",
+            value: "dread",
+          },
+        ],
       },
     },
     {

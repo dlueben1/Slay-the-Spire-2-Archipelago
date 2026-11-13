@@ -438,7 +438,7 @@ export function hasActiveChallenges(answers: ChallengeAnswers): boolean {
     (answers.runModifiers.length > 0 ||
       answers.enemyHpScaling > 0 ||
       answers.enemyDamageScaling > 0 ||
-      answers.dreadMode ||
+      answers.gameMode !== "standard" ||
       answers.hiddenIntents !== "off" ||
       answers.hiddenHealth !== "off" ||
       answers.hiddenPiles !== "off" ||
@@ -522,8 +522,10 @@ export function summarizeChallengeAnswers(answers: ChallengeAnswers): string {
     );
   }
 
-  if (answers.dreadMode) {
-    sentences.push("Singleplayer runs are Dread runs.");
+  if (answers.gameMode === "dread") {
+    sentences.push(
+      "Runs are Dread runs, with every Ascension on and no Ascension Down items.",
+    );
   }
 
   if (answers.hiddenIntents !== "off") {

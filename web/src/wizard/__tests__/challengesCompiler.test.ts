@@ -85,7 +85,7 @@ function compilesConfiguredChallenges(): void {
     runModifiers: ["FrailStart", "RisingStrength"],
     enemyHpScaling: 15,
     enemyDamageScaling: 10,
-    dreadMode: true,
+    gameMode: "dread",
     hiddenIntents: "one",
     hiddenHealth: "two",
     hiddenPiles: "one",
@@ -102,7 +102,7 @@ function compilesConfiguredChallenges(): void {
   ]);
   expect(options[CHALLENGE_OPTION_KEYS.enemyHpScaling]).toBe(15);
   expect(options[CHALLENGE_OPTION_KEYS.enemyDamageScaling]).toBe(10);
-  expect(options[CHALLENGE_OPTION_KEYS.dreadMode]).toBe(true);
+  expect(options[CHALLENGE_OPTION_KEYS.gameMode]).toBe("dread");
   expect(options[CHALLENGE_OPTION_KEYS.hiddenIntents]).toBe(1);
   expect(options[CHALLENGE_OPTION_KEYS.hiddenHealth]).toBe(2);
   expect(options[CHALLENGE_OPTION_KEYS.hiddenPiles]).toBe(1);
@@ -126,7 +126,7 @@ function ignoresChallengesUntilOptedIn(): void {
     runModifiers: ["CursedRun"],
     enemyHpScaling: 12,
     enemyDamageScaling: 8,
-    dreadMode: true,
+    gameMode: "dread",
     hiddenIntents: "two",
     hiddenHealth: "one",
     hiddenPiles: "two",
@@ -164,7 +164,7 @@ function showsQuestionsOnlyAfterOptingIn(): void {
     "run-modifiers",
     "enemy-hp-scaling",
     "enemy-damage-scaling",
-    "dread-mode",
+    "game-mode",
     "hidden-intents",
     "hidden-health",
     "hidden-piles",

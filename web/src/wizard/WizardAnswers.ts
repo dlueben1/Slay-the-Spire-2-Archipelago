@@ -63,6 +63,10 @@ export type BonusItemAnswer =
   SpecificWaxRelicBonusItem | RandomWaxRelicBonusItem;
 
 export type AncientRelicLocation = "start_of_act" | "anytime";
+
+/** Game modes the wizard offers, by their generated `game_mode` choice names. */
+export const GAME_MODE_CHOICES = ["standard", "dread"] as const;
+export type GameModeChoice = (typeof GAME_MODE_CHOICES)[number];
 export type AncientRelicPool = "balanced" | "chaos" | "true_chaos";
 export type AccessibilityMode = "full" | "minimal";
 export type ShopCostMode =
@@ -173,8 +177,8 @@ export interface ChallengeAnswers {
   runModifiers: string[];
   enemyHpScaling: number;
   enemyDamageScaling: number;
-  /** Singleplayer runs use the game's Dread mode, which only its beta branch has. */
-  dreadMode: boolean;
+  /** The game mode the slot's runs use. Dread only exists in the game's beta branch. */
+  gameMode: GameModeChoice;
   hiddenIntents: SightCopies;
   hiddenHealth: SightCopies;
   hiddenPiles: SightCopies;
@@ -504,7 +508,11 @@ export function createDefaultWizardAnswers(
         catalog,
         CHALLENGE_OPTION_KEYS.enemyDamageScaling,
       ),
-      dreadMode: getBooleanDefault(catalog, CHALLENGE_OPTION_KEYS.dreadMode),
+      gameMode: getChoiceDefault(
+        catalog,
+        CHALLENGE_OPTION_KEYS.gameMode,
+        GAME_MODE_CHOICES,
+      ),
       hiddenIntents: getSightCopiesDefault(
         catalog,
         CHALLENGE_OPTION_KEYS.hiddenIntents,
