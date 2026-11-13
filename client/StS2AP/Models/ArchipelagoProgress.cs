@@ -219,7 +219,7 @@ namespace StS2AP.Models
                 else
                 {
                     choices = Enumerable.Range(0, choiceCount)
-                        .Select(_ => RelicFactory.PullNextRelicFromFront(player))
+                        .Select(_ => GameApiCompat.PullNextRewardRelic(player))
                         .ToList();
                 }
                 RelicChoiceAssignments[index] = choices;

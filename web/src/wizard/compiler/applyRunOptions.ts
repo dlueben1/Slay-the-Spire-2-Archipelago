@@ -73,4 +73,5 @@ export function applyRunOptions(
   );
   target[RUN_OPTION_KEYS.releaseOnVictory] = answers.releaseOnVictory;
   target[RUN_OPTION_KEYS.seeded] = answers.seeded;
+  target[RUN_OPTION_KEYS.blitzMerchantChance] = answers.blitzMerchantChance;
 }

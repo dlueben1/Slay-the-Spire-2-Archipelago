@@ -367,6 +367,8 @@ namespace StS2AP
         private static readonly object _connectionStateLock = new();
         private static bool _currentAttemptIsAutomaticReconnect;
         private static SessionCallbacks? _sessionCallbacks;
+        // Cancelled by Disconnect, so Cancel ends a login that is still waiting on the server.
+        private static CancellationTokenSource? _loginCancellation;
 
         /// <summary>
         /// Whether the room was generated in race mode, from the server's read-only
@@ -525,6 +527,7 @@ namespace StS2AP
                 return;
             }
 
+            var loginCancellation = new CancellationTokenSource();
             lock (_connectionStateLock)
             {
                 if (State is not ConnectionState.Connecting and not ConnectionState.Reconnecting)
@@ -534,6 +537,7 @@ namespace StS2AP
                     return;
                 }
                 Session = connectionSession;
+                _loginCancellation = loginCancellation;
             }
 
             DeathLinkController = connectionSession.CreateDeathLinkService();
@@ -564,7 +568,8 @@ namespace StS2AP
                                     loginResult = ConnectAndLoginAfterDownload(
                                         connectionSession,
                                         playerName,
-                                        password
+                                        password,
+                                        loginCancellation.Token
                                     );
                                 }
                                 catch (Exception ex)
@@ -623,17 +628,27 @@ namespace StS2AP
         /// download because the server answers each client in order. That timer also gives up on
         /// a busy server that is slow to answer the login, so this waits for the answer itself.
         /// Blocks rather than awaits: the caller holds ConnectionLock, which belongs to its thread.
+        /// Disconnect cancels <paramref name="cancellation"/>, which ends the wait at once so a
+        /// cancelled attempt releases the lock before the player's next attempt needs it.
         /// </summary>
         private static LoginResult ConnectAndLoginAfterDownload(
             ArchipelagoSession session,
             string playerName,
-            string password
+            string password,
+            CancellationToken cancellation
         )
         {
+            const string CancelledMessage = "The connection attempt was cancelled.";
+            var roomInfoReceived = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
             var downloadEnded = new TaskCompletionSource<LoginFailure?>(
                 TaskCreationOptions.RunContinuationsAsynchronously);
             var loginAnswered = new TaskCompletionSource<LoginResult>(
                 TaskCreationOptions.RunContinuationsAsynchronously);
+            // Games whose data package the SDK asked for, counted from the socket's send thread.
+            int gamesRequested = 0;
+            // Only read and written by OnPacket, which the SDK calls from one thread.
+            int gamesReceived = 0;
 
             void Fail(string message)
             {
@@ -641,19 +656,45 @@ namespace StS2AP
                 downloadEnded.TrySetResult(failure);
                 loginAnswered.TrySetResult(failure);
             }
+            void ShowProgress(string status) =>
+                RunForSession(session, () => ArchipelagoConnectionUI.ShowConnectProgress(status));
             void OnPacket(ArchipelagoPacketBase packet)
             {
-                // The SDK subscribed first and blocks until its GetDataPackage requests are written.
-                // MultiServer finishes each command before reading that client's next one, so this
-                // empty reply follows the real ones. The protocol docs don't promise that order; a
-                // server that breaks it only makes us send the login before the download ends.
-                if (packet is RoomInfoPacket)
-                    _ = session.Socket.SendPacketAsync(
-                        new GetDataPackagePacket { Games = Array.Empty<string>() });
-                else if (packet is DataPackagePacket { DataPackage.Games.Count: 0 })
-                    downloadEnded.TrySetResult(null);
-                else if (packet is ConnectedPacket or ConnectionRefusedPacket)
-                    loginAnswered.TrySetResult(LoginResult.FromPacket(packet));
+                switch (packet)
+                {
+                    case RoomInfoPacket:
+                        roomInfoReceived.TrySetResult();
+                        // The SDK subscribed first and blocks until its GetDataPackage requests are
+                        // written. MultiServer finishes each command before reading that client's
+                        // next one, so this empty reply follows the real ones. The protocol docs
+                        // don't promise that order; a server that breaks it only makes us send the
+                        // login before the download ends.
+                        _ = session.Socket.SendPacketAsync(
+                            new GetDataPackagePacket { Games = Array.Empty<string>() });
+                        break;
+                    case DataPackagePacket { DataPackage.Games.Count: 0 }:
+                        downloadEnded.TrySetResult(null);
+                        break;
+                    case DataPackagePacket { DataPackage.Games: { } games }:
+                        gamesReceived += games.Count;
+                        // OnPacketsSent runs on another thread and can, rarely, count a request
+                        // after its reply has arrived; never show more received than requested.
+                        int requested = Math.Max(Volatile.Read(ref gamesRequested), gamesReceived);
+                        ShowProgress($"Downloading game data ({gamesReceived} of {requested})...");
+                        break;
+                    case ConnectedPacket or ConnectionRefusedPacket:
+                        loginAnswered.TrySetResult(LoginResult.FromPacket(packet));
+                        break;
+                }
+            }
+            void OnPacketsSent(ArchipelagoPacketBase[] packets)
+            {
+                foreach (var packet in packets)
+                {
+                    // Our own empty request asks for nothing, so it adds nothing.
+                    if (packet is GetDataPackagePacket { Games: { } games })
+                        Interlocked.Add(ref gamesRequested, games.Length);
+                }
             }
             void OnClosed(string reason) => Fail("The Archipelago connection closed during login.");
             // A failed read may report only this error, but a bad packet leaves the socket usable.
@@ -664,20 +705,38 @@ namespace StS2AP
             }
 
             session.Socket.PacketReceived += OnPacket;
+            session.Socket.PacketsSent += OnPacketsSent;
             session.Socket.SocketClosed += OnClosed;
             session.Socket.ErrorReceived += OnError;
+            using var cancelRegistration = cancellation.Register(() => Fail(CancelledMessage));
             try
             {
-                if (!session.Socket.ConnectAsync().Wait(SocketOpenTimeout))
-                    return new LoginFailure("Connection timed out.");
+                Task socketOpened = session.Socket.ConnectAsync();
+                Task.WaitAny(socketOpened, Task.Delay(SocketOpenTimeout, cancellation));
+                if (!socketOpened.IsCompleted || cancellation.IsCancellationRequested)
+                {
+                    CloseSocketOnceOpen(session, socketOpened);
+                    return new LoginFailure(cancellation.IsCancellationRequested
+                        ? CancelledMessage
+                        : "Connection timed out.");
+                }
+                socketOpened.Wait(); // Rethrows a failed open.
 
                 if (!downloadEnded.Task.Wait(DataPackageTimeout))
+                {
+                    // Without RoomInfo the SDK refuses to send the login, so don't wait for it.
+                    if (!roomInfoReceived.Task.IsCompleted)
+                        return new LoginFailure("The Archipelago server did not send its room information.");
                     LogUtility.Warn("No data package completion reply; attempting login anyway.");
+                }
                 else if (downloadEnded.Task.Result is { } problem)
                     return problem;
 
-                // LoginAsync's own result gives up after 4 seconds, and the call can block forever
-                // if the socket has just closed. Send the login with it but wait for OnPacket instead.
+                ShowProgress("Logging in...");
+                // LoginAsync's own result gives up after 4 seconds, so send the login with it but
+                // wait for OnPacket instead. If the socket has just closed, the SDK's send never
+                // completes and the call blocks forever. That only holds this pool thread, not
+                // the caller or ConnectionLock.
                 _ = Task.Run(() => session.LoginAsync(
                     Game,
                     playerName,
@@ -699,9 +758,32 @@ namespace StS2AP
             finally
             {
                 session.Socket.PacketReceived -= OnPacket;
+                session.Socket.PacketsSent -= OnPacketsSent;
                 session.Socket.SocketClosed -= OnClosed;
                 session.Socket.ErrorReceived -= OnError;
             }
+        }
+
+        /// <summary>
+        /// Closes the socket of a login attempt that nothing is waiting for any more. A
+        /// ClientWebSocket refuses to close while it is still opening, so Disconnect can't close
+        /// it then; without this it would open later and stay connected to the slot.
+        /// </summary>
+        private static void CloseSocketOnceOpen(ArchipelagoSession session, Task socketOpened) =>
+            socketOpened.ContinueWith(opened =>
+            {
+                _ = opened.Exception; // A failed open has nothing to close.
+                if (opened.Status == TaskStatus.RanToCompletion)
+                    CloseAbandonedSocket(session);
+            }, TaskScheduler.Default);
+
+        private static void CloseAbandonedSocket(ArchipelagoSession session)
+        {
+            if (!session.Socket.Connected)
+                return;
+            _ = session.Socket.DisconnectAsync().ContinueWith(
+                closing => _ = closing.Exception,
+                TaskContinuationOptions.OnlyOnFaulted);
         }
 
         /// <summary>
@@ -723,6 +805,10 @@ namespace StS2AP
                 )
                 {
                     LogUtility.Debug("Ignoring a stale Archipelago login result");
+                    // A cancelled attempt can still log in if its socket opened after Disconnect
+                    // tried to close it. Don't leave that connection on the slot.
+                    if (!ReferenceEquals(Session, connectionSession))
+                        CloseAbandonedSocket(connectionSession);
                     return;
                 }
 
@@ -794,6 +880,21 @@ namespace StS2AP
                     return;
                 }
 
+                // A setting that needs a game feature this build lacks is left off. Such settings
+                // change no checks, so the slot still plays; say so once, so the easier run is
+                // not a surprise.
+                IReadOnlyList<string> missingGameFeatures = GameFeatures.FindMissing(
+                    ApSlotData.ReadRequiredGameFeatures(ApSlotData.Normalize(SlotData)),
+                    GameFeatures.Supported
+                );
+                if (missingGameFeatures.Count > 0)
+                {
+                    string missingFeaturesNote = GameFeatures.DescribeMissing(missingGameFeatures);
+                    LogUtility.Warn(missingFeaturesNote);
+                    if (!wasAutomaticReconnect)
+                        NotificationUtility.ShowRawText(missingFeaturesNote);
+                }
+
                 // These metadata fields cannot predict whether this client understands every
                 // enabled item and location. Treat discrepancies as visible diagnostics and let
                 // the concrete runtime behavior decide whether the combination actually works.
@@ -860,7 +961,7 @@ namespace StS2AP
                     {
                         CancelConnectionAfterWarning(
                             "Missing character mods warning declined",
-                            "Connection cancelled. Enable the missing character mods, or connect again and play Defect in their place."
+                            "Connection cancelled. Enable the missing characters' mods or switch to the game branch that has them, or connect again and play Defect in their place."
                         );
                         return;
                     }
@@ -1374,6 +1475,7 @@ namespace StS2AP
         public static void Disconnect(bool showMultiplayerNotice = true)
         {
             ArchipelagoSession? session;
+            CancellationTokenSource? loginCancellation;
             lock (_connectionStateLock)
             {
                 if (State == ConnectionState.Disconnected)
@@ -1387,7 +1489,10 @@ namespace StS2AP
                 Session = null;
                 State = ConnectionState.Disconnected;
                 _currentAttemptIsAutomaticReconnect = false;
+                loginCancellation = _loginCancellation;
+                _loginCancellation = null;
             }
+            loginCancellation?.Cancel();
 
             _pendingConnectionWarning?.TrySetResult(false);
             _pendingConnectionWarning = null;
@@ -1721,6 +1826,8 @@ namespace StS2AP
                 settings.HiddenPiles = Convert.ToInt32(slotData["hidden_piles"]) > 0;
             if (slotData.ContainsKey("hidden_map"))
                 settings.HiddenMap = Convert.ToInt32(slotData["hidden_map"]) > 0;
+            if (slotData.ContainsKey("hidden_cards"))
+                settings.HiddenCards = Convert.ToInt32(slotData["hidden_cards"]) > 0;
             if (slotData.ContainsKey("lock_characters"))
                 settings.NoCharactersLocked = Convert.ToInt32(slotData["lock_characters"]) == 0;
             if (slotData.ContainsKey("enable_death_fragments"))
@@ -1797,6 +1904,11 @@ namespace StS2AP
                 settings.EnemyHpScaling = Convert.ToInt32(slotData["enemy_hp_scaling"]);
             if (slotData.ContainsKey("enemy_damage_scaling"))
                 settings.EnemyDamageScaling = Convert.ToInt32(slotData["enemy_damage_scaling"]);
+            // Older APWorlds omit this key; their slots play standard runs.
+            if (slotData.ContainsKey("dread_mode"))
+                settings.DreadMode = Convert.ToInt32(slotData["dread_mode"]) != 0;
+            if (slotData.ContainsKey("blitz_merchant_chance"))
+                settings.BlitzMerchantChance = Convert.ToInt32(slotData["blitz_merchant_chance"]);
 
             if (slotData.ContainsKey("campfire_sanity"))
                 settings.CampfireSanity = Convert.ToInt32(slotData["campfire_sanity"]) != 0;
@@ -1844,6 +1956,23 @@ namespace StS2AP
             {
                 LogUtility.Warn("ShopSanity is enabled but 'shop_sanity_options' was missing or not the expected object shape — all shop slots will read as unlocked.");
             }
+            settings.ShopCardWeights = ReadShopWeights("shop_card_weights", "Random Shop Cards");
+            settings.ShopRelicWeights = ReadShopWeights("shop_relic_weights", "Random Shop Relics");
+            settings.ShopPotionWeights = ReadShopWeights("shop_potion_weights", "Random Shop Potions");
+
+            // Older APWorlds omit these keys, and an empty object means the vanilla layout.
+            Dictionary<string, int> ReadShopWeights(string key, string optionName)
+            {
+                if (slotData.GetValueOrDefault(key) is not JObject weightsToken)
+                    return new Dictionary<string, int>();
+
+                var weights = weightsToken.Properties()
+                    .ToDictionary(property => property.Name, property => Convert.ToInt32(property.Value));
+                if (weights.Count > 0)
+                    LogUtility.Info($"SLOT - {optionName}: {string.Join(", ", weights.Select(pair => $"{pair.Key}={pair.Value}"))}");
+                return weights;
+            }
+
             // And return it
             return settings;
         }

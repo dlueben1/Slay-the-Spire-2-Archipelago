@@ -31,6 +31,7 @@ class ItemType(Enum):
     HEALTH_SIGHT = auto()
     PILE_SIGHT = auto()
     MAP_SIGHT = auto()
+    CARD_SIGHT = auto()
     TRAP = auto()
     CAW_CAW = auto()
     BUFF = auto()
@@ -69,7 +70,7 @@ base_item_table: Dict[str, ItemData] = {
     'Progressive Rest': ItemData(7, ItemType.CAMPFIRE, ItemClassification.progression),
     'Progressive Smith': ItemData(8, ItemType.CAMPFIRE, ItemClassification.progression),
     'Shop Card Slot': ItemData(9, ItemType.SHOP_CARD, ItemClassification.progression_deprioritized),
-    'Neutral Shop Card Slot': ItemData(10, ItemType.SHOP_NEUTRAL, ItemClassification.progression_deprioritized),
+    'Shop Colorless Card Slot': ItemData(10, ItemType.SHOP_NEUTRAL, ItemClassification.progression_deprioritized),
     'Shop Relic Slot': ItemData(11, ItemType.SHOP_RELIC, ItemClassification.progression_deprioritized),
     'Shop Potion Slot': ItemData(12, ItemType.SHOP_POTION, ItemClassification.progression_deprioritized),
     'Progressive Shop Remove': ItemData(13, ItemType.SHOP_REMOVE, ItemClassification.progression_deprioritized),
@@ -142,6 +143,7 @@ challenge_item_table: Dict[str, ItemData] = {
     "Health Sight": ItemData(801, ItemType.HEALTH_SIGHT, ItemClassification.useful),
     "Pile Sight": ItemData(802, ItemType.PILE_SIGHT, ItemClassification.useful),
     "Map Sight": ItemData(803, ItemType.MAP_SIGHT, ItemClassification.useful),
+    "Card Sight": ItemData(804, ItemType.CARD_SIGHT, ItemClassification.useful),
 }
 
 # `universal_bonus_items` is keyed by the actual Archipelago item name (like "Bonus Wax Relic").

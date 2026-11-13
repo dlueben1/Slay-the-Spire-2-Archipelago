@@ -27,8 +27,18 @@ namespace StS2AP.Patches
         public static class OnRunPreStart
         {
             [HarmonyPrefix]
+#if STS2_AT_LEAST_0_113_0
+            public static void Prefix(
+                Player player,
+                ref int ascensionLevel,
+                ref string seed,
+                ref GameMode gameMode)
+            {
+                CharacterModel character = player.Character;
+#else
             public static void Prefix(CharacterModel character, ref int ascensionLevel, ref string seed)
             {
+#endif
                 var officialName = character.Id.Entry;
                 ArchipelagoSettings? settings = ArchipelagoClient.Settings;
                 if (settings == null
@@ -55,6 +65,20 @@ namespace StS2AP.Patches
                 {
                     seed = configuredSeed;
                 }
+#if STS2_AT_LEAST_0_113_0
+                // The standard character select starts this run, so a Dread slot only has to
+                // change the mode the run is created with. The game's Dread rules key on the
+                // mode, not on the Ascension level above, so the slot's own set still applies.
+                if (gameMode == GameMode.Standard && DreadRuns.IsSlotSetting)
+                {
+                    gameMode = GameMode.Dread;
+                    LogUtility.Info($"Starting the AP run for '{officialName}' as a Dread run.");
+                }
+
+                // From 0.113 the caller creates the player before this method, so the player is
+                // bound here, once the character's settings are in place.
+                BindSingleplayerPlayer(player);
+#endif
             }
         }
 
@@ -92,8 +116,10 @@ namespace StS2AP.Patches
             }
         }
 
+#if !STS2_AT_LEAST_0_113_0
         /// <summary>
-        /// Does a bunch of work we need when a run starts, including caching references, resetting game state/progress, and hooking event listeners.
+        /// Before 0.113 the game creates the singleplayer player inside StartNewSingleplayerRun,
+        /// after OnRunPreStart has set the character's settings.
         /// </summary>
         [HarmonyPatch(typeof(Player), nameof(Player.CreateForNewRun), new Type[] { typeof(CharacterModel), typeof(UnlockState), typeof(ulong) })]
         public static class OnRunStart
@@ -106,26 +132,31 @@ namespace StS2AP.Patches
                 if (MultiplayerSupport.PendingDestination == ApPlayDestination.Multiplayer)
                     return;
 
-                // Get rid of the tracker UI
-                ArchipelagoCharTrackerUI.RemoveUI();
-                ArchipelagoGoalTrackerUI.RemoveUI();
-
-                // Grab a reference to the current player
-                GameUtility.CurrentPlayer = __result;
-
-                // Reset progress
-                ArchipelagoClient.Progress.InitializeTrackers(__result);
-
-                // Relic Coupons is a presentation-only starting relic backed by the saved bank.
-                RelicCoupons.EnsureOwnedBy(__result);
-
-                // At start of game, listen to Combat Manager
-                //CombatManager.Instance.CombatWon -= GameUtility.OnCombatWin;
-                //CombatManager.Instance.CombatWon += GameUtility.OnCombatWin;
-
-                // Send "Press Start" check
-                GameUtility.TrySendPressStartCheck();
+                BindSingleplayerPlayer(__result);
             }
+        }
+#endif
+
+        /// <summary>
+        /// Does a bunch of work we need when a singleplayer run starts, including caching references and resetting game state/progress.
+        /// </summary>
+        private static void BindSingleplayerPlayer(Player player)
+        {
+            // Get rid of the tracker UI
+            ArchipelagoCharTrackerUI.RemoveUI();
+            ArchipelagoGoalTrackerUI.RemoveUI();
+
+            // Grab a reference to the current player
+            GameUtility.CurrentPlayer = player;
+
+            // Reset progress
+            ArchipelagoClient.Progress.InitializeTrackers(player);
+
+            // Relic Coupons is a presentation-only starting relic backed by the saved bank.
+            RelicCoupons.EnsureOwnedBy(player);
+
+            // Send "Press Start" check
+            GameUtility.TrySendPressStartCheck();
         }
 
         /// <summary>

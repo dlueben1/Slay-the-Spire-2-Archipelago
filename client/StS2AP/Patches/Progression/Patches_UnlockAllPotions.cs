@@ -63,4 +63,15 @@ public static class Patches_UnlockAllPotions
             RegentPotionPool __instance,
             ref IEnumerable<PotionModel> __result) => Unlock(__instance, ref __result);
     }
+
+#if STS2_AT_LEAST_0_113_0
+    [HarmonyPatch(typeof(FoolPotionPool), nameof(PotionPoolModel.GetUnlockedPotions))]
+    private static class Fool
+    {
+        [HarmonyPostfix]
+        private static void Postfix(
+            FoolPotionPool __instance,
+            ref IEnumerable<PotionModel> __result) => Unlock(__instance, ref __result);
+    }
+#endif
 }

@@ -26,10 +26,12 @@ class LogicTests(unittest.TestCase):
         "shop_relic_slots": 3,
         "shop_potion_slots": 3,
         "shop_remove_slots": True,
+        # Gold Sanity adds a shop-gold penalty; the shop tests measure slot penalties alone.
+        "gold_sanity": False,
     }
     shop_slots = (
         ("shop_card_slots", "Shop Card Slot", 5),
-        ("shop_neutral_card_slots", "Neutral Shop Card Slot", 2),
+        ("shop_neutral_card_slots", "Shop Colorless Card Slot", 2),
         ("shop_relic_slots", "Shop Relic Slot", 3),
         ("shop_potion_slots", "Shop Potion Slot", 3),
     )
@@ -235,7 +237,7 @@ class LogicTests(unittest.TestCase):
                 self.assertEqual(before, rule.strength(state))
 
     def test_restored_starters_match_unshuffled_loadout(self):
-        for character in ("Ironclad", "Silent", "Defect", "Necrobinder", "Regent"):
+        for character in character_list:
             baseline = self.make_world(characters=[character],
                                        progressive_starter_card=False, progressive_starter_relic=False)
             expected = self.power_rule(baseline).strength(CollectionState(baseline.multiworld))

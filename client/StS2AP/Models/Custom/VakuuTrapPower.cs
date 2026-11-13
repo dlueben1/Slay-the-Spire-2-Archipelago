@@ -8,6 +8,7 @@ using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Random;
+using StS2AP.Utils;
 using STS2RitsuLib.Interop.AutoRegistration;
 using STS2RitsuLib.Scaffolding.Content;
 
@@ -47,7 +48,7 @@ public sealed class VakuuTrapPower : ModPowerTemplate
         // Spend one stack even if the hand is unplayable; remaining stacks run on later turns.
         _activationTurn = playerCombat.TurnNumber + 1;
         await PowerCmd.Decrement(this);
-        using (CardSelectCmd.PushSelector(new VakuuCardSelector()))
+        using (GameApiCompat.PushCardSelector(player, new VakuuCardSelector()))
         {
             int startTurn = playerCombat.TurnNumber;
             // Match Whispering Earring's resource spending, selection and safety bound.

@@ -103,6 +103,13 @@ namespace StS2AP.Patches
                 {
                     if (IntoTheSpireverseSelection.RefreshButton(button, __instance))
                         continue;
+                    if (button.IsRandom)
+                    {
+                        // AP runs pick a character from the slot. From 0.113 Init also refuses
+                        // the random button, which has its own InitAsRandom.
+                        button.Visible = false;
+                        continue;
+                    }
                     var charModel = button.Character;
                     var name = charModel.Id.Entry;
 

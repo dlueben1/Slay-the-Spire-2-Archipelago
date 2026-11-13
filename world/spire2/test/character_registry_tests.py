@@ -19,7 +19,7 @@ from worlds.spire2.options import ModdedCharacters
 class TestCharacterRegistry(unittest.TestCase):
     def test_vanilla_and_generic_ids_use_separate_reserved_ranges(self):
         # Freeze the intended ranges independently of the registry implementation.
-        vanilla = ["Ironclad", "Silent", "Defect", "Regent", "Necrobinder"]
+        vanilla = ["Ironclad", "Silent", "Defect", "Regent", "Necrobinder", "Fool"]
         generic = [f"Custom Character {i}" for i in range(1, 21)]
         for block, name in [*enumerate(vanilla, start=1), *enumerate(generic, start=11)]:
             for suffix, data in base_item_table.items():
@@ -64,12 +64,13 @@ class TestCharacterRegistry(unittest.TestCase):
     def test_new_vanilla_character_does_not_renumber_existing_tables(self):
         future = CharacterDefinition("Future Vanilla", "FUTURE_VANILLA", DEFAULT_STARTER_POWER)
         registry = create_character_registry((*VANILLA_CHARACTERS, future))
-        self.assertEqual(future, registry[6])
+        block = len(VANILLA_CHARACTERS) + 1
+        self.assertEqual(future, registry[block])
         items, _, _ = create_item_tables(registry)
         locations, _, _ = create_location_tables(registry)
         self.assertEqual(item_table, {name: items[name] for name in item_table})
         self.assertEqual(location_table, {name: locations[name] for name in location_table})
-        self.assertEqual(60004, items["Future Vanilla Progressive Ancient"].code)
+        self.assertEqual(block * CHAR_OFFSET + 4, items["Future Vanilla Progressive Ancient"].code)
 
     def test_aliases_cannot_shadow_another_registered_character(self):
         with self.assertRaisesRegex(ValueError, "ambiguous alias"):
@@ -80,7 +81,7 @@ class TestCharacterRegistry(unittest.TestCase):
 
     def test_ten_vanilla_characters_fit_without_overlapping_generic_blocks(self):
         future = tuple(CharacterDefinition(f"Future {i}", f"FUTURE_{i}", DEFAULT_STARTER_POWER)
-                       for i in range(6, 11))
+                       for i in range(len(VANILLA_CHARACTERS) + 1, 11))
         registry = create_character_registry((*VANILLA_CHARACTERS, *future))
         self.assertEqual(future[-1], registry[10])
         self.assertEqual("Custom Character 1", registry[11].name)

@@ -21,6 +21,13 @@ internal static class ApSlotData
             ?? throw new InvalidDataException("The AP slot is missing its character configuration.");
     }
 
+    // Reads normalized slot data. Older APWorlds omit the key: their slots need no game feature
+    // beyond what every supported game version has.
+    internal static IReadOnlyList<string> ReadRequiredGameFeatures(IReadOnlyDictionary<string, object> slotData) =>
+        slotData.GetValueOrDefault("required_game_features") is JArray features
+            ? features.Select(feature => feature.ToString()).ToList()
+            : [];
+
     private static object NormalizeValue(object value)
     {
         // Keep null, numbers, booleans and strings as they are. JSON objects and

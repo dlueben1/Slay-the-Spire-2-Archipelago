@@ -84,6 +84,14 @@ public static class Patches_APBossPresentation
         {
             if (!DoubleBossDisabled)
                 return true;
+            // A Dread run's boss icon explains the act's Dominion instead of naming the boss.
+            if (DreadRuns.DescribeDominion(__instance._runState) is { } dominionTips)
+            {
+                NHoverTipSet.CreateAndShow(__instance, dominionTips, HoverTipAlignment.Center)
+                    ?.SetGlobalPosition(__instance._bossIcon.GlobalPosition
+                        + new Vector2(0f, __instance.Size.Y + 20f));
+                return false;
+            }
             var boss = __instance._runState.Act.BossEncounter;
             var title = new LocString("static_hover_tips", "BOSS.title");
             var description = new LocString("static_hover_tips", "BOSS.description");

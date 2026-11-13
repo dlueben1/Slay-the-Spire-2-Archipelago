@@ -378,8 +378,9 @@ namespace StS2AP.Patches
                 NClickableControl.SignalName.Released,
                 Callable.From<NButton>(_ =>
                 {
-                    // Go to the website
-                    var url = "https://sts2ap.net";
+                    // The beta site has the builder for options that sts2ap.net has not published
+                    // yet. Point this back at https://sts2ap.net/#/builder once it catches up.
+                    var url = "https://sts2ap.terairk.dev/#/builder";
                     Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
                 })
             );
@@ -426,16 +427,10 @@ namespace StS2AP.Patches
                 MultiplayerSupport.SelectDestination(ApPlayDestination.Singleplayer);
                 Patches_ItemProcessor.ProcessDeferredItemsForSingleplayer();
 
-                // Hide the actual sub-menu options
-                var standardButton = __result.GetNode<NSubmenuButton>("StandardButton");
-                var dailyButton = __result.GetNode<NSubmenuButton>("DailyButton");
-                var customButton = __result.GetNode<NSubmenuButton>("CustomRunButton");
-                var backButton = __result.GetNode<NBackButton>("BackButton");
-
-                standardButton.Visible = false;
-                dailyButton.Visible = false;
-                customButton.Visible = false;
-                backButton.Visible = false;
+                // Hide the actual sub-menu options. The mode buttons are found by type, not by
+                // path: 0.113 moved them into a container and added Blitz and Dread.
+                HideModeButtons(__result);
+                __result.GetNode<NBackButton>("BackButton").Visible = false;
 
                 // If we are connected, dive directly into the game
                 if (ArchipelagoClient.IsConnected)
@@ -448,6 +443,17 @@ namespace StS2AP.Patches
                         "Connect to Archipelago from the main menu before starting AP Singleplayer."
                     );
                 }
+            }
+        }
+
+        private static void HideModeButtons(Node node)
+        {
+            foreach (Node child in node.GetChildren())
+            {
+                if (child is NSubmenuButton button)
+                    button.Visible = false;
+                else
+                    HideModeButtons(child);
             }
         }
 
@@ -599,7 +605,11 @@ namespace StS2AP.Patches
         [HarmonyPatch(
             typeof(NMultiplayerSubmenu),
             nameof(NMultiplayerSubmenu.FastHost),
+#if STS2_AT_LEAST_0_113_0
+            new[] { typeof(GameMode), typeof(bool) }
+#else
             new[] { typeof(GameMode) }
+#endif
         )]
         private static class RequireApSlotForFastHost
         {
@@ -621,23 +631,46 @@ namespace StS2AP.Patches
         [HarmonyPatch(
             typeof(NMultiplayerHostSubmenu),
             nameof(NMultiplayerHostSubmenu.StartHost),
+#if STS2_AT_LEAST_0_113_0
+            new[] { typeof(GameMode), typeof(bool) }
+#else
             new[] { typeof(GameMode) }
+#endif
         )]
         private static class RequireApSlotForHostMode
         {
             [HarmonyPrefix]
+#if STS2_AT_LEAST_0_113_0
+            private static bool Prefix(
+                NMultiplayerHostSubmenu __instance,
+                GameMode gameMode,
+                bool isCustom)
+            {
+#else
             private static bool Prefix(
                 NMultiplayerHostSubmenu __instance,
                 GameMode gameMode)
             {
+                // A custom run is its own game mode on these versions.
+                const bool isCustom = false;
+#endif
                 if (!AllowHostCreation())
                     return false;
+#if STS2_AT_LEAST_0_113_0
+                if (gameMode is GameMode.Blitz or GameMode.Dread)
+                {
+                    // Both modes replace maps, shops and rewards that AP checks are placed on.
+                    LogUtility.Warn($"Blocked multiplayer host creation: {gameMode} is not supported in AP runs.");
+                    NotificationUtility.ShowRawText($"{gameMode} is not supported in Archipelago runs yet.");
+                    return false;
+                }
+#endif
                 if (ApMultiplayerCampaignFlow.IsResumingNativeStart)
                     return true;
 
                 try
                 {
-                    ApMultiplayerCampaignFlow.OpenPicker(__instance, gameMode);
+                    ApMultiplayerCampaignFlow.OpenPicker(__instance, gameMode, isCustom);
                 }
                 catch (Exception ex)
                 {
@@ -649,6 +682,20 @@ namespace StS2AP.Patches
                 return false;
             }
         }
+
+#if STS2_AT_LEAST_0_113_0
+        /// <summary>Hides the modes RequireApSlotForHostMode refuses. Every host is an AP host.</summary>
+        [HarmonyPatch(typeof(NMultiplayerHostSubmenu), nameof(NMultiplayerHostSubmenu.OnSubmenuOpened))]
+        private static class HideUnsupportedHostModes
+        {
+            [HarmonyPostfix]
+            private static void Postfix(NMultiplayerHostSubmenu __instance)
+            {
+                __instance._blitzButton.Visible = false;
+                __instance._dreadButton.Visible = false;
+            }
+        }
+#endif
 
         /// <summary>
         /// AP owns multiplayer save selection. Keep Host available and remove the native

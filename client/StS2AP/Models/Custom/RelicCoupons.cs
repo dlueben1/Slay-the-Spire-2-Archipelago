@@ -42,7 +42,11 @@ public sealed class RelicCoupons : ModRelicTemplate
     );
 
     // This relic is granted explicitly to AP players and must never enter a natural reward pool.
+#if STS2_AT_LEAST_0_113_0
+    protected override bool IsAllowedInternal(IRunState runState) => false;
+#else
     public override bool IsAllowed(IRunState runState) => false;
+#endif
 
     /// <summary>
     /// Adds the counter as starting-inventory state. Direct inventory insertion is intentional at

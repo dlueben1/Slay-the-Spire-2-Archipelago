@@ -9,6 +9,7 @@
  * translation, and numeric bounds arrive through semantic names in `optionRanges.ts`.
  */
 
+import { isBetaOnlyOption } from "./betaOnlyOptions";
 import { MAX_GENERIC_CHARACTERS } from "./CharacterRoster";
 import { includeFloorChecksTransition } from "./checksTransitions";
 import {
@@ -23,6 +24,7 @@ import type {
   WizardControlDescriptor,
 } from "./QuestionControl";
 import type { SightCopies, WizardAnswers } from "./WizardAnswers";
+import { CHALLENGE_OPTION_KEYS } from "./WizardOptionKey";
 
 export interface WizardQuestion {
   id: string;
@@ -350,8 +352,33 @@ export const runSetupStep: WizardStep = {
         ],
       },
     },
+    {
+      id: "blitz-merchant-chance",
+      title: "How many shops should be Blitz merchants?",
+      description:
+        "A Blitz merchant comes from the base game's Blitz mode. It replaces a shop's cards, relics and potions with six offers, such as a rare card reward, a relic, a card removal or a full heal with extra max HP (some come with a curse), and you take three of them for free. Shop Sanity checks are still sold on the shop's AP page.",
+      help: "This is very strong, and logic doesn't account for it at all. Three free picks are worth far more than a normal shop visit, and at high percentages there is little left to spend gold on, so gold becomes much less useful. Pair it with harder settings from the Challenges step, such as Run Modifiers, Enemy HP and Damage Scaling, or Dread Mode. 0% leaves every shop normal. In multiplayer, the host's chance applies to everyone. Beta branch only: on the game's main branch every shop stays normal.",
+      control: {
+        kind: "slider",
+        field: "blitzMerchantChance",
+        range: generatedRange("blitzMerchantChance"),
+        unit: "%",
+        ariaLabel: "Blitz merchant chance percent",
+      },
+    },
   ],
 };
+
+/**
+ * Explains Dread Mode's game-branch requirement while the APWorld still marks it beta-only.
+ *
+ * @returns The note for the question's help area, or nothing once every branch has Dread.
+ */
+function describeDreadModeRequirements(): string | null {
+  return isBetaOnlyOption(CHALLENGE_OPTION_KEYS.dreadMode)
+    ? "Beta branch only. On the game's main branch the mod says so when connecting, and runs are standard runs."
+    : null;
+}
 
 /**
  * Checks whether the player opted in to challenges.
@@ -450,6 +477,21 @@ export const challengeSetupStep: WizardStep = {
       },
     },
     {
+      id: "dread-mode",
+      isVisible: usesChallenges,
+      title: "Should runs be Dread runs?",
+      description:
+        "Dread is a harder game mode from the base game. Each act has a Dominion, an extra combat rule set by that act's boss. Bosses are stronger, and you gain an Ascender's Bane at the start of Act 2 and of Act 3. In multiplayer, the host's setting applies to the whole run.",
+      help: describeDreadModeRequirements,
+      control: {
+        kind: "checkbox",
+        field: "dreadMode",
+        label: "Dread Mode",
+        description:
+          "Your Ascensions and Ascension Down items from Character Setup still apply. The base game only plays Dread at Ascension 10, so turn on all ten Ascensions for the same challenge.",
+      },
+    },
+    {
       id: "hidden-intents",
       isVisible: usesChallenges,
       title: "Should enemy intents be hidden?",
@@ -458,7 +500,10 @@ export const challengeSetupStep: WizardStep = {
       control: {
         kind: "radio",
         field: "hiddenIntents",
-        choices: sightCopyChoices("Intent Sight", "Intents are shown as normal."),
+        choices: sightCopyChoices(
+          "Intent Sight",
+          "Intents are shown as normal.",
+        ),
       },
     },
     {
@@ -495,6 +540,18 @@ export const challengeSetupStep: WizardStep = {
         kind: "radio",
         field: "hiddenMap",
         choices: sightCopyChoices("Map Sight", "The map is shown as normal."),
+      },
+    },
+    {
+      id: "hidden-cards",
+      isVisible: usesChallenges,
+      title: "Should cards be hidden?",
+      description:
+        "Hidden Cards makes every card unknown: its name, text and energy cost are hidden, its art is blurred and it shows no tooltips, until a Card Sight is found. Finding one shows cards again, for every character.",
+      control: {
+        kind: "radio",
+        field: "hiddenCards",
+        choices: sightCopyChoices("Card Sight", "Cards are shown as normal."),
       },
     },
     {
@@ -728,6 +785,62 @@ export const checkSetupStep: WizardStep = {
           },
         ],
       },
+    },
+    {
+      id: "random-shop-cards",
+      title: "Do you want to customize which cards shops sell?",
+      description:
+        "By default, a shop sells 2 Attacks, 2 Skills, a Power and 2 colorless cards.",
+      help: "Works with or without Shop Slots.",
+      control: {
+        kind: "checkbox",
+        field: "shopCards.enabled",
+        label: "Custom Shop Cards",
+        description:
+          "Choose how often each of the 7 card slots holds each kind of card.",
+      },
+    },
+    {
+      id: "shop-card-weights",
+      title: "How often should a shop card slot hold each kind of card?",
+      isVisible: (answers) => answers.checksAndRewards.shopCards.enabled,
+    },
+    {
+      id: "random-shop-relics",
+      title: "Do you want to customize which relics shops sell?",
+      description: "By default, a shop sells 2 random relics and a Shop relic.",
+      help: "Works with or without Shop Slots.",
+      control: {
+        kind: "checkbox",
+        field: "shopRelics.enabled",
+        label: "Custom Shop Relics",
+        description:
+          "Choose how often each of the 3 relic slots holds each kind of relic. Event and Ancient relics can appear.",
+      },
+    },
+    {
+      id: "shop-relic-weights",
+      title: "How often should a shop relic slot hold each kind of relic?",
+      isVisible: (answers) => answers.checksAndRewards.shopRelics.enabled,
+    },
+    {
+      id: "random-shop-potions",
+      title: "Do you want to customize which potions shops sell?",
+      description:
+        "By default, a shop sells 3 random potions from your class and the shared pool.",
+      help: "Works with or without Shop Slots.",
+      control: {
+        kind: "checkbox",
+        field: "shopPotions.enabled",
+        label: "Custom Shop Potions",
+        description:
+          "Choose how often each of the 3 potion slots holds each kind of potion. Potions from other classes and from events can appear.",
+      },
+    },
+    {
+      id: "shop-potion-weights",
+      title: "How often should a shop potion slot hold each kind of potion?",
+      isVisible: (answers) => answers.checksAndRewards.shopPotions.enabled,
     },
     {
       id: "bonus-items",

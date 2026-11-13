@@ -19,8 +19,10 @@ namespace StS2AP.Patches
         {
             [HarmonyPatch(nameof(NCharacterSelectScreen.SelectCharacter))]
             [HarmonyPostfix]
-            public static void Postfix(NCharacterSelectScreen __instance, NCharacterSelectButton charSelectButton, CharacterModel characterModel)
+            public static void Postfix(NCharacterSelectScreen __instance, NCharacterSelectButton charSelectButton)
             {
+                // Older versions pass the button's character as a second argument; 0.113 dropped it.
+                CharacterModel characterModel = charSelectButton.Character;
                 Patches_AscensionOverride.UpdateCharacterSelectAscension(
                     __instance,
                     charSelectButton,

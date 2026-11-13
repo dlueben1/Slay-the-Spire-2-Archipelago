@@ -27,7 +27,7 @@ namespace StS2AP.Patches
         [HarmonyPatch(typeof(NRun), nameof(NRun.ShowGameOverScreen))]
         public static class OnRunFailed
         {
-            static bool Prefix(NRun __instance, SerializableRun serializableRun)
+            static bool Prefix(NRun __instance)
             {
                 // AP_MP: multiplayer uses a replicated individual-death boundary instead.
                 if (!MultiplayerSupport.IsFeatureEnabled(MultiplayerFeature.DeathLink))

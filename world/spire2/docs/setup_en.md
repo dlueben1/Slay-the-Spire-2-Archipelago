@@ -45,9 +45,11 @@ that release's notes rather than assuming a newer game update is supported.
 ## Prepare your player YAML
 
 The easiest and recommended way to make your YAML is the
-[YAML Builder](https://sts2ap.net/#/builder) on the Slay the Spire II Archipelago
-website. It walks through every option and downloads a finished YAML. The mod's
-**Mod Website & YAML Builder** main-menu button opens the same website.
+[YAML Builder](https://sts2ap.terairk.dev/#/builder) on the beta Slay the Spire II
+Archipelago website, which has the newest options first. The main site,
+[sts2ap.net](https://sts2ap.net/#/builder), gets them later. The builder walks through
+every option and downloads a finished YAML. The mod's **Mod Website & YAML Builder**
+main-menu button opens the beta site's builder.
 
 Alternatively, download `Spire2-template.yaml` from the same release and edit it
 by hand, or use the Archipelago Launcher's **Options Creator**. Set `name` to the

@@ -153,6 +153,21 @@ public static class Patches_APCardRewardUpgradeOdds
     /// AP regular rewards use fixed independent 57/37/6 rarity rolls. Scarcity halves the
     /// Rare chance to use a 60/37/3 table, and rare AP rewards remain guaranteed Rare.
     /// </summary>
+#if STS2_AT_LEAST_0_113_0
+    [HarmonyPatch(
+        typeof(CardFactory),
+        nameof(CardFactory.RollForRarity),
+        [typeof(Player), typeof(CardCreationOptions), typeof(HashSet<CardRarity>)]
+    )]
+    private static class RollApCardRarity
+    {
+        [HarmonyPrefix]
+        private static bool Prefix(
+            CardCreationOptions options,
+            HashSet<CardRarity> allowedRarities,
+            ref CardRarity __result) =>
+            !TryRollApRarity(options.RarityOdds, allowedRarities, ref __result);
+#else
     [HarmonyPatch(
         typeof(CardFactory),
         nameof(CardFactory.RollForRarity),
@@ -170,10 +185,17 @@ public static class Patches_APCardRewardUpgradeOdds
         private static bool Prefix(
             CardRarityOddsType rollMethod,
             HashSet<CardRarity> allowedRarities,
-            ref CardRarity __result)
+            ref CardRarity __result) =>
+            !TryRollApRarity(rollMethod, allowedRarities, ref __result);
+#endif
+
+        private static bool TryRollApRarity(
+            CardRarityOddsType rollMethod,
+            HashSet<CardRarity> allowedRarities,
+            ref CardRarity result)
         {
             if (s_apRewardRng == null)
-                return true;
+                return false;
             CardRarity rarity;
             if (rollMethod == CardRarityOddsType.BossEncounter)
             {
@@ -206,8 +228,8 @@ public static class Patches_APCardRewardUpgradeOdds
                 }
                 rarity = rarity.GetNextHighestRarityWithWrapping();
             }
-            __result = rarity;
-            return false;
+            result = rarity;
+            return true;
         }
     }
 

@@ -120,6 +120,93 @@ class TestProgressiveRelicOptionsConfigured(Spire2TestBase):
         self.assertEqual(1, slot_data["strict_card_rewards"])
 
 
+class TestRandomShopCardsOff(Spire2TestBase):
+    def test_vanilla_layout_sends_no_weights(self):
+        self.assertEqual({}, self.world.fill_slot_data()["shop_card_weights"])
+
+
+class TestRandomShopCardsOn(Spire2TestBase):
+    options = {
+        "random_shop_cards": 1,
+        "shop_attack_weight": "none",
+        "shop_rare_weight": "high",
+        "shop_colorless_weight": "low",
+    }
+
+    def test_weights_are_sent_in_slot_data(self):
+        self.assertEqual({
+            "attack": 0,
+            "skill": 3,
+            "power": 3,
+            "common": 3,
+            "uncommon": 3,
+            "rare": 5,
+            "colorless": 1,
+            "event": 1,
+        }, self.world.fill_slot_data()["shop_card_weights"])
+
+
+class TestRandomShopCardsWithoutWeights(Spire2TestBase):
+    options = {
+        "random_shop_cards": 1,
+        "shop_attack_weight": "none",
+        "shop_skill_weight": "none",
+        "shop_power_weight": "none",
+        "shop_common_weight": "none",
+        "shop_uncommon_weight": "none",
+        "shop_rare_weight": "none",
+        "shop_colorless_weight": "none",
+        "shop_event_weight": "none",
+    }
+
+    def test_all_none_keeps_vanilla_layout(self):
+        self.assertEqual({}, self.world.fill_slot_data()["shop_card_weights"])
+
+
+class TestRandomShopStockOff(Spire2TestBase):
+    def test_vanilla_layout_sends_no_weights(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual({}, slot_data["shop_relic_weights"])
+        self.assertEqual({}, slot_data["shop_potion_weights"])
+
+
+class TestRandomShopStockDefaults(Spire2TestBase):
+    options = {"random_shop_relics": 1, "random_shop_potions": 1}
+
+    def test_default_weights_are_sent_in_slot_data(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual({
+            "common": 3,
+            "uncommon": 3,
+            "rare": 3,
+            "shop": 3,
+            "event": 1,
+            "ancient": 1,
+        }, slot_data["shop_relic_weights"])
+        self.assertEqual({
+            "common": 3,
+            "uncommon": 3,
+            "rare": 3,
+            "otherclass": 3,
+            "event": 1,
+        }, slot_data["shop_potion_weights"])
+
+
+class TestRandomShopStockWithoutWeights(Spire2TestBase):
+    options = {
+        "random_shop_relics": 1,
+        "shop_relic_common_weight": "none",
+        "shop_relic_uncommon_weight": "none",
+        "shop_relic_rare_weight": "none",
+        "shop_relic_shop_weight": "none",
+        "shop_relic_event_weight": "none",
+        "shop_relic_ancient_weight": "none",
+    }
+
+    def test_all_none_keeps_vanilla_layout(self):
+        self.assertEqual({}, self.world.fill_slot_data()["shop_relic_weights"])
+
+
 class TestAscensionDowns(Spire2TestBase):
     options = {
         "characters": [
@@ -193,3 +280,70 @@ class TestEnsureShopWithNoGoldWorks(Spire2TestBase):
         "shop_sanity": True,
         "gold_sanity": False,
     }
+
+
+class TestDreadModeOff(Spire2TestBase):
+    options = {
+        "ascension": ["3"],
+        "ascension_down": ["2"],
+    }
+
+    def test_slot_needs_no_game_features(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(0, slot_data["dread_mode"])
+        self.assertEqual([], slot_data["required_game_features"])
+
+    def test_ascension_options_are_kept(self):
+        for config in self.world.characters:
+            self.assertEqual(3, len(config.ascension))
+            self.assertEqual(2, len(config.ascension_down))
+
+
+class TestDreadModeOn(Spire2TestBase):
+    options = {
+        "dread_mode": True,
+        "ascension": ["3"],
+        "ascension_down": ["2"],
+    }
+
+    def test_slot_requires_the_dread_game_feature(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(1, slot_data["dread_mode"])
+        self.assertEqual(["dread"], slot_data["required_game_features"])
+
+    def test_ascension_options_still_apply(self):
+        for config in self.world.characters:
+            self.assertEqual(3, len(config.ascension))
+            self.assertEqual(2, len(config.ascension_down))
+
+
+class TestBlitzMerchantChanceOff(Spire2TestBase):
+    def test_slot_needs_no_game_features(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(0, slot_data["blitz_merchant_chance"])
+        self.assertEqual([], slot_data["required_game_features"])
+
+
+class TestBlitzMerchantChance(Spire2TestBase):
+    options = {
+        "blitz_merchant_chance": 100,
+        "shop_sanity": False,
+    }
+
+    def test_slot_requires_the_blitz_merchant_game_feature(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(100, slot_data["blitz_merchant_chance"])
+        self.assertEqual(["blitz_merchant"], slot_data["required_game_features"])
+
+
+class TestBlitzMerchantChanceWithShopSanity(Spire2TestBase):
+    options = {
+        "blitz_merchant_chance": 100,
+        "shop_sanity": True,
+        "dread_mode": True,
+    }
+
+    def test_shop_sanity_does_not_limit_the_chance(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(100, slot_data["blitz_merchant_chance"])
+        self.assertEqual(["blitz_merchant", "dread"], slot_data["required_game_features"])

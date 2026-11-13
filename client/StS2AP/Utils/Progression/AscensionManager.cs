@@ -43,6 +43,12 @@ namespace StS2AP.Utils
             }
         }
 
+        /// <summary>
+        /// Rebuilds the hover tip the next time it is shown. A tip built before the run exists
+        /// cannot know the run's game mode.
+        /// </summary>
+        public void InvalidateHoverTip() => _hoverTip = null;
+
         public int AscensionLevelAsInt
         {
             get
@@ -88,11 +94,14 @@ namespace StS2AP.Utils
             {
                 if(CurrentAscension.Contains((AscensionLevel) i))
                 {
-                    ascensions.Add(AscensionHelper.GetTitle(i).GetFormattedText());
+                    ascensions.Add(GameApiCompat.GetAscensionTitle(i).GetFormattedText());
                 }
             }
             description.Add("ascensions", ascensions);
-            _hoverTip = new HoverTip(title, description);
+            string? dreadRules = DreadRuns.DescribeRules(GameUtility.CurrentPlayer.RunState);
+            _hoverTip = dreadRules == null
+                ? new HoverTip(title, description)
+                : new HoverTip(title, (description.GetFormattedText() + "\n\n" + dreadRules).Trim());
             Patches_AscensionOverride.ChangeAscensionLabel(CurrentAscension.Count.ToString());
         }
 

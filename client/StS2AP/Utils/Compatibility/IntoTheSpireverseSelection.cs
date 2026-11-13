@@ -92,7 +92,7 @@ internal static class IntoTheSpireverseSelection
             // Native Select() does nothing for an already-selected button. Refresh the
             // lobby, background, ascension and AP tracker against the new member too.
             if (button.IsSelected)
-                screen.SelectCharacter(button, button.Character);
+                GameApiCompat.SelectCharacter(screen, button);
             return true;
         }
         catch (Exception ex)

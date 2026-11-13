@@ -15,10 +15,15 @@ CLIENT_ARCHIVE_NAME = "Archipelago.zip"
 APWORLD_ARCHIVE_NAME = "spire2.apworld"
 VARIANT_MANIFEST_NAME = "archipelago-variants.manifest"
 _client_project = ElementTree.parse(Path(__file__).resolve().parents[1] / "client/StS2AP/SupportedGameVersions.props")
-SUPPORTED_STS2_API_COMPATS = tuple(
-    _client_project.findtext(f".//{property_name}")
-    for property_name in ("Sts2MainApiCompat", "Sts2BetaApiCompat")
+MAIN_STS2_API_COMPAT = _client_project.findtext(".//Sts2MainApiCompat")
+BETA_STS2_API_COMPAT = _client_project.findtext(".//Sts2BetaApiCompat")
+# Other game versions with a build of their own, such as the one the main branch moves to next.
+EXTRA_STS2_API_COMPATS = tuple(
+    version.strip()
+    for version in (_client_project.findtext(".//Sts2ExtraApiCompats") or "").split(";")
+    if version.strip()
 )
+SUPPORTED_STS2_API_COMPATS = (MAIN_STS2_API_COMPAT, *EXTRA_STS2_API_COMPATS, BETA_STS2_API_COMPAT)
 EXPECTED_MOD_ID = "Archipelago"
 EXCLUDED_CLIENT_FILES = {"0Harmony.dll", "GodotSharp.dll", "sts2.dll"}
 RITSULIB_ASSEMBLY_PREFIXES = ("sts2.ritsulib", "sts2-ritsulib")
