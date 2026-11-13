@@ -58,7 +58,6 @@ skip to step 4.
 2. Download the `.apworld` file from the same mod release.
 3. Open the Launcher, select **Install APWorld**, and choose that file. On Windows,
    double-clicking the file also works if the Launcher installed its file association.
-   The mod's main-menu **Install APWorld** action is another way to use the bundled file.
 4. Use **Browse Files** in the Launcher, open `Players`, and put the players' YAML
    files there.
 5. Select **Generate**. The resulting ZIP is written to `output` in the Archipelago
