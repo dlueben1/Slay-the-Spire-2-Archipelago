@@ -378,8 +378,9 @@ namespace StS2AP.Patches
                 NClickableControl.SignalName.Released,
                 Callable.From<NButton>(_ =>
                 {
-                    // Go to the website
-                    var url = "https://sts2ap.net";
+                    // The beta site has the builder for options that sts2ap.net has not published
+                    // yet. Point this back at https://sts2ap.net/#/builder once it catches up.
+                    var url = "https://sts2ap.terairk.dev/#/builder";
                     Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
                 })
             );

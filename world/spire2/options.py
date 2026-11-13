@@ -594,7 +594,7 @@ class BonusItems(OptionList):
 
     Generation fails if more bonus items are configured than there are filler slots.
 
-    It's HIGHLY recommended to use the YAML Builder on our website to easily generate this option, which you can find at https://sts2ap.net
+    It's HIGHLY recommended to use the YAML Builder on our website to easily generate this option, which you can find at https://sts2ap.terairk.dev/#/builder (or https://sts2ap.net)
     """
     display_name = "Bonus Items"
     visibility = Visibility.template
@@ -679,7 +679,7 @@ class RunModifiers(OptionSet):
       Shops are unchanged. The chances reset each act, with no cap. Juzu Bracelet never appears.
       The extra fights and elites reach combat and relic checks sooner than logic expects.
 
-    Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder"""
+    Easiest to set up in the YAML Builder: https://sts2ap.terairk.dev/#/builder"""
     display_name = "Run Modifiers"
     valid_keys_casefold = False
     valid_keys = {
@@ -700,7 +700,7 @@ class RunModifiers(OptionSet):
 class EnemyHpScaling(Range):
     """Extra max HP for every enemy in Acts 2 and 3, as a percentage. Act 1 is unchanged. Stacks with
     Ascension. Logic does not account for it. In multiplayer, the host's value applies to the whole
-    run. Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder"""
+    run. Easiest to set up in the YAML Builder: https://sts2ap.terairk.dev/#/builder"""
     display_name = "Enemy HP Scaling"
     range_start = 0
     range_end = 15
@@ -710,7 +710,7 @@ class EnemyHpScaling(Range):
 class EnemyDamageScaling(Range):
     """Extra damage from every enemy in Acts 2 and 3, as a percentage. Act 1 is unchanged. Stacks with
     Ascension. Logic does not account for it. In multiplayer, the host's value applies to the whole
-    run. Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder"""
+    run. Easiest to set up in the YAML Builder: https://sts2ap.terairk.dev/#/builder"""
     display_name = "Enemy Damage Scaling"
     range_start = 0
     range_end = 15

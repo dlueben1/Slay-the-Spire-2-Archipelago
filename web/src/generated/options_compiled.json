@@ -12,7 +12,7 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "f200585264617058526fb9930e59905c290f47ff372fc63b90c0d792f6ff9bce"
+      "sha256": "617c3f9b1b86e9c07fcf16df587d8119f2b838b4310149f70a2b5b092409d469"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
@@ -1336,7 +1336,7 @@
       "module": "worlds.spire2.options",
       "kind": "list",
       "display_name": "Bonus Items",
-      "description": "Add a number of Bonus Items to the item pool.\nThese items make the game easier to complete, and are not accounted for in logic.\n\nEach ordered entry creates one character-agnostic bonus item and must provide either\na non-empty list of value Pools or one specific Value. For example:\n\n    bonus_items:\n        - WAX_RELIC:\n            Pools: [Common, Uncommon]\n        - WAX_RELIC:\n            Value: Orichalcum\n\n\nGeneration fails if more bonus items are configured than there are filler slots.\n\nIt's HIGHLY recommended to use the YAML Builder on our website to easily generate this option, which you can find at https://sts2ap.net",
+      "description": "Add a number of Bonus Items to the item pool.\nThese items make the game easier to complete, and are not accounted for in logic.\n\nEach ordered entry creates one character-agnostic bonus item and must provide either\na non-empty list of value Pools or one specific Value. For example:\n\n    bonus_items:\n        - WAX_RELIC:\n            Pools: [Common, Uncommon]\n        - WAX_RELIC:\n            Value: Orichalcum\n\n\nGeneration fails if more bonus items are configured than there are filler slots.\n\nIt's HIGHLY recommended to use the YAML Builder on our website to easily generate this option, which you can find at https://sts2ap.terairk.dev/#/builder (or https://sts2ap.net)",
       "default": [],
       "raw_default": [],
       "visibility": {
@@ -4155,7 +4155,7 @@
       "module": "worlds.spire2.options",
       "kind": "set",
       "display_name": "Run Modifiers",
-      "description": "Extra difficulty modifiers for every run, on top of Ascension. Logic does not account for them.\nMost leave Act 1 as it is and grow harder in Acts 2 and 3. Names are case-sensitive. In\nmultiplayer, the host's modifiers apply to the whole run.\n\n- 'RisingStrength': Elites and bosses start each combat with 1 Strength in Act 2 and 2 in Act 3.\n- 'EscalatingBuffs': Enemies start combat with one random buff in Act 2 and two different ones in\n  Act 3, from 1 Strength, 4 Plating, 2 Thorns, 1 Artifact, 3 Regen, 4 Curl Up, 4 Vigor and\n  1 Slippery.\n- 'ShrinkingRests': Resting heals 25% of max HP in Act 2 and 20% in Act 3, instead of 30%.\n- 'MountingCurses': Gain a random curse at the start of Act 2 and of Act 3.\n- 'MountingBanes': Gain an Ascender's Bane, which cannot be removed, at the start of Act 2 and\n  of Act 3.\n- 'CursedRun': Gain a random curse at the start of every act, including Act 1 (the base game's\n  Cursed Run). Stacks with 'MountingCurses'.\n- 'ExtraAscendersBane': Start each run with an extra Ascender's Bane. Stacks with\n  'MountingBanes'.\n- 'SlowStart': Draw 1 fewer card on the first turn of each combat, in every act.\n- 'FrailStart': Start each run with 10% less max HP.\n- 'DangerousUnknowns': ? rooms lean towards fights. Combat starts at 20% and rises 15% each\n  time a ? room is not a fight; elites start at 0% and rise 4%; chests start and rise at 1%.\n  Shops are unchanged. The chances reset each act, with no cap. Juzu Bracelet never appears.\n  The extra fights and elites reach combat and relic checks sooner than logic expects.\n\nEasiest to set up in the YAML Builder: https://sts2ap.net/#/builder",
+      "description": "Extra difficulty modifiers for every run, on top of Ascension. Logic does not account for them.\nMost leave Act 1 as it is and grow harder in Acts 2 and 3. Names are case-sensitive. In\nmultiplayer, the host's modifiers apply to the whole run.\n\n- 'RisingStrength': Elites and bosses start each combat with 1 Strength in Act 2 and 2 in Act 3.\n- 'EscalatingBuffs': Enemies start combat with one random buff in Act 2 and two different ones in\n  Act 3, from 1 Strength, 4 Plating, 2 Thorns, 1 Artifact, 3 Regen, 4 Curl Up, 4 Vigor and\n  1 Slippery.\n- 'ShrinkingRests': Resting heals 25% of max HP in Act 2 and 20% in Act 3, instead of 30%.\n- 'MountingCurses': Gain a random curse at the start of Act 2 and of Act 3.\n- 'MountingBanes': Gain an Ascender's Bane, which cannot be removed, at the start of Act 2 and\n  of Act 3.\n- 'CursedRun': Gain a random curse at the start of every act, including Act 1 (the base game's\n  Cursed Run). Stacks with 'MountingCurses'.\n- 'ExtraAscendersBane': Start each run with an extra Ascender's Bane. Stacks with\n  'MountingBanes'.\n- 'SlowStart': Draw 1 fewer card on the first turn of each combat, in every act.\n- 'FrailStart': Start each run with 10% less max HP.\n- 'DangerousUnknowns': ? rooms lean towards fights. Combat starts at 20% and rises 15% each\n  time a ? room is not a fight; elites start at 0% and rise 4%; chests start and rise at 1%.\n  Shops are unchanged. The chances reset each act, with no cap. Juzu Bracelet never appears.\n  The extra fights and elites reach combat and relic checks sooner than logic expects.\n\nEasiest to set up in the YAML Builder: https://sts2ap.terairk.dev/#/builder",
       "default": [],
       "raw_default": [],
       "visibility": {
@@ -4193,7 +4193,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Enemy HP Scaling",
-      "description": "Extra max HP for every enemy in Acts 2 and 3, as a percentage. Act 1 is unchanged. Stacks with\nAscension. Logic does not account for it. In multiplayer, the host's value applies to the whole\nrun. Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder",
+      "description": "Extra max HP for every enemy in Acts 2 and 3, as a percentage. Act 1 is unchanged. Stacks with\nAscension. Logic does not account for it. In multiplayer, the host's value applies to the whole\nrun. Easiest to set up in the YAML Builder: https://sts2ap.terairk.dev/#/builder",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -4219,7 +4219,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Enemy Damage Scaling",
-      "description": "Extra damage from every enemy in Acts 2 and 3, as a percentage. Act 1 is unchanged. Stacks with\nAscension. Logic does not account for it. In multiplayer, the host's value applies to the whole\nrun. Easiest to set up in the YAML Builder: https://sts2ap.net/#/builder",
+      "description": "Extra damage from every enemy in Acts 2 and 3, as a percentage. Act 1 is unchanged. Stacks with\nAscension. Logic does not account for it. In multiplayer, the host's value applies to the whole\nrun. Easiest to set up in the YAML Builder: https://sts2ap.terairk.dev/#/builder",
       "default": 0,
       "raw_default": 0,
       "visibility": {
