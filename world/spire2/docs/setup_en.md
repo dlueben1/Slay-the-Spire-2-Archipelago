@@ -6,6 +6,11 @@ else is generating and hosting, you only need steps 1, 2 and 4.
 We recommend the game's **beta branch**, where Terairk mainly develops and tests
 the mod. Beta updates can temporarily break the mod until it is updated.
 
+To switch, right-click Slay the Spire 2 in your Steam library, select
+**Properties** > **Game Versions & Betas**, and select **public-beta** instead of
+**Default Public Version**. Steam then downloads the beta version. To switch back,
+select **Default Public Version** again.
+
 Main-branch support is on thin ice. The mod still runs there, but it is largely
 untested and new features are not supported on it: The Fool, Dread Mode and Blitz
 Merchants need the beta branch. Multiplayer on the main branch will stop being

@@ -29,7 +29,7 @@ see [Getting help](#getting-help).
 **The game just updated and the mod stopped working:** game updates can break the
 mod until a new mod release comes out, especially on the beta branch. Check for a
 new release, or switch game branch in Steam under the game's **Properties** >
-**Betas**.
+**Game Versions & Betas**.
 
 ## My saves are gone
 
@@ -80,7 +80,7 @@ The Fool only exists on the game's beta branch, so a slot with The Fool needs it
 **`This game version does not have: ...`:** the slot uses Dread Mode or Blitz
 Merchants, which need the game's beta branch. On the main branch the slot still
 plays, with standard runs and normal shops. Switch to the beta branch in Steam
-under the game's **Properties** > **Betas** to play with them.
+under the game's **Properties** > **Game Versions & Betas** to play with them.
 
 ## During a game
 

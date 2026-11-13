@@ -29,6 +29,12 @@ Steam and let it finish downloading before starting the game. Some players have
 found that the [Multiplayer Mod Sync](https://steamcommunity.com/sharedfiles/filedetails/?id=3762348066) mod on Steam Workshop helps
 keep everyone's mods the same.
 
+[Mod Launch Manager](https://steamcommunity.com/sharedfiles/filedetails/?id=3788556097),
+recommended in the setup guide, can also sync mod lists with your Steam friends:
+it downloads any Workshop mods you are missing and applies the same setup. Both
+players need compatible versions of the manager and must be on its screen at the
+same time. You can also share a mod list as a link and import it in one click.
+
 ## Two ways to join
 
 Every player in the lobby takes part in one of two ways:
