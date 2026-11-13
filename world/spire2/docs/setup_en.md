@@ -4,13 +4,18 @@ This guide takes you from installing the mod to connecting to a game. If someone
 else is generating and hosting, you only need steps 1, 2 and 4.
 
 We recommend the game's **beta branch**, where Terairk mainly develops and tests
-the mod. Beta updates can temporarily break the mod until it is updated. The main
-branch remains supported, but receives little gameplay testing.
+the mod. Beta updates can temporarily break the mod until it is updated.
+
+Main-branch support is on thin ice. The mod still runs there, but it is largely
+untested and new features are not supported on it: The Fool, Dread Mode and Blitz
+Merchants need the beta branch. Multiplayer on the main branch will stop being
+supported in a future release, because beta 0.113.0 changed the game's multiplayer
+code substantially.
 
 ## 1. Install the mod
 
 1. Subscribe to [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295)
-   (version 0.6.0 or newer) and [Slay the Spire II Archipelago](https://steamcommunity.com/sharedfiles/filedetails/?id=3748826296)
+   (version 0.6.11 or newer) and [Slay the Spire II Archipelago](https://steamcommunity.com/sharedfiles/filedetails/?id=3748826296)
    on Steam Workshop.
 2. Wait for Steam to finish downloading both mods, then start the game.
 
@@ -23,9 +28,10 @@ and keep mod profiles to switch between different sets of mods.
 ## 2. Make your YAML
 
 A YAML is the file that holds your settings for the game. The easiest way to make
-one is the YAML Builder at <https://sts2ap.net/#/builder>. It walks through every
-option and downloads a finished YAML. The mod's **Mod Website & YAML Builder**
-main-menu button opens the same website.
+one is the YAML Builder at <https://sts2ap.terairk.dev/#/builder>. It walks through
+every option and downloads a finished YAML, and it can import a YAML you already have
+to edit it. The mod's **Mod Website & YAML Builder** main-menu button opens the same
+builder.
 
 **Modded characters (optional):** see [Predefined modded characters](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/world/spire2/docs/predefined_characters_en.md)
 for those with ready-made names and [Finding a modded character ID](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/world/spire2/docs/modded_characters_en.md)
@@ -33,9 +39,8 @@ for any other.
 
 Other ways to make a YAML:
 
-- The preview builder at <https://sts2ap.terairk.dev/#/builder> is updated more
-  freely, so it is more likely to be up to date. For now it also has options that
-  don't exist in the main releases and more of upcoming features.
+- The builder on the main site, <https://sts2ap.net/#/builder>, works too, but it
+  gets new options later.
 - Edit `Spire2-template.yaml` from the mod release by hand, or use the Archipelago
   Launcher's **Options Creator**. Set `name` to the slot name you want.
 

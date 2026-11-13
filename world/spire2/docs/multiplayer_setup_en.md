@@ -4,6 +4,11 @@ Slay the Spire II Archipelago works with the game's built-in co-op. This guide
 covers what changes when you play together. Install the mod and prepare your
 YAML with the [setup guide](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/world/spire2/docs/setup_en.md) first.
 
+> [!IMPORTANT]
+> Play multiplayer on the game's **beta branch**. Beta 0.113.0 changed the game's
+> multiplayer code substantially, so multiplayer on the main branch will stop being
+> supported in a future release.
+
 ## Everyone needs the same mods
 
 - **Same game version.** Everyone must be on the same game branch (all beta or
@@ -88,7 +93,8 @@ Players can only join while the host is in the lobby. Once the run starts,
 the lobby closes. To continue a campaign later, the host loads it from the
 campaign picker and the same players join again.
 
-Ascension and other run settings come from the host's slot.
+Ascension and other run settings come from the host's slot, including Run
+Modifiers, enemy HP and damage scaling, and Dread Mode.
 
 ## Joining a lobby
 
@@ -132,6 +138,8 @@ hosts again, copy a new link.
 - AP menu rewards, including potions, can only be claimed outside combat. Claim
   the potions you want before entering a fight.
 - DeathLink works, but Death Fragments are disabled in multiplayer.
+- Blitz Merchants are singleplayer only for now. In multiplayer, every shop is a
+  normal shop.
 - **Anytime** Ancient rewards are recommended. With **Start of Act**, Ancient
   rewards missed before a checkpoint cannot be claimed later in that run.
 

@@ -64,8 +64,8 @@ What you do in the game to send each check. Which ones exist depends on your YAM
 | `Boss Gold 1`, `2` | The gold from the Act 1 and Act 2 bosses. | **Gold Sanity** |
 | `Potion Drop 1`–`9` | Your Nth potion dropped as a combat reward in the run. | **Potion Sanity** |
 | `Act 1 Campfire 1`, `2` (and Acts 2, 3) | An extra option at a campfire. Picking it uses that campfire visit, like resting or smithing. Every campfire offers the unchecked ones for its act and earlier acts, so you can still do Act 1's in Act 3. | **Campfire Sanity** |
-| `Shop Slot 1`–`16` | Buying from the Archipelago page of a shop. Act 1 shops offer up to Shop Slot 5, Act 2 up to 10, Act 3 up to 16. How many slots exist depends on your shop slot options. | **Shop Sanity** |
-| `Reached Floor 1`–`49` | Reaching that floor. Floor 17 is the Act 1 boss, 33 is the Act 2 boss, and 48 is the Act 3 boss (49 is the second boss with Double Boss). Reaching a floor also sends every floor below it. | **Include Floor Checks** |
+| `Shop Slot 1`–`16` | Buying from the Archipelago page of a shop. Act 1 shops offer up to Shop Slot 5, Act 2 up to 10, Act 3 up to 16. How many slots exist depends on your shop slot options. Blitz merchants sell them too. | **Shop Sanity** |
+| `Reached Floor 1`–`49` | Reaching that floor. Floor 17 is the Act 1 boss, 33 is the Act 2 boss, and 48 is the Act 3 boss (49 is the second boss with Double Boss, which Dread Mode includes). Reaching a floor also sends every floor below it. | **Include Floor Checks** |
 | `Press Start` | Starting your first run with that character. | Characters that start locked |
 
 ### Going for a late check
@@ -115,7 +115,7 @@ You claim these from the Archipelago reward menu during each run.
 | `Progressive Shop Remove` | Lets you remove cards at shops, one act per copy like Progressive Rest. |
 | `Progressive Starter Card` | The first copy gives back your special starter card (Bash, Neutralize, ...); the second upgrades it the way Archaic Tooth would. |
 | `Progressive Starter Relic` | The first copy gives back your starter relic (Burning Blood, ...); the second refines it the way Touch of Orobas would. |
-| `Disable <Ascension>` | Turns off that Ascension for this character, for example `Ironclad Disable Tough Enemies`. |
+| `Disable <Ascension>` | Turns off that Ascension for this character, for example `Ironclad Disable Tough Enemies`. Dread Mode slots have none. |
 
 ### Items for every character
 
@@ -126,7 +126,7 @@ These have no character name.
 | Buffs (`Strength`, `Vigor`, `Free Attack`, `Post-Combat Card Upgrade`, ...) | One-time help. Buffs wait in a queue and one applies per combat, to whichever character you're playing. |
 | Traps (`Weak Trap`, `Vakuu Trap`, `Dazed Trap`, ...) | One-time trouble for a combat, such as Weak for a turn or Dazed in your draw pile. |
 | `Bonus Wax Relic` | A Bonus Item: a wax relic you can claim from the reward menu in every run, on any character. |
-| `Intent Sight`, `Health Sight`, `Pile Sight`, `Map Sight` | Only with the matching Hidden challenge option. Any one copy shows intents, health, your piles or the full map again for every character. |
+| `Intent Sight`, `Health Sight`, `Pile Sight`, `Map Sight`, `Card Sight` | Only with the matching Hidden challenge option. Any one copy shows intents, health, your piles, the full map or your cards again for every character. |
 
 ## What to hint when you're stuck
 

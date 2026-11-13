@@ -7,11 +7,12 @@ see [Getting help](#getting-help).
 
 - **Only have one copy of the mod installed:** use either the Workshop item or `mods/Archipelago`,
   not both. Check this if the mod doesn't load i.e. no Archipelago logo on main screen
-- **RitsuLib is installed:** you need version 0.6.0 or newer.
+- **RitsuLib is installed:** you need version 0.6.11 or newer.
 - **Get the latest versions of all mods** if your mods look out of date, use RitsuLib in the mod's 
   settings to install the latest version of all mods.
 - **Your game version is supported:** your mod release's notes list the supported
-  main and beta branch versions.
+  main and beta branch versions. The beta branch is recommended; the main branch is
+  largely untested and doesn't get new features.
 
 ## The mod doesn't load
 
@@ -74,6 +75,12 @@ choose to connect anyway and watch for problems (usually there isn't any problem
 
 **A warning about a missing character mod:** see
 [If a character mod is missing or broken](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/world/spire2/docs/modded_characters_en.md#if-a-character-mod-is-missing-or-broken).
+The Fool only exists on the game's beta branch, so a slot with The Fool needs it too.
+
+**`This game version does not have: ...`:** the slot uses Dread Mode or Blitz
+Merchants, which need the game's beta branch. On the main branch the slot still
+plays, with standard runs and normal shops. Switch to the beta branch in Steam
+under the game's **Properties** > **Betas** to play with them.
 
 ## During a game
 
