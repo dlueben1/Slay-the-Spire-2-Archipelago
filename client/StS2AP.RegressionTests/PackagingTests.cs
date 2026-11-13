@@ -9,7 +9,7 @@ public sealed class PackagingTests
 {
     [ArtifactFact("STS2AP_TEST_BUNDLE")]
     [Trait("Category", "Bundle")]
-    public void BothPackagedVariantsLoadDependenciesThroughTheModLoader()
+    public void EveryPackagedVariantLoadsDependenciesThroughTheModLoader()
     {
         string root = Path.GetFullPath(Environment.GetEnvironmentVariable("STS2AP_TEST_BUNDLE")!);
         foreach (string dependency in new[] { "StS2AP.Domain.dll", "FSharp.Core.dll" })
@@ -17,7 +17,8 @@ public sealed class PackagingTests
         using JsonDocument manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "archipelago-variants.manifest")));
         string[] variants = manifest.RootElement.GetProperty("variants").EnumerateObject()
             .Select(variant => variant.Name).ToArray();
-        Assert.Equal(2, variants.Length);
+        // One for each game branch at least; SupportedGameVersions.props may list more.
+        Assert.True(variants.Length >= 2, $"Expected a variant for each game branch, found {variants.Length}.");
         foreach (string compat in variants)
         {
             var context = new BundleContext(compat);

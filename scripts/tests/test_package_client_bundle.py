@@ -10,10 +10,12 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from package_client_bundle import assemble
-from client_archive import SUPPORTED_STS2_API_COMPATS
-
-
-MAIN_API, BETA_API = SUPPORTED_STS2_API_COMPATS
+from client_archive import (
+    BETA_STS2_API_COMPAT as BETA_API,
+    EXTRA_STS2_API_COMPATS as EXTRA_APIS,
+    MAIN_STS2_API_COMPAT as MAIN_API,
+    SUPPORTED_STS2_API_COMPATS,
+)
 
 
 class PackageClientBundleTests(unittest.TestCase):
@@ -46,13 +48,15 @@ class PackageClientBundleTests(unittest.TestCase):
                 loader.write_bytes(b"loader")
 
                 with patch("package_client_bundle.subprocess.run") as run:
-                    assemble(repo, output, "Debug", MAIN_API, BETA_API, local=local)
-                self.assertEqual(run.call_count, 3)
+                    assemble(repo, output, "Debug", MAIN_API, BETA_API, extra=EXTRA_APIS, local=local)
+                # One build for each game version, then the loader.
+                variant_builds = len(SUPPORTED_STS2_API_COMPATS)
+                self.assertEqual(run.call_count, variant_builds + 1)
                 for index, call in enumerate(run.call_args_list):
                     command = call.args[0]
                     self.assertTrue(call.kwargs["check"])
                     self.assertEqual("-p:UseSts2RefLib=true" in command, not local)
-                    if index < 2:
+                    if index < variant_builds:
                         self.assertIn("-p:BuildMode=CompileOnly", command)
                 manifest = json.loads((output / "archipelago-variants.manifest").read_text())
                 self.assertEqual(set(manifest["variants"]), set(SUPPORTED_STS2_API_COMPATS))

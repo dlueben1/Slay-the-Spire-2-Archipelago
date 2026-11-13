@@ -2,5 +2,11 @@
   <PropertyGroup>
     <Sts2MainApiCompat>0.107.1</Sts2MainApiCompat>
     <Sts2BetaApiCompat>0.113.0</Sts2BetaApiCompat>
+    <!--
+      Other game versions that get a build of their own, separated by semicolons. A version the
+      main branch is expected to move to belongs here, so that a released mod keeps working when
+      it does. Each is compiled against the Book.StS2.RefLib package "<version>-beta".
+    -->
+    <Sts2ExtraApiCompats>0.111.0</Sts2ExtraApiCompats>
   </PropertyGroup>
 </Project>
