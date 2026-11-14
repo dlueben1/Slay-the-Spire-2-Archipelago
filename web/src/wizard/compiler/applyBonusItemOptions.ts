@@ -2,7 +2,8 @@
  * @file Translates Bonus Item answers into the generated `bonus_items` option.
  *
  * Each configured row becomes one ordered entry keyed by its bonus item type, with
- * exactly one selector: a specific `Value` relic ID or a non-empty `Pools` list.
+ * exactly one selector: a specific `Value` (relic ID, enchantment name or Max HP amount)
+ * or a non-empty `Pools` list (relic pools or enchantment tiers).
  * The Python `BonusItems` schema accepts that shape verbatim, so this compiler only
  * needs to validate semantic answers against the relic source data and preserve the
  * player's row order. Capacity against filler slots is deliberately not checked;
@@ -10,13 +11,61 @@
  */
 
 import type { OptionCatalog } from "../../generated/optionCatalog";
+import {
+  findBonusEnchantment,
+  isBonusEnchantmentTier,
+} from "../BonusEnchantmentData";
 import { isBonusRelicPool, isEligibleSpecificRelicId } from "../BonusRelicData";
-import type { BonusItemAnswer } from "../WizardAnswers";
+import {
+  isEnchantmentBonusItem,
+  type BonusItemAnswer,
+} from "../WizardAnswers";
 import { BONUS_ITEM_OPTION_KEY } from "../WizardOptionKey";
 import type { CompiledOptions } from "./applyCharacterOptions";
 
 /** The generated `bonus_items` value: one single-key mapping per configured row. */
-type CompiledBonusItems = Record<string, Record<string, string | string[]>>[];
+type CompiledBonusItem = Record<string, Record<string, string | number | string[]>>;
+type CompiledBonusItems = CompiledBonusItem[];
+
+/** Max HP a new Max HP row starts with. */
+export const BONUS_MAX_HP_DEFAULT = 6;
+/** The largest Max HP bonus the APWorld accepts (`BONUS_MAX_HP_LIMIT` in items.py). */
+export const BONUS_MAX_HP_LIMIT = 50;
+
+/**
+ * Validates and converts an enchantment row.
+ *
+ * @throws When the row names an unknown enchantment or tier.
+ */
+function compileEnchantmentItem(
+  item: Extract<BonusItemAnswer, { kind: "ENCHANTMENT" | "ENCHANTED_CARDS" }>,
+  context: string,
+): CompiledBonusItem {
+  if (item.mode === "specific") {
+    const enchantment = findBonusEnchantment(item.enchantment);
+    if (!enchantment) {
+      throw new Error(
+        `${context} selects '${item.enchantment}', which is not an enchantment bonus items can give.`,
+      );
+    }
+    return { [item.kind]: { Value: enchantment.name } };
+  }
+
+  if (!Array.isArray(item.tiers) || item.tiers.length === 0) {
+    throw new Error(`${context} must select at least one enchantment tier.`);
+  }
+  const seenTiers = new Set<string>();
+  for (const tier of item.tiers) {
+    if (!isBonusEnchantmentTier(tier)) {
+      throw new Error(`${context} selects unknown enchantment tier '${tier}'.`);
+    }
+    if (seenTiers.has(tier)) {
+      throw new Error(`${context} selects tier '${tier}' more than once.`);
+    }
+    seenTiers.add(tier);
+  }
+  return { [item.kind]: { Pools: [...item.tiers] } };
+}
 
 /**
  * Validates and converts one semantic Bonus Item answer.
@@ -29,21 +78,40 @@ type CompiledBonusItems = Record<string, Record<string, string | string[]>>[];
 function compileBonusItem(
   item: BonusItemAnswer,
   index: number,
-): Record<string, Record<string, string | string[]>> {
+): CompiledBonusItem {
   const context = `Bonus Item ${index + 1}`;
 
-  if (item.kind !== "WAX_RELIC") {
-    throw new Error(`${context} uses unsupported type '${String(item.kind)}'.`);
+  if (item.kind === "MAX_HP") {
+    if (
+      !Number.isInteger(item.amount) ||
+      item.amount < 1 ||
+      item.amount > BONUS_MAX_HP_LIMIT
+    ) {
+      throw new Error(
+        `${context} must give between 1 and ${BONUS_MAX_HP_LIMIT} Max HP.`,
+      );
+    }
+    return { MAX_HP: { Value: item.amount } };
+  }
+
+  if (isEnchantmentBonusItem(item)) {
+    return compileEnchantmentItem(item, context);
+  }
+
+  if (item.kind !== "WAX_RELIC" && item.kind !== "RELIC") {
+    throw new Error(
+      `${context} uses unsupported type '${String((item as BonusItemAnswer).kind)}'.`,
+    );
   }
 
   if (item.mode === "specific") {
     if (!isEligibleSpecificRelicId(item.relicId)) {
       throw new Error(
-        `${context} selects '${item.relicId}', which is not an eligible Wax Relic. It may be blacklisted, a pickup effect, or outside the valid pools.`,
+        `${context} selects '${item.relicId}', which is not an eligible bonus relic. It may be blacklisted, a pickup effect, or outside the valid pools.`,
       );
     }
 
-    return { WAX_RELIC: { Value: item.relicId } };
+    return { [item.kind]: { Value: item.relicId } };
   }
 
   if (item.mode === "random") {
@@ -62,7 +130,7 @@ function compileBonusItem(
       seenPools.add(pool);
     }
 
-    return { WAX_RELIC: { Pools: [...item.pools] } };
+    return { [item.kind]: { Pools: [...item.pools] } };
   }
 
   throw new Error(

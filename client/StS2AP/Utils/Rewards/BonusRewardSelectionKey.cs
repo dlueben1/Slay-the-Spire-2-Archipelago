@@ -11,12 +11,14 @@ internal static class BonusRewardSelectionKey
         string runSeed,
         int ordinal,
         string relicId,
-        int? playerSlotIndex = null)
+        int? playerSlotIndex = null,
+        string category = "WAX_RELIC")
     {
         string playerComponent = playerSlotIndex.HasValue
             ? $"|PLAYER_SLOT:{playerSlotIndex.Value}"
             : string.Empty;
-        string material = $"{Domain}|{runSeed}|WAX_RELIC:{ordinal}{playerComponent}|{relicId}";
+        // Wax relics keep the key they always had, so existing runs pick the same relic.
+        string material = $"{Domain}|{runSeed}|{category}:{ordinal}{playerComponent}|{relicId}";
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(material)));
     }
 }

@@ -7,6 +7,7 @@
  * malformed or drifted state fails loudly at the compiler boundary.
  */
 
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import blacklistJson from "@shared/bonus_relic_blacklist.json";
 import customPoolsJson from "@shared/relic_custom_pools.json";
@@ -27,6 +28,10 @@ import {
   RANDOM_WAX_RELIC_NAME,
 } from "../BonusRelicData";
 import { getBonusItemDisplayRow } from "../BonusItemDisplay";
+import {
+  BONUS_ENCHANTMENT_TIERS,
+  getBonusEnchantments,
+} from "../BonusEnchantmentData";
 import { createDefaultFillerAnswers } from "../FillerItem";
 import { getGuidedOptionKeys } from "../GuidedOption";
 import { createDefaultWizardAnswers } from "../WizardAnswers";
@@ -265,7 +270,7 @@ function rejectsInvalidBonusItemAnswers(): void {
     { kind: "WAX_RELIC", mode: "specific", relicId: BLACKLISTED_RELIC_ID },
   ];
   expect(() => compileWizardAnswers(blacklisted, optionCatalog)).toThrow(
-    "not an eligible Wax Relic",
+    "not an eligible bonus relic",
   );
 
   // An unknown relic ID fails with the same eligibility message.
@@ -274,7 +279,7 @@ function rejectsInvalidBonusItemAnswers(): void {
     { kind: "WAX_RELIC", mode: "specific", relicId: "NOT_A_RELIC" },
   ];
   expect(() => compileWizardAnswers(unknown, optionCatalog)).toThrow(
-    "not an eligible Wax Relic",
+    "not an eligible bonus relic",
   );
 
   // Random mode requires at least one pool.
@@ -366,6 +371,121 @@ function rendersDisplayRows(): void {
  *
  * @returns Nothing; test registration occurs as a module-load side effect.
  */
+/**
+ * Verifies relic, enchantment and Max HP rows compile to the Python schema shape.
+ *
+ * @returns Nothing; Vitest records assertion failures.
+ */
+function compilesEveryBonusKind(): void {
+  const answers = createTestAnswers();
+  answers.checksAndRewards.bonusItems = [
+    { kind: "RELIC", mode: "specific", relicId: STANDARD_RELIC_ID },
+    { kind: "RELIC", mode: "random", pools: ["Rare"] },
+    { kind: "ENCHANTMENT", mode: "random", tiers: ["Common", "Rare"] },
+    { kind: "ENCHANTMENT", mode: "specific", enchantment: "royally approved" },
+    { kind: "ENCHANTED_CARDS", mode: "specific", enchantment: "Swift" },
+    { kind: "MAX_HP", amount: 6 },
+  ];
+
+  const options = compileWizardAnswers(answers, optionCatalog);
+
+  expect(options[BONUS_ITEM_OPTION_KEY]).toEqual([
+    { RELIC: { Value: STANDARD_RELIC_ID } },
+    { RELIC: { Pools: ["Rare"] } },
+    { ENCHANTMENT: { Pools: ["Common", "Rare"] } },
+    { ENCHANTMENT: { Value: "RoyallyApproved" } },
+    { ENCHANTED_CARDS: { Value: "Swift" } },
+    { MAX_HP: { Value: 6 } },
+  ]);
+}
+
+/**
+ * Verifies enchantment and Max HP rows the APWorld would reject fail here first.
+ *
+ * @returns Nothing; Vitest records assertion failures.
+ */
+function rejectsInvalidNewBonusKinds(): void {
+  const cases: [
+    (typeof createTestAnswers extends () => infer T
+      ? T
+      : never)["checksAndRewards"]["bonusItems"][number],
+    string,
+  ][] = [
+    [
+      { kind: "ENCHANTMENT", mode: "specific", enchantment: "TezcatarasEmber" },
+      "not an enchantment bonus items can give",
+    ],
+    [
+      { kind: "ENCHANTED_CARDS", mode: "random", tiers: ["Legendary"] },
+      "unknown enchantment tier",
+    ],
+    [
+      { kind: "ENCHANTMENT", mode: "random", tiers: [] },
+      "at least one enchantment tier",
+    ],
+    [{ kind: "MAX_HP", amount: 0 }, "between 1 and 50 Max HP"],
+    [{ kind: "MAX_HP", amount: 51 }, "between 1 and 50 Max HP"],
+  ];
+  for (const [item, message] of cases) {
+    const answers = createTestAnswers();
+    answers.checksAndRewards.bonusItems = [item];
+    expect(() => compileWizardAnswers(answers, optionCatalog)).toThrow(message);
+  }
+}
+
+/**
+ * Verifies the builder's enchantment tiers match the APWorld's, which validates YAMLs.
+ *
+ * @returns Nothing; Vitest records assertion failures.
+ */
+function matchesApworldEnchantmentTiers(): void {
+  const items = readFileSync(
+    new URL("../../../../world/spire2/items.py", import.meta.url),
+    "utf8",
+  );
+  for (const tier of BONUS_ENCHANTMENT_TIERS) {
+    const match = new RegExp(`'${tier}': \\(([^)]*)\\)`).exec(items);
+    expect(match, `items.py tier ${tier}`).not.toBeNull();
+    const apworldNames = [...match![1]!.matchAll(/'([A-Za-z]+)'/g)].map(
+      (name) => name[1],
+    );
+    const builderNames = getBonusEnchantments()
+      .filter((entry) => entry.tier === tier)
+      .map((entry) => entry.name);
+    expect(builderNames).toEqual(apworldNames);
+  }
+}
+
+/**
+ * Verifies the new kinds render rows with art and readable names.
+ *
+ * @returns Nothing; Vitest records assertion failures.
+ */
+function rendersNewDisplayRows(): void {
+  expect(getBonusItemDisplayRow({ kind: "MAX_HP", amount: 6 })).toMatchObject({
+    name: "+6 Max HP",
+  });
+  const sharp = getBonusItemDisplayRow({
+    kind: "ENCHANTMENT",
+    mode: "specific",
+    enchantment: "Sharp",
+  });
+  expect(sharp.name).toBe("Enchant a card: Sharp");
+  expect(sharp.imageUrl).toContain("/enchantments/sharp");
+  expect(sharp.details).not.toContain("[");
+  expect(
+    getBonusItemDisplayRow({
+      kind: "ENCHANTED_CARDS",
+      mode: "specific",
+      enchantment: "Sown",
+    }).details,
+  ).toBe("The first time you play this card each combat, gain 1 Energy.");
+  expect(
+    getBonusItemDisplayRow({ kind: "RELIC", mode: "random", pools: ["Rare"] })
+      .name,
+  ).toBe("Random Relic");
+}
+
 function registerBonusItemsTests(): void {
   it("keeps the three relic sources consistent", keepsSourceDataConsistent);
   it(
@@ -385,6 +505,10 @@ function registerBonusItemsTests(): void {
   it("owns bonus_items exactly once", ownsBonusItemsExactlyOnce);
   it("sits between Shop Sanity and Filler Items", placesBonusItemsBeforeFiller);
   it("renders display rows for both modes", rendersDisplayRows);
+  it("compiles every bonus kind", compilesEveryBonusKind);
+  it("rejects invalid enchantment and Max HP rows", rejectsInvalidNewBonusKinds);
+  it("matches the APWorld's enchantment tiers", matchesApworldEnchantmentTiers);
+  it("renders rows for the new kinds", rendersNewDisplayRows);
 }
 
 // Register the documented test callbacks as one focused vertical-slice suite.

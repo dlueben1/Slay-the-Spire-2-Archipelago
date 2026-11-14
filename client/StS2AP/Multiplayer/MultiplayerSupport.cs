@@ -309,9 +309,9 @@ public static class MultiplayerSupport
             or APItem.CardSight)
             return MultiplayerFeature.ChallengeSight;
 
-        // In multiplayer, Bonus Wax Relics arrive as gold unless the experimental Bonus Items
+        // In multiplayer, bonus items arrive as gold unless the experimental Bonus Items
         // feature is enabled (see BonusRewardUtility.ConvertToGold).
-        if (universalItem == APItem.BonusWaxRelic)
+        if (BonusRewardUtility.IsBonusItem(universalItem))
         {
             return ShouldRunReplicatedConstruction(MultiplayerFeature.BonusItems)
                 ? MultiplayerFeature.BonusItems

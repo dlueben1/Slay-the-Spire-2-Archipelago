@@ -456,7 +456,7 @@ namespace StS2AP.Models
         public bool IsAvailableInRewardMenu(IndexedItemInfo item, Player player)
         {
             if (ArchipelagoIdCodec.IsUniversalItemId(item.Item.ItemId))
-                return item.Item.GetUniversalItemId() == APItem.BonusWaxRelic
+                return BonusRewardUtility.IsBonusItem(item.Item.GetUniversalItemId())
                     && !Items.IsUsed(item.Index)
                     && !BonusRewardUtility.ConvertToGold(item.Item.ItemId);
             var itemId = item.Item.GetCharacterItemType();

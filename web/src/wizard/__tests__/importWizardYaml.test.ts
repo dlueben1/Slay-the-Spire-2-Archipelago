@@ -267,6 +267,18 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
     },
   ],
   [
+    "Bonus Items of every other kind",
+    (answers) => {
+      answers.checksAndRewards.bonusItems = [
+        { kind: "RELIC", mode: "random", pools: ["Rare"] },
+        { kind: "ENCHANTMENT", mode: "random", tiers: ["Common", "Rare"] },
+        { kind: "ENCHANTMENT", mode: "specific", enchantment: "RoyallyApproved" },
+        { kind: "ENCHANTED_CARDS", mode: "specific", enchantment: "Swift" },
+        { kind: "MAX_HP", amount: 6 },
+      ];
+    },
+  ],
+  [
     "Death Link with fragments only",
     (answers) => {
       answers.deathLink = {

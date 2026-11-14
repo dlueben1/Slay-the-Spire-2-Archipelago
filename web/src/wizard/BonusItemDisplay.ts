@@ -7,11 +7,15 @@
  */
 
 import {
+  findBonusEnchantment,
+  getRandomEnchantmentImageUrl,
+} from "./BonusEnchantmentData";
+import {
   getRandomWaxRelicImageUrl,
   getRelicById,
   RANDOM_WAX_RELIC_NAME,
 } from "./BonusRelicData";
-import type { BonusItemAnswer } from "./WizardAnswers";
+import { isEnchantmentBonusItem, type BonusItemAnswer } from "./WizardAnswers";
 
 /** One renderable Bonus Item row. */
 export interface BonusItemDisplayRow {
@@ -20,30 +24,63 @@ export interface BonusItemDisplayRow {
   details: string;
 }
 
+/** Relic whose art stands for a Max HP row, as in the game's reward menu. */
+const MAX_HP_IMAGE_RELIC_ID = "STRAWBERRY";
+
 /**
  * Builds the display row for one configured Bonus Item.
  *
  * @param item - Semantic bonus item answer from wizard state.
  * @returns Image, name, and detail text for table and review rendering.
- * @throws When a specific Wax Relic references an unknown relic ID.
+ * @throws When a specific row references an unknown relic or enchantment.
  */
 export function getBonusItemDisplayRow(
   item: BonusItemAnswer,
 ): BonusItemDisplayRow {
-  if (item.kind === "WAX_RELIC" && item.mode === "specific") {
+  if (item.kind === "MAX_HP") {
+    return {
+      imageUrl: getRelicById(MAX_HP_IMAGE_RELIC_ID).imageUrl,
+      name: `+${item.amount} Max HP`,
+      details: "Raises max HP and current HP when claimed.",
+    };
+  }
+
+  if (isEnchantmentBonusItem(item)) {
+    const what =
+      item.kind === "ENCHANTMENT" ? "Enchant a card" : "Enchanted card reward";
+    if (item.mode === "specific") {
+      const enchantment = findBonusEnchantment(item.enchantment);
+      if (!enchantment) {
+        throw new Error(`Unknown bonus enchantment '${item.enchantment}'.`);
+      }
+      return {
+        imageUrl: enchantment.imageUrl,
+        name: `${what}: ${enchantment.displayName}`,
+        details: enchantment.description,
+      };
+    }
+    return {
+      imageUrl: getRandomEnchantmentImageUrl(),
+      name: `${what}: random`,
+      details: `From tiers: ${item.tiers.join(", ")}`,
+    };
+  }
+
+  const prefix = item.kind === "WAX_RELIC" ? "Wax " : "";
+  if (item.mode === "specific") {
     const relic = getRelicById(item.relicId);
 
     return {
       imageUrl: relic.imageUrl,
-      name: `Wax ${relic.name}`,
+      name: `${prefix}${relic.name}`,
       details: relic.description,
     };
   }
 
-  if (item.kind === "WAX_RELIC" && item.mode === "random") {
+  if (item.mode === "random") {
     return {
       imageUrl: getRandomWaxRelicImageUrl(),
-      name: RANDOM_WAX_RELIC_NAME,
+      name: item.kind === "WAX_RELIC" ? RANDOM_WAX_RELIC_NAME : "Random Relic",
       details: `From Pools: ${item.pools.join(", ")}`,
     };
   }

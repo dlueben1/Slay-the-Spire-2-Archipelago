@@ -14,6 +14,10 @@ import {
   BONUS_RELIC_POOLS,
   getEligibleSpecificRelics,
 } from "../BonusRelicData";
+import {
+  BONUS_ENCHANTMENT_TIERS,
+  findBonusEnchantment,
+} from "../BonusEnchantmentData";
 import { FILLER_ITEM_DEFINITIONS, FILLER_WEIGHT_NAMES } from "../FillerItem";
 import { getOrderedRunModifiers } from "../RunModifier";
 import { SHOP_CARD_KIND_DEFINITIONS } from "../ShopCardKind";
@@ -26,6 +30,7 @@ import { TRAP_ITEM_DEFINITIONS, type TrapWeight } from "../TrapItem";
 import {
   SIGHT_COPY_COUNTS,
   type BonusItemAnswer,
+  type BonusItemKind,
   type ChallengeAnswers,
   type ChecksAndRewardsAnswers,
   type DeathLinkAnswers,
@@ -59,8 +64,14 @@ import { describeValue, isMapping } from "./readOptionValue";
 /** Adds one player-readable warning. */
 type Warn = (message: string) => void;
 
-/** The Bonus Item type the builder supports, as the YAML names it. */
-const WAX_RELIC = "WAX_RELIC";
+/** The Bonus Item types the builder supports, as the YAML names them. */
+const BONUS_ITEM_KINDS: readonly BonusItemKind[] = [
+  "WAX_RELIC",
+  "RELIC",
+  "ENCHANTMENT",
+  "ENCHANTED_CARDS",
+  "MAX_HP",
+];
 
 /**
  * Checks whether two resolved option values are equal, ignoring set order.
@@ -116,48 +127,11 @@ function findSpecificRelicId(value: string): string | undefined {
 }
 
 /**
- * Reads one `bonus_items` entry as a Bonus Item row.
+ * Reads the Pools of a relic bonus row.
  *
- * @param entry - Raw list entry, such as `{WAX_RELIC: {Pools: [Common]}}`.
- * @param context - Row named in warnings.
- * @param warn - Receives warnings for anything that cannot be loaded.
- * @returns The row, or `null` when it was left out.
+ * @returns The known pools in YAML order, without duplicates.
  */
-function readBonusItem(
-  entry: unknown,
-  context: string,
-  warn: Warn,
-): BonusItemAnswer | null {
-  const [type, ...extraTypes] = isMapping(entry) ? Object.keys(entry) : [];
-  if (!type || extraTypes.length || type.toUpperCase() !== WAX_RELIC) {
-    warn(
-      `${context}: left out ${describeValue(entry)}; the builder supports Wax Relics only.`,
-    );
-    return null;
-  }
-
-  const selector = (entry as Record<string, unknown>)[type];
-  if (!isMapping(selector) || "Value" in selector === "Pools" in selector) {
-    warn(
-      `${context}: left out a Wax Relic that needs exactly one of Value or Pools.`,
-    );
-    return null;
-  }
-
-  if ("Value" in selector) {
-    const relicId = findSpecificRelicId(String(selector.Value));
-    if (!relicId) {
-      warn(
-        `${context}: left out ${describeValue(selector.Value)}, which is not an eligible Wax Relic.`,
-      );
-      return null;
-    }
-    return { kind: WAX_RELIC, mode: "specific", relicId };
-  }
-
-  const rawPools = Array.isArray(selector.Pools)
-    ? selector.Pools
-    : [selector.Pools];
+function readRelicPools(rawPools: unknown[], context: string, warn: Warn): string[] {
   const pools: string[] = [];
   for (const rawPool of rawPools) {
     const pool = BONUS_RELIC_POOLS.find(
@@ -171,11 +145,114 @@ function readBonusItem(
       pools.push(pool);
     }
   }
-  if (!pools.length) {
-    warn(`${context}: left out a Wax Relic without any known relic pool.`);
+  return pools;
+}
+
+/**
+ * Reads the Pools of an enchantment bonus row.
+ *
+ * @returns The known tiers in YAML order, without duplicates.
+ */
+function readEnchantmentTiers(
+  rawPools: unknown[],
+  context: string,
+  warn: Warn,
+): string[] {
+  const tiers: string[] = [];
+  for (const rawPool of rawPools) {
+    const tier = BONUS_ENCHANTMENT_TIERS.find(
+      (name) => name.toLowerCase() === String(rawPool).trim().toLowerCase(),
+    );
+    if (!tier) {
+      warn(
+        `${context}: ignored ${describeValue(rawPool)}, which is not an enchantment tier.`,
+      );
+    } else if (!tiers.includes(tier)) {
+      tiers.push(tier);
+    }
+  }
+  return tiers;
+}
+
+/**
+ * Reads one `bonus_items` entry as a Bonus Item row.
+ *
+ * @param entry - Raw list entry, such as `{WAX_RELIC: {Pools: [Common]}}`.
+ * @param context - Row named in warnings.
+ * @param warn - Receives warnings for anything that cannot be loaded.
+ * @returns The row, or `null` when it was left out.
+ */
+function readBonusItem(
+  entry: unknown,
+  context: string,
+  warn: Warn,
+): BonusItemAnswer | null {
+  const [type, ...extraTypes] = isMapping(entry) ? Object.keys(entry) : [];
+  const kind = BONUS_ITEM_KINDS.find((name) => name === type?.toUpperCase());
+  if (!type || extraTypes.length || !kind) {
+    warn(
+      `${context}: left out ${describeValue(entry)}, which is not a Bonus Item type the builder knows.`,
+    );
     return null;
   }
-  return { kind: WAX_RELIC, mode: "random", pools };
+
+  const selector = (entry as Record<string, unknown>)[type];
+  if (!isMapping(selector) || "Value" in selector === "Pools" in selector) {
+    warn(
+      `${context}: left out a ${kind} Bonus Item that needs exactly one of Value or Pools.`,
+    );
+    return null;
+  }
+
+  if (kind === "MAX_HP") {
+    const amount = Number(selector.Value);
+    if (!("Value" in selector) || !Number.isInteger(amount) || amount < 1) {
+      warn(`${context}: left out a Max HP Bonus Item without a whole-number Value.`);
+      return null;
+    }
+    return { kind, amount };
+  }
+
+  const rawPools = Array.isArray(selector.Pools)
+    ? selector.Pools
+    : [selector.Pools];
+
+  if (kind === "ENCHANTMENT" || kind === "ENCHANTED_CARDS") {
+    if ("Value" in selector) {
+      const enchantment = findBonusEnchantment(String(selector.Value));
+      if (!enchantment) {
+        warn(
+          `${context}: left out ${describeValue(selector.Value)}, which is not an enchantment Bonus Items can give.`,
+        );
+        return null;
+      }
+      return { kind, mode: "specific", enchantment: enchantment.name };
+    }
+    const tiers = readEnchantmentTiers(rawPools, context, warn);
+    if (!tiers.length) {
+      warn(`${context}: left out an enchantment Bonus Item without any known tier.`);
+      return null;
+    }
+    return { kind, mode: "random", tiers };
+  }
+
+  if ("Value" in selector) {
+    const relicId = findSpecificRelicId(String(selector.Value));
+    if (!relicId) {
+      warn(
+        `${context}: left out ${describeValue(selector.Value)}, which is not an eligible bonus relic.`,
+      );
+      return null;
+    }
+    return { kind, mode: "specific", relicId };
+  }
+
+  const pools = readRelicPools(rawPools, context, warn);
+  if (!pools.length) {
+    warn(`${context}: left out a relic Bonus Item without any known relic pool.`);
+    return null;
+  }
+  return { kind, mode: "random", pools };
 }
 
 /**

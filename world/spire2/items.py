@@ -27,6 +27,10 @@ class ItemType(Enum):
     PROGRESSIVE_STARTER_CARD = auto()
     PROGRESSIVE_STARTER_RELIC = auto()
     BONUS_WAX_RELIC = auto()
+    BONUS_RELIC = auto()
+    BONUS_ENCHANTMENT = auto()
+    BONUS_ENCHANTED_CARDS = auto()
+    BONUS_MAX_HP = auto()
     INTENT_SIGHT = auto()
     HEALTH_SIGHT = auto()
     PILE_SIGHT = auto()
@@ -110,12 +114,54 @@ universal_items: Dict[str, ItemData] = {
     #'Single Colorless Card': ItemData(508, ItemType.FILLER_CARD_REWARD, ItemClassification.filler),
 }
 
-# `bonus_item_table` is keyed by the configuration selector: "WAX_RELIC". This is what the YAML option uses.
+# `bonus_item_table` is keyed by the configuration selector, such as "WAX_RELIC". This is what the
+# YAML option uses. Bonus items take IDs 600-699; the client's ItemTable uses the same IDs.
 bonus_item_table: Dict[str, BonusItemData] = {
     'WAX_RELIC': BonusItemData(
         'Bonus Wax Relic',
         ItemData(600, ItemType.BONUS_WAX_RELIC, ItemClassification.useful),
     ),
+    'RELIC': BonusItemData(
+        'Bonus Relic',
+        ItemData(601, ItemType.BONUS_RELIC, ItemClassification.useful),
+    ),
+    'ENCHANTMENT': BonusItemData(
+        'Bonus Enchantment',
+        ItemData(602, ItemType.BONUS_ENCHANTMENT, ItemClassification.useful),
+    ),
+    'ENCHANTED_CARDS': BonusItemData(
+        'Bonus Enchanted Cards',
+        ItemData(603, ItemType.BONUS_ENCHANTED_CARDS, ItemClassification.useful),
+    ),
+    'MAX_HP': BonusItemData(
+        'Bonus Max HP',
+        ItemData(604, ItemType.BONUS_MAX_HP, ItemClassification.useful),
+    ),
+}
+
+# Enchantments that ENCHANTMENT and ENCHANTED_CARDS bonus items can give, by the tier a YAML `Pools`
+# entry names. Random rolls draw only from these tiers. The client has the same table with each
+# enchantment's amount (`BonusEnchantmentCatalog`), and the web builder has a copy for its picker.
+BONUS_ENCHANTMENT_TIERS: Dict[str, tuple] = {
+    'Common': ('Sharp', 'Nimble', 'Adroit', 'Steady', 'Swift', 'Vigorous'),
+    'Uncommon': ('Inky', 'Momentum', 'RoyallyApproved', 'Goopy'),
+    'Rare': ('Sown', 'Glam', 'Imbued', 'SoulsPower', 'Instinct', 'Spiral'),
+}
+# Allowed only when a YAML entry names them as its `Value`: they have a drawback or need a rest site.
+BONUS_ENCHANTMENTS_BY_VALUE_ONLY = ('Corrupted', 'Slither', 'SlumberingEssence', 'PerfectFit', 'Clone')
+
+BONUS_MAX_HP_LIMIT = 50
+
+
+def normalize_bonus_enchantment(name: str) -> str:
+    """Matches 'RoyallyApproved', 'royally approved' and 'ROYALLY_APPROVED' alike."""
+    return "".join(ch for ch in name if ch.isalnum()).lower()
+
+
+BONUS_ENCHANTMENT_VALUES: Dict[str, str] = {
+    normalize_bonus_enchantment(name): name
+    for name in (*[name for tier in BONUS_ENCHANTMENT_TIERS.values() for name in tier],
+                 *BONUS_ENCHANTMENTS_BY_VALUE_ONLY)
 }
 
 # Universal trap IDs are shared with the client and never receive character offsets.

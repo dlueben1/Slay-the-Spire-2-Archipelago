@@ -398,6 +398,10 @@ namespace StS2AP.Patches
             switch (universalId)
             {
                 case APItem.BonusWaxRelic:
+                case APItem.BonusRelic:
+                case APItem.BonusEnchantment:
+                case APItem.BonusEnchantedCards:
+                case APItem.BonusMaxHp:
                     ArchipelagoClient.Progress.Items.RegisterReceived(receipt);
                     break;
                 case APItem.IntentSight:

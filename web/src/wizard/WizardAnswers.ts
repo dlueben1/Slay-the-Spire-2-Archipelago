@@ -41,26 +41,68 @@ export type CharacterAvailability = "all" | "random" | "fixed";
 export type CharacterGoal = "all" | number;
 export type CharacterAscensionMode = "shared" | "individual";
 
-/** Bonus item types currently supported by the wizard. More arrive in later passes. */
-export type BonusItemKind = "WAX_RELIC";
+/** Bonus item types the builder supports, as the YAML names them. */
+export type BonusItemKind =
+  | "WAX_RELIC"
+  | "RELIC"
+  | "ENCHANTMENT"
+  | "ENCHANTED_CARDS"
+  | "MAX_HP";
 
-/** A Wax Relic that always grants one chosen relic. */
-export interface SpecificWaxRelicBonusItem {
-  kind: "WAX_RELIC";
+/** Bonus item types that grant a relic: a Wax Relic melts, a Relic stays all run. */
+export type RelicBonusKind = "WAX_RELIC" | "RELIC";
+
+/** Bonus item types that give an enchantment: enchant a card, or an enchanted card reward. */
+export type EnchantmentBonusKind = "ENCHANTMENT" | "ENCHANTED_CARDS";
+
+/** A relic bonus that always grants one chosen relic. */
+export interface SpecificRelicBonusItem {
+  kind: RelicBonusKind;
   mode: "specific";
   relicId: string;
 }
 
-/** A Wax Relic randomized from one or more selected pools. */
-export interface RandomWaxRelicBonusItem {
-  kind: "WAX_RELIC";
+/** A relic bonus randomized from one or more selected pools. */
+export interface RandomRelicBonusItem {
+  kind: RelicBonusKind;
   mode: "random";
   pools: string[];
 }
 
+/** An enchantment bonus that always gives one named enchantment. */
+export interface SpecificEnchantmentBonusItem {
+  kind: EnchantmentBonusKind;
+  mode: "specific";
+  enchantment: string;
+}
+
+/** An enchantment bonus rolled from one or more enchantment tiers. */
+export interface RandomEnchantmentBonusItem {
+  kind: EnchantmentBonusKind;
+  mode: "random";
+  tiers: string[];
+}
+
+/** Gain a fixed amount of max HP. */
+export interface MaxHpBonusItem {
+  kind: "MAX_HP";
+  amount: number;
+}
+
 /** Discriminated union of every supported Bonus Item configuration. */
 export type BonusItemAnswer =
-  SpecificWaxRelicBonusItem | RandomWaxRelicBonusItem;
+  | SpecificRelicBonusItem
+  | RandomRelicBonusItem
+  | SpecificEnchantmentBonusItem
+  | RandomEnchantmentBonusItem
+  | MaxHpBonusItem;
+
+/** Whether a row gives an enchantment (enchant a card, or enchanted cards). */
+export function isEnchantmentBonusItem(
+  item: BonusItemAnswer,
+): item is SpecificEnchantmentBonusItem | RandomEnchantmentBonusItem {
+  return item.kind === "ENCHANTMENT" || item.kind === "ENCHANTED_CARDS";
+}
 
 export type AncientRelicLocation = "start_of_act" | "anytime";
 export type AncientRelicPool = "balanced" | "chaos" | "true_chaos";

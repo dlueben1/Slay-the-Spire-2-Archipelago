@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from Options import OptionSet, OptionList, Range, Toggle, DefaultOnToggle, Visibility, Choice, TextChoice, OptionDict, \
     PerGameCommonOptions, OptionGroup, DeathLink as ArchipelagoDeathLink
 
-from schema import Schema, Optional, And
+from schema import Schema, Optional, And, Or
 
 from .characters import PREDEFINED_CHARACTERS, character_list, unique_character_ids
 from .constants import NUM_CUSTOM, ASCENSIONS
@@ -581,15 +581,31 @@ class CharacterOptions(OptionDict):
 class BonusItems(OptionList):
     """Add a number of Bonus Items to the item pool.
     These items make the game easier to complete, and are not accounted for in logic.
+    Once found, each one can be claimed once in every run, from the Archipelago reward menu.
 
-    Each ordered entry creates one character-agnostic bonus item and must provide either
-    a non-empty list of value Pools or one specific Value. For example:
+    Each ordered entry creates one bonus item and gives either a list of Pools to roll from or
+    one specific Value:
+
+    - WAX_RELIC: a relic that melts after a few combats. Pools are relic pools such as Common.
+    - RELIC: a relic that stays for the whole run, from the same Pools or Value.
+    - ENCHANTMENT: choose a card to enchant. Pools: Common, Uncommon, Rare; or name an
+      enchantment as the Value.
+    - ENCHANTED_CARDS: a card reward whose cards are all enchanted, from the same Pools or Value.
+    - MAX_HP: gain this much max HP. Value only.
+
+    For example:
 
         bonus_items:
             - WAX_RELIC:
                 Pools: [Common, Uncommon]
-            - WAX_RELIC:
+            - RELIC:
                 Value: Orichalcum
+            - ENCHANTMENT:
+                Pools: [Common]
+            - ENCHANTED_CARDS:
+                Value: Swift
+            - MAX_HP:
+                Value: 6
 
 
     Generation fails if more bonus items are configured than there are filler slots.
@@ -617,7 +633,8 @@ class BonusItems(OptionList):
             Schema({
                 str: {
                     Optional("Pools"): [And(str, len)],
-                    Optional("Value"): And(str, len),
+                    # MAX_HP takes a number; the other types take a name.
+                    Optional("Value"): Or(And(str, len), And(int, lambda value: value > 0)),
                 }
             }),
             _has_exactly_one_selector,

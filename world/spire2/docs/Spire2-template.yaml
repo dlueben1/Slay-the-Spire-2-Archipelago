@@ -276,9 +276,15 @@ Slay the Spire II:
   # Extra items that make the game easier and aren't counted in logic. Each entry needs
   # either Pools or a single Value; the YAML Builder aka the website is the easiest way to set these up, e.g.
   # website is linked at the top of this yaml or in discord
+  # Each one can be claimed once in every run. Types: WAX_RELIC, RELIC, ENCHANTMENT,
+  # ENCHANTED_CARDS (enchantment Pools: Common, Uncommon, Rare) and MAX_HP (Value only).
   #   bonus_items:
   #     - WAX_RELIC:
   #         Pools: [Common, Uncommon]
+  #     - ENCHANTMENT:
+  #         Pools: [Common]
+  #     - MAX_HP:
+  #         Value: 6
   bonus_items: []
 
   #########

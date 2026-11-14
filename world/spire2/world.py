@@ -20,7 +20,8 @@ from .characters import (CharacterConfig, character_list, vanilla_character_ids,
                          needs_generic_block)
 from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET, GENERIC_CHARACTER_BLOCKS
 from .items import (item_table, chars_to_items, bonus_item_table, ItemType, base_event_item_pairs, ItemData,
-                    item_groups)
+                    item_groups, BONUS_ENCHANTMENT_TIERS, BONUS_ENCHANTMENT_VALUES, BONUS_MAX_HP_LIMIT,
+                    normalize_bonus_enchantment)
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
 from .options import Spire2Options
 
@@ -52,6 +53,32 @@ def sparse_placement_rank(item: 'SlayTheSpire2Item') -> int:
         return 4
     # Unlocks and anything else.
     return 5
+
+
+def validate_bonus_entry(bonus_type: str, selector: dict) -> None:
+    """Rejects bonus entries the client could not honour. Relic names are checked by the client,
+    which knows the game's relics; the other types are checked here."""
+    pools = selector.get("Pools")
+    value = selector.get("Value")
+    if bonus_type == "MAX_HP":
+        amount = int(value) if isinstance(value, int) or (isinstance(value, str) and value.isdigit()) else None
+        if pools is not None or amount is None or not 1 <= amount <= BONUS_MAX_HP_LIMIT:
+            raise OptionError(f"A MAX_HP bonus item needs a Value from 1 to {BONUS_MAX_HP_LIMIT}.")
+    elif bonus_type in ("ENCHANTMENT", "ENCHANTED_CARDS"):
+        if pools is not None:
+            unknown = [pool for pool in pools if pool not in BONUS_ENCHANTMENT_TIERS]
+            if unknown:
+                raise OptionError(
+                    f"Unknown {bonus_type} pools {unknown}. "
+                    f"Supported pools: {', '.join(BONUS_ENCHANTMENT_TIERS)}"
+                )
+        elif not isinstance(value, str) or normalize_bonus_enchantment(value) not in BONUS_ENCHANTMENT_VALUES:
+            raise OptionError(
+                f"Unknown {bonus_type} enchantment '{value}'. "
+                f"Supported enchantments: {', '.join(BONUS_ENCHANTMENT_VALUES.values())}"
+            )
+    elif isinstance(value, int):
+        raise OptionError(f"A {bonus_type} bonus item's Value must be a relic name, not a number.")
 
 
 class SlayTheSpire2Item(Item):
@@ -627,6 +654,7 @@ class SlayTheSpire2World(World):
                     f"Unknown Bonus Items type '{bonus_type}'. "
                     f"Supported types: {', '.join(sorted(bonus_item_table))}"
                 )
+            validate_bonus_entry(bonus_type, bonus_entry[bonus_type])
             bonus_item_names.append(bonus_data.item_name)
         # Challenge items take filler slots the same way Bonus Items do.
         bonus_item_names += ["Intent Sight"] * self.options.hidden_intents.value
