@@ -12,11 +12,11 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "29794a2eae81ba4529473dca39ceefb38791b2e1ae908965b6520452be4f4d03"
+      "sha256": "42e4f7c8a200550c689ca0de0a0604fcbfb19b896a826add0c4d0aa008a48f05"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "bdd0493f789b2de6543a49ced36e9e9759e892c4f5ab57728a3e218c95d4bca4"
+      "sha256": "693bad2202670fb8085e6f33107b139f7f2af89693ef4c9070936531c91e149a"
     }
   },
   "characters": {
@@ -215,6 +215,7 @@
     "confused_trap_weight",
     "sloth_trap_weight",
     "dazed_trap_weight",
+    "boons",
     "run_modifiers",
     "enemy_hp_scaling",
     "enemy_damage_scaling",
@@ -388,6 +389,14 @@
         "vigor_filler_weight",
         "thorns_filler_weight",
         "artifact_filler_weight"
+      ],
+      "start_collapsed": false,
+      "source": "web_world"
+    },
+    {
+      "name": "Boons",
+      "option_keys": [
+        "boons"
       ],
       "start_collapsed": false,
       "source": "web_world"
@@ -4148,6 +4157,42 @@
       ],
       "supports_weighting": true,
       "group": "Traps"
+    },
+    "boons": {
+      "key": "boons",
+      "class_name": "Boons",
+      "module": "worlds.spire2.options",
+      "kind": "set",
+      "display_name": "Boons",
+      "description": "Helpful modifiers for every run. Logic does not account for them. Names are case-sensitive.\nOnly Compound Interest, Gilded and Loyal Customer work in multiplayer, where the host's choice\napplies to the whole run; multiplayer runs leave out the others.\n\n- 'Wayfinder': Three times per act, travel to any room in the next row, ignoring the paths.\n- 'SecondWind': Once per act, survive a killing blow and heal 25% of your max HP.\n- 'EmberEnchanting': Campfires let you enchant a card with a random enchantment. This uses up\n  the campfire and needs the same Progressive Smith as upgrading.\n- 'CompoundInterest': At the start of Act 2 and of Act 3, gain 20% of the gold you hold, up to\n  100.\n- 'Gilded': Gain 30% more gold, including gold from Archipelago items.\n- 'SpringCleaning': After the Act 1 and Act 2 bosses, choose one: remove a card, transform a\n  card, or upgrade 2 random cards.\n- 'LoyalCustomer': Each purchase makes the rest of that shop 15% cheaper, up to 45%.\n  Archipelago checks in the shop count and get the discount too.\n- 'CampfireBrewing': Once per campfire, brew a random potion. You can still rest or upgrade\n  afterwards.",
+      "default": [],
+      "raw_default": [],
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "valid_keys": [
+        "CampfireBrewing",
+        "CompoundInterest",
+        "EmberEnchanting",
+        "Gilded",
+        "LoyalCustomer",
+        "SecondWind",
+        "SpringCleaning",
+        "Wayfinder"
+      ],
+      "valid_keys_casefold": false,
+      "allow_custom_values": false,
+      "supports_weighting": false,
+      "group": "Boons"
     },
     "run_modifiers": {
       "key": "run_modifiers",

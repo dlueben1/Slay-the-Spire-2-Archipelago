@@ -802,6 +802,7 @@ public static class ApRunData
             && existing.HostSettings?.AncientRelicPool == hostSettings?.AncientRelicPool
             && (existing.HostSettings?.RunModifiers ?? []).SequenceEqual(
                 hostSettings?.RunModifiers ?? [])
+            && (existing.HostSettings?.Boons ?? []).SequenceEqual(hostSettings?.Boons ?? [])
             && existing.HostSettings?.EnemyHpScaling == hostSettings?.EnemyHpScaling
             && existing.HostSettings?.EnemyDamageScaling == hostSettings?.EnemyDamageScaling
             && existing.HostSettings?.DreadMode == hostSettings?.DreadMode

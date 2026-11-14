@@ -734,6 +734,7 @@ class SlayTheSpire2World(World):
             "lock_characters",
             "seeded",
             "run_modifiers",
+            "boons",
             "enemy_hp_scaling",
             "enemy_damage_scaling",
             "dread_mode",

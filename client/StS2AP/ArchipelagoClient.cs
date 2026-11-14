@@ -1900,6 +1900,12 @@ namespace StS2AP
                 settings.RunModifiers = runModifiers.Select(token => token.ToString()).ToList();
                 LogUtility.Info($"SLOT - Run Modifiers: [{string.Join(",", settings.RunModifiers)}]");
             }
+            if (slotData.TryGetValue("boons", out object? boonsValue)
+                && boonsValue is Newtonsoft.Json.Linq.JArray boons)
+            {
+                settings.Boons = boons.Select(token => token.ToString()).ToList();
+                LogUtility.Info($"SLOT - Boons: [{string.Join(",", settings.Boons)}]");
+            }
             if (slotData.ContainsKey("enemy_hp_scaling"))
                 settings.EnemyHpScaling = Convert.ToInt32(slotData["enemy_hp_scaling"]);
             if (slotData.ContainsKey("enemy_damage_scaling"))
