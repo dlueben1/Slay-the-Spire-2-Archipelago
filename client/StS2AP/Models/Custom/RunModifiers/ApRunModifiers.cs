@@ -35,7 +35,7 @@ public static class ApRunModifiers
         ImageHelper.GetImagePath($"packed/modifiers/{modifierEntry.ToLowerInvariant()}.png");
 
     /// <summary>
-    /// Adds the configured modifiers to a new standard run. Call this before the base game
+    /// Adds the configured modifiers to a new standard or Dread run. Call this before the base game
     /// initializes the run's modifiers; in multiplayer, pass the host's settings so every peer
     /// builds the same run.
     /// </summary>
@@ -47,7 +47,9 @@ public static class ApRunModifiers
             LogUtility.Info("Skipped run modifiers: no AP slot settings for this run.");
             return;
         }
-        if (runState.GameMode != GameMode.Standard)
+        // Run Modifiers stack with a Dread run's own rules, so Mounting Banes adds a second
+        // Ascender's Bane in Acts 2 and 3.
+        if (runState.GameMode != GameMode.Standard && !DreadRuns.IsDreadRun(runState))
         {
             LogUtility.Info($"Skipped run modifiers: game mode is {runState.GameMode}.");
             return;

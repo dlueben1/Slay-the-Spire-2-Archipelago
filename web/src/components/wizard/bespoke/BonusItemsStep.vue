@@ -9,6 +9,7 @@ import type { BonusItemAnswer } from "../../../wizard/WizardAnswers";
 import type { WizardQuestion as WizardQuestionDefinition } from "../../../wizard/WizardStep";
 import WaxRelicDialog from "./WaxRelicDialog.vue";
 import WizardQuestion from "../core/WizardQuestion.vue";
+import FillerBudgetNote from "../core/FillerBudgetNote.vue";
 
 const props = defineProps<{
   modelValue: BonusItemAnswer[];
@@ -97,6 +98,25 @@ function removeBonusItem(index: number): void {
 }
 
 /**
+ * Inserts a copy of one row directly below it, so several identical items do not each
+ * need a trip through the dialog.
+ *
+ * @param index - Zero-based row to copy.
+ */
+function duplicateBonusItem(index: number): void {
+  const item = props.modelValue[index];
+  if (!item) {
+    return;
+  }
+
+  // Answers are plain JSON data; a JSON round trip also unwraps Vue's reactive proxy.
+  const copy = JSON.parse(JSON.stringify(item)) as BonusItemAnswer;
+  const bonusItems = [...props.modelValue];
+  bonusItems.splice(index + 1, 0, copy);
+  emit("update:modelValue", bonusItems);
+}
+
+/**
  * Commits the dialog's result: appends in Add mode, replaces in Edit mode.
  *
  * @param item - Completed semantic answer produced by the dialog.
@@ -120,8 +140,7 @@ function submitBonusItem(item: BonusItemAnswer): void {
   <WizardQuestion :question="question">
     <template #help>
       Bonus Items are placed in the item pool before any filler is generated.
-      There is no limit here, but generation fails if there are not enough
-      filler slots for them.
+      Each one takes a filler slot; the count below shows how many are left.
     </template>
 
     <WizardMarkdownDocument
@@ -130,6 +149,8 @@ function submitBonusItem(item: BonusItemAnswer): void {
     />
 
     <div class="bonus-item-section pt-4">
+      <FillerBudgetNote />
+
       <div class="bonus-item-table" role="table" aria-label="Bonus Items">
         <div class="bonus-item-table__header" role="row">
           <span class="bonus-item-table__image-heading" role="columnheader">
@@ -203,6 +224,19 @@ function submitBonusItem(item: BonusItemAnswer): void {
                 class="cursor-pointer"
                 :aria-label="`Edit Bonus Item ${index + 1}`"
                 @click="openEditDialog(index)"
+              />
+            </UTooltip>
+            <UTooltip text="Duplicate Bonus Item">
+              <UButton
+                type="button"
+                icon="i-glyphs-copy-bold"
+                color="primary"
+                variant="ghost"
+                size="sm"
+                square
+                class="cursor-pointer"
+                :aria-label="`Duplicate Bonus Item ${index + 1}`"
+                @click="duplicateBonusItem(index)"
               />
             </UTooltip>
             <UTooltip text="Remove Bonus Item">

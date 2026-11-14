@@ -152,6 +152,82 @@ public sealed class ApRunGraphLogTests : IDisposable
         Assert.Equal(8, run["ap"]!["start_time"]!.GetValue<long>());
     }
 
+    [Fact]
+    public void SnapshotRoundTripsAndIsDeletedWithItsLog()
+    {
+        Store.Save(new ApRunGraphLog { StartTime = 9 });
+        Assert.Null(Store.LoadSnapshot(9, out string? missingError));
+        Assert.Null(missingError);
+
+        Store.SaveSnapshot(9, """{ "start_time": 9 }""");
+        Store.SaveSnapshot(9, """{ "start_time": 9, "run_time": 120 }""");
+
+        Assert.Equal("""{ "start_time": 9, "run_time": 120 }""", Store.LoadSnapshot(9, out string? error));
+        Assert.Null(error);
+        Assert.Equal(new long[] { 9 }, Store.ListStartTimes());
+
+        Store.Delete(9);
+        Assert.False(Store.HasSnapshot(9));
+        Assert.Empty(Directory.GetFiles(_root));
+    }
+
+    [Fact]
+    public void CorruptSnapshotLoadsAsNullWithAnError()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Store.SnapshotPathFor(10), "not gzip");
+        Assert.Null(Store.LoadSnapshot(10, out string? error));
+        Assert.NotNull(error);
+    }
+
+    [Fact]
+    public void FurthestFloorKeepsTheHighestSnapshotOrEvent()
+    {
+        var log = new ApRunGraphLog { StartTime = 11, SavedFloor = 3, FurthestSavedFloor = 8 };
+        Assert.Equal(8, log.FurthestFloor);
+        log.Events.Add(Check(12, ApRunGraphItemType.Filler));
+        Assert.Equal(12, log.FurthestFloor);
+    }
+
+    [Fact]
+    public void ReplacedRunsBeforeTheThresholdFoldAsRestarts()
+    {
+        int keep = ApPastRunRules.KeepReplacedFromFloor;
+        var logs = new[]
+        {
+            Run(1, "IRONCLAD", floor: keep - 1),
+            Run(2, "IRONCLAD", floor: keep),
+            Run(3, "IRONCLAD", floor: 30, finished: true),
+            Run(4, "IRONCLAD", floor: 1),
+            // Another character, and a multiplayer run of the same one, replace nothing above.
+            Run(5, "SILENT", floor: 1),
+            Run(6, "IRONCLAD", floor: 2, multiplayer: true),
+            // A different seed is a lineage of its own.
+            Run(7, "IRONCLAD", floor: 1, seed: "other"),
+        };
+
+        var statuses = ApPastRunRules.Classify(logs, log => log.Outcome != null);
+
+        Assert.Equal(ApPastRunStatus.Restart, statuses[1]);
+        Assert.Equal(ApPastRunStatus.Unfinished, statuses[2]);
+        Assert.Equal(ApPastRunStatus.Finished, statuses[3]);
+        Assert.Equal(ApPastRunStatus.InProgress, statuses[4]);
+        Assert.Equal(ApPastRunStatus.InProgress, statuses[5]);
+        Assert.Equal(ApPastRunStatus.InProgress, statuses[6]);
+        Assert.Equal(ApPastRunStatus.InProgress, statuses[7]);
+    }
+
+    private static ApRunGraphLog Run(long startTime, string character, int floor,
+        bool finished = false, bool multiplayer = false, string seed = "seed") => new()
+    {
+        StartTime = startTime,
+        Seed = seed,
+        Character = character,
+        IsMultiplayer = multiplayer,
+        FurthestSavedFloor = floor,
+        Outcome = finished ? ApRunOutcome.Lost : null,
+    };
+
     private static ApRunGraphEvent Check(int floor, ApRunGraphItemType classification) => new()
     {
         Kind = ApRunGraphEventKind.CheckSent,

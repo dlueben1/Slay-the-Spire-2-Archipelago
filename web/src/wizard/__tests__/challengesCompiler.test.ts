@@ -85,10 +85,12 @@ function compilesConfiguredChallenges(): void {
     runModifiers: ["FrailStart", "RisingStrength"],
     enemyHpScaling: 15,
     enemyDamageScaling: 10,
+    dreadMode: true,
     hiddenIntents: "one",
     hiddenHealth: "two",
     hiddenPiles: "one",
     hiddenMap: "two",
+    hiddenCards: "one",
     strictCardRewards: true,
   };
 
@@ -100,10 +102,12 @@ function compilesConfiguredChallenges(): void {
   ]);
   expect(options[CHALLENGE_OPTION_KEYS.enemyHpScaling]).toBe(15);
   expect(options[CHALLENGE_OPTION_KEYS.enemyDamageScaling]).toBe(10);
+  expect(options[CHALLENGE_OPTION_KEYS.dreadMode]).toBe(true);
   expect(options[CHALLENGE_OPTION_KEYS.hiddenIntents]).toBe(1);
   expect(options[CHALLENGE_OPTION_KEYS.hiddenHealth]).toBe(2);
   expect(options[CHALLENGE_OPTION_KEYS.hiddenPiles]).toBe(1);
   expect(options[CHALLENGE_OPTION_KEYS.hiddenMap]).toBe(2);
+  expect(options[CHALLENGE_OPTION_KEYS.hiddenCards]).toBe(1);
   expect(options[CHALLENGE_OPTION_KEYS.strictCardRewards]).toBe(true);
 }
 
@@ -122,10 +126,12 @@ function ignoresChallengesUntilOptedIn(): void {
     runModifiers: ["CursedRun"],
     enemyHpScaling: 12,
     enemyDamageScaling: 8,
+    dreadMode: true,
     hiddenIntents: "two",
     hiddenHealth: "one",
     hiddenPiles: "two",
     hiddenMap: "one",
+    hiddenCards: "two",
     strictCardRewards: true,
   };
 
@@ -158,10 +164,12 @@ function showsQuestionsOnlyAfterOptingIn(): void {
     "run-modifiers",
     "enemy-hp-scaling",
     "enemy-damage-scaling",
+    "dread-mode",
     "hidden-intents",
     "hidden-health",
     "hidden-piles",
     "hidden-map",
+    "hidden-cards",
     "strict-card-rewards",
   ]);
 }
@@ -240,11 +248,13 @@ function reviewWarnsOnlyWithActiveChallenges(): void {
 
   answers.challenges.hiddenPiles = "one";
   answers.challenges.hiddenMap = "two";
+  answers.challenges.hiddenCards = "two";
 
   const summary = summarizeChallengeAnswers(answers.challenges);
 
   expect(summary).toContain("until Pile Sight is found");
   expect(summary).toContain("either of two Map Sights");
+  expect(summary).toContain("Cards are unknown until either of two Card Sights");
 }
 
 /**

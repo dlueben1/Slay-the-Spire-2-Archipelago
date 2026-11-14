@@ -81,6 +81,7 @@
             HealthSight = 801,
             PileSight = 802,
             MapSight = 803,
+            CardSight = 804,
         }
 
         public static Dictionary<int, string> Items = new Dictionary<int, string>
@@ -95,7 +96,7 @@
             { 7, "Progressive Rest" },
             { 8, "Progressive Smith" },
             { 9, "Shop Card Slot" },
-            { 10, "Neutral Shop Card Slot" },
+            { 10, "Shop Colorless Card Slot" },
             { 11, "Shop Relic Slot" },
             { 12, "Shop Potion Slot" },
             { 13, "Progressive Shop Remove" },
@@ -142,6 +143,9 @@
             { 708, "Dazed Trap" },
             { 800, "Intent Sight" },
             { 801, "Health Sight" },
+            { 802, "Pile Sight" },
+            { 803, "Map Sight" },
+            { 804, "Card Sight" },
         };
 
         /// <summary>

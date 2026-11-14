@@ -36,6 +36,8 @@ internal sealed class ApRunRecapData
     internal int Ascension { get; init; }
     internal long RunSeconds { get; init; }
     internal string KilledBy { get; init; } = "";
+    /// <summary>An unfinished run that is still its character's newest on the seed, so it may be continued.</summary>
+    internal bool InProgress { get; init; }
 
     /// <summary>Every floor of <see cref="MapHistory"/> that has a graph floor, in order.</summary>
     internal IEnumerable<RecapFloorEntry> FloorEntries()
@@ -70,13 +72,16 @@ internal sealed class ApRunRecapData
                 ? SaveUtil.EventOrDeprecated(history.KilledByEvent).Title.GetFormattedText()
                 : "";
 
-    /// <summary>The live run at game over, before or without a saved history.</summary>
-    internal static ApRunRecapData FromRun(SerializableRun run, ApRunGraphLog log)
+    /// <summary>
+    /// The live run at game over, before or without a saved history, or the last snapshot of a
+    /// run that never reached a game-over screen.
+    /// </summary>
+    internal static ApRunRecapData FromRun(SerializableRun run, ApRunGraphLog log, bool inProgress = false)
     {
         var player = run.Players.FirstOrDefault(p => p.NetId == log.LocalNetId) ?? run.Players.FirstOrDefault();
         long seconds = run.WinTime > 0 ? run.WinTime : run.RunTime;
         return Create(log, run.MapPointHistory, player?.CharacterId, player?.Deck, player?.Relics,
-            run.Ascension, seconds, killedBy: "");
+            run.Ascension, seconds, killedBy: "", inProgress);
     }
 
     private static ApRunRecapData Create(
@@ -87,7 +92,8 @@ internal sealed class ApRunRecapData
         IEnumerable<SerializableRelic>? relics,
         int ascension,
         long runSeconds,
-        string killedBy)
+        string killedBy,
+        bool inProgress = false)
     {
         var floors = ApRunGraphCanvas.BuildFloors(mapHistory, log.LocalNetId);
         return new ApRunRecapData
@@ -102,6 +108,7 @@ internal sealed class ApRunRecapData
             Ascension = ascension,
             RunSeconds = runSeconds,
             KilledBy = killedBy,
+            InProgress = inProgress,
         };
     }
 

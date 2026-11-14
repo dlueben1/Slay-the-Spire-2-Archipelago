@@ -17,6 +17,9 @@ namespace StS2AP.UI
         private static Button? _connectButton;
         private static Button? _closeButton;
         private static Label? _statusLabel;
+        // True while the label shows the progress of an attempt started from this form,
+        // rather than a result or an error.
+        private static bool _statusShowsProgress;
 
         /// <summary>
         /// Whether the UI is currently visible
@@ -157,10 +160,21 @@ namespace StS2AP.UI
         /// </summary>
         public static void SetStatus(string status)
         {
+            _statusShowsProgress = false;
             if (_statusLabel != null && IsInstanceValid(_statusLabel))
             {
                 _statusLabel.Text = status;
             }
+        }
+
+        /// <summary>
+        /// Shows the current step of a connection attempt started from this form. Does nothing
+        /// once the form shows a result or an error, or for automatic reconnects.
+        /// </summary>
+        internal static void ShowConnectProgress(string status)
+        {
+            if (_statusShowsProgress && _statusLabel != null && IsInstanceValid(_statusLabel))
+                _statusLabel.Text = status;
         }
 
         /// <summary>
@@ -296,6 +310,7 @@ namespace StS2AP.UI
             _statusLabel = new Label();
             _statusLabel.Name = "StatusLabel";
             _statusLabel.Text = "";
+            _statusShowsProgress = false;
             _statusLabel.HorizontalAlignment = HorizontalAlignment.Center;
             _statusLabel.AddThemeFontSizeOverride("font_size", 14);
             _statusLabel.AddThemeColorOverride("font_color", new Color(0.7f, 0.7f, 0.7f));
@@ -550,6 +565,7 @@ namespace StS2AP.UI
             // Begin Connecting
             LogUtility.Info($"Connect pressed - Slot: {slotName}, URL: {url}");
             SetStatus("Connecting...");
+            _statusShowsProgress = true;
             SetConnectButtonEnabled(false);
             SetCloseButtonEnabled(ArchipelagoClient.CanLeaveSlot);
             ArchipelagoClient.ServerAddress = url;
@@ -606,8 +622,7 @@ namespace StS2AP.UI
             // We failed to connect
             else if (state == ConnectionState.Disconnected)
             {
-                if (_statusLabel == null || !IsInstanceValid(_statusLabel)
-                    || _statusLabel.Text == "Connecting...")
+                if (_statusLabel == null || !IsInstanceValid(_statusLabel) || _statusShowsProgress)
                     SetStatus("Failed to connect. Please check your details and try again.");
                 SetConnectButtonEnabled(true);
                 SetCloseButtonEnabled(true);

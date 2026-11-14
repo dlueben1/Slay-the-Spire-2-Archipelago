@@ -33,7 +33,7 @@
     <AssemblyName>$(ModName)</AssemblyName>
 
     <!-- Client Release Version -->
-    <Version>2.0.0</Version>
+    <Version>2.1.0</Version>
 
     <!-- Build/deploy paths for the active game installation. -->
     <ModsOutputDir Condition="'$(ModsOutputDir)' == ''"
@@ -46,7 +46,7 @@
 
     <!-- Supported versions come from SupportedGameVersions.props. -->
     <SupportedSts2ApiCompats>
-      $(Sts2MainApiCompat);$(Sts2BetaApiCompat)
+      $(Sts2MainApiCompat);$(Sts2ExtraApiCompats);$(Sts2BetaApiCompat)
     </SupportedSts2ApiCompats>
 
     <!-- The Default Version of StS2 we support, if not specified -->
@@ -63,6 +63,11 @@
     </Sts2RefLibPackageVersion>
     <Sts2RefLibPackageVersion Condition="'$(Sts2ApiCompat)' == '$(Sts2BetaApiCompat)'">
       $(Sts2BetaApiCompat)-beta
+    </Sts2RefLibPackageVersion>
+    <!-- An extra version was a beta build when its reference package was published. -->
+    <Sts2ApiCompatIsExtra Condition="$([System.String]::Copy(';$(Sts2ExtraApiCompats);').Contains(';$(Sts2ApiCompat);'))">true</Sts2ApiCompatIsExtra>
+    <Sts2RefLibPackageVersion Condition="'$(Sts2ApiCompatIsExtra)' == 'true'">
+      $(Sts2ApiCompat)-beta
     </Sts2RefLibPackageVersion>
 
     <!-- Whether to use the Reference Library or the actual game assemblies (If we can find the sts2.dll, we use the real thing) -->
@@ -82,6 +87,21 @@
     -->
     <DefineConstants Condition="$([MSBuild]::VersionGreaterThanOrEquals('$(Sts2ApiCompat)', '0.111.0'))"
       >$(DefineConstants);STS2_AT_LEAST_0_111_0</DefineConstants>
+    <DefineConstants Condition="$([MSBuild]::VersionGreaterThanOrEquals('$(Sts2ApiCompat)', '0.113.0'))"
+      >$(DefineConstants);STS2_AT_LEAST_0_113_0</DefineConstants>
+
+    <!--
+      RitsuLib publishes one compile-time package per game API: STS2.RitsuLib follows its newest
+      supported API (0.113.0 at RitsuLib 0.6.11), and STS2.RitsuLib.Compat.<version> covers older
+      ones. Its public types differ between them (HookedSingletonModel is a RunModel from 0.113.0),
+      so each variant must compile against the package for its own game API.
+    -->
+    <RitsuLibPackageVersion>0.6.11</RitsuLibPackageVersion>
+    <RitsuLibPackageId>STS2.RitsuLib.Compat.0.107.1</RitsuLibPackageId>
+    <RitsuLibPackageId Condition="$([MSBuild]::VersionGreaterThanOrEquals('$(Sts2ApiCompat)', '0.111.0'))"
+      >STS2.RitsuLib.Compat.0.111.0</RitsuLibPackageId>
+    <RitsuLibPackageId Condition="$([MSBuild]::VersionGreaterThanOrEquals('$(Sts2ApiCompat)', '0.113.0'))"
+      >STS2.RitsuLib</RitsuLibPackageId>
 
     <!-- The reference package generates the access-check attribute, so Publicizer must not add its own. -->
     <PublicizerRuntimeStrategies Condition="'$(UseSts2RefLib)' == 'true'">Unsafe</PublicizerRuntimeStrategies>
@@ -101,7 +121,7 @@
       PrivateAssets="all"
       Condition="'$(UseSts2RefLib)' == 'true' and '$(Sts2RefLibPackageVersion)' != ''"
     />
-    <PackageReference Include="STS2.RitsuLib.Compat.0.107.1" Version="0.6.10" />
+    <PackageReference Include="$(RitsuLibPackageId)" Version="$(RitsuLibPackageVersion)" />
     <PackageReference Include="Krafs.Publicizer" Version="2.3.2" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
@@ -197,7 +217,7 @@
   <!-- Prevent unsupported StS2 versions from building -->
   <Target Name="ValidateSts2ApiCompat" BeforeTargets="ResolveAssemblyReferences">
     <Error
-      Condition="'$(Sts2ApiCompat)' != '$(Sts2MainApiCompat)' and '$(Sts2ApiCompat)' != '$(Sts2BetaApiCompat)'"
+      Condition="'$(Sts2ApiCompat)' != '$(Sts2MainApiCompat)' and '$(Sts2ApiCompat)' != '$(Sts2BetaApiCompat)' and '$(Sts2ApiCompatIsExtra)' != 'true'"
       Text="Unsupported Sts2ApiCompat '$(Sts2ApiCompat)'. Supported targets: $(SupportedSts2ApiCompats)."
     />
 
@@ -428,6 +448,6 @@ dotnet/embed_build_outputs=false
     <PropertyGroup>
       <LocalBundleArgument Condition="'$(BuildMode)' == 'Local'">--local</LocalBundleArgument>
     </PropertyGroup>
-    <Exec Command="&quot;$(PythonExe)&quot; &quot;$(MSBuildProjectDirectory)/../../scripts/package_client_bundle.py&quot; --configuration &quot;$(Configuration)&quot; --output &quot;$(ModsOutputDir)&quot; --main &quot;$(Sts2MainApiCompat)&quot; --beta &quot;$(Sts2BetaApiCompat)&quot; $(LocalBundleArgument)" />
+    <Exec Command="&quot;$(PythonExe)&quot; &quot;$(MSBuildProjectDirectory)/../../scripts/package_client_bundle.py&quot; --configuration &quot;$(Configuration)&quot; --output &quot;$(ModsOutputDir)&quot; --main &quot;$(Sts2MainApiCompat)&quot; --beta &quot;$(Sts2BetaApiCompat)&quot; --extra &quot;$(Sts2ExtraApiCompats)&quot; $(LocalBundleArgument)" />
   </Target>
 </Project>

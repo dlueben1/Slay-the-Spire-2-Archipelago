@@ -1,10 +1,21 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { optionCatalog } from "../../../generated/optionCatalog";
 import type { FillerDisplayItem } from "../../../wizard/FillerItem";
+import { createShopCardKindDisplayItems } from "../../../wizard/ShopCardKind";
+import {
+  createShopStockDisplayItems,
+  SHOP_POTION_KIND_DEFINITIONS,
+  SHOP_RELIC_KIND_DEFINITIONS,
+} from "../../../wizard/ShopStockKind";
 import type {
   BonusItemAnswer,
   ChecksAndRewardsAnswers,
   FillerAnswers,
+  FillerWeightLevel,
+  ShopCardKindId,
+  ShopPotionKindId,
+  ShopRelicKindId,
 } from "../../../wizard/WizardAnswers";
 import {
   checkSetupStep,
@@ -16,6 +27,7 @@ import {
 import BonusItemsStep from "../bespoke/BonusItemsStep.vue";
 import TrapStep from "../bespoke/TrapStep.vue";
 import FillerStep from "../bespoke/FillerStep.vue";
+import ItemWeightTable from "../bespoke/ItemWeightTable.vue";
 import WizardControl from "../core/WizardControl.vue";
 import WizardQuestion from "../core/WizardQuestion.vue";
 import { useWizardAnswers } from "../core/wizardAnswersContext";
@@ -26,9 +38,9 @@ import { useWizardAnswers } from "../core/wizardAnswersContext";
  * Every standard question — Starting Equipment, Ancients, the check-types grid, and
  * the dependent Shop Sanity family — renders through `WizardControl` from its
  * definition in `checkSetupStep`; the Floor Checks dependency rule lives in
- * `wizard/checksTransitions.ts`. Only the Bonus Items table and the Filler odds
- * table remain bespoke child components, and this shell owns the subsection
- * headers that group everything for the player.
+ * `wizard/checksTransitions.ts`. Only the Bonus Items table, the random shop stock
+ * weights and the Filler odds table remain bespoke child components, and this shell
+ * owns the subsection headers that group everything for the player.
  */
 const props = defineProps<{
   modelValue: ChecksAndRewardsAnswers;
@@ -100,6 +112,68 @@ function setBonusItems(bonusItems: BonusItemAnswer[]): void {
 function setFillerAnswers(filler: FillerAnswers): void {
   // Delegate combined-section ownership to the shared immutable update helper.
   updateAnswers({ filler });
+}
+
+const shopCardKinds = createShopCardKindDisplayItems(optionCatalog);
+const shopRelicKinds = createShopStockDisplayItems(
+  SHOP_RELIC_KIND_DEFINITIONS,
+  optionCatalog,
+);
+const shopPotionKinds = createShopStockDisplayItems(
+  SHOP_POTION_KIND_DEFINITIONS,
+  optionCatalog,
+);
+const SHOP_WEIGHT_LABELS = ["Never", "Low", "Medium", "High"] as const;
+
+/**
+ * Replaces one Random Shop Cards kind's weight level.
+ *
+ * @param id - Kind whose slider moved.
+ * @param level - New slider level from zero through three.
+ * @returns Nothing; replaces the nested Shop Cards answer immutably.
+ */
+function setShopCardWeight(id: ShopCardKindId, level: number): void {
+  const shopCards = props.modelValue.shopCards;
+  updateAnswers({
+    shopCards: {
+      ...shopCards,
+      weights: { ...shopCards.weights, [id]: level as FillerWeightLevel },
+    },
+  });
+}
+
+/**
+ * Replaces one Random Shop Relics kind's weight level.
+ *
+ * @param id - Kind whose slider moved.
+ * @param level - New slider level from zero through three.
+ * @returns Nothing; replaces the nested Shop Relics answer immutably.
+ */
+function setShopRelicWeight(id: ShopRelicKindId, level: number): void {
+  const shopRelics = props.modelValue.shopRelics;
+  updateAnswers({
+    shopRelics: {
+      ...shopRelics,
+      weights: { ...shopRelics.weights, [id]: level as FillerWeightLevel },
+    },
+  });
+}
+
+/**
+ * Replaces one Random Shop Potions kind's weight level.
+ *
+ * @param id - Kind whose slider moved.
+ * @param level - New slider level from zero through three.
+ * @returns Nothing; replaces the nested Shop Potions answer immutably.
+ */
+function setShopPotionWeight(id: ShopPotionKindId, level: number): void {
+  const shopPotions = props.modelValue.shopPotions;
+  updateAnswers({
+    shopPotions: {
+      ...shopPotions,
+      weights: { ...shopPotions.weights, [id]: level as FillerWeightLevel },
+    },
+  });
 }
 </script>
 
@@ -209,6 +283,120 @@ function setFillerAnswers(filler: FillerAnswers): void {
             :question="question('shop-costs')"
             :model-value="modelValue"
             @update:model-value="forwardUpdate"
+          />
+        </WizardQuestion>
+      </div>
+    </section>
+
+    <section class="wizard-subsection">
+      <div class="wizard-subsection__header">
+        <h3>Shop Cards</h3>
+        <p>
+          Change which cards the shop sells. This is separate from Shop Slots
+          and adds no checks.
+        </p>
+      </div>
+
+      <div class="space-y-8">
+        <WizardQuestion
+          :question="question('random-shop-cards')"
+          :help-text="
+            resolveQuestionHelp(question('random-shop-cards'), answers)
+          "
+        >
+          <WizardControl
+            :question="question('random-shop-cards')"
+            :model-value="modelValue"
+            @update:model-value="forwardUpdate"
+          />
+        </WizardQuestion>
+
+        <WizardQuestion
+          v-if="visibleQuestionIds.has('shop-card-weights')"
+          :question="question('shop-card-weights')"
+        >
+          <ItemWeightTable
+            heading="Card"
+            :items="shopCardKinds"
+            :weights="modelValue.shopCards.weights"
+            :labels="SHOP_WEIGHT_LABELS"
+            @update:weight="setShopCardWeight"
+          />
+        </WizardQuestion>
+      </div>
+    </section>
+
+    <section class="wizard-subsection">
+      <div class="wizard-subsection__header">
+        <h3>Shop Relics</h3>
+        <p>
+          Change which relics the shop sells. This is separate from Shop Slots
+          and adds no checks.
+        </p>
+      </div>
+
+      <div class="space-y-8">
+        <WizardQuestion
+          :question="question('random-shop-relics')"
+          :help-text="
+            resolveQuestionHelp(question('random-shop-relics'), answers)
+          "
+        >
+          <WizardControl
+            :question="question('random-shop-relics')"
+            :model-value="modelValue"
+            @update:model-value="forwardUpdate"
+          />
+        </WizardQuestion>
+
+        <WizardQuestion
+          v-if="visibleQuestionIds.has('shop-relic-weights')"
+          :question="question('shop-relic-weights')"
+        >
+          <ItemWeightTable
+            heading="Relic"
+            :items="shopRelicKinds"
+            :weights="modelValue.shopRelics.weights"
+            :labels="SHOP_WEIGHT_LABELS"
+            @update:weight="setShopRelicWeight"
+          />
+        </WizardQuestion>
+      </div>
+    </section>
+
+    <section class="wizard-subsection">
+      <div class="wizard-subsection__header">
+        <h3>Shop Potions</h3>
+        <p>
+          Change which potions the shop sells. This is separate from Shop Slots
+          and adds no checks.
+        </p>
+      </div>
+
+      <div class="space-y-8">
+        <WizardQuestion
+          :question="question('random-shop-potions')"
+          :help-text="
+            resolveQuestionHelp(question('random-shop-potions'), answers)
+          "
+        >
+          <WizardControl
+            :question="question('random-shop-potions')"
+            :model-value="modelValue"
+            @update:model-value="forwardUpdate"
+          />
+        </WizardQuestion>
+
+        <WizardQuestion
+          v-if="visibleQuestionIds.has('shop-potion-weights')"
+          :question="question('shop-potion-weights')"
+        >
+          <ItemWeightTable
+            heading="Potion"
+            :items="shopPotionKinds"
+            :weights="modelValue.shopPotions.weights"
+            :labels="SHOP_WEIGHT_LABELS"
+            @update:weight="setShopPotionWeight"
           />
         </WizardQuestion>
       </div>

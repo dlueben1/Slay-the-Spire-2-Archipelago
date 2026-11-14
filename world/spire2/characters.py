@@ -28,6 +28,10 @@ class CharacterDefinition:
     # Reviewed starter values; None uses DEFAULT_STARTER_POWER. Modded characters are assumed to
     # define Archaic Tooth and Touch of Orobas mappings, so the defaults fit them until reviewed.
     starter_power: StarterPower | None = None
+    # A vanilla character that only the game's beta branch has. Generation can't know a player's
+    # branch, so this only reaches the web builder, which labels the character. Clear it when the
+    # main branch gets the character.
+    beta_only: bool = False
 
 
 # Append only: position within each list determines its permanent ID block.
@@ -38,6 +42,9 @@ VANILLA_CHARACTERS = (
     CharacterDefinition("Regent", "Regent", StarterPower((1.5, 5.0), (1.5, 2.5))),
     # Normal Necrobinder starts with both halves of a card/relic synergy.
     CharacterDefinition("Necrobinder", "Necrobinder", StarterPower((1.0, 2.5), (4.0, 5.0), missing_pair=0.5)),
+    # Added in game 0.113.0. Its starter values (Foolish Shot to Divine Shot, Song Bow to
+    # Storyteller) are not reviewed yet, so it uses the default profile.
+    CharacterDefinition("Fool", "Fool", DEFAULT_STARTER_POWER, beta_only=True),
 )
 
 # Fill these in with their known starter power once people know them better

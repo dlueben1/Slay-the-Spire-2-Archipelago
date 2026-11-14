@@ -31,7 +31,7 @@ class TestItemGroups(TestCase):
         self.assertLessEqual(
             {
                 "Ironclad Shop Card Slot",
-                "Ironclad Neutral Shop Card Slot",
+                "Ironclad Shop Colorless Card Slot",
                 "Ironclad Shop Relic Slot",
                 "Ironclad Shop Potion Slot",
                 "Ironclad Progressive Shop Remove",

@@ -100,6 +100,12 @@ namespace StS2AP.Models
         /// </summary>
         public bool HiddenMap { get; set; }
 
+        /// <summary>
+        /// Whether the slot enabled the Hidden Cards challenge. When it is on, cards look unseen
+        /// until <see cref="StS2AP.Utils.Combat.CardSight"/> sees a Card Sight item.
+        /// </summary>
+        public bool HiddenCards { get; set; }
+
         /// <summary>Whether a victory releases the winning character's remaining checks.</summary>
         public bool ReleaseOnVictory { get; set; } = true;
 
@@ -143,6 +149,18 @@ namespace StS2AP.Models
         /// <summary>Extra enemy damage in Acts 2 and 3, in percent (0-15).</summary>
         public int EnemyDamageScaling { get; set; }
 
+        /// <summary>
+        /// Whether the slot's runs are Dread runs. In multiplayer, the host's value applies to
+        /// the whole run. Only game versions with <see cref="GameFeatures.Dread"/> can honour it.
+        /// </summary>
+        public bool DreadMode { get; set; }
+
+        /// <summary>
+        /// Chance, in percent, for each shop to be a Blitz merchant. In multiplayer, the host's
+        /// value applies to the whole run. See <see cref="BlitzMerchantVisits"/>.
+        /// </summary>
+        public int BlitzMerchantChance { get; set; }
+
         public bool CampfireSanity { get; set; }
         public bool GoldSanity { get; set; }
         public bool PotionSanity { get; set; }
@@ -184,6 +202,24 @@ namespace StS2AP.Models
         public int ShopPotionSlots { get; set; }
         public bool ShopRemoveSlots { get; set; }
         public int ShopSanityCosts { get; set; }
+
+        /// <summary>
+        /// Random Shop Cards weights by kind name ("attack", "skill", "power", "common",
+        /// "uncommon", "rare", "colorless"). Empty keeps the vanilla shop card layout.
+        /// </summary>
+        public Dictionary<string, int> ShopCardWeights { get; set; } = new();
+
+        /// <summary>
+        /// Random Shop Relics weights by kind name ("common", "uncommon", "rare", "shop", "event",
+        /// "ancient"). Empty keeps the vanilla shop relic layout.
+        /// </summary>
+        public Dictionary<string, int> ShopRelicWeights { get; set; } = new();
+
+        /// <summary>
+        /// Random Shop Potions weights by kind name ("common", "uncommon", "rare", "otherclass",
+        /// "event"). Empty keeps the vanilla shop potion layout.
+        /// </summary>
+        public Dictionary<string, int> ShopPotionWeights { get; set; } = new();
 
         /// <summary>
         /// Total number of generic Shop Slot locations generated per character. Enabling card

@@ -51,6 +51,24 @@ export function usesGenericCharacterSlot(
 }
 
 /**
+ * Lists selected built-in characters that only the game's beta branch has.
+ *
+ * @param answers - Current Character Setup answer model.
+ * @param catalog - Generated schema naming the beta-only characters.
+ * @returns Their display names, in portrait order.
+ * @remarks The APWorld can't know which game branch a player runs, so the wizard is
+ * where a player learns that the main branch can't play such a character.
+ */
+export function getSelectedBetaOnlyCharacters(
+  answers: CharacterAnswers,
+  catalog: OptionCatalog = optionCatalog,
+): string[] {
+  return answers.selectedCharacters.filter((character) =>
+    catalog.characters.beta_only.includes(character),
+  );
+}
+
+/**
  * Copies an Ascension configuration for immutable answer-model updates.
  *
  * @param configuration - Existing Ascension, Ascension Down mode, and selections.

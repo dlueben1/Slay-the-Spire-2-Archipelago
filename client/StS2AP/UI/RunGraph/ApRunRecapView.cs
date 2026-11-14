@@ -115,8 +115,11 @@ internal static class ApRunRecapView
     {
         ApRunOutcome.Won => ("Victory", Gold),
         ApRunOutcome.Lost => ("Defeat", DeathText),
-        _ => ("Unfinished", TextMuted),
+        _ => (data.InProgress ? "In progress" : "Unfinished", TextMuted),
     };
+
+    /// <summary>Where an unfinished run's recap ends: the last floor the game saved.</summary>
+    internal static string LastSavedText(ApRunRecapData data) => $"Last saved on floor {data.Floors.Count}";
 
     // ---- Top bar: outcome and the run's numbers, like the game's own top bar ----
 
@@ -159,6 +162,8 @@ internal static class ApRunRecapView
             when.AddChild(RightAligned(Label(data.Log.SlotName, 15, Text)));
         else if (data.Log.Outcome == ApRunOutcome.Lost && data.KilledBy.Length > 0)
             when.AddChild(RightAligned(Label($"Killed by {data.KilledBy}", 15, DeathText)));
+        else if (data.Log.Outcome == null)
+            when.AddChild(RightAligned(Label(LastSavedText(data), 15, TextMuted)));
         row.AddChild(Centered(when));
         return row;
     }
@@ -330,6 +335,7 @@ internal static class ApRunRecapView
     private static string HeroSubtitle(ApRunRecapData data) => data.Log.Outcome switch
     {
         ApRunOutcome.Lost when data.KilledBy.Length > 0 => $"Killed by {data.KilledBy}",
+        null => LastSavedText(data),
         _ => $"Ascension {data.Ascension}",
     };
 

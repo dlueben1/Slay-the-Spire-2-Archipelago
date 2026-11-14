@@ -1,6 +1,12 @@
-# Fuzzer 0.6.2 meta file: add one random character only if the roster is empty.
-# Existing nonempty rosters and other options remain randomized.
+# Fuzzer meta file: keeps the rolled character options valid. Everything else remains randomized.
 Slay the Spire II:
   fuzz_constraints:
+    # Add one random character only if the roster is empty.
     - option: characters
-      ensure_any: [Ironclad, Silent, Defect, Regent, Necrobinder]
+      ensure_any: [Ironclad, Silent, Defect, Regent, Necrobinder, Fool]
+    # The fuzzer rolls the fixed starter without looking at the roster. "" starts with a random
+    # character from the roster.
+    - option: lock_characters
+      if_value: locked_fixed
+      then:
+        unlocked_character: ""

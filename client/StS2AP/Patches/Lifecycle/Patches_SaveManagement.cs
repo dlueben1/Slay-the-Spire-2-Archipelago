@@ -51,15 +51,21 @@ namespace StS2AP.Patches
                         // also advances the separate checkpoint; carry that decision across await.
                         bool isApCheckpoint = TryGetCheckpointEligibility(preFinishedRoom, out _, out _);
                         SerializableRun snapshot = RunManager.Instance.ToSave(preFinishedRoom);
+                        ApRunGraphRecorder.CaptureSnapshot(snapshot);
                         __result = ApMultiplayerCampaignStore.SaveHostSnapshot(__instance, snapshot, isApCheckpoint);
                         return false;
                     }
 
+                    // A client saves nothing, but its player still gets a recap of an unfinished run.
+                    ApRunGraphRecorder.CaptureSnapshot(preFinishedRoom);
                     __result = Task.CompletedTask;
                     return false;
                 }
 
                 if (!ApSingleplayerSaves.IsHandlingSingleplayerRun) return true;
+
+                // Every room save refreshes the recap snapshot, checkpoint or not.
+                SerializableRun? recapSnapshot = ApRunGraphRecorder.CaptureSnapshot(preFinishedRoom);
 
                 LogUtility.Debug(
                     $"Game attempted to save: room type '{preFinishedRoom?.RoomType}', "
@@ -85,7 +91,7 @@ namespace StS2AP.Patches
                 }
 
                 LogUtility.Info("Preparing AP checkpoint save");
-                SerializableRun saveMe = RunManager.Instance.ToSave(preFinishedRoom);
+                SerializableRun saveMe = recapSnapshot ?? RunManager.Instance.ToSave(preFinishedRoom);
                 ApSingleplayerSaves.Save(saveMe, checkpointKind);
                 __result = Task.CompletedTask;
                 return false;

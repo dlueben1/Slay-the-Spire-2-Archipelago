@@ -20,12 +20,15 @@ internal static class CrossCharacterCardPoolUtility
         "NECROBINDER",
         "IRONCLAD",
         "REGENT",
+#if STS2_AT_LEAST_0_113_0
+        "FOOL",
+#endif
         "SILENT",
         "DEFECT",
     ];
 
     /// <summary>
-    /// Returns all five built-in pools followed by installed modded pools selected by the
+    /// Returns all built-in pools followed by installed modded pools selected by the
     /// reward owner's AP slot. Returns <see langword="false"/> before slot settings are available so
     /// callers can fail open to the base-game behavior.
     /// </summary>

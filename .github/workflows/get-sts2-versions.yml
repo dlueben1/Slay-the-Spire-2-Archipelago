@@ -52,15 +52,18 @@ jobs:
         shell: bash
         run: |
           properties=$(dotnet msbuild client/StS2AP/StS2AP.csproj \
-            -getProperty:Sts2MainApiCompat,Sts2BetaApiCompat)
+            -getProperty:Sts2MainApiCompat,Sts2BetaApiCompat,Sts2ExtraApiCompats)
 
           main=$(echo "$properties" | jq -r '.Properties.Sts2MainApiCompat')
           beta=$(echo "$properties" | jq -r '.Properties.Sts2BetaApiCompat')
+          # Other versions with a build of their own, separated by semicolons; may be empty.
+          extra=$(echo "$properties" | jq -r '.Properties.Sts2ExtraApiCompats')
 
           matrix=$(jq -cn \
             --arg main "$main" \
             --arg beta "$beta" \
-            '[$main, $beta]')
+            --arg extra "$extra" \
+            '[$main] + ($extra | split(";") | map(gsub("\\s"; "")) | map(select(length > 0))) + [$beta]')
 
           echo "main_api=$main" >> "$GITHUB_OUTPUT"
           echo "beta_api=$beta" >> "$GITHUB_OUTPUT"
@@ -73,4 +76,5 @@ jobs:
             echo "| --- | --- |"
             echo "| Main | \`$main\` |"
             echo "| Beta | \`$beta\` |"
+            echo "| Extra | \`${extra:-none}\` |"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -1,6 +1,7 @@
 using Archipelago.MultiClient.Net.Models;
 using Godot;
 using MegaCrit.Sts2.Core.Context;
+using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves;
 
@@ -41,6 +42,7 @@ internal static class ApRunGraphRecorder
             log.Seed = session.RoomState.Seed;
             log.SlotName = ArchipelagoClient.PlayerName;
             log.SlotLocationCount = ArchipelagoClient.SlotLocationIds.Count;
+            log.IsMultiplayer = state.Players.Count > 1;
             if (me != null)
             {
                 log.LocalNetId = me.NetId;
@@ -158,6 +160,105 @@ internal static class ApRunGraphRecorder
             _active.SlotChecksAtEnd = ArchipelagoClient.CheckedLocations.Count;
             Store.Save(_active);
         });
+    }
+
+    /// <summary>
+    /// Keeps the run as the game just saved it, so a run that never reaches a game-over screen
+    /// can still open a full recap. Called at every room save, checkpoint or not.
+    /// </summary>
+    internal static void CaptureSnapshot(SerializableRun run)
+    {
+        if (_active == null || run.StartTime != _active.StartTime)
+            return;
+        Guard(nameof(CaptureSnapshot), () => WriteSnapshot(run));
+    }
+
+    /// <summary>
+    /// For saves where the AP client skips the game's own <c>ToSave</c>: takes it here and returns
+    /// it so a checkpoint on the same save can reuse it. Null when not recording or it failed.
+    /// </summary>
+    internal static SerializableRun? CaptureSnapshot(AbstractRoom? preFinishedRoom)
+    {
+        if (_active == null || !RunManager.Instance.ShouldSave)
+            return null;
+        SerializableRun? run = null;
+        Guard(nameof(CaptureSnapshot), () =>
+        {
+            run = RunManager.Instance.ToSave(preFinishedRoom);
+            if (run.StartTime == _active.StartTime)
+                WriteSnapshot(run);
+        });
+        return run;
+    }
+
+    /// <summary>
+    /// Save and quit writes no save of its own, so the last room save may be a floor behind where
+    /// the player stopped. Take one more snapshot, with the current floor's HP, while the run still
+    /// exists. A run that reached the game-over screen has its history instead.
+    /// </summary>
+    internal static void CaptureAtQuit()
+    {
+        if (_active == null)
+            return;
+        Guard(nameof(CaptureAtQuit), () =>
+        {
+            var manager = RunManager.Instance;
+            if (manager.DebugOnlyGetState() is not RunState state || state.IsGameOver || manager.IsAbandoned
+                || manager._startTime != _active.StartTime)
+                return;
+            // The game updates a floor's HP and gold only when it leaves the floor. The run is
+            // ending, so updating them early changes nothing it will save.
+            manager.UpdatePlayerStatsInMapPointHistory();
+            WriteSnapshot(manager.ToSave(null));
+        });
+        // Nothing is recorded between runs; the next run opens its own log.
+        _active = null;
+    }
+
+    /// <summary>
+    /// Keeps only what the recap reads (players, floors, times). The rest of a save, such as the
+    /// map, RNG and drawings, would make each snapshot several times larger.
+    /// </summary>
+    private static void WriteSnapshot(SerializableRun run)
+    {
+        if (_active == null)
+            return;
+        var recapOnly = new SerializableRun
+        {
+            SchemaVersion = run.SchemaVersion,
+            StartTime = run.StartTime,
+            SaveTime = run.SaveTime,
+            RunTime = run.RunTime,
+            WinTime = run.WinTime,
+            Ascension = run.Ascension,
+            CurrentActIndex = run.CurrentActIndex,
+            GameMode = run.GameMode,
+            Players = run.Players,
+            MapPointHistory = run.MapPointHistory,
+        };
+        var store = Store;
+        store.SaveSnapshot(run.StartTime, JsonSerializationUtility.ToJson(recapOnly));
+
+        // The floor count from the map history, as the recap draws it: a save on entering a room
+        // comes before the game adds that floor, so it counts the floors already done.
+        _active.SavedFloor = run.FloorReached;
+        _active.FurthestSavedFloor = Math.Max(_active.FurthestSavedFloor, run.FloorReached);
+        store.Save(_active);
+    }
+
+    /// <summary>The run as last snapshotted, or null when it has none or it cannot be read.</summary>
+    internal static SerializableRun? LoadSnapshot(long startTime)
+    {
+        string? json = Store.LoadSnapshot(startTime, out string? error);
+        if (error != null)
+            LogUtility.Warn(error);
+        if (json == null)
+            return null;
+        var result = JsonSerializationUtility.FromJson<SerializableRun>(json);
+        if (result.Success && result.SaveData != null)
+            return result.SaveData;
+        LogUtility.Warn($"Run snapshot {startTime} could not be read: {result.ErrorMessage ?? result.Status.ToString()}");
+        return null;
     }
 
     private static void Describe(ApRunGraphEvent e, ItemInfo item, bool isSelf, string game)

@@ -25,6 +25,17 @@
   gap: 0.75rem;
 }
 
+/* Character Setup sets the column count once the cards no longer fit one row. Phones keep
+   wrapping by width. */
+@media (min-width: 48rem) {
+  .character-portrait-grid {
+    grid-template-columns: repeat(
+      var(--character-portrait-columns, auto-fit),
+      minmax(7.5rem, 1fr)
+    );
+  }
+}
+
 .character-portrait-button {
   position: relative;
   display: flex;
@@ -56,6 +67,19 @@
   object-fit: cover;
   opacity: 0.6;
   filter: saturate(0.75) contrast(1.08);
+}
+
+.character-portrait-badge {
+  position: absolute;
+  top: 0.4rem;
+  left: 0.4rem;
+  z-index: 1;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.5rem;
+  color: black;
+  font-size: 0.7rem;
+  font-weight: 800;
+  background: var(--ui-warning);
 }
 
 .character-portrait-label {

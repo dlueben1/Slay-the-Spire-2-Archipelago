@@ -68,6 +68,11 @@ class VersionBranchTests(unittest.TestCase):
         props = "<Sts2MainApiCompat>0.107.1</Sts2MainApiCompat><Sts2BetaApiCompat>0.111.0</Sts2BetaApiCompat>"
         self.assertEqual(supported_versions(props), [(0, 107, 1), (0, 111, 0)])
 
+    def test_reads_extra_supported_versions(self):
+        props = ("<Sts2MainApiCompat>0.107.1</Sts2MainApiCompat><Sts2BetaApiCompat>0.113.0</Sts2BetaApiCompat>"
+                 "<Sts2ExtraApiCompats>0.111.0; 0.112.0</Sts2ExtraApiCompats>")
+        self.assertEqual(supported_versions(props), [(0, 107, 1), (0, 113, 0), (0, 111, 0), (0, 112, 0)])
+
 
 class GameDataTests(unittest.TestCase):
     def test_uses_the_game_path_from_local_props(self):

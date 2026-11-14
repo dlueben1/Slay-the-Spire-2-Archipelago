@@ -10,6 +10,11 @@
 import type { OptionValue } from "../generated/optionCatalog";
 import { TRAP_ITEM_DEFINITIONS } from "./TrapItem";
 import { FILLER_ITEM_DEFINITIONS } from "./FillerItem";
+import { SHOP_CARD_KIND_DEFINITIONS } from "./ShopCardKind";
+import {
+  SHOP_POTION_KIND_DEFINITIONS,
+  SHOP_RELIC_KIND_DEFINITIONS,
+} from "./ShopStockKind";
 import {
   CHALLENGE_OPTION_KEYS,
   CHARACTER_OPTION_KEYS,
@@ -19,7 +24,10 @@ import {
   DEATH_LINK_OPTION_KEYS,
   PROGRESSION_OPTION_KEYS,
   RUN_OPTION_KEYS,
+  SHOP_CARD_OPTION_KEY,
   SHOP_OPTION_KEYS,
+  SHOP_POTION_OPTION_KEY,
+  SHOP_RELIC_OPTION_KEY,
   STARTING_EQUIPMENT_OPTION_KEYS,
   TRAP_CHANCE_OPTION_KEY,
 } from "./WizardOptionKey";
@@ -51,6 +59,12 @@ export function getGuidedOptionKeys(): string[] {
     ...Object.values(ANCIENT_OPTION_KEYS),
     ...Object.values(CHECK_OPTION_KEYS),
     ...Object.values(SHOP_OPTION_KEYS),
+    SHOP_CARD_OPTION_KEY,
+    ...SHOP_CARD_KIND_DEFINITIONS.map((definition) => definition.optionKey),
+    SHOP_RELIC_OPTION_KEY,
+    ...SHOP_RELIC_KIND_DEFINITIONS.map((definition) => definition.optionKey),
+    SHOP_POTION_OPTION_KEY,
+    ...SHOP_POTION_KIND_DEFINITIONS.map((definition) => definition.optionKey),
     BONUS_ITEM_OPTION_KEY,
   ];
 
@@ -117,10 +131,37 @@ export function selectGuidedOptions(
   // Preserve step order by collecting entries from the central ownership registry.
   const guidedEntries: [string, OptionValue][] = [];
   const usesAdvancedCharacters = compiled.use_advanced_characters === true;
+  const shopCardWeightKeys = new Set(
+    SHOP_CARD_KIND_DEFINITIONS.map((definition) => definition.optionKey),
+  );
+  const shopRelicWeightKeys = new Set(
+    SHOP_RELIC_KIND_DEFINITIONS.map((definition) => definition.optionKey),
+  );
+  const shopPotionWeightKeys = new Set(
+    SHOP_POTION_KIND_DEFINITIONS.map((definition) => definition.optionKey),
+  );
 
   for (const optionKey of getGuidedOptionKeys()) {
     // Omit technical character fields that the selected YAML mode ignores.
     if (!isActiveGuidedOption(optionKey, usesAdvancedCharacters)) {
+      continue;
+    }
+
+    // Shop card weights do nothing while Random Shop Cards is off.
+    if (
+      shopCardWeightKeys.has(optionKey) &&
+      compiled[SHOP_CARD_OPTION_KEY] !== true
+    ) {
+      continue;
+    }
+
+    // So do the relic and potion weights while their switches are off.
+    if (
+      (shopRelicWeightKeys.has(optionKey) &&
+        compiled[SHOP_RELIC_OPTION_KEY] !== true) ||
+      (shopPotionWeightKeys.has(optionKey) &&
+        compiled[SHOP_POTION_OPTION_KEY] !== true)
+    ) {
       continue;
     }
 

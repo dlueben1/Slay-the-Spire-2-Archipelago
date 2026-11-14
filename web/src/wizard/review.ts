@@ -20,6 +20,11 @@ import type {
   FillerAnswers,
   ProgressionAnswers,
   RunAnswers,
+  ShopCardAnswers,
+  ShopCardKindId,
+  ShopPotionKindId,
+  ShopRelicKindId,
+  ShopStockAnswers,
   ShopAnswers,
   SightCopies,
   StartingEquipmentAnswers,
@@ -29,7 +34,11 @@ import {
   getBonusItemDisplayRows,
   type BonusItemDisplayRow,
 } from "./BonusItemDisplay";
-import { getConfiguredCharacterNames } from "./CharacterRoster";
+import {
+  getConfiguredCharacterNames,
+  getSelectedBetaOnlyCharacters,
+} from "./CharacterRoster";
+import { getActiveBetaOnlyChallenges } from "./betaOnlyOptions";
 import { RUN_MODIFIERS } from "./RunModifier";
 
 export interface WizardReviewSection {
@@ -162,6 +171,26 @@ function summarizeCharacterAscensions(answers: CharacterAnswers): string {
 }
 
 /**
+ * Warns when the roster includes a character only the game's beta branch has.
+ *
+ * @param answers - Valid current Character Setup answers.
+ * @returns The caution to show with the Character Setup summary, if any.
+ */
+export function describeBetaOnlyCharacters(
+  answers: CharacterAnswers,
+): string | undefined {
+  const names = getSelectedBetaOnlyCharacters(answers);
+
+  if (!names.length) {
+    return undefined;
+  }
+
+  const verb = names.length === 1 ? "is" : "are";
+
+  return `${joinNames(names)} ${verb} only in the game's beta branch, so this YAML needs Slay the Spire II on the beta branch.`;
+}
+
+/**
  * Summarizes Character Setup choices in gameplay language.
  *
  * @param answers - Valid current Character Setup answers.
@@ -280,6 +309,89 @@ export function summarizeFillerAnswers(answers: FillerAnswers): string {
 }
 
 /**
+ * Describes the shop's card layout.
+ *
+ * @param answers - Valid current Random Shop Cards answers.
+ * @returns One sentence naming the kinds a random shop card slot can hold.
+ */
+export function summarizeShopCardAnswers(answers: ShopCardAnswers): string {
+  const kinds = SHOP_CARD_KIND_LABELS.filter(
+    ([id]) => answers.weights[id] > 0,
+  ).map(([, label]) => label);
+  if (!answers.enabled || kinds.length === 0) {
+    return "Shops sell their usual cards.";
+  }
+  return `Each shop card slot holds a random kind of card: ${kinds.join(", ")}.`;
+}
+
+/** Plural labels for the review sentence, in option order. */
+const SHOP_CARD_KIND_LABELS: readonly [ShopCardKindId, string][] = [
+  ["attack", "Attacks"],
+  ["skill", "Skills"],
+  ["power", "Powers"],
+  ["common", "Commons"],
+  ["uncommon", "Uncommons"],
+  ["rare", "Rares"],
+  ["colorless", "colorless cards"],
+  ["event", "Event cards"],
+];
+
+/**
+ * Describes the shop's relic layout.
+ *
+ * @param answers - Valid current Random Shop Relics answers.
+ * @returns One sentence naming the kinds a random shop relic slot can hold.
+ */
+export function summarizeShopRelicAnswers(
+  answers: ShopStockAnswers<ShopRelicKindId>,
+): string {
+  const kinds = SHOP_RELIC_KIND_LABELS.filter(
+    ([id]) => answers.weights[id] > 0,
+  ).map(([, label]) => label);
+  if (!answers.enabled || kinds.length === 0) {
+    return "Shops sell their usual relics.";
+  }
+  return `Each shop relic slot holds a random kind of relic: ${kinds.join(", ")}.`;
+}
+
+/**
+ * Describes the shop's potion layout.
+ *
+ * @param answers - Valid current Random Shop Potions answers.
+ * @returns One sentence naming the kinds a random shop potion slot can hold.
+ */
+export function summarizeShopPotionAnswers(
+  answers: ShopStockAnswers<ShopPotionKindId>,
+): string {
+  const kinds = SHOP_POTION_KIND_LABELS.filter(
+    ([id]) => answers.weights[id] > 0,
+  ).map(([, label]) => label);
+  if (!answers.enabled || kinds.length === 0) {
+    return "Shops sell their usual potions.";
+  }
+  return `Each shop potion slot holds a random kind of potion: ${kinds.join(", ")}.`;
+}
+
+/** Plural labels for the review sentence, in option order. */
+const SHOP_RELIC_KIND_LABELS: readonly [ShopRelicKindId, string][] = [
+  ["common", "Commons"],
+  ["uncommon", "Uncommons"],
+  ["rare", "Rares"],
+  ["shop", "Shop relics"],
+  ["event", "Event relics"],
+  ["ancient", "Ancient relics"],
+];
+
+/** Plural labels for the review sentence, in option order. */
+const SHOP_POTION_KIND_LABELS: readonly [ShopPotionKindId, string][] = [
+  ["common", "Commons"],
+  ["uncommon", "Uncommons"],
+  ["rare", "Rares"],
+  ["otherClass", "other classes' potions"],
+  ["event", "Event potions"],
+];
+
+/**
  * Summarizes the run settings that affect an individual climb.
  *
  * @param answers - Valid current Run Settings answers.
@@ -311,7 +423,11 @@ export function summarizeRunAnswers(answers: RunAnswers): string {
     ? "Each character uses a fixed seed."
     : "Runs are not assigned fixed seeds.";
 
-  return `${immediateRelics} ${opRelics} ${victoryRelease} ${seeded}`;
+  const blitzMerchants = answers.blitzMerchantChance
+    ? ` ${answers.blitzMerchantChance}% of shops are Blitz merchants. They are very strong and logic ignores them; they need the game's beta branch.`
+    : "";
+
+  return `${immediateRelics} ${opRelics} ${victoryRelease} ${seeded}${blitzMerchants}`;
 }
 
 /**
@@ -326,12 +442,43 @@ export function hasActiveChallenges(answers: ChallengeAnswers): boolean {
     (answers.runModifiers.length > 0 ||
       answers.enemyHpScaling > 0 ||
       answers.enemyDamageScaling > 0 ||
+      answers.dreadMode ||
       answers.hiddenIntents !== "off" ||
       answers.hiddenHealth !== "off" ||
       answers.hiddenPiles !== "off" ||
       answers.hiddenMap !== "off" ||
+      answers.hiddenCards !== "off" ||
       answers.strictCardRewards)
   );
+}
+
+/**
+ * Builds the cautions shown with the Challenges summary.
+ *
+ * @param answers - Current Challenges answers.
+ * @returns The warning text, or nothing while no challenge is on.
+ */
+export function describeChallengeWarnings(
+  answers: ChallengeAnswers,
+): string | undefined {
+  if (!hasActiveChallenges(answers)) {
+    return undefined;
+  }
+
+  const warnings = [
+    "Challenges are on. Logic doesn't account for them, so a seed can get stuck if runs become too hard to win.",
+  ];
+  const betaOnly = getActiveBetaOnlyChallenges(answers);
+
+  if (betaOnly.length) {
+    const verb = betaOnly.length === 1 ? "is" : "are";
+    const pronoun = betaOnly.length === 1 ? "it" : "them";
+    warnings.push(
+      `${joinNames(betaOnly)} ${verb} only in the game's beta branch. On the main branch the slot plays without ${pronoun}.`,
+    );
+  }
+
+  return warnings.join(" ");
 }
 
 /**
@@ -380,6 +527,12 @@ export function summarizeChallengeAnswers(answers: ChallengeAnswers): string {
     );
   }
 
+  if (answers.dreadMode) {
+    sentences.push(
+      "Runs are Dread runs, with the Ascensions from Character Setup.",
+    );
+  }
+
   if (answers.hiddenIntents !== "off") {
     sentences.push(
       `Enemy intents are hidden until ${describeSightItems(answers.hiddenIntents, "Intent Sight")} is found.`,
@@ -401,6 +554,12 @@ export function summarizeChallengeAnswers(answers: ChallengeAnswers): string {
   if (answers.hiddenMap !== "off") {
     sentences.push(
       `Rooms beyond your next move are hidden until ${describeSightItems(answers.hiddenMap, "Map Sight")} is found.`,
+    );
+  }
+
+  if (answers.hiddenCards !== "off") {
+    sentences.push(
+      `Cards are unknown until ${describeSightItems(answers.hiddenCards, "Card Sight")} is found.`,
     );
   }
 
@@ -607,6 +766,9 @@ export function summarizeChecksAndRewardsAnswers(
   const checks = summarizeCheckAnswers(answers.checks);
   const ancients = summarizeAncientAnswers(answers.ancients);
   const shop = summarizeShopAnswers(answers.shop);
+  const shopCards = summarizeShopCardAnswers(answers.shopCards);
+  const shopRelics = summarizeShopRelicAnswers(answers.shopRelics);
+  const shopPotions = summarizeShopPotionAnswers(answers.shopPotions);
   const bonusItems = summarizeBonusItemAnswers(answers.bonusItems);
   const filler = summarizeFillerAnswers(answers.filler);
   const traps =
@@ -615,7 +777,7 @@ export function summarizeChecksAndRewardsAnswers(
       : `${answers.traps.chance}% of filler slots become traps, with ${Object.values(answers.traps.weights).filter((weight) => weight !== "none").length} trap types enabled. At most one queued trap applies per player per turn.`;
 
   // Preserve the visible subsection order in the final combined review paragraph.
-  return `${startingEquipment} ${ancients} ${checks} ${shop} ${bonusItems} ${filler} ${traps}`;
+  return `${startingEquipment} ${ancients} ${checks} ${shop} ${shopCards} ${shopRelics} ${shopPotions} ${bonusItems} ${filler} ${traps}`;
 }
 
 /**
@@ -674,6 +836,7 @@ export function buildWizardReviewSections(
         answers.characters,
         answers.checksAndRewards.checks.includeFloorChecks,
       ),
+      warning: describeBetaOnlyCharacters(answers.characters),
     },
     { title: "Run Settings", summary: summarizeRunAnswers(answers.run) },
     {
@@ -688,9 +851,7 @@ export function buildWizardReviewSections(
     {
       title: "Challenges",
       summary: summarizeChallengeAnswers(answers.challenges),
-      warning: hasActiveChallenges(answers.challenges)
-        ? "Challenges are on. Logic doesn't account for them, so a seed can get stuck if runs become too hard to win."
-        : undefined,
+      warning: describeChallengeWarnings(answers.challenges),
     },
     {
       title: "Progression",

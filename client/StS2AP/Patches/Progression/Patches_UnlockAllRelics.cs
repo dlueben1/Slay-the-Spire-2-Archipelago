@@ -63,4 +63,15 @@ public static class Patches_UnlockAllRelics
             RegentRelicPool __instance,
             ref IEnumerable<RelicModel> __result) => Unlock(__instance, ref __result);
     }
+
+#if STS2_AT_LEAST_0_113_0
+    [HarmonyPatch(typeof(FoolRelicPool), nameof(RelicPoolModel.GetUnlockedRelics))]
+    private static class Fool
+    {
+        [HarmonyPostfix]
+        private static void Postfix(
+            FoolRelicPool __instance,
+            ref IEnumerable<RelicModel> __result) => Unlock(__instance, ref __result);
+    }
+#endif
 }

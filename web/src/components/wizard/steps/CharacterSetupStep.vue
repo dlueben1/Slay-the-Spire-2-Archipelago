@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AccordionItem, SelectItem } from "@nuxt/ui";
 import { computed, ref, watch } from "vue";
+import { optionCatalog } from "../../../generated/optionCatalog";
 import { reconcileRosterDependents } from "../../../wizard/characterReconciliation";
 import {
   canDeselectBuiltInCharacter,
@@ -96,6 +97,22 @@ function getConfiguredRoster(): string[] {
 }
 
 const configuredRoster = computed(getConfiguredRoster);
+
+/** Built-in characters only the game's beta branch has; their portraits carry a badge. */
+const betaOnlyCharacters = new Set(optionCatalog.characters.beta_only);
+
+/**
+ * Column count for the portrait grid, or undefined to let the cards wrap by width.
+ *
+ * @remarks At most 6 cards fit one row of the builder's content width. With more, the
+ * built-in portraits and the Modded card split into two balanced rows (7 as 4 + 3)
+ * instead of leaving a single card on a row of its own.
+ */
+const portraitColumns = computed(() => {
+  const cards = props.availableCharacters.length + 1;
+
+  return cards > 6 ? Math.ceil(cards / 2) : undefined;
+});
 
 /**
  * Calculates how many characters will exist after optional random selection.
@@ -488,7 +505,14 @@ watch(getRosterForReconciliation, applyRosterReconciliation, { deep: true });
   <div class="space-y-8">
     <!-- Character Selection -->
     <WizardQuestion :question="question('characters')">
-      <div class="character-portrait-grid">
+      <div
+        class="character-portrait-grid"
+        :style="
+          portraitColumns
+            ? { '--character-portrait-columns': portraitColumns }
+            : undefined
+        "
+      >
         <!-- Vanilla Characters -->
         <UButton
           v-for="character in availableCharacters"
@@ -515,6 +539,13 @@ watch(getRosterForReconciliation, applyRosterReconciliation, { deep: true });
             alt=""
             class="character-portrait-image"
           />
+
+          <span
+            v-if="betaOnlyCharacters.has(character)"
+            class="character-portrait-badge"
+          >
+            Beta branch only
+          </span>
 
           <span class="character-portrait-label">{{ character }}</span>
 

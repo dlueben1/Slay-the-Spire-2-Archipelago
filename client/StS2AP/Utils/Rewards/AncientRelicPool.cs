@@ -114,6 +114,47 @@ namespace StS2AP.Utils
         }
 
         /// <summary>
+        /// Picks one Ancient relic for a Random Shop Relics slot, from every act's Ancients
+        /// including Neow. Returns null when no relic is eligible. Every replica builds every
+        /// player's shop, so the pick depends only on run state and the shop RNG.
+        /// </summary>
+        public static RelicModel? CreateForShopSlot(
+            Player player,
+            string choiceKey,
+            IReadOnlyCollection<ModelId> relicIdsOnSale,
+            ArchipelagoSettings settings)
+        {
+            var ownedOrOnSale = player.Relics.Select(relic => relic.Id).ToHashSet();
+            ownedOrOnSale.UnionWith(relicIdsOnSale);
+
+            var allAncients = ModelDb.Acts
+                .SelectMany(act => act.AllAncients)
+                .Concat(ModelDb.AllSharedAncients)
+                .GroupBy(ancient => ancient.Id)
+                .Select(group => group.First());
+
+            // A sorted list so that the same RNG roll means the same relic on every replica.
+            var candidates = CollectCandidateRelics(player, allAncients, ownedOrOnSale, logFailures: true, settings)
+                .Values
+                .Where(relic => !OpRelicPolicy.IsRemovedFromAnytimeAncients(relic, player, settings))
+                .OrderBy(relic => relic.Id.Entry, StringComparer.Ordinal)
+                .ToList();
+
+            long? characterOffset = player.GetAPCharacterNumber();
+            while (candidates.Count > 0)
+            {
+                var candidate = player.PlayerRng.Shops.NextItem(candidates)!;
+                candidates.Remove(candidate);
+
+                var prepared = PrepareForPlayer(candidate, player, choiceKey, characterOffset);
+                if (prepared != null)
+                    return prepared;
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// Creates the mutable, player-specific form of an Ancient relic. The base game performs
         /// these setup calls while generating the natural Ancient's options; AP choices are built
         /// from AllPossibleOptions instead, so they must mirror that setup explicitly.

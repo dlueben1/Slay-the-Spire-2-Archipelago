@@ -20,6 +20,9 @@ public static class Patches_UnlockAllCards
             or SilentCardPool
             or DefectCardPool
             or NecrobinderCardPool
+#if STS2_AT_LEAST_0_113_0
+            or FoolCardPool
+#endif
             or RegentCardPool))
             return;
 

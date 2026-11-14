@@ -77,7 +77,13 @@ def version_branches(repo: Path) -> dict[tuple[int, ...], list[str]]:
 
 
 def supported_versions(props: str) -> list[tuple[int, ...]]:
-    found = re.findall(r"<Sts2\w+ApiCompat>([\d.]+)</", props)
+    # Sts2ExtraApiCompats holds a list, separated by semicolons.
+    found = [
+        version.strip()
+        for value in re.findall(r"<Sts2\w+ApiCompats?>([\d.;\s]+)</", props)
+        for version in value.split(";")
+        if version.strip()
+    ]
     return [tuple(int(part) for part in version.split(".")) for version in found]
 
 

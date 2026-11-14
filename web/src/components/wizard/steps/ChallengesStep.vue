@@ -8,6 +8,7 @@ import {
 } from "../../../wizard/WizardStep";
 import ChallengeOptIn from "../bespoke/ChallengeOptIn.vue";
 import RunModifierTable from "../bespoke/RunModifierTable.vue";
+import FillerBudgetNote from "../core/FillerBudgetNote.vue";
 import WizardControl from "../core/WizardControl.vue";
 import WizardQuestion from "../core/WizardQuestion.vue";
 import { useWizardAnswers } from "../core/wizardAnswersContext";
@@ -89,6 +90,8 @@ function setRunModifiers(runModifiers: string[]): void {
         :model-value="modelValue"
         @update:model-value="forwardUpdate"
       />
+      <!-- Sight items take filler slots; show what is left beside the first of them. -->
+      <FillerBudgetNote v-if="question.id === 'hidden-intents'" class="mt-4" />
     </WizardQuestion>
   </div>
 </template>

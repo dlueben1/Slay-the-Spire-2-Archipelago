@@ -12,6 +12,9 @@ internal static class InstalledCharacterIds
     private static readonly HashSet<string> VanillaCharacterIds = new(StringComparer.OrdinalIgnoreCase)
     {
         "IRONCLAD", "SILENT", "REGENT", "DEFECT", "NECROBINDER",
+#if STS2_AT_LEAST_0_113_0
+        "FOOL",
+#endif
     };
 
     public static string Status { get; private set; } =

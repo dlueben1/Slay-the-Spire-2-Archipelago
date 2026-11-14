@@ -1,4 +1,6 @@
 <script setup lang="ts" generic="ItemId extends string">
+import { computed } from "vue";
+
 const props = defineProps<{
   heading: string;
   items: readonly {
@@ -8,12 +10,15 @@ const props = defineProps<{
     imageSource?: string;
   }[];
   weights: Record<ItemId, number>;
+  /** Names of the four levels; defaults to the item-pool rarity wording. */
+  labels?: readonly [string, string, string, string];
 }>();
 const emit = defineEmits<{
   "update:weight": [id: ItemId, level: number];
 }>();
 
-const WEIGHT_LABELS = ["Exempt", "Rare", "Uncommon", "Common"] as const;
+const DEFAULT_WEIGHT_LABELS = ["Exempt", "Rare", "Uncommon", "Common"] as const;
+const WEIGHT_LABELS = computed(() => props.labels ?? DEFAULT_WEIGHT_LABELS);
 const WEIGHT_LEVELS = [0, 1, 2, 3] as const;
 const BADGE_COLORS = ["neutral", "info", "warning", "success"] as const;
 
@@ -29,7 +34,7 @@ function updateWeight(id: ItemId, value: number | number[] | undefined): void {
 }
 
 function getWeightLabel(id: ItemId) {
-  return WEIGHT_LABELS[props.weights[id]];
+  return WEIGHT_LABELS.value[props.weights[id]];
 }
 
 function getWeightBadgeColor(id: ItemId) {
