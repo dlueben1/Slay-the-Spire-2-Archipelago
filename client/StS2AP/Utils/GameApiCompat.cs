@@ -1,12 +1,15 @@
+using Godot;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Merchant;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Factories;
 using MegaCrit.Sts2.Core.Helpers;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Multiplayer.Game.Lobby;
+using MegaCrit.Sts2.Core.Nodes.HoverTips;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Nodes.Screens.GameOverScreen;
 using MegaCrit.Sts2.Core.Nodes.Screens.MainMenu;
@@ -95,6 +98,24 @@ public static class GameApiCompat
         return AscensionHelper.GetTitle(level, GameMode.Standard);
 #else
         return AscensionHelper.GetTitle(level);
+#endif
+    }
+
+    /// <summary>
+    /// Shows hover tips hanging below a point, with any card tips laid out beside the text, the way
+    /// the game's boss icon shows a Dread run's Dominion. 0.113.1 replaced the Center alignment
+    /// with SetAlignmentBelow.
+    /// </summary>
+    public static void ShowHoverTipsBelow(
+        Control owner,
+        IEnumerable<IHoverTip> hoverTips,
+        Vector2 globalPosition)
+    {
+#if STS2_AT_LEAST_0_113_1
+        NHoverTipSet.CreateAndShow(owner, hoverTips)?.SetAlignmentBelow(globalPosition);
+#else
+        NHoverTipSet.CreateAndShow(owner, hoverTips, HoverTipAlignment.Center)
+            ?.SetGlobalPosition(globalPosition);
 #endif
     }
 
