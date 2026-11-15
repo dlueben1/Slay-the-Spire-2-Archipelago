@@ -300,6 +300,22 @@ public static class ArchipelagoRewardUI
 
     internal static bool IsApRewardSet(RewardsSet set) => Sessions.ContainsKey(set);
 
+    /// <summary>
+    /// Whether a set is a multiplayer AP menu: this player's alone, never begun on the reward-set
+    /// synchronizer, its rows claiming through queued actions.
+    /// </summary>
+    internal static bool IsOwnerLocalSet(RewardsSet set) =>
+        MultiplayerSupport.IsRealMultiplayerRun
+        && Sessions.TryGetValue(set, out NativeMenuSession? session)
+        && !session.Synchronized;
+
+    /// <summary>Whether a reward row belongs to the open owner-local multiplayer AP menu.</summary>
+    internal static bool IsOwnerLocalReward(Reward reward) =>
+        reward is ApMirroredRewardDispatcher.IApNativeReward
+        && IsOpen
+        && _set != null
+        && IsOwnerLocalSet(_set);
+
     internal static bool ShouldKeepEmptyScreenOpen(RewardsSet set) =>
         Sessions.TryGetValue(set, out NativeMenuSession? session) && session.InitiallyEmpty;
 

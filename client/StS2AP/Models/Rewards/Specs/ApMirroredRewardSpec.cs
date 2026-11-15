@@ -53,10 +53,10 @@ public sealed class ApMirroredRewardSpec
     public List<string> SerializedModels { get; set; } = new();
 
     /// <summary>
-    /// Set when the owner claims this reward as a queued action (<c>ApQueuedClaims</c>); every
-    /// peer's row then waits for that action instead of applying the reward itself.
+    /// Multiplayer: the row claims this reward as a queued action (<c>ApQueuedClaims</c>) instead
+    /// of applying it itself.
     /// </summary>
-    public Guid? QueuedClaimId { get; set; }
+    public bool QueuedClaim { get; set; }
 
     public ApGrantId GrantId => new(ApSlotId, ReceivedItemIndex);
 }

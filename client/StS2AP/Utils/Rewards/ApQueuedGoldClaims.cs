@@ -21,11 +21,10 @@ internal static class ApQueuedGoldClaims
         describe: static message => $"cursor {message.CursorBefore} + {message.SourceAmount} raw gold"
     );
 
-    internal static async Task<bool> SelectRow(Guid claimId, ApGoldClaim claim, Player player)
+    internal static async Task<bool> SelectRow(ApGoldClaim claim, Player player)
     {
-        ApQueuedClaimResult result = await ApQueuedClaims.SelectRow(
+        ApQueuedClaimResult result = await ApQueuedClaims.RequestAndWait(
             Kind,
-            claimId,
             player,
             () => new ApGoldClaimActionMessage
             {

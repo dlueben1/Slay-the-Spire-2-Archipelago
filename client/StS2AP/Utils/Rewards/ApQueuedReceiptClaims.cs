@@ -29,22 +29,20 @@ internal static class ApQueuedReceiptClaims
     );
 
     internal static Task<ApQueuedClaimResult> SelectPotionRow(
-        Guid claimId,
         int receivedItemIndex,
         string serializedPotion,
         Player player) =>
-        ApQueuedClaims.SelectRow(PotionKind, claimId, player, () => new ApReceiptClaimActionMessage
+        ApQueuedClaims.RequestAndWait(PotionKind, player, () => new ApReceiptClaimActionMessage
         {
             ReceivedItemIndex = receivedItemIndex,
             SerializedModel = serializedPotion,
         });
 
     internal static Task<ApQueuedClaimResult> SelectBonusRelicRow(
-        Guid claimId,
         int receivedItemIndex,
         string serializedRelic,
         Player player) =>
-        ApQueuedClaims.SelectRow(BonusRelicKind, claimId, player, () => new ApReceiptClaimActionMessage
+        ApQueuedClaims.RequestAndWait(BonusRelicKind, player, () => new ApReceiptClaimActionMessage
         {
             ReceivedItemIndex = receivedItemIndex,
             SerializedModel = serializedRelic,

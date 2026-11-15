@@ -7,12 +7,9 @@ namespace StS2AP.Models;
 public abstract class ApQueuedClaimMessage
 {
     public Guid RunId { get; set; }
-    // Also the claim's row in the replicated menu, so each peer can match the row's selection
-    // to this action.
+    // New for each request, so the owner can match the action to its waiting row and every
+    // peer's log names the same claim.
     public Guid ClaimId { get; set; }
-    // Which selection of that row this is, counted from 1. A claim that did not apply (a full
-    // potion belt) leaves its row in the menu, and selecting it again requests a new action.
-    public int Attempt { get; set; }
     public ulong OwnerNetId { get; set; }
     public int ApSlotId { get; set; }
 }

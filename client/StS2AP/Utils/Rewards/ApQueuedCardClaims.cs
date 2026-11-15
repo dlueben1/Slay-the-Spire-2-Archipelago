@@ -60,14 +60,13 @@ internal static class ApQueuedCardClaims
     /// </summary>
     internal static CardReward? OwnerPickerReward { get; private set; }
 
-    internal static async Task<ApQueuedClaimResult> SelectRow(
-        Guid claimId,
+    internal static Task<ApQueuedClaimResult> SelectRow(
         int receivedItemIndex,
         bool isRare,
         int? actIndex,
         bool strictCardRewards,
         Player player) =>
-        await ApQueuedClaims.SelectRow(ClaimKind, claimId, player, () => new ApCardClaimActionMessage
+        ApQueuedClaims.RequestAndWait(ClaimKind, player, () => new ApCardClaimActionMessage
         {
             ReceivedItemIndex = receivedItemIndex,
             IsRare = isRare,
@@ -119,7 +118,7 @@ internal static class ApQueuedCardClaims
         // The offer is revealed now, before the first pause, in queue order on every peer.
         RecordOffer(claim, reward);
         LogUtility.Info(
-            $"Queued AP card reward claim {message.ClaimId} attempt {message.Attempt} for player {player.NetId} "
+            $"Queued AP card reward claim {message.ClaimId} for player {player.NetId} "
                 + $"offers [{string.Join(", ", reward.Cards.Select(DescribeCard))}], canReroll={reward.CanReroll}"
         );
 
@@ -258,8 +257,8 @@ internal static class ApQueuedCardClaims
                     endSelection = true;
                 }
                 LogUtility.Info(
-                    $"Queued AP card reward claim {claim.Message.ClaimId} attempt {claim.Message.Attempt} for "
-                        + $"player {player.NetId}: choice {choiceId} picked "
+                    $"Queued AP card reward claim {claim.Message.ClaimId} for player {player.NetId}: "
+                        + $"choice {choiceId} picked "
                         + (obtained != null ? DescribeCard(obtained)
                             : alternative != null ? alternative.OptionId
                             : "nothing (skip)")

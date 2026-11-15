@@ -37,7 +37,7 @@ internal static class ApQueuedRelicClaims
         describe: static message => "relic receipts [" + string.Join(", ", message.Receipts.Select(receipt =>
                 receipt.RequiresBank ? $"{receipt.ReceivedItemIndex} (banked)" : $"{receipt.ReceivedItemIndex}"))
             + "], Ancient receipts [" + string.Join(", ", message.Ancients.Select(ancient => ancient.ReceivedItemIndex)) + "]",
-        waitsForMenuRow: false
+        notifiesOwnerOfRefusal: false
     );
 
     internal static readonly ApQueuedClaimKind<ApReceiptClaimActionMessage> ClaimKind = new(
@@ -116,12 +116,11 @@ internal static class ApQueuedRelicClaims
             ? choices
             : null;
 
-    internal static async Task<ApQueuedClaimResult> SelectAncientRow(
-        Guid claimId,
+    internal static Task<ApQueuedClaimResult> SelectAncientRow(
         int receivedItemIndex,
         int optionIndex,
         Player player) =>
-        await ApQueuedClaims.SelectRow(AncientClaimKind, claimId, player, () => new ApAncientClaimActionMessage
+        ApQueuedClaims.RequestAndWait(AncientClaimKind, player, () => new ApAncientClaimActionMessage
         {
             ReceivedItemIndex = receivedItemIndex,
             OptionIndex = optionIndex,
@@ -133,8 +132,8 @@ internal static class ApQueuedRelicClaims
             ?? throw new InvalidOperationException(
                 $"AP relic receipt {owner.NetId}:{receivedItemIndex} has no queued assignment.");
 
-    internal static async Task<ApQueuedClaimResult> SelectRow(Guid claimId, int receivedItemIndex, Player player) =>
-        await ApQueuedClaims.SelectRow(ClaimKind, claimId, player, () => new ApReceiptClaimActionMessage
+    internal static Task<ApQueuedClaimResult> SelectRow(int receivedItemIndex, Player player) =>
+        ApQueuedClaims.RequestAndWait(ClaimKind, player, () => new ApReceiptClaimActionMessage
         {
             ReceivedItemIndex = receivedItemIndex,
         });

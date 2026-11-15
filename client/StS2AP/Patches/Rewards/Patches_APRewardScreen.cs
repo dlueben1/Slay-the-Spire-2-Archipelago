@@ -2,10 +2,14 @@ using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.addons.mega_text;
 using MegaCrit.Sts2.Core.Helpers;
+using MegaCrit.Sts2.Core.Nodes;
+using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Screens;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
+using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
 using MegaCrit.Sts2.Core.Rewards;
+using MegaCrit.Sts2.Core.TestSupport;
 using System.Runtime.CompilerServices;
 using StS2AP.UI;
 using StS2AP.Utils;
@@ -91,6 +95,88 @@ namespace StS2AP.Patches
     }
 
     /// <summary>
+    /// A multiplayer AP menu is the owner's alone (ApQueuedClaims), so the reward-set synchronizer
+    /// never began it and its SelectLocalReward would fail, as would RitsuLib's linked-reward
+    /// prefix on it, which looks for the set on the synchronizer's stack. Its rows run vanilla's
+    /// GetReward without the synchronizer: the row's own selection requests its queued claim, and
+    /// the row stays disabled until the claim has executed here.
+    /// </summary>
+    [HarmonyPatch(typeof(NRewardButton), nameof(NRewardButton.GetReward))]
+    public static class SelectOwnerLocalApReward
+    {
+        [HarmonyPrefix]
+        public static bool Prefix(NRewardButton __instance, ref Task __result)
+        {
+            if (__instance.Reward is not { } reward || !ArchipelagoRewardUI.IsOwnerLocalReward(reward))
+                return true;
+            __result = GetReward(__instance, reward);
+            return false;
+        }
+
+        private static async Task GetReward(NRewardButton button, Reward reward)
+        {
+            button.Disable();
+            bool claimed;
+            try
+            {
+                claimed = await SelectOwnerLocal(reward);
+            }
+            catch (Exception ex)
+            {
+                LogUtility.Error($"AP reward selection failed for player {reward.Player.NetId}: {ex}");
+                claimed = false;
+            }
+            // The menu may have closed (for travel, say) while the claim waited for its turn.
+            if (!GodotObject.IsInstanceValid(button) || !button.IsInsideTree())
+                return;
+
+            if (claimed)
+            {
+                if (TestMode.IsOff && NRun.Instance is { } run)
+                {
+                    if (reward is RelicReward { ClaimedRelic: { } relic })
+                        run.GlobalUi.RelicInventory.AnimateRelic(relic, button._iconContainer.GlobalPosition);
+                    else if (reward is PotionReward { ClaimedPotion: { } potion })
+                        run.GlobalUi.TopBar.PotionContainer.AnimatePotion(potion, button._iconContainer.GlobalPosition);
+                }
+                button._isEnabled = false;
+                button.EmitSignal(NRewardButton.SignalName.RewardClaimed, button);
+            }
+            else
+            {
+                button.Enable();
+                button.TryGrabFocus();
+                button.EmitSignal(NRewardButton.SignalName.RewardSkipped, button);
+            }
+        }
+
+        // A linked (Ancient) choice runs detached from its set, as RitsuLib's choose-one
+        // resolution does, so a refused pick leaves the set whole. Once one is claimed the screen
+        // skips its siblings (ApLinkedRewardControllerFocus.CollectLinkedReward).
+        private static async Task<bool> SelectOwnerLocal(Reward reward)
+        {
+            if (reward.ParentRewardSet is not { } parent)
+                return await reward.SelectUnsynchronized();
+
+            reward.ParentRewardSet = null;
+            try
+            {
+                bool selected = await reward.SelectUnsynchronized();
+                if (selected)
+                    parent.RemoveReward(reward);
+                else
+                    reward.ParentRewardSet = parent;
+                return selected;
+            }
+            catch
+            {
+                reward.ParentRewardSet = parent;
+                throw;
+            }
+        }
+    }
+
+    /// <summary>
     /// Vanilla removes an empty nonterminal reward screen immediately. AP intentionally exposes
     /// an empty persistent inventory, so retain only AP-owned screens that started empty.
     /// </summary>
@@ -98,8 +184,23 @@ namespace StS2AP.Patches
     public static class KeepEmptyApRewardScreenOpen
     {
         [HarmonyPrefix]
-        public static bool Prefix(RewardsSet ____rewardsSet) =>
-            !ArchipelagoRewardUI.ShouldKeepEmptyScreenOpen(____rewardsSet);
+        public static bool Prefix(
+            NRewardsScreen __instance,
+            RewardsSet ____rewardsSet,
+            List<Control> ____rewardButtons)
+        {
+            if (ArchipelagoRewardUI.ShouldKeepEmptyScreenOpen(____rewardsSet))
+                return false;
+            // An owner-local menu whose last row was claimed closes as vanilla's does, without
+            // first asking the synchronizer, which never saw the set, whether it completed (that
+            // only logs an error).
+            if (____rewardButtons.Count == 0 && ArchipelagoRewardUI.IsOwnerLocalSet(____rewardsSet))
+            {
+                NOverlayStack.Instance?.Remove(__instance);
+                return false;
+            }
+            return true;
+        }
 
         [HarmonyPostfix]
         public static void Postfix(NRewardsScreen __instance, RewardsSet ____rewardsSet)
@@ -404,8 +505,8 @@ namespace StS2AP.Patches
     }
 
     /// <summary>
-    /// Empty and vanilla-guest AP screens have no live synchronized set to skip. Their native
-    /// proceed button is presentation-only and simply closes the overlay.
+    /// Owner-local multiplayer, empty and vanilla-guest AP screens have no synchronized set to
+    /// skip. Their native proceed button simply closes the overlay.
     /// </summary>
     [HarmonyPatch(typeof(NRewardsScreen), nameof(NRewardsScreen.OnProceedButtonPressed))]
     public static class CloseUnsynchronizedApRewardScreen
