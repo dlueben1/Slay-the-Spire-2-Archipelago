@@ -62,11 +62,8 @@ internal static class ApQueuedGoldClaims
         ApRunData.RecordQueuedGoldClaim(claim.RunState, claim.Player.NetId, decision.CursorAfter);
         if (decision.GrantedAmount > 0)
             await PlayerCmd.GainGold(decision.GrantedAmount, claim.Player);
-        LogUtility.Info(
-            $"Applied queued AP gold claim {message.ClaimId} for player {claim.Player.NetId}: "
-                + $"{decision.GrantedAmount} gold, raw cursor {message.CursorBefore} -> "
-                + $"{decision.CursorAfter}, poverty={poverty}"
-        );
+        ApQueuedClaims.LogApplied(Kind, message, claim.Player,
+            $"{decision.GrantedAmount} gold, raw cursor -> {decision.CursorAfter}, poverty={poverty}");
 
         if (claim.IsLocalOwner)
             CommitOwnerBookkeeping(message, decision, claim.Player);

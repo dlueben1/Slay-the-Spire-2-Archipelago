@@ -61,19 +61,15 @@ internal static class ApQueuedReceiptClaims
         {
             // As with a vanilla potion reward, a full belt leaves the reward on offer; the belt
             // flashes on the owner's screen. Every peer has the same belt, so all agree.
-            LogUtility.Info(
-                $"Queued AP potion claim {message.ClaimId} for player {claim.Player.NetId} found the "
-                    + $"potion belt full; receipt {message.ReceivedItemIndex} stays unclaimed."
-            );
+            ApQueuedClaims.LogApplied(PotionKind, message, claim.Player,
+                $"{potion.Id} not procured, potion belt full; the receipt stays unclaimed");
             return ApQueuedClaimResult.NotApplied;
         }
 
         // Any other refusal (a relic that forbids potions) uses the reward up, as vanilla does.
         ApQueuedClaims.MarkReceiptClaimed(claim, message.ReceivedItemIndex);
-        LogUtility.Info(
-            $"Applied queued AP potion claim {message.ClaimId} for player {claim.Player.NetId}: "
-                + $"receipt {message.ReceivedItemIndex}, {potion.Id}, procured={procured.success}"
-        );
+        ApQueuedClaims.LogApplied(PotionKind, message, claim.Player,
+            $"{potion.Id}, procured={procured.success}");
         if (claim.IsLocalOwner)
             ApMirroredRewardDispatcher.CommitDiscreteReward(message.ReceivedItemIndex, ApMirroredRewardKind.Potion);
         return new ApQueuedClaimResult(true, potion);
@@ -89,10 +85,7 @@ internal static class ApQueuedReceiptClaims
         ApReceiptClaimActionMessage message = claim.Message;
         ApQueuedClaims.MarkReceiptClaimed(claim, message.ReceivedItemIndex);
         RelicModel obtained = await RelicCmd.Obtain(relic, claim.Player);
-        LogUtility.Info(
-            $"Applied queued AP bonus wax relic claim {message.ClaimId} for player {claim.Player.NetId}: "
-                + $"receipt {message.ReceivedItemIndex}, {obtained.Id}"
-        );
+        ApQueuedClaims.LogApplied(BonusRelicKind, message, claim.Player, $"{obtained.Id}");
         if (claim.IsLocalOwner)
             ApMirroredRewardDispatcher.CommitDiscreteReward(message.ReceivedItemIndex, ApMirroredRewardKind.Bonus);
         return new ApQueuedClaimResult(true, obtained);

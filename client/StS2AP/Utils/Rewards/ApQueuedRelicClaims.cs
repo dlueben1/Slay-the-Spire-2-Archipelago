@@ -219,14 +219,12 @@ internal static class ApQueuedRelicClaims
 
         List<(int Index, IReadOnlyList<RelicModel> Choices)> ancients = AssignAncients(claim);
 
-        LogUtility.Info(
-            $"Applied queued AP relic assignment {claim.Message.ClaimId} for player {player.NetId}: "
-                + (assigned.Count + ancients.Count == 0
-                    ? "nothing new"
-                    : string.Join(", ", assigned.Select(entry => $"{entry.Request.ReceivedItemIndex}={entry.Relic.Id}")
-                        .Concat(ancients.Select(entry =>
-                            $"{entry.Index}=[{string.Join(", ", entry.Choices.Select(relic => relic.Id))}]"))))
-        );
+        ApQueuedClaims.LogApplied(AssignmentKind, claim.Message, player,
+            assigned.Count + ancients.Count == 0
+                ? "nothing new"
+                : string.Join(", ", assigned.Select(entry => $"{entry.Request.ReceivedItemIndex}={entry.Relic.Id}")
+                    .Concat(ancients.Select(entry =>
+                        $"{entry.Index}=[{string.Join(", ", entry.Choices.Select(relic => relic.Id))}]"))));
         if (claim.IsLocalOwner && assigned.Count + ancients.Count > 0)
             CommitOwnerAssignments(player, assigned, ancients);
         return Task.FromResult(new ApQueuedClaimResult(true));
@@ -359,10 +357,7 @@ internal static class ApQueuedRelicClaims
             state.Consume(player.NetId, index, ApRelicReceiptState.MenuDestination));
         ApQueuedClaims.MarkReceiptClaimed(claim, index);
         RelicModel obtained = await RelicCmd.Obtain(relic, player);
-        LogUtility.Info(
-            $"Applied queued AP relic claim {message.ClaimId} for player {player.NetId}: "
-                + $"receipt {index}, {obtained.Id}"
-        );
+        ApQueuedClaims.LogApplied(ClaimKind, message, player, $"{obtained.Id}");
         if (claim.IsLocalOwner)
             ApMirroredRewardDispatcher.CommitDiscreteReward(index, ApMirroredRewardKind.Relic);
         return new ApQueuedClaimResult(true, obtained);
@@ -401,10 +396,7 @@ internal static class ApQueuedRelicClaims
 
         ApQueuedClaims.MarkReceiptClaimed(claim, index);
         RelicModel obtained = await RelicCmd.Obtain(relic, player);
-        LogUtility.Info(
-            $"Applied queued AP Ancient claim {message.ClaimId} for player {player.NetId}: "
-                + $"receipt {index}, {obtained.Id}"
-        );
+        ApQueuedClaims.LogApplied(AncientClaimKind, message, player, $"{obtained.Id}");
         if (claim.IsLocalOwner)
             ApMirroredRewardDispatcher.CommitDiscreteReward(index, ApMirroredRewardKind.Ancient);
         return new ApQueuedClaimResult(true, obtained);

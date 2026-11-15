@@ -388,6 +388,17 @@ public static class ApQueuedClaims
         where T : ApQueuedClaimMessage =>
         ApRunData.RecordQueuedReceiptClaim(claim.RunState, claim.Player.NetId, receivedItemIndex);
 
+    /// <summary>
+    /// Logs what a claim did on this peer, in the same form on every peer (claim id, attempt,
+    /// player, the kind's payload, then the outcome), so two players' logs line up per claim.
+    /// </summary>
+    internal static void LogApplied<T>(ApQueuedClaimKind<T> kind, T message, Player player, string outcome)
+        where T : ApQueuedClaimMessage, new() =>
+        LogUtility.Info(
+            $"Applied queued {kind.Noun} claim {message.ClaimId} attempt {message.Attempt} for player "
+                + $"{player.NetId} ({kind.Describe(message)}): {outcome}"
+        );
+
     /// <summary>A refused claim is a no-op on every peer, plus a notice for its owner.</summary>
     internal static ApQueuedClaimResult Refuse<T>(
         ApQueuedClaimKind<T> kind,

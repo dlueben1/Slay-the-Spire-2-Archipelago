@@ -118,6 +118,10 @@ internal static class ApQueuedCardClaims
         }
         // The offer is revealed now, before the first pause, in queue order on every peer.
         RecordOffer(claim, reward);
+        LogUtility.Info(
+            $"Queued AP card reward claim {message.ClaimId} attempt {message.Attempt} for player {player.NetId} "
+                + $"offers [{string.Join(", ", reward.Cards.Select(DescribeCard))}], canReroll={reward.CanReroll}"
+        );
 
         (bool rewardComplete, List<CardModel> taken) = await RunPicks(claim, reward);
 
@@ -131,10 +135,8 @@ internal static class ApQueuedCardClaims
             // Skipped or closed: keep what is left of the offer, rerolled or not, for next time.
             RecordOffer(claim, reward);
         }
-        LogUtility.Info(
-            $"Applied queued AP card claim {message.ClaimId} for player {player.NetId}: receipt {index}, "
-                + $"complete={rewardComplete}, taken=[{string.Join(", ", taken.Select(card => card.Id))}]"
-        );
+        ApQueuedClaims.LogApplied(ClaimKind, message, player,
+            $"complete={rewardComplete}, taken=[{string.Join(", ", taken.Select(DescribeCard))}]");
         if (rewardComplete && claim.IsLocalOwner)
             ApMirroredRewardDispatcher.CommitDiscreteReward(index, ApMirroredRewardKind.Card);
         return new ApQueuedClaimResult(rewardComplete);
@@ -255,6 +257,13 @@ internal static class ApQueuedCardClaims
                     rewardComplete = false;
                     endSelection = true;
                 }
+                LogUtility.Info(
+                    $"Queued AP card reward claim {claim.Message.ClaimId} attempt {claim.Message.Attempt} for "
+                        + $"player {player.NetId}: choice {choiceId} picked "
+                        + (obtained != null ? DescribeCard(obtained)
+                            : alternative != null ? alternative.OptionId
+                            : "nothing (skip)")
+                );
 
                 if (obtained != null)
                 {
@@ -319,6 +328,9 @@ internal static class ApQueuedCardClaims
             return null;
         }
     }
+
+    // Card id and upgrade level, as the replicated path's offer log lists them.
+    private static string DescribeCard(CardModel card) => $"{card.Id}+{card.CurrentUpgradeLevel}";
 
     private static NCardHolder? TryGetShownCardHolder(CardReward reward, CardModel card)
     {
