@@ -43,23 +43,16 @@ public sealed class ApCardRevealTests
     }
 
     [Fact]
-    public void RefreshedOfferSurvivesSaveAndProgressDeltaWithoutReplayInstructions()
+    public void RefreshedOfferSurvivesTheProgressCheckpointWithoutReplayInstructions()
     {
-        var before = Final();
-        var owner = RoundTrip(before);
+        var owner = RoundTrip(Final());
         owner.SerializedModels[1] = owner.SerializedModels[1].Replace("\"upgrade\":0", "\"upgrade\":1");
-        var replica = RoundTrip(owner); // Represents independently refreshed final cards.
-        var oldProgress = new ApRunProgressState { CardAssignments = { [42] = Assignment(before) } };
-        var newProgress = new ApRunProgressState { CardAssignments = { [42] = Assignment(replica) } };
-        ApProgressDelta delta = RoundTrip(ApProgressDelta.Between(oldProgress, newProgress));
-        Assert.Single(delta.CardAssignmentUpserts);
-        Assert.Empty(delta.UsedItemsAdded);
-        ApRunProgressState restored = RoundTrip(delta.ApplyToCopy(oldProgress));
+        var progress = new ApRunProgressState { CardAssignments = { [42] = Assignment(owner) } };
+        ApRunProgressState restored = RoundTrip(progress);
         var decoded = MirroredRewardAdapter.DecodeSavedCardAssignment(42, restored.CardAssignments[42], 123).Card;
         Assert.Equal(owner.SerializedModels, decoded.Models);
         Assert.True(decoded.Configuration.HasBeenRevealed);
         Assert.Equal("ap_rng_replicated_card_v1", decoded.Configuration.Policy.StrategyId);
-        Assert.False(ApProgressDelta.Between(restored, newProgress).HasChanges);
     }
 
     private static ApCardAssignmentState Assignment(ApMirroredRewardSpec spec) => new()

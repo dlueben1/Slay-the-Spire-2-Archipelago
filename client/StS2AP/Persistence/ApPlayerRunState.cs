@@ -21,7 +21,6 @@ public sealed class ApPlayerRunState
     // Advanced independently by the native combat-end hook on every replica.
     public int CombatsSinceLastWaxMelt { get; set; }
     public ApReplicaConstructionState Construction { get; set; } = new();
-    public long ProgressRevision { get; set; }
     public ApProgressiveStarterPlayerState ProgressiveStarters { get; set; } = new();
     // Advanced by buff actions on every replica; retained in the host's save for rejoin.
     public int LastConsumedBuffIndex { get; set; } = -1;

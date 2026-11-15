@@ -77,7 +77,6 @@
     <Compile Include="..\StS2AP\Persistence\LocalApSaveDeletion.cs" Link="Persistence\LocalApSaveDeletion.cs" />
     <Compile Include="..\StS2AP\Persistence\ApRelicReceiptState.cs" Link="Persistence\ApRelicReceiptState.cs" />
     <Using Include="StS2AP.Models" />
-    <Compile Include="..\StS2AP\Persistence\ApProgressDelta.cs" Link="Persistence\ApProgressDelta.cs" />
     <Compile Include="..\StS2AP\Persistence\ApProgressiveStarterState.cs" Link="Persistence\ApProgressiveStarterState.cs" />
     <Compile Include="..\StS2AP\Models\Configuration\AncientRewardSettings.cs" Link="Models\AncientRewardSettings.cs" />
     <Compile Include="..\StS2AP\Models\Configuration\OpRelicCategories.cs" Link="Models\OpRelicCategories.cs" />
