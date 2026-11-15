@@ -170,6 +170,7 @@ public static class ApMirroredRewardDispatcher
         ApRewardMenuSpec spec;
         IReadOnlyList<MirroredReward> rewards;
         bool ownerMaterializationStarted = false;
+        bool queuedClaims = ApQueuedClaims.IsActive;
         try
         {
             var approvedRelics = await RelicReceiptMultiplayer.ApproveMenu(
@@ -179,7 +180,7 @@ public static class ApMirroredRewardDispatcher
                     && !ArchipelagoRewardUI.CanBuildMenuAfterAwait(apLifecycleVersion)))
                 return false;
             ownerMaterializationStarted = true;
-            spec = BuildOwnerMenuSpec(player, runState, approvedRelics);
+            spec = BuildOwnerMenuSpec(player, runState, approvedRelics, queuedClaims);
             rewards = DecodeRewards(spec);
         }
         catch (Exception ex)
@@ -247,10 +248,12 @@ public static class ApMirroredRewardDispatcher
         }
     }
 
+    /// <param name="queuedClaims">Whether this menu's rows are queued claims (<see cref="ApQueuedClaims"/>).</param>
     private static ApRewardMenuSpec BuildOwnerMenuSpec(
         Player player,
         RunState runState,
-        IReadOnlySet<int>? approvedRelics)
+        IReadOnlySet<int>? approvedRelics,
+        bool queuedClaims)
     {
         Guid runId = Guid.Empty;
         if (MultiplayerSupport.IsRealMultiplayerRun)
@@ -283,7 +286,7 @@ public static class ApMirroredRewardDispatcher
                 SourceAmount = gold.SourceAmount,
                 GrantedAmount = gold.GrantedAmount,
                 RedeemedRawAfter = gold.RedeemedRawAfter,
-                QueuedClaimId = ApQueuedClaims.NewClaimId(),
+                QueuedClaimId = queuedClaims ? Guid.NewGuid() : null,
             };
         }
 
@@ -308,7 +311,7 @@ public static class ApMirroredRewardDispatcher
                 if (kind == ApMirroredRewardKind.Relic && approvedRelics != null
                     && !approvedRelics.Contains(receipt.Index)) continue;
 
-                menu.Rewards.Add(BuildAssignedSpec(receipt, player, apSlotId, kind));
+                menu.Rewards.Add(BuildAssignedSpec(receipt, player, apSlotId, kind, queuedClaims));
                 continue;
             }
 
@@ -350,7 +353,8 @@ public static class ApMirroredRewardDispatcher
         IndexedItemInfo receipt,
         Player player,
         int apSlotId,
-        ApMirroredRewardKind kind)
+        ApMirroredRewardKind kind,
+        bool queuedClaims)
     {
         int itemIndex = receipt.Index;
         var spec = new ApMirroredRewardSpec
@@ -405,7 +409,7 @@ public static class ApMirroredRewardDispatcher
                     break;
                 }
                 spec.SerializedModels.Add(SerializeRelic(relic));
-                spec.QueuedClaimId = ApQueuedClaims.NewClaimId();
+                spec.QueuedClaimId = queuedClaims ? Guid.NewGuid() : null;
                 break;
             }
             case ApMirroredRewardKind.Relic:
@@ -436,7 +440,7 @@ public static class ApMirroredRewardDispatcher
                 }
 
                 spec.SerializedModels.Add(SerializePotion(potion!));
-                spec.QueuedClaimId = ApQueuedClaims.NewClaimId();
+                spec.QueuedClaimId = queuedClaims ? Guid.NewGuid() : null;
                 break;
             }
             case ApMirroredRewardKind.Ancient:

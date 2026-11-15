@@ -42,11 +42,13 @@ internal sealed class ApQueuedClaimKind<T> where T : ApQueuedClaimMessage, new()
         string actionKey,
         string noun,
         Func<ApQueuedClaim<T>, Task<ApQueuedClaimResult>> apply,
-        Func<T, string> describe)
+        Func<T, string> describe,
+        bool waitsForMenuRow = true)
     {
         Noun = noun;
         Apply = apply;
         Describe = describe;
+        WaitsForMenuRow = waitsForMenuRow;
         Descriptor = new ApNetActionDescriptor<T>(
             ActionKey: actionKey,
             Serialize: static message => JsonSerializer.SerializeToUtf8Bytes(message),
@@ -71,6 +73,13 @@ internal sealed class ApQueuedClaimKind<T> where T : ApQueuedClaimMessage, new()
 
     /// <summary>The kind's own payload, for logs that compare two players' claims.</summary>
     internal Func<T, string> Describe { get; }
+
+    /// <summary>
+    /// Whether each action belongs to a row of the replicated AP menu and meets it there (see
+    /// <see cref="ApQueuedClaims.SelectRow{T}"/>). An action that prepares the menu has no row:
+    /// only its owner waits for it (<see cref="ApQueuedClaims.RequestAndWait{T}"/>).
+    /// </summary>
+    internal bool WaitsForMenuRow { get; }
 
     internal ApNetActionDescriptor<T> Descriptor { get; }
 
@@ -142,13 +151,16 @@ public static class ApQueuedClaims
 
     /// <summary>
     /// Whether this process's new AP menus offer gold, potions and bonus wax relics as queued
-    /// claims. Only the claim owner's switch matters: the menu tells every peer how each row works.
+    /// claims. Only the claim owner's switch matters: the menu tells every peer
+    /// how each row works.
     /// </summary>
     public static bool Enabled { get; set; }
 
-    /// <summary>A claim id for a new menu row, or null when the row should stay a replicated selection.</summary>
-    internal static Guid? NewClaimId() =>
-        Enabled && MultiplayerSupport.IsRealMultiplayerRun ? Guid.NewGuid() : null;
+    /// <summary>
+    /// Whether a menu opened now uses queued claims. A menu reads it once when it starts opening,
+    /// so all of its rows go the same way.
+    /// </summary>
+    internal static bool IsActive => Enabled && MultiplayerSupport.IsRealMultiplayerRun;
 
     public static void Initialize()
     {
@@ -212,6 +224,35 @@ public static class ApQueuedClaims
         }
     }
 
+    /// <summary>
+    /// Owner only: requests a row-less action, such as one that prepares a menu before it opens,
+    /// and waits until this peer has executed it. A timeout disables nothing: the action
+    /// still executes alike on every peer whenever it comes, and a retry finds its effect there.
+    /// </summary>
+    internal static async Task<ApQueuedClaimResult> RequestAndWait<T>(
+        ApQueuedClaimKind<T> kind,
+        Player owner,
+        Func<T> createMessage) where T : ApQueuedClaimMessage, new()
+    {
+        var key = new AttemptKey(Guid.NewGuid(), 1);
+        Meeting meeting = GetOrAdd(key);
+        if (!TryRequest(kind, key.ClaimId, key.Attempt, owner, createMessage))
+            return ApQueuedClaimResult.NotApplied;
+
+        try
+        {
+            return await meeting.Executed.Task.WaitAsync(ExecutionTimeout);
+        }
+        catch (TimeoutException)
+        {
+            LogUtility.Error(
+                $"Queued {kind.Noun} {key.ClaimId} for player {owner.NetId} did not execute within "
+                    + $"{ExecutionTimeout.TotalSeconds:0} seconds."
+            );
+            return ApQueuedClaimResult.NotApplied;
+        }
+    }
+
     private static bool TryRequest<T>(
         ApQueuedClaimKind<T> kind,
         Guid claimId,
@@ -258,7 +299,8 @@ public static class ApQueuedClaims
         {
             try
             {
-                await meeting.RowReached.Task.WaitAsync(RowTimeout);
+                if (kind.WaitsForMenuRow)
+                    await meeting.RowReached.Task.WaitAsync(RowTimeout);
             }
             catch (TimeoutException)
             {
@@ -268,8 +310,13 @@ public static class ApQueuedClaims
                 );
             }
 
+            // A menu row tells its owner why nothing happened; an owner waiting on a row-less
+            // action reports the failure itself.
             if (!TryGetClaim(message, context.Player, out ApQueuedClaim<T> claim, out string reason))
-                result = Refuse(kind, message, context.Player, reason, $"Could not claim that {kind.Noun}.");
+            {
+                result = Refuse(kind, message, context.Player, reason,
+                    kind.WaitsForMenuRow ? $"Could not claim that {kind.Noun}." : null);
+            }
             else
                 result = await kind.Apply(claim);
         }
@@ -330,13 +377,13 @@ public static class ApQueuedClaims
         T message,
         Player player,
         string reason,
-        string ownerNotice) where T : ApQueuedClaimMessage, new()
+        string? ownerNotice) where T : ApQueuedClaimMessage, new()
     {
         LogUtility.Warn(
             $"Refused queued {kind.Noun} claim {message.ClaimId} attempt {message.Attempt} for player "
                 + $"{player.NetId} ({kind.Describe(message)}): {reason}."
         );
-        if (LocalContext.IsMe(player))
+        if (ownerNotice != null && LocalContext.IsMe(player))
             NotificationUtility.ShowRawText(ownerNotice);
         return ApQueuedClaimResult.NotApplied;
     }
