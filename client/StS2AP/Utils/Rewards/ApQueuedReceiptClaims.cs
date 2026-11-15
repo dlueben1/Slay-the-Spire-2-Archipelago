@@ -3,6 +3,7 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Potions;
 using MegaCrit.Sts2.Core.Models;
 using StS2AP.Models;
+using static StS2AP.Data.ItemTable;
 
 namespace StS2AP.Utils;
 
@@ -50,7 +51,8 @@ internal static class ApQueuedReceiptClaims
 
     private static async Task<ApQueuedClaimResult> ApplyPotion(ApQueuedClaim<ApReceiptClaimActionMessage> claim)
     {
-        if (!TryLoad(PotionKind, claim, ApMirroredRewardDispatcher.LoadPotion, out PotionModel potion, out ApQueuedClaimResult refused))
+        if (!TryLoad(PotionKind, claim, APItem.Potion, universal: false, ApMirroredRewardDispatcher.LoadPotion,
+                out PotionModel potion, out ApQueuedClaimResult refused))
             return refused;
 
         ApReceiptClaimActionMessage message = claim.Message;
@@ -75,7 +77,8 @@ internal static class ApQueuedReceiptClaims
 
     private static async Task<ApQueuedClaimResult> ApplyBonusRelic(ApQueuedClaim<ApReceiptClaimActionMessage> claim)
     {
-        if (!TryLoad(BonusRelicKind, claim, ApMirroredRewardDispatcher.LoadRelic, out RelicModel relic, out ApQueuedClaimResult refused))
+        if (!TryLoad(BonusRelicKind, claim, APItem.BonusWaxRelic, universal: true, ApMirroredRewardDispatcher.LoadRelic,
+                out RelicModel relic, out ApQueuedClaimResult refused))
             return refused;
 
         // The wax cadence needs nothing here: every peer counts combats from the unmelted wax
@@ -90,13 +93,16 @@ internal static class ApQueuedReceiptClaims
     }
 
     /// <summary>
-    /// The receipt checks potion and bonus relic claims share: the receipt is still unclaimed and
-    /// its model loads to the same model on this game. Every peer runs the same game build, so a
-    /// model that fails to load is refused everywhere.
+    /// The receipt checks potion and bonus relic claims share: the receipt is in the player's
+    /// receipt ledger as this kind of item, still unclaimed, and its model loads to the same model
+    /// on this game. Every peer runs the same game build, so a model that fails to load is refused
+    /// everywhere.
     /// </summary>
     private static bool TryLoad<TModel>(
         ApQueuedClaimKind<ApReceiptClaimActionMessage> kind,
         ApQueuedClaim<ApReceiptClaimActionMessage> claim,
+        APItem receiptType,
+        bool universal,
         Func<string, string, TModel> load,
         out TModel model,
         out ApQueuedClaimResult refused) where TModel : class
@@ -109,6 +115,12 @@ internal static class ApQueuedReceiptClaims
         {
             refused = ApQueuedClaims.Refuse(kind, message, claim.Player,
                 "it names no receipt", $"Could not claim that {kind.Noun}.");
+            return false;
+        }
+        if (!ApReceiptLedger.HasReceipt(claim.Player, claim.OwnerState, message.ReceivedItemIndex, receiptType, universal))
+        {
+            refused = ApQueuedClaims.Refuse(kind, message, claim.Player,
+                $"its receipt is not a {receiptType} in the receipt ledger", $"Could not claim that {kind.Noun}.");
             return false;
         }
         if (ApQueuedClaims.IsReceiptClaimed(claim, message.ReceivedItemIndex))

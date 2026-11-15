@@ -43,7 +43,9 @@ public sealed class ApReceiptClaimActionMessage : ApQueuedClaimMessage
 public sealed class ApRelicAssignmentActionMessage : ApQueuedClaimMessage
 {
     public List<ApRelicAssignmentRequest> Receipts { get; set; } = new();
-    public List<ApAncientAssignmentRequest> Ancients { get; set; } = new();
+    // Progressive Ancient receipts. Every peer works out each one's recipe
+    // (ApAncientAssignmentRequest) from the receipt ledger and the player's slot settings.
+    public List<int> AncientReceipts { get; set; } = new();
 }
 
 public sealed class ApRelicAssignmentRequest
@@ -54,9 +56,9 @@ public sealed class ApRelicAssignmentRequest
 }
 
 /// <summary>
-/// The owner's recipe for one Progressive Ancient's three choices, as
-/// <c>ArchipelagoProgress.TryGetAncientDrawRequest</c> works it out from the owner's AP receipts
-/// and settings. Every peer draws the choices from it.
+/// The recipe for one Progressive Ancient's three choices
+/// (<c>ArchipelagoProgress.TryCreateAncientDrawRequest</c>), from the player's Progressive Ancient
+/// receipts and slot settings. In multiplayer every peer works it out from the receipt ledger.
 /// </summary>
 public sealed class ApAncientAssignmentRequest
 {
@@ -91,15 +93,13 @@ public sealed class ApReceiptsArrivedActionMessage : ApQueuedClaimMessage
 }
 
 /// <summary>
-/// One queued card reward claim. Every peer generates or reloads the offer in the action and
-/// waits there for the owner's pick.
+/// One queued card reward claim. Every peer works out the reward (rare or regular, and a regular
+/// one's act) from the receipt ledger, generates or reloads the offer in the action and waits
+/// there for the owner's pick.
 /// </summary>
 public sealed class ApCardClaimActionMessage : ApQueuedClaimMessage
 {
     public int ReceivedItemIndex { get; set; }
-    public bool IsRare { get; set; }
-    // The act whose upgrade odds a regular reward uses; null for a rare one or the current act.
-    public int? ActIndex { get; set; }
     // The owner's Strict Card Rewards setting, which adds Discard to the picker on every peer.
     public bool StrictCardRewards { get; set; }
 }

@@ -1204,8 +1204,7 @@ public static class ApMirroredRewardDispatcher
         // The claim action shows the picker and applies the pick on every peer; this row waits
         // for it here.
         private async Task<bool> SelectQueued() =>
-            (await ApQueuedCardClaims.SelectRow(
-                _itemIndex, IsRare, RewardActIndex, RequiresCommitment, Player)).Applied;
+            (await ApQueuedCardClaims.SelectRow(_itemIndex, RequiresCommitment, Player)).Applied;
 
         private async Task<bool> SelectAndCommit()
         {

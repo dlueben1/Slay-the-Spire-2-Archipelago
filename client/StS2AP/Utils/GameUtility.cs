@@ -174,7 +174,6 @@ namespace StS2AP.Utils
                 .Select(item => item.Index)
                 .ToList();
 
-            var rewardOrdinal = orderedCardRewardIndices.IndexOf(index);
             ArchipelagoSettings? settings = ArchipelagoClient.Settings;
             if (settings == null)
             {
@@ -183,7 +182,19 @@ namespace StS2AP.Utils
                 );
                 return null;
             }
-            var shuffleAllCards = settings.ShouldShuffleAllCards;
+            return GetCardRewardActIndex(index, orderedCardRewardIndices, settings.ShouldShuffleAllCards);
+        }
+
+        /// <summary>
+        /// The act whose upgrade odds a regular Card Reward uses, from its position among the
+        /// character's Card Reward receipts in AP order. Null maps to the current act's odds.
+        /// </summary>
+        internal static int? GetCardRewardActIndex(
+            int index,
+            IReadOnlyList<int> orderedCardRewardIndices,
+            bool shuffleAllCards)
+        {
+            var rewardOrdinal = orderedCardRewardIndices.ToList().IndexOf(index);
             var actOneCount = shuffleAllCards ? 7 : 3;
             var actTwoCount = shuffleAllCards ? 7 : 4;
             var totalCount = shuffleAllCards

@@ -6,6 +6,7 @@ using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Models;
 using StS2AP.Multiplayer;
 using StS2AP.Persistence;
+using static StS2AP.Data.ItemTable;
 
 namespace StS2AP.Utils;
 
@@ -33,7 +34,7 @@ internal static class ApQueuedRelicClaims
         apply: ApplyAssignment,
         describe: static message => "relic receipts ["
             + string.Join(", ", message.Receipts.Select(receipt => receipt.ReceivedItemIndex))
-            + "], Ancient receipts [" + string.Join(", ", message.Ancients.Select(ancient => ancient.ReceivedItemIndex)) + "]",
+            + "], Ancient receipts [" + string.Join(", ", message.AncientReceipts) + "]",
         notifiesOwnerOfRefusal: false
     );
 
@@ -70,16 +71,15 @@ internal static class ApQueuedRelicClaims
             .ToList();
 
         ApRunData.TryGetPlayerState(runState, owner.NetId, out ApPlayerRunState ownerState);
-        List<ApAncientAssignmentRequest> missingAncients = new();
+        List<int> missingAncients = new();
         foreach (IndexedItemInfo receipt in ApMirroredRewardDispatcher.GetClaimableMenuReceipts(
                      owner, ApMirroredRewardKind.Ancient))
         {
             if (ownerState?.QueuedAncientChoices.ContainsKey(receipt.Index) == true)
                 continue;
             // A surplus receipt has no recipe and stays an unavailable row, as it does today.
-            if (ArchipelagoClient.Progress.TryGetAncientDrawRequest(
-                    receipt.Index, owner, AncientChoiceKey(owner, receipt.Index), out var request))
-                missingAncients.Add(request);
+            if (ArchipelagoClient.Progress.TryGetAncientDrawRequest(receipt.Index, owner, null, out _))
+                missingAncients.Add(receipt.Index);
         }
 
         if (missing.Count > 0 || missingAncients.Count > 0)
@@ -87,7 +87,7 @@ internal static class ApQueuedRelicClaims
             ApQueuedClaimResult result = await ApQueuedClaims.RequestAndWait(
                 AssignmentKind,
                 owner,
-                () => new ApRelicAssignmentActionMessage { Receipts = missing, Ancients = missingAncients }
+                () => new ApRelicAssignmentActionMessage { Receipts = missing, AncientReceipts = missingAncients }
             );
             if (!result.Applied)
                 throw new InvalidOperationException("The AP relic assignments for this menu did not execute.");
@@ -221,7 +221,7 @@ internal static class ApQueuedRelicClaims
             assigned.Add((index, requiresBank, relic));
         }
 
-        List<(int Index, IReadOnlyList<RelicModel> Choices)> ancients = AssignAncients(claim);
+        List<(int Index, IReadOnlyList<RelicModel> Choices)> ancients = AssignAncients(claim, skipped);
 
         IEnumerable<string> outcome = assigned
             .Select(entry => $"{entry.Index}={entry.Relic.Id}{(entry.SpentBank ? " (banked)" : "")}")
@@ -235,16 +235,18 @@ internal static class ApQueuedRelicClaims
     }
 
     /// <summary>
-    /// Every peer: draws each requested Progressive Ancient's three choices from the owner's
-    /// recipe, with the owner's slot settings rather than this peer's own. A receipt that already
-    /// has choices keeps them; one with no valid set gets none and stays unavailable in the menu.
+    /// Every peer: draws each requested Progressive Ancient's three choices from its recipe, which
+    /// it works out from the receipt ledger and the owner's slot settings rather than this peer's
+    /// own. A receipt that already has choices keeps them; one that is not a Progressive Ancient
+    /// in the ledger, or has no valid set, gets none and stays unavailable in the menu.
     /// </summary>
     private static List<(int Index, IReadOnlyList<RelicModel> Choices)> AssignAncients(
-        ApQueuedClaim<ApRelicAssignmentActionMessage> claim)
+        ApQueuedClaim<ApRelicAssignmentActionMessage> claim,
+        List<string> skipped)
     {
         Player player = claim.Player;
         var assigned = new List<(int Index, IReadOnlyList<RelicModel> Choices)>();
-        if (claim.Message.Ancients.Count == 0)
+        if (claim.Message.AncientReceipts.Count == 0)
             return assigned;
 
         // As the owner's own draws did, exclude every relic already offered by an Ancient receipt.
@@ -266,15 +268,28 @@ internal static class ApQueuedRelicClaims
         ArchipelagoSettings? settings = ApPlayerContextResolver.TryGetRewardSettings(player, out var resolved)
             ? resolved
             : null;
+        List<int> ancientReceipts = ApReceiptLedger
+            .CharacterReceipts(player, claim.OwnerState, APItem.ProgressiveAncient)
+            .Select(receipt => receipt.Index)
+            .ToList();
 
-        foreach (ApAncientAssignmentRequest request in claim.Message.Ancients
-                     .Where(request => request.ReceivedItemIndex >= 0)
-                     .DistinctBy(request => request.ReceivedItemIndex)
-                     .OrderBy(request => request.ReceivedItemIndex))
+        foreach (int index in claim.Message.AncientReceipts.Where(index => index >= 0).Distinct().Order())
         {
-            int index = request.ReceivedItemIndex;
             if (ApQueuedClaims.IsReceiptClaimed(claim, index) || claim.OwnerState.QueuedAncientChoices.ContainsKey(index))
                 continue;
+            if (settings == null
+                || !ancientReceipts.Contains(index)
+                || !ArchipelagoProgress.TryCreateAncientDrawRequest(
+                    index,
+                    ancientReceipts,
+                    settings.NeowSanity,
+                    settings.AncientRelicPool,
+                    AncientChoiceKey(player, index),
+                    out ApAncientAssignmentRequest request))
+            {
+                skipped.Add($"Ancient {index} (no recipe from the ledger)");
+                continue;
+            }
 
             IReadOnlyList<RelicModel> choices =
                 ArchipelagoProgress.DrawAncientChoices(player, request, reservedRelicIds, settings);
@@ -324,6 +339,8 @@ internal static class ApQueuedRelicClaims
                 "its receipt was already claimed", "That AP relic was already claimed.");
         }
         string? refusal = index < 0 ? "it names no receipt"
+            : !RelicReceiptMultiplayer.IsRelicReceipt(player, claim.OwnerState, index)
+                ? "its receipt is not a Relic in the receipt ledger"
             : reservation is { Destination: not ApRelicReceiptState.MenuDestination }
                 ? $"a chest decision reserved its receipt ({reservation.Destination})"
             : reservation?.MenuRelicAssignment == null ? "its receipt has no assigned relic"
@@ -364,6 +381,8 @@ internal static class ApQueuedRelicClaims
         }
         List<string>? choices = index < 0 ? null : claim.OwnerState.QueuedAncientChoices.GetValueOrDefault(index);
         string? refusal = index < 0 ? "it names no receipt"
+            : !ApReceiptLedger.HasReceipt(player, claim.OwnerState, index, APItem.ProgressiveAncient)
+                ? "its receipt is not a Progressive Ancient in the receipt ledger"
             : choices == null ? "its receipt has no assigned choices"
             : message.OptionIndex < 0 || message.OptionIndex >= choices.Count ? $"it picks option {message.OptionIndex} of {choices.Count}"
             : null;

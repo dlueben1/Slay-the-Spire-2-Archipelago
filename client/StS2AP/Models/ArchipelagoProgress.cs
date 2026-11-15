@@ -253,12 +253,9 @@ namespace StS2AP.Models
             string? stableChoiceKey,
             out ApAncientAssignmentRequest request)
         {
-            request = null!;
-
             // AllReceivedItems contains multiple reward types, so restrict it to this
             // character's Progressive Ancients. ArchipelagoClient adds these entries only for
-            // Anytime mode. Sorting them by AP item index maps their ordinals to Neow/Act 2/Act 3
-            // when Neow Sanity is enabled, or Act 2/Act 3 otherwise.
+            // Anytime mode.
             var characterOffset = player.GetAPCharacterNumber();
             var orderedAncientItemIndices = AllReceivedItems
                 .Where(item => item.Item.GetAPCharacterNumber() == characterOffset &&
@@ -266,10 +263,33 @@ namespace StS2AP.Models
                 .OrderBy(item => item.Index)
                 .Select(item => item.Index)
                 .ToList();
+            return TryCreateAncientDrawRequest(
+                index,
+                orderedAncientItemIndices,
+                ArchipelagoClient.Settings?.NeowSanity ?? false,
+                AncientSettingsUtility.Current.Pool,
+                stableChoiceKey ?? index.ToString(),
+                out request
+            );
+        }
 
-            // This is the item's zero-based position in the ordered list above, not its AP item index.
-            var rewardOrdinal = orderedAncientItemIndices.IndexOf(index);
-            var includesNeowReward = ArchipelagoClient.Settings?.NeowSanity ?? false;
+        /// <summary>
+        /// The recipe for one Progressive Ancient: its position among the character's Progressive
+        /// Ancient receipts in AP order maps to Neow/Act 2/Act 3 with Neow Sanity, or Act 2/Act 3
+        /// otherwise. False for a receipt past those, which has no claimable Ancient.
+        /// </summary>
+        public static bool TryCreateAncientDrawRequest(
+            int index,
+            IReadOnlyList<int> orderedAncientItemIndices,
+            bool includesNeowReward,
+            AncientRelicPoolMode poolMode,
+            string choiceKey,
+            out ApAncientAssignmentRequest request)
+        {
+            request = null!;
+
+            // This is the item's zero-based position in the ordered list, not its AP item index.
+            var rewardOrdinal = orderedAncientItemIndices.ToList().IndexOf(index);
             var maxRewardOrdinal = includesNeowReward ? 2 : 1;
             var expectedProgression = includesNeowReward ? "Neow/Act 2/Act 3" : "Act 2/Act 3";
             if (rewardOrdinal < 0)
@@ -291,13 +311,10 @@ namespace StS2AP.Models
             // With Neow Sanity, ordinals 0/1/2 map to Act indices 0/1/2.
             // Otherwise ordinals 0/1 map to Act indices 1/2.
             var ancientActIndex = rewardOrdinal + (includesNeowReward ? 0 : 1);
-            var poolMode = AncientSettingsUtility.Current.Pool;
             request = new ApAncientAssignmentRequest
             {
                 ReceivedItemIndex = index,
-                // AP slot + received index is supplied by the multiplayer grant ledger. The
-                // singleplayer fallback retains the historical item-index key.
-                ChoiceKey = stableChoiceKey ?? index.ToString(),
+                ChoiceKey = choiceKey,
                 AncientActIndex = ancientActIndex,
                 // True Chaos combines only Act 2/3; Neow's reward remains Neow-only.
                 PoolActIndex = ancientActIndex == 0

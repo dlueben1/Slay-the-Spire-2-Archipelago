@@ -23,6 +23,7 @@ using StS2AP.Models;
 using StS2AP.Multiplayer;
 using StS2AP.Persistence;
 using StS2AP.UI;
+using static StS2AP.Data.ItemTable;
 
 namespace StS2AP.Utils;
 
@@ -50,8 +51,7 @@ internal static class ApQueuedCardClaims
         actionKey: "card_claim",
         noun: "AP card reward",
         apply: ApplyClaim,
-        describe: static message => $"receipt {message.ReceivedItemIndex}, rare={message.IsRare}, "
-            + $"act={message.ActIndex?.ToString() ?? "current"}, strict={message.StrictCardRewards}"
+        describe: static message => $"receipt {message.ReceivedItemIndex}, strict={message.StrictCardRewards}"
     );
 
     /// <summary>
@@ -62,17 +62,37 @@ internal static class ApQueuedCardClaims
 
     internal static Task<ApQueuedClaimResult> SelectRow(
         int receivedItemIndex,
-        bool isRare,
-        int? actIndex,
         bool strictCardRewards,
         Player player) =>
         ApQueuedClaims.RequestAndWait(ClaimKind, player, () => new ApCardClaimActionMessage
         {
             ReceivedItemIndex = receivedItemIndex,
-            IsRare = isRare,
-            ActIndex = isRare ? null : actIndex,
             StrictCardRewards = strictCardRewards,
         });
+
+    /// <summary>
+    /// The reward a card receipt is, from the receipt ledger: rare or regular, and the act whose
+    /// upgrade odds a regular one uses (its position among the character's Card Rewards).
+    /// </summary>
+    private static bool TryGetRecipe(ApQueuedClaim<ApCardClaimActionMessage> claim, out bool isRare, out int? actIndex)
+    {
+        Player player = claim.Player;
+        int index = claim.Message.ReceivedItemIndex;
+        isRare = ApReceiptLedger.HasReceipt(player, claim.OwnerState, index, APItem.RareCardReward);
+        actIndex = null;
+        if (isRare)
+            return true;
+        if (!ApReceiptLedger.HasReceipt(player, claim.OwnerState, index, APItem.CardReward)
+            || !ApPlayerContextResolver.TryGetRewardSettings(player, out ArchipelagoSettings settings))
+        {
+            return false;
+        }
+        List<int> cardRewards = ApReceiptLedger.CharacterReceipts(player, claim.OwnerState, APItem.CardReward)
+            .Select(receipt => receipt.Index)
+            .ToList();
+        actIndex = GameUtility.GetCardRewardActIndex(index, cardRewards, settings.ShouldShuffleAllCards);
+        return true;
+    }
 
     /// <summary>The offer a queued card claim revealed for this receipt and nobody resolved yet.</summary>
     internal static ApQueuedCardOfferState? GetRevealedOffer(Player player, int receivedItemIndex) =>
@@ -104,11 +124,16 @@ internal static class ApQueuedCardClaims
             return ApQueuedClaims.Refuse(ClaimKind, message, player,
                 "its receipt was already claimed", "That AP card reward was already claimed.");
         }
+        if (!TryGetRecipe(claim, out bool isRare, out int? actIndex))
+        {
+            return ApQueuedClaims.Refuse(ClaimKind, message, player,
+                "its receipt is not a card reward in the receipt ledger", "Could not claim that AP card reward.");
+        }
 
         ApMirroredRewardDispatcher.ApNativeCardReward reward;
         try
         {
-            reward = await PrepareOffer(claim);
+            reward = await PrepareOffer(claim, isRare, actIndex);
         }
         catch (Exception ex)
         {
@@ -119,7 +144,8 @@ internal static class ApQueuedCardClaims
         RecordOffer(claim, reward);
         LogUtility.Info(
             $"Queued AP card reward claim {message.ClaimId} for player {player.NetId} "
-                + $"offers [{string.Join(", ", reward.Cards.Select(DescribeCard))}], canReroll={reward.CanReroll}"
+                + $"offers [{string.Join(", ", reward.Cards.Select(DescribeCard))}], rare={isRare}, "
+                + $"act={actIndex?.ToString() ?? "current"}, canReroll={reward.CanReroll}"
         );
 
         (bool rewardComplete, List<CardModel> taken) = await RunPicks(claim, reward);
@@ -147,7 +173,9 @@ internal static class ApQueuedCardClaims
     /// RNG. Both run on every peer in queue order.
     /// </summary>
     private static async Task<ApMirroredRewardDispatcher.ApNativeCardReward> PrepareOffer(
-        ApQueuedClaim<ApCardClaimActionMessage> claim)
+        ApQueuedClaim<ApCardClaimActionMessage> claim,
+        bool isRare,
+        int? actIndex)
     {
         ApCardClaimActionMessage message = claim.Message;
         Player player = claim.Player;
@@ -155,9 +183,9 @@ internal static class ApQueuedCardClaims
         if (recorded == null)
         {
             List<CardCreationResult> generated = await ApMirroredRewardDispatcher.GenerateQueuedCardOffer(
-                player, message.ApSlotId, message.ReceivedItemIndex, message.IsRare, message.ActIndex);
+                player, message.ApSlotId, message.ReceivedItemIndex, isRare, actIndex);
             return ApMirroredRewardDispatcher.CreateQueuedCardOffer(
-                player, message.ApSlotId, message.ReceivedItemIndex, message.IsRare, message.ActIndex,
+                player, message.ApSlotId, message.ReceivedItemIndex, isRare, actIndex,
                 generated, canReroll: false, hasBeenRerolled: false, message.StrictCardRewards);
         }
 
@@ -168,7 +196,7 @@ internal static class ApQueuedCardClaims
                 player)))
             .ToList();
         ApMirroredRewardDispatcher.ApNativeCardReward reward = ApMirroredRewardDispatcher.CreateQueuedCardOffer(
-            player, message.ApSlotId, message.ReceivedItemIndex, message.IsRare, message.ActIndex,
+            player, message.ApSlotId, message.ReceivedItemIndex, isRare, actIndex,
             cards, recorded.CanReroll, recorded.HasBeenRerolled, message.StrictCardRewards);
         ApCardRewardLifecycle.RefreshEggUpgrades(player, reward._cards, reward.Options);
         return reward;
