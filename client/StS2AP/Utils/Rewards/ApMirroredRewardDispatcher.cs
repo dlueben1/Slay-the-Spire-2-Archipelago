@@ -1105,6 +1105,14 @@ public static class ApMirroredRewardDispatcher
         {
             if (!MultiplayerSupport.CanClaimReceivedReward(ApMirroredRewardKind.Card, out reason))
                 return false;
+            // One queued claim at a time before a card claim: a second picker could otherwise
+            // stack behind the first, and Strict Card Rewards' lock is checked before the first
+            // offer is revealed.
+            if (IsQueuedClaim && ApQueuedClaims.HasPendingOwnerClaims)
+            {
+                reason = ArchipelagoRewardUI.PendingClaimMessage;
+                return false;
+            }
             if (!IsLockedByAnotherReveal())
                 return true;
             reason = "Take a card from your revealed card reward or discard it first.";

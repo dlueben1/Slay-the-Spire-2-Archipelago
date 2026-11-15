@@ -31,6 +31,8 @@ public static class ArchipelagoRewardUI
         "Finish the current card or relic selection before opening AP rewards.";
     private const string TravelBlockedMessage =
         "AP rewards are unavailable while traveling to another room.";
+    internal const string PendingClaimMessage =
+        "Wait for your AP reward to finish first.";
 
     private enum ReturnDestination
     {
@@ -327,7 +329,7 @@ public static class ArchipelagoRewardUI
     internal static bool CanSelectNativeReward(NRewardButton button)
     {
         if (button.Reward is not ApMirroredRewardDispatcher.IApNativeReward reward)
-            return true;
+            return !TryBlockNativeChoiceWhileClaimPending();
         if (TryBlockTravel())
             return false;
         if (reward.CanClaim(out string reason))
@@ -364,6 +366,21 @@ public static class ArchipelagoRewardUI
     {
         if (button.Reward is ApMirroredRewardDispatcher.ApNativeCardReward card)
             button.Modulate = card.IsLockedByAnotherReveal() ? LockedCardRewardModulate : Colors.White;
+    }
+
+    /// <summary>
+    /// Refuses a native choice while this player has a queued AP claim requested but not yet
+    /// executed here. A card claim, or a relic that asks for a card when obtained, reserves choice
+    /// ids inside its action, while a native reward pick, rest-site option, event option or shop
+    /// purchase reserves them when its message arrives. Until the claim has executed, other peers
+    /// could reserve the two in a different order and match a pick to the wrong choice.
+    /// </summary>
+    internal static bool TryBlockNativeChoiceWhileClaimPending()
+    {
+        if (!MultiplayerSupport.IsRealMultiplayerRun || !ApQueuedClaims.HasPendingOwnerClaims)
+            return false;
+        ShowBlockedMessage(PendingClaimMessage, blockedByCombat: false, includeInDevConsole: false);
+        return true;
     }
 
     private static bool TryBlockMultiplayerCombatOpen()

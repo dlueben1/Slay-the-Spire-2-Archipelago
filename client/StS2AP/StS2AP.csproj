@@ -143,6 +143,8 @@
     <Publicize Include="sts2:MegaCrit.Sts2.Core.Nodes.Screens.Shops.NMerchantRelic.UpdateVisual" />
     <Publicize Include="sts2:MegaCrit.Sts2.Core.Nodes.Screens.MainMenu.NMultiplayerSubmenu.InitialFocusedControl" />
     <Publicize Include="sts2:MegaCrit.Sts2.Core.Nodes.Rewards.NRewardButton.OnRelease" />
+    <Publicize Include="sts2:MegaCrit.Sts2.Core.Nodes.RestSite.NRestSiteButton.OnRelease" />
+    <Publicize Include="sts2:MegaCrit.Sts2.Core.Nodes.Events.NEventOptionButton.OnRelease" />
     <Publicize Include="sts2:MegaCrit.sts2.Core.Nodes.TopBar.NTopBarBossIcon.OnFocus" />
     <Publicize Include="sts2:MegaCrit.sts2.Core.Nodes.TopBar.NTopBarModifier.OnFocus" />
     <Publicize Include="sts2:MegaCrit.sts2.Core.Nodes.TopBar.NTopBarPortraitTip.OnFocus" />
