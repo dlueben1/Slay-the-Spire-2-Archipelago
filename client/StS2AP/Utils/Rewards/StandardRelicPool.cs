@@ -13,9 +13,9 @@ using StS2AP.Extensions;
 namespace StS2AP.Utils;
 
 /// <summary>
-/// Selects standard AP relic rewards without consuming MegaCrit's reward RNG. The owner persists
-/// and publishes the concrete model in the mirrored reward recipe; every replica then reserves
-/// that exact model from the native grab bags before the synchronized RewardsSet begins.
+/// Selects standard AP relic rewards without consuming MegaCrit's reward RNG. In multiplayer the
+/// queued relic assignment action draws and reserves them on every peer in queue order
+/// (ApQueuedRelicClaims).
 /// </summary>
 public static class StandardRelicPool
 {

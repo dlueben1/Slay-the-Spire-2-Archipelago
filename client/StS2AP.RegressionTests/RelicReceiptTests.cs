@@ -6,41 +6,6 @@ namespace StS2AP.RegressionTests;
 
 public sealed class RelicReceiptTests
 {
-    [Fact(DisplayName = "Host approves only known receipts with funding and caps fresh bank reservations")]
-    public void HostApprovesOnlyKnownReceiptsWithFundingAndCapsFreshBankReservations()
-    {
-        var state = new ApRelicReceiptState();
-        var progress = new ApRunProgressState { RelicRewardsAttempted = 1, RelicRewardsAvailableAnytimeForRun = 1 };
-        var result = state.ApproveMenu(11, new[] { 99, 100, 101, 102, 101 }, new[] { 100, 101, 102 }, progress);
-        Assert.True(result.SequenceEqual(new[] { 100, 101 }));
-        Assert.True(!state.Find(11, 100)!.RequiresBank && state.Find(11, 101)!.RequiresBank);
-        Assert.True(state.Find(11, 99) == null && state.Find(11, 102) == null);
-    }
-
-    [Fact(DisplayName = "An approval retry reuses its reservation without spending another bank")]
-    public void AnApprovalRetryReusesItsReservationWithoutSpendingAnotherBank()
-    {
-        var state = new ApRelicReceiptState();
-        var progress = new ApRunProgressState { RelicRewardsAttempted = 1 };
-        state.ApproveMenu(11, new[] { 100 }, new[] { 100, 101 }, progress);
-        var retry = state.ApproveMenu(11, new[] { 100, 101 }, new[] { 100, 101 }, progress);
-        Assert.True(retry.SequenceEqual(new[] { 100 }));
-        state.AssignMenu(11, 100, "stable choice");
-        state.Consume(11, 100, ApRelicReceiptState.MenuDestination);
-        var stale = new ApRunProgressState { RelicRewardsAttempted = 1, BankedRelicRewards = 1 };
-        Assert.True(state.ApproveMenu(11, new[] { 100, 101 }, new[] { 100, 101 }, stale).Count == 0);
-    }
-
-    [Fact(DisplayName = "A receipt missing from the host catalog can be approved after it arrives")]
-    public void AReceiptMissingFromTheHostCatalogCanBeApprovedAfterItArrives()
-    {
-        var state = new ApRelicReceiptState();
-        var progress = new ApRunProgressState { RelicRewardsAttempted = 1 };
-        Assert.True(state.ApproveMenu(11, new[] { 100 }, Array.Empty<int>(), progress).Count == 0);
-        Assert.True(progress.UsedItems.Count == 0 && progress.BankedRelicRewards == 1);
-        Assert.True(state.ApproveMenu(11, new[] { 100 }, new[] { 100 }, progress).SequenceEqual(new[] { 100 }));
-    }
-
     [Fact(DisplayName = "Chest reservation wins over a later menu request")]
     public void ChestReservationWinsOverALaterMenuRequest()
     {

@@ -18,12 +18,11 @@ namespace StS2AP.Utils;
 /// <c>ancient_claim</c> action then obtains a recorded relic.
 /// </summary>
 /// <remarks>
-/// The assignment is recorded where the host's menu approval records it today: as a menu
-/// reservation in <see cref="ApRelicReceiptState"/>, with its relic in
-/// <see cref="ApRelicReceiptState.Claim.MenuRelicAssignment"/>. Chest decisions skip reserved
-/// receipts, and bank reconciliation, reloads and reconnects read those reservations, so a queued
-/// assignment behaves like an approved one there. The difference is who writes it: the action, on
-/// every peer in queue order, instead of host replies that arrive whenever they arrive. A chest
+/// The assignment is recorded as a menu reservation in <see cref="ApRelicReceiptState"/>, with its
+/// relic in <see cref="ApRelicReceiptState.Claim.MenuRelicAssignment"/>, where the host's menu
+/// approval used to record it. Chest decisions skip reserved receipts, and bank reconciliation,
+/// reloads and reconnects read those reservations. Only this action writes them, on every peer in
+/// queue order. A chest
 /// decision is made during room entry inside the move action, so it is ordered against these
 /// actions too. Ancient choices have no such record, so they go to
 /// <see cref="ApPlayerRunState.QueuedAncientChoices"/>.

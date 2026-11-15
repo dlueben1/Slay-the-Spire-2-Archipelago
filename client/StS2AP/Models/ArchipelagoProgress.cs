@@ -181,9 +181,9 @@ namespace StS2AP.Models
         public AscensionManager Ascensions = new AscensionManager();
 
         /// <summary>
-        /// Returns the relic choices assigned to the given AP item. Singleplayer preserves the
-        /// native RelicFactory behavior. Multiplayer uses AP's stable selector so building a
-        /// mirrored reward recipe cannot advance only one replica's reward RNG or grab bags.
+        /// Returns the relic choices assigned to the given AP item, pulling them from the native
+        /// RelicFactory on first use (singleplayer). Multiplayer draws AP relics in a queued action
+        /// on every peer instead (ApQueuedRelicClaims).
         /// </summary>
         /// <param name="index">The index of the specific item sent from the Multiworld.</param>
         /// <param name="player">The current player, needed by RelicFactory.</param>
@@ -202,26 +202,9 @@ namespace StS2AP.Models
 
             try
             {
-                List<RelicModel> choices;
-                if (MultiplayerSupport.IsRealMultiplayerRun)
-                {
-                    var reservedRelicIds = RelicChoiceAssignments.Values
-                        .SelectMany(assignment => assignment)
-                        .Select(relic => relic.Id)
-                        .ToHashSet();
-                    choices = StandardRelicPool.CreateChoices(
-                        player,
-                        $"{player.NetId}:{index}",
-                        choiceCount,
-                        reservedRelicIds
-                    ).ToList();
-                }
-                else
-                {
-                    choices = Enumerable.Range(0, choiceCount)
-                        .Select(_ => GameApiCompat.PullNextRewardRelic(player))
-                        .ToList();
-                }
+                List<RelicModel> choices = Enumerable.Range(0, choiceCount)
+                    .Select(_ => GameApiCompat.PullNextRewardRelic(player))
+                    .ToList();
                 RelicChoiceAssignments[index] = choices;
                 LogUtility.Info(
                     $"Pre-assigned relic choices for item w/ index {index}: " +
@@ -240,10 +223,7 @@ namespace StS2AP.Models
         /// Returns the three Ancient relics assigned to a Progressive Ancient, creating the deterministic
         /// assignment on first use. An empty list indicates that a valid three-relic pool could not be built.
         /// </summary>
-        public IReadOnlyList<RelicModel> GetOrAssignAncientRelicChoices(
-            int index,
-            Player player,
-            string? stableChoiceKey = null)
+        public IReadOnlyList<RelicModel> GetOrAssignAncientRelicChoices(int index, Player player)
         {
             if (AncientRelicChoiceAssignments.TryGetValue(index, out var existing))
                 return existing;
@@ -252,7 +232,7 @@ namespace StS2AP.Models
                 .SelectMany(assignment => assignment)
                 .Select(relic => relic.Id)
                 .ToHashSet();
-            if (!TryGetAncientDrawRequest(index, player, stableChoiceKey, out var request))
+            if (!TryGetAncientDrawRequest(index, player, stableChoiceKey: null, out var request))
                 return Array.Empty<RelicModel>();
 
             var choices = DrawAncientChoices(player, request, reservedRelicIds);

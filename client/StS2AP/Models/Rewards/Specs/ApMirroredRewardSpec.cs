@@ -1,9 +1,9 @@
 namespace StS2AP.Models;
 
 /// <summary>
-/// Concrete owner-authored specification sent through RitsuLib Sidecar before a native
-/// reward flow starts. Model payloads are MegaCrit save-schema JSON strings so mutable
-/// card/relic/potion state can be reconstructed rather than reduced to a model ID.
+/// One AP menu row as the owner builds it. Model payloads are MegaCrit save-schema JSON strings
+/// so mutable card/relic/potion state can be reconstructed rather than reduced to a model ID;
+/// multiplayer claims carry them to every peer.
 /// </summary>
 public sealed class ApMirroredRewardSpec
 {

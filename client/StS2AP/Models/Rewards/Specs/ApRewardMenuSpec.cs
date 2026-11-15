@@ -1,8 +1,7 @@
 namespace StS2AP.Models;
 
 /// <summary>
-/// One immutable AP reward-menu snapshot. Every multiplayer replica builds the same ordered
-/// native RewardsSet before MegaCrit begins synchronizing selections for its owner.
+/// One immutable AP reward-menu snapshot, from which the owner builds the native reward screen.
 /// </summary>
 public sealed class ApRewardMenuSpec
 {
@@ -11,8 +10,8 @@ public sealed class ApRewardMenuSpec
     public int ApSlotId { get; set; }
     public ulong OwnerNetId { get; set; }
     public ApMenuGoldSpec? Gold { get; set; }
-    // The owner's Strict Card Rewards setting. Replicas need it so every peer builds the same
-    // picker alternatives, whose indexes are the synchronized choice.
+    // The owner's Strict Card Rewards setting, which adds Discard to card pickers. A multiplayer
+    // card claim carries it, so every peer builds the same picker alternatives.
     public bool StrictCardRewards { get; set; }
     public List<ApMirroredRewardSpec> Rewards { get; set; } = new();
 }

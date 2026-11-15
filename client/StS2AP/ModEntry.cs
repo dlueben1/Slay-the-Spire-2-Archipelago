@@ -41,7 +41,6 @@ namespace StS2AP
             ModSettingsRegistration.Register();
 
             // Initialize Utilities
-            ApMirroredRewardDispatcher.Initialize();
             ApQueuedClaims.Initialize();
             RelicReceiptMultiplayer.Initialize();
             ProgressiveStarterMultiplayer.Initialize();

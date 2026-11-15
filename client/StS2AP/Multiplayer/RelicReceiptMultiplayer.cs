@@ -9,30 +9,26 @@ using STS2RitsuLib.Networking.Sidecar;
 namespace StS2AP.Multiplayer;
 
 /// <summary>
-/// Arbitrates chest receipt assignments and AP-menu assignments before native reward construction.
-/// Sidecar messages do not enter the native action queue: room entry may already be executing there.
+/// Arbitrates chest receipt assignments before native treasure construction. AP-menu relics are
+/// assigned by a queued action instead (ApQueuedRelicClaims). These messages do not enter the
+/// native action queue: room entry may already be executing there.
 /// </summary>
 public static class RelicReceiptMultiplayer
 {
+    // A client's request for a chest decision it has not received.
     private sealed class Request
     {
         public Request() { }
         public Guid RunId { get; set; }
-        public Guid RequestId { get; set; }
         public ulong OwnerNetId { get; set; }
         public string? RoomKey { get; set; }
-        public List<int> MenuIndexes { get; set; } = new();
     }
 
     private sealed class Reply
     {
         public Reply() { }
         public Guid RunId { get; set; }
-        public Guid RequestId { get; set; }
-        public ulong OwnerNetId { get; set; }
-        public List<int> MenuIndexes { get; set; } = new();
         public ApRelicReceiptState.ChestDecision? Chest { get; set; }
-        public List<int> BankedMenuIndexes { get; set; } = new();
     }
 
     private sealed class TreasureProceedReady
@@ -92,13 +88,11 @@ public static class RelicReceiptMultiplayer
             if (IsFromHost(context.SenderNetId))
                 ApplyTreasureProceedReady(context.Message);
         }));
-    private static readonly Dictionary<Guid, TaskCompletionSource<Reply>> PendingMenus = new();
     private static readonly Dictionary<string, TaskCompletionSource> PendingChests = new();
     private static readonly HashSet<string> ReadyPickers = new();
     private static readonly HashSet<(string, ulong)> OpenedChests = new();
     private static readonly Dictionary<string, HashSet<ulong>> ProceedReadyPlayers = new();
     private static readonly HashSet<string> ProceedReadyRooms = new();
-    private static TaskCompletionSource _decisionsChanged = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private static IDisposable? _requestSubscription;
     private static IDisposable? _replySubscription;
     private static IDisposable? _treasureProceedReadyRequestSubscription;
@@ -145,16 +139,12 @@ public static class RelicReceiptMultiplayer
     public static void EndRun()
     {
         Interlocked.Increment(ref _runGeneration);
-        foreach (var pending in PendingMenus.Values) pending.TrySetCanceled();
         foreach (var pending in PendingChests.Values) pending.TrySetCanceled();
-        PendingMenus.Clear();
         PendingChests.Clear();
         ReadyPickers.Clear();
         OpenedChests.Clear();
         ProceedReadyPlayers.Clear();
         ProceedReadyRooms.Clear();
-        _decisionsChanged.TrySetCanceled();
-        _decisionsChanged = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 
     private static void Post(Action action)
@@ -226,36 +216,6 @@ public static class RelicReceiptMultiplayer
         !MultiplayerSupport.IsRealMultiplayerRun || player.RunState is RunState run
         && State(run).CanUseMenu(player.NetId, index);
 
-    /// <summary>Only an acknowledged subset may be materialized into stable menu assignments.</summary>
-    public static async Task<IReadOnlySet<int>?> ApproveMenu(Player player, IReadOnlyList<int> indexes)
-    {
-        if (!MultiplayerSupport.IsRealMultiplayerRun) return null;
-        if (indexes.Count == 0) return new HashSet<int>();
-        if (!ApRunData.PublishLocalProgress(player))
-            throw new InvalidOperationException("Could not publish AP progress before relic menu approval.");
-        var run = (RunState)player.RunState;
-        var request = new Request
-        {
-            RunId = ApRunData.GetSharedState(run).RunId,
-            RequestId = Guid.NewGuid(), OwnerNetId = player.NetId,
-            MenuIndexes = indexes.Distinct().ToList(),
-        };
-        var pending = new TaskCompletionSource<Reply>(TaskCreationOptions.RunContinuationsAsynchronously);
-        PendingMenus.Add(request.RequestId, pending);
-        try
-        {
-            if (RunManager.Instance.NetService.Type == NetGameType.Host)
-                HandleRequest(player.NetId, request);
-            else if (!SendToHost(request))
-                throw new InvalidOperationException("Could not request relic menu reservations.");
-            var reply = await pending.Task.WaitAsync(TimeSpan.FromSeconds(15));
-            if (RunManager.Instance.DebugOnlyGetState() != run)
-                throw new OperationCanceledException("Run changed during relic menu approval.");
-            return reply.MenuIndexes.ToHashSet();
-        }
-        finally { PendingMenus.Remove(request.RequestId); }
-    }
-
     public static async Task FreezeChest(RunState run)
     {
         string roomKey = RoomKey(run);
@@ -323,25 +283,10 @@ public static class RelicReceiptMultiplayer
             || sender != request.OwnerNetId || !TryRun(request.RunId, out var run)
             || run.GetPlayer(sender) == null)
             return;
-        if (request.RoomKey != null)
-        {
-            if (State(run).Chests.TryGetValue(request.RoomKey, out var chest)
-                && !SendToPeer(sender, new Reply { RunId = request.RunId, Chest = chest }))
-                throw new InvalidOperationException("Could not send the frozen chest decision to its requester.");
-            return;
-        }
-        if (!ApRunData.TryGetPlayerState(run, sender, out var playerState)
-            || playerState.Participation == ApParticipationKind.VanillaGuest)
-            return;
-        var reply = new Reply { RunId = request.RunId, RequestId = request.RequestId, OwnerNetId = sender };
-        var player = run.GetPlayer(sender)!;
-        var catalog = MultiplayerLocationChecks.GetReplicatedRelicReceiptIndexes(player, playerState.Progress).ToList();
-        ApRunData.ModifyRelicReceipts(run, state =>
-        {
-            reply.MenuIndexes = state.ApproveMenu(sender, request.MenuIndexes, catalog, playerState.Progress);
-            reply.BankedMenuIndexes = reply.MenuIndexes.Where(index => state.Find(sender, index)!.RequiresBank).ToList();
-        });
-        Publish(reply);
+        if (request.RoomKey != null
+            && State(run).Chests.TryGetValue(request.RoomKey, out var chest)
+            && !SendToPeer(sender, new Reply { RunId = request.RunId, Chest = chest }))
+            throw new InvalidOperationException("Could not send the frozen chest decision to its requester.");
     }
 
     private static void Publish(Reply reply)
@@ -353,25 +298,10 @@ public static class RelicReceiptMultiplayer
 
     private static void ApplyReply(Reply reply)
     {
-        if (!TryRun(reply.RunId, out var run)) return;
-        ApRunData.ModifyRelicReceipts(run, state =>
-        {
-            if (reply.Chest != null) state.AddChest(reply.Chest);
-            foreach (int index in reply.MenuIndexes)
-            {
-                var existing = state.Find(reply.OwnerNetId, index);
-                if (existing?.Destination == ApRelicReceiptState.MenuDestination) continue;
-                if (!state.TryReserve(reply.OwnerNetId, index, ApRelicReceiptState.MenuDestination,
-                    requiresBank: reply.BankedMenuIndexes.Contains(index)))
-                    throw new InvalidOperationException("Conflicting host relic menu reservation.");
-            }
-        });
-        var changed = _decisionsChanged;
-        _decisionsChanged = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        changed.TrySetResult();
-        if (reply.Chest != null && PendingChests.TryGetValue(
-            $"{reply.RunId}:{reply.Chest.RoomKey}", out var chestPending)) chestPending.TrySetResult();
-        if (PendingMenus.TryGetValue(reply.RequestId, out var menuPending)) menuPending.TrySetResult(reply);
+        if (reply.Chest == null || !TryRun(reply.RunId, out var run)) return;
+        ApRunData.ModifyRelicReceipts(run, state => state.AddChest(reply.Chest));
+        if (PendingChests.TryGetValue($"{reply.RunId}:{reply.Chest.RoomKey}", out var chestPending))
+            chestPending.TrySetResult();
     }
 
     private static bool TryRun(Guid id, out RunState run)
@@ -479,27 +409,6 @@ public static class RelicReceiptMultiplayer
         var gated = MultiplayerLocationChecks.GetReplicatedRelicReceiptIndexes(player, progress)
             .Skip(Math.Clamp(progress.RelicRewardsAvailableAnytimeForRun, 0, 10));
         State(run).ReconcileProgress(player.NetId, progress, gated);
-    }
-
-    public static async Task WaitForMenuReservations(Player player, IEnumerable<int> indexes)
-    {
-        int[] required = indexes.ToArray();
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-        while (required.Any(index => !CanUseMenu(player, index)))
-            await _decisionsChanged.Task.WaitAsync(timeout.Token);
-    }
-
-    public static void RecordMenuAssignment(Player player, int index, string serializedRelic)
-    {
-        if (MultiplayerSupport.IsRealMultiplayerRun && player.RunState is RunState run)
-            ApRunData.ModifyRelicReceipts(run, state => state.AssignMenu(player.NetId, index, serializedRelic));
-    }
-
-    public static void ConsumeMenu(Player player, int index)
-    {
-        if (MultiplayerSupport.IsRealMultiplayerRun && player.RunState is RunState run)
-            ApRunData.ModifyRelicReceipts(run, state => state.Consume(
-                player.NetId, index, ApRelicReceiptState.MenuDestination));
     }
 
     public static void ConsumeChest(Player player, int index)

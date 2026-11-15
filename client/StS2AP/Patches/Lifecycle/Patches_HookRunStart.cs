@@ -277,11 +277,6 @@ namespace StS2AP.Patches
                     MultiplayerSupport.InvalidateRunClaims(bindError);
                     return;
                 }
-                if (!ApMirroredRewardDispatcher.BeginRun(__result, out bindError))
-                {
-                    MultiplayerSupport.InvalidateRunClaims(bindError);
-                    return;
-                }
                 AscensionMultiplayer.BeginRun(__result, localPlayer);
                 ProgressiveStarterMultiplayer.BeginRun(__result, localPlayer);
                 if (MultiplayerSupport.IsLocalOwnApSlot)

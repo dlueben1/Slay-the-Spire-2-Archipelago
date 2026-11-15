@@ -1,8 +1,9 @@
 namespace StS2AP.Persistence;
 
 /// <summary>
-/// Host-approved destinations for standard Relic receipts. Player Net IDs deliberately remain
-/// part of the key: players can connect to the same AP slot but each has their own rewards.
+/// Destinations for standard Relic receipts: a chest (decided by the host at room entry) or the AP
+/// menu (assigned by the queued relic assignment action). Player Net IDs deliberately remain part
+/// of the key: players can connect to the same AP slot but each has their own rewards.
 /// </summary>
 public sealed class ApRelicReceiptState
 {
@@ -93,31 +94,6 @@ public sealed class ApRelicReceiptState
         if (claim!.MenuRelicAssignment != null && claim.MenuRelicAssignment != serializedRelic)
             throw new InvalidOperationException("A reserved relic assignment cannot be rerolled.");
         claim.MenuRelicAssignment = serializedRelic;
-    }
-
-    public List<int> ApproveMenu(ulong player, IEnumerable<int> requested,
-        IReadOnlyList<int> catalog, ApRunProgressState progress)
-    {
-        int anytimeCount = Math.Clamp(progress.RelicRewardsAvailableAnytimeForRun, 0, 10);
-        ReconcileProgress(player, progress, catalog.Skip(anytimeCount));
-        var anytime = catalog.Take(anytimeCount).ToHashSet();
-        int outstanding = Claims.GetValueOrDefault(player)?.Count(kv =>
-            kv.Value.Destination == MenuDestination && kv.Value.RequiresBank && !kv.Value.Consumed
-            && !progress.UsedItems.Contains(kv.Key) && !progress.RelicChoiceAssignments.ContainsKey(kv.Key)) ?? 0;
-        int banks = Math.Max(0, progress.BankedRelicRewards - outstanding);
-        var approved = new List<int>();
-        foreach (int index in requested.Distinct())
-        {
-            if (!catalog.Contains(index) || progress.UsedItems.Contains(index)) continue;
-            bool requiresBank = !anytime.Contains(index);
-            bool newBank = requiresBank && Find(player, index) == null
-                && !progress.RelicChoiceAssignments.ContainsKey(index);
-            if (newBank && banks <= 0) continue;
-            if (!TryReserve(player, index, MenuDestination, requiresBank: requiresBank)) continue;
-            if (newBank) banks--;
-            approved.Add(index);
-        }
-        return approved;
     }
 
     /// <summary>

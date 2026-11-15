@@ -36,13 +36,10 @@ internal abstract class ApDeferredCardReward : CardReward
 
     protected abstract Task PrepareCards();
 
-    // Multiplayer may bind an already-reserved first choice before entering the native picker.
-    protected virtual Task<bool> SelectCards() => base.OnSelect();
-
     protected override async Task<bool> OnSelect()
     {
         await PrepareCards();
         _canPopulate = true;
-        return await SelectCards();
+        return await base.OnSelect();
     }
 }

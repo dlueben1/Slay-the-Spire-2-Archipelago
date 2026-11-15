@@ -207,23 +207,17 @@ namespace StS2AP.Utils
         /// The assignment is persisted before the bank is spent, so reopening or loading cannot
         /// reroll the offered relic. The value remains a list to support multiple choices later.
         /// </summary>
-        public static void ReconcileBankedRewards(Player player, IReadOnlySet<int>? approvedMenu = null)
+        public static void ReconcileBankedRewards(Player player)
         {
-            // Multiplayer assigns only after the host has excluded receipts reserved by a chest.
-            // Item callbacks still publish receipt history; opening the menu performs the pairing.
-            if (MultiplayerSupport.IsRealMultiplayerRun && approvedMenu == null)
+            // Multiplayer pairs banks in the queued relic assignment action as the menu opens
+            // (ApQueuedRelicClaims), after a chest can have taken a receipt.
+            if (MultiplayerSupport.IsRealMultiplayerRun)
                 return;
             var progress = ArchipelagoClient.Progress;
             bool changed = false;
             while (progress.BankedRelicRewards > 0)
             {
-                var receipt = MultiplayerSupport.IsRealMultiplayerRun
-                    ? GetRelicReceipts(player).Skip(GetAvailableAnytimeForRun()).FirstOrDefault(r =>
-                        !progress.Items.IsUsed(r.Index)
-                        && !progress.RelicChoiceAssignments.ContainsKey(r.Index)
-                        && approvedMenu!.Contains(r.Index)
-                        && RelicReceiptMultiplayer.CanUseMenu(player, r.Index))
-                    : FindWaitingReceiptForNaturalReward(player);
+                var receipt = FindWaitingReceiptForNaturalReward(player);
                 if (receipt == null)
                     break;
 
@@ -259,7 +253,8 @@ namespace StS2AP.Utils
         /// <summary>
         /// Returns whether this Relic receipt belongs in the AP reward menu. Receipts are available
         /// there when they are among the run's first X or have a persisted banked assignment.
-        /// Multiplayer also advertises unassigned bank pairs; the host approves them on opening.
+        /// Multiplayer also advertises unassigned bank pairs; the menu's queued relic assignment
+        /// action pairs them as it opens.
         /// </summary>
         public static bool IsAvailableInRewardMenu(IndexedItemInfo receipt, Player player)
         {
@@ -361,7 +356,7 @@ namespace StS2AP.Utils
 
         /// <summary>
         /// Whether this Relic receipt is among the run's first X, which need no banked natural
-        /// relic reward. The host's menu approval draws the same line over its receipt catalog.
+        /// relic reward.
         /// </summary>
         internal static bool IsAnytimeReceiptIndex(Player player, int receiptIndex)
         {
