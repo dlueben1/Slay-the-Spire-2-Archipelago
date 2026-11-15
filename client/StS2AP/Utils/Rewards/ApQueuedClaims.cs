@@ -102,9 +102,9 @@ internal sealed class ApQueuedClaimKind<T> where T : ApQueuedClaimMessage, new()
 
 /// <summary>
 /// Prototype, off by default (<c>ap queuedclaims on</c>): multiplayer AP claims (gold, potions,
-/// bonus wax relics and relics) run as native queued actions, executed on every peer in the
-/// host's action order, instead of applying when a replicated reward selection arrives. Relics
-/// are also assigned by one, before the menu opens.
+/// bonus wax relics, relics and Ancient relics) run as native queued actions, executed on every
+/// peer in the host's action order, instead of applying when a replicated reward selection
+/// arrives. Relics and Ancient choices are also assigned by one, before the menu opens.
 /// </summary>
 /// <remarks>
 /// A replicated selection is handled whenever it arrives, so one peer can apply a claim before a
@@ -177,6 +177,7 @@ public static class ApQueuedClaims
         ApNetActions.Register(ApQueuedReceiptClaims.BonusRelicKind.Descriptor);
         ApNetActions.Register(ApQueuedRelicClaims.AssignmentKind.Descriptor);
         ApNetActions.Register(ApQueuedRelicClaims.ClaimKind.Descriptor);
+        ApNetActions.Register(ApQueuedRelicClaims.AncientClaimKind.Descriptor);
         _initialized = true;
     }
 

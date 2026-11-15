@@ -141,6 +141,7 @@ public static class ApRunData
             CombatTrapLimit = existing?.CombatTrapLimit ?? new CombatEffectLimit(),
             QueuedGoldClaimCursor = existing?.QueuedGoldClaimCursor,
             QueuedClaimedReceiptIndexes = existing?.QueuedClaimedReceiptIndexes ?? new List<int>(),
+            QueuedAncientChoices = existing?.QueuedAncientChoices ?? new Dictionary<int, List<string>>(),
         };
         // SyncLobbyOnChange makes this a contribution to the authoritative host staging
         // session. On a client RitsuLib pushes the local PlayerRunSavedData payload with a
@@ -254,6 +255,23 @@ public static class ApRunData
         int position = state.QueuedClaimedReceiptIndexes.BinarySearch(receivedItemIndex);
         if (position < 0)
             state.QueuedClaimedReceiptIndexes.Insert(~position, receivedItemIndex);
+        _players.Set(runState, netId, state);
+        return true;
+    }
+
+    /// <summary>
+    /// Records the Ancient choices the queued relic assignment action drew, identically on every
+    /// replica; owner progress deltas never touch them.
+    /// </summary>
+    internal static bool RecordQueuedAncientChoices(
+        RunState runState,
+        ulong netId,
+        int receivedItemIndex,
+        List<string> serializedChoices)
+    {
+        if (!_initialized || !_players.TryGet(runState, netId, out ApPlayerRunState state))
+            return false;
+        state.QueuedAncientChoices[receivedItemIndex] = serializedChoices;
         _players.Set(runState, netId, state);
         return true;
     }

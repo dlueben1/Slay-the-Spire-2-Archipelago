@@ -299,13 +299,7 @@ public static class ApMirroredRewardDispatcher
             };
         }
 
-        IEnumerable<IndexedItemInfo> receipts = ArchipelagoClient.Progress.AllReceivedItems
-            .Concat(MultiplayerSupport.PendingUnsupportedItems)
-            .GroupBy(receipt => receipt.Index)
-            .Select(group => group.First())
-            .OrderBy(receipt => receipt.Index);
-
-        foreach (IndexedItemInfo receipt in receipts)
+        foreach (IndexedItemInfo receipt in GetMenuReceipts())
         {
             MultiplayerFeature feature = MultiplayerSupport.GetFeatureForItem(receipt);
             bool featureEnabled = MultiplayerSupport.IsFeatureEnabled(feature);
@@ -357,6 +351,25 @@ public static class ApMirroredRewardDispatcher
             .ToList();
         return menu;
     }
+
+    // Every receipt the menu considers, in AP order, including ones multiplayer can't offer yet.
+    private static IEnumerable<IndexedItemInfo> GetMenuReceipts() =>
+        ArchipelagoClient.Progress.AllReceivedItems
+            .Concat(MultiplayerSupport.PendingUnsupportedItems)
+            .GroupBy(receipt => receipt.Index)
+            .Select(group => group.First())
+            .OrderBy(receipt => receipt.Index);
+
+    /// <summary>
+    /// The receipts of one kind that the owner's next menu offers as claimable rows: the same
+    /// filter <see cref="BuildOwnerMenuSpec"/> applies before it builds each row.
+    /// </summary>
+    internal static IEnumerable<IndexedItemInfo> GetClaimableMenuReceipts(Player player, ApMirroredRewardKind kind) =>
+        GetMenuReceipts().Where(receipt =>
+            MultiplayerSupport.IsFeatureEnabled(MultiplayerSupport.GetFeatureForItem(receipt))
+            && ArchipelagoClient.Progress.IsAvailableInRewardMenu(receipt, player)
+            && TryGetMirroredKind(receipt, out ApMirroredRewardKind receiptKind)
+            && receiptKind == kind);
 
     private static ApMirroredRewardSpec BuildAssignedSpec(
         IndexedItemInfo receipt,
@@ -460,6 +473,23 @@ public static class ApMirroredRewardDispatcher
                 spec.QueuedClaimId = queuedClaims ? Guid.NewGuid() : null;
                 break;
             }
+            case ApMirroredRewardKind.Ancient when queuedClaims:
+            {
+                // Every peer drew these in the menu's relic_assignment action.
+                IReadOnlyList<string>? assigned =
+                    ApQueuedRelicClaims.GetAssignedAncientChoices((RunState)player.RunState, player, itemIndex);
+                if (assigned == null || assigned.Count != AncientRelicPool.ChoiceCount)
+                {
+                    spec.Kind = ApMirroredRewardKind.Unavailable;
+                    spec.ItemName = "Ancient Relic Choice Unavailable";
+                    spec.UnavailableReason =
+                        "No valid Ancient relic choice is available for this receipt.";
+                    break;
+                }
+                spec.SerializedModels = assigned.ToList();
+                spec.QueuedClaimId = Guid.NewGuid();
+                break;
+            }
             case ApMirroredRewardKind.Ancient:
             {
                 string? choiceKey = MultiplayerSupport.IsRealMultiplayerRun
@@ -529,10 +559,11 @@ public static class ApMirroredRewardDispatcher
             potion => new ApNativePotionReward(
                 LoadPotion(potion.Model, spec.Origin.ReceiptIdentity), owner, spec.Origin, potion.Model, queuedClaimId),
             relic => BuildStandardRelicReward(spec.Origin, relic, owner, queuedClaimId),
-            choices => BuildAncientReward(spec.Origin, choices, owner),
+            choices => BuildAncientReward(spec.Origin, choices, owner, queuedClaimId),
             reason => new ApUnavailableReward(spec.Origin.ItemName, reason, owner, spec.Origin),
             relic => new ApNativeRelicReward(
-                DeserializeRelic(relic), owner, spec.Origin, ApMirroredRewardKind.Bonus, relic, queuedClaimId));
+                DeserializeRelic(relic), owner, spec.Origin, ApMirroredRewardKind.Bonus,
+                queuedClaimId, serializedBonusRelic: relic));
 
     private static Reward BuildCardReward(RewardOrigin origin, CardRewardData card, Player player)
     {
@@ -589,10 +620,14 @@ public static class ApMirroredRewardDispatcher
         return relic;
     }
 
-    private static Reward BuildAncientReward(RewardOrigin origin, IReadOnlyList<string> models, Player player)
+    private static Reward BuildAncientReward(
+        RewardOrigin origin,
+        IReadOnlyList<string> models,
+        Player player,
+        Guid? queuedClaimId)
     {
         var children = models
-            .Select(serialized =>
+            .Select((serialized, option) =>
             {
                 RelicModel relic = DeserializeRelic(serialized);
                 // These are fresh, unclaimed choices. Some Ancient saved-property setters (for
@@ -604,7 +639,9 @@ public static class ApMirroredRewardDispatcher
                     relic,
                     player,
                     origin,
-                    ApMirroredRewardKind.Ancient
+                    ApMirroredRewardKind.Ancient,
+                    queuedClaimId,
+                    ancientOption: option
                 );
             })
             .ToList();
@@ -620,7 +657,7 @@ public static class ApMirroredRewardDispatcher
         RelicModel relic = DeserializeRelic(model);
         // A queued relic's assignment action already recorded and reserved it on every peer.
         if (queuedClaimId != null)
-            return new ApNativeRelicReward(relic, player, origin, ApMirroredRewardKind.Relic, model, queuedClaimId);
+            return new ApNativeRelicReward(relic, player, origin, ApMirroredRewardKind.Relic, queuedClaimId);
 
         RelicReceiptMultiplayer.RecordMenuAssignment(player, origin.ReceivedItemIndex, model);
         StandardRelicPool.ReserveChoice(player, relic);
@@ -1044,11 +1081,12 @@ public static class ApMirroredRewardDispatcher
         private readonly int _itemIndex;
         private readonly ApMirroredRewardKind _kind;
         private readonly LocString _description;
-        // Bonus wax relics and standard relics can be queued claims; Ancients still apply their
-        // effect in this replicated selection. A bonus relic's claim carries the relic, while a
-        // standard relic's claim reads it from the receipt's recorded assignment.
-        private readonly string? _serializedBonusRelic;
+        // Set when this row is a queued claim. A bonus relic's claim carries its relic; a standard
+        // relic's claim and an Ancient pick read theirs from the receipt's recorded assignment.
         private readonly Guid? _queuedClaimId;
+        private readonly string? _serializedBonusRelic;
+        // Which of an Ancient's three choices this row is.
+        private readonly int _ancientOption;
 
         public override LocString Description => _description;
 
@@ -1057,19 +1095,19 @@ public static class ApMirroredRewardDispatcher
             Player player,
             RewardOrigin spec,
             ApMirroredRewardKind kind,
-            string? serializedRelic = null,
-            Guid? queuedClaimId = null)
+            Guid? queuedClaimId = null,
+            string? serializedBonusRelic = null,
+            int ancientOption = -1)
             : base(relic, player)
         {
             _itemIndex = spec.ReceivedItemIndex;
             _kind = kind;
             _description = CreateApDescription(relic.Title, spec);
-            if (kind == ApMirroredRewardKind.Relic
-                || (kind == ApMirroredRewardKind.Bonus && serializedRelic != null))
-            {
-                _serializedBonusRelic = kind == ApMirroredRewardKind.Bonus ? serializedRelic : null;
-                _queuedClaimId = queuedClaimId;
-            }
+            _queuedClaimId = queuedClaimId;
+            _serializedBonusRelic = serializedBonusRelic;
+            _ancientOption = ancientOption;
+            if (queuedClaimId != null && kind == ApMirroredRewardKind.Bonus && serializedBonusRelic == null)
+                throw new ArgumentException("A queued bonus relic row needs its relic.", nameof(serializedBonusRelic));
         }
 
         public bool CanClaim(out string reason) =>
@@ -1082,10 +1120,14 @@ public static class ApMirroredRewardDispatcher
             // A queued claim's action obtains the relic on every peer; this row only takes its turn.
             if (_queuedClaimId is Guid claimId)
             {
-                ApQueuedClaimResult result = _kind == ApMirroredRewardKind.Bonus
-                    ? await ApQueuedReceiptClaims.SelectBonusRelicRow(
-                        claimId, _itemIndex, _serializedBonusRelic!, Player)
-                    : await ApQueuedRelicClaims.SelectRow(claimId, _itemIndex, Player);
+                ApQueuedClaimResult result = _kind switch
+                {
+                    ApMirroredRewardKind.Bonus => await ApQueuedReceiptClaims.SelectBonusRelicRow(
+                        claimId, _itemIndex, _serializedBonusRelic!, Player),
+                    ApMirroredRewardKind.Ancient => await ApQueuedRelicClaims.SelectAncientRow(
+                        claimId, _itemIndex, _ancientOption, Player),
+                    _ => await ApQueuedRelicClaims.SelectRow(claimId, _itemIndex, Player),
+                };
                 // The reward screen finds the relic to animate by instance, as for potions below.
                 ClaimedRelic = result.ClaimedModel as RelicModel;
                 return result.Applied;

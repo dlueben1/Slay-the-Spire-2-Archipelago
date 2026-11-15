@@ -1,5 +1,6 @@
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Models;
@@ -9,10 +10,12 @@ using StS2AP.Persistence;
 namespace StS2AP.Utils;
 
 /// <summary>
-/// Standard AP Relic receipts as queued claims (<see cref="ApQueuedClaims"/>). A relic comes from
-/// the player's relic bag, so every peer must draw it at the same point in the run: before the
-/// owner's menu opens, one <c>relic_assignment</c> action draws every relic the menu needs on every
-/// peer and records it, and each <c>relic_claim</c> action then obtains a recorded relic.
+/// Standard AP Relic and Progressive Ancient receipts as queued claims (<see cref="ApQueuedClaims"/>).
+/// A relic comes from the player's relic bag, and preparing an Ancient choice can roll the player's
+/// reward RNG (Dusty Tome picks its card there), so every peer must draw both at the same point in
+/// the run: before the owner's menu opens, one <c>relic_assignment</c> action draws every relic and
+/// Ancient choice the menu needs on every peer and records it. Each <c>relic_claim</c> or
+/// <c>ancient_claim</c> action then obtains a recorded relic.
 /// </summary>
 /// <remarks>
 /// The assignment is recorded where the host's menu approval records it today: as a menu
@@ -22,7 +25,8 @@ namespace StS2AP.Utils;
 /// assignment behaves like an approved one there. The difference is who writes it: the action, on
 /// every peer in queue order, instead of host replies that arrive whenever they arrive. A chest
 /// decision is made during room entry inside the move action, so it is ordered against these
-/// actions too.
+/// actions too. Ancient choices have no such record, so they go to
+/// <see cref="ApPlayerRunState.QueuedAncientChoices"/>.
 /// </remarks>
 internal static class ApQueuedRelicClaims
 {
@@ -30,8 +34,9 @@ internal static class ApQueuedRelicClaims
         actionKey: "relic_assignment",
         noun: "AP relic assignment",
         apply: ApplyAssignment,
-        describe: static message => "receipts " + string.Join(", ", message.Receipts.Select(receipt =>
-            receipt.RequiresBank ? $"{receipt.ReceivedItemIndex} (banked)" : $"{receipt.ReceivedItemIndex}")),
+        describe: static message => "relic receipts [" + string.Join(", ", message.Receipts.Select(receipt =>
+                receipt.RequiresBank ? $"{receipt.ReceivedItemIndex} (banked)" : $"{receipt.ReceivedItemIndex}"))
+            + "], Ancient receipts [" + string.Join(", ", message.Ancients.Select(ancient => ancient.ReceivedItemIndex)) + "]",
         waitsForMenuRow: false
     );
 
@@ -42,11 +47,19 @@ internal static class ApQueuedRelicClaims
         describe: static message => $"receipt {message.ReceivedItemIndex}"
     );
 
+    internal static readonly ApQueuedClaimKind<ApAncientClaimActionMessage> AncientClaimKind = new(
+        actionKey: "ancient_claim",
+        noun: "AP Ancient relic",
+        apply: ApplyAncientClaim,
+        describe: static message => $"receipt {message.ReceivedItemIndex}, option {message.OptionIndex}"
+    );
+
     /// <summary>
-    /// Owner only, as the menu opens: assigns relics to the menu's Relic receipts that have none
-    /// yet and returns every receipt the menu can offer. The same receipts the host's approval
-    /// takes today: the run's anytime relics, and waiting receipts up to the owner's banked natural
-    /// relic rewards, without those a chest took.
+    /// Owner only, as the menu opens: assigns relics to the menu's Relic receipts and choices to its
+    /// Progressive Ancient receipts that have none yet, and returns every Relic receipt the menu
+    /// can offer. The same Relic receipts the host's approval takes today: the run's anytime
+    /// relics, and waiting receipts up to the owner's banked natural relic rewards, without those
+    /// a chest took.
     /// </summary>
     internal static async Task<IReadOnlySet<int>> PrepareMenu(Player owner)
     {
@@ -64,12 +77,25 @@ internal static class ApQueuedRelicClaims
             })
             .ToList();
 
-        if (missing.Count > 0)
+        ApRunData.TryGetPlayerState(runState, owner.NetId, out ApPlayerRunState ownerState);
+        List<ApAncientAssignmentRequest> missingAncients = new();
+        foreach (IndexedItemInfo receipt in ApMirroredRewardDispatcher.GetClaimableMenuReceipts(
+                     owner, ApMirroredRewardKind.Ancient))
+        {
+            if (ownerState?.QueuedAncientChoices.ContainsKey(receipt.Index) == true)
+                continue;
+            // A surplus receipt has no recipe and stays an unavailable row, as it does today.
+            if (ArchipelagoClient.Progress.TryGetAncientDrawRequest(
+                    receipt.Index, owner, AncientChoiceKey(owner, receipt.Index), out var request))
+                missingAncients.Add(request);
+        }
+
+        if (missing.Count > 0 || missingAncients.Count > 0)
         {
             ApQueuedClaimResult result = await ApQueuedClaims.RequestAndWait(
                 AssignmentKind,
                 owner,
-                () => new ApRelicAssignmentActionMessage { Receipts = missing }
+                () => new ApRelicAssignmentActionMessage { Receipts = missing, Ancients = missingAncients }
             );
             if (!result.Applied)
                 throw new InvalidOperationException("The AP relic assignments for this menu did not execute.");
@@ -79,6 +105,27 @@ internal static class ApQueuedRelicClaims
 
         return candidates.Where(index => HasUsableAssignment(runState, owner, index)).ToHashSet();
     }
+
+    // The multiplayer Ancient choice key, as the menu used for its owner-drawn choices.
+    internal static string AncientChoiceKey(Player owner, int receivedItemIndex) => $"{owner.NetId}:{receivedItemIndex}";
+
+    /// <summary>The three relics a queued Ancient row offers, as the assignment action recorded them.</summary>
+    internal static IReadOnlyList<string>? GetAssignedAncientChoices(RunState runState, Player owner, int receivedItemIndex) =>
+        ApRunData.TryGetPlayerState(runState, owner.NetId, out ApPlayerRunState state)
+        && state.QueuedAncientChoices.TryGetValue(receivedItemIndex, out List<string>? choices)
+            ? choices
+            : null;
+
+    internal static async Task<ApQueuedClaimResult> SelectAncientRow(
+        Guid claimId,
+        int receivedItemIndex,
+        int optionIndex,
+        Player player) =>
+        await ApQueuedClaims.SelectRow(AncientClaimKind, claimId, player, () => new ApAncientClaimActionMessage
+        {
+            ReceivedItemIndex = receivedItemIndex,
+            OptionIndex = optionIndex,
+        });
 
     /// <summary>The relic a queued menu row offers for this receipt, as its assignment recorded it.</summary>
     internal static string GetAssignedRelic(RunState runState, Player owner, int receivedItemIndex) =>
@@ -170,15 +217,76 @@ internal static class ApQueuedRelicClaims
             assigned.Add((request, relic));
         }
 
+        List<(int Index, IReadOnlyList<RelicModel> Choices)> ancients = AssignAncients(claim);
+
         LogUtility.Info(
             $"Applied queued AP relic assignment {claim.Message.ClaimId} for player {player.NetId}: "
-                + (assigned.Count == 0
+                + (assigned.Count + ancients.Count == 0
                     ? "nothing new"
-                    : string.Join(", ", assigned.Select(entry => $"{entry.Request.ReceivedItemIndex}={entry.Relic.Id}")))
+                    : string.Join(", ", assigned.Select(entry => $"{entry.Request.ReceivedItemIndex}={entry.Relic.Id}")
+                        .Concat(ancients.Select(entry =>
+                            $"{entry.Index}=[{string.Join(", ", entry.Choices.Select(relic => relic.Id))}]"))))
         );
-        if (claim.IsLocalOwner && assigned.Count > 0)
-            CommitOwnerAssignments(player, assigned);
+        if (claim.IsLocalOwner && assigned.Count + ancients.Count > 0)
+            CommitOwnerAssignments(player, assigned, ancients);
         return Task.FromResult(new ApQueuedClaimResult(true));
+    }
+
+    /// <summary>
+    /// Every peer: draws each requested Progressive Ancient's three choices from the owner's
+    /// recipe, with the owner's slot settings rather than this peer's own. A receipt that already
+    /// has choices keeps them; one with no valid set gets none and stays unavailable in the menu.
+    /// </summary>
+    private static List<(int Index, IReadOnlyList<RelicModel> Choices)> AssignAncients(
+        ApQueuedClaim<ApRelicAssignmentActionMessage> claim)
+    {
+        Player player = claim.Player;
+        var assigned = new List<(int Index, IReadOnlyList<RelicModel> Choices)>();
+        if (claim.Message.Ancients.Count == 0)
+            return assigned;
+
+        // As the owner's own draws did, exclude every relic already offered by an Ancient receipt.
+        var reservedRelicIds = new HashSet<ModelId>();
+        foreach ((int index, List<string> choices) in claim.OwnerState.QueuedAncientChoices)
+        {
+            foreach (string choice in choices)
+            {
+                try
+                {
+                    reservedRelicIds.Add(ApMirroredRewardDispatcher.LoadRelic(choice, $"{index}").Id);
+                }
+                catch (Exception ex)
+                {
+                    LogUtility.Warn($"Ignoring unreadable AP Ancient choice {player.NetId}:{index}: {ex.Message}");
+                }
+            }
+        }
+        ArchipelagoSettings? settings = ApPlayerContextResolver.TryGetRewardSettings(player, out var resolved)
+            ? resolved
+            : null;
+
+        foreach (ApAncientAssignmentRequest request in claim.Message.Ancients
+                     .Where(request => request.ReceivedItemIndex >= 0)
+                     .DistinctBy(request => request.ReceivedItemIndex)
+                     .OrderBy(request => request.ReceivedItemIndex))
+        {
+            int index = request.ReceivedItemIndex;
+            if (ApQueuedClaims.IsReceiptClaimed(claim, index) || claim.OwnerState.QueuedAncientChoices.ContainsKey(index))
+                continue;
+
+            IReadOnlyList<RelicModel> choices =
+                ArchipelagoProgress.DrawAncientChoices(player, request, reservedRelicIds, settings);
+            if (choices.Count != AncientRelicPool.ChoiceCount)
+            {
+                LogUtility.Warn($"No valid AP Ancient choices for receipt {player.NetId}:{index}.");
+                continue;
+            }
+            ApRunData.RecordQueuedAncientChoices(claim.RunState, player.NetId, index,
+                choices.Select(ApMirroredRewardDispatcher.SerializeRelic).ToList());
+            reservedRelicIds.UnionWith(choices.Select(relic => relic.Id));
+            assigned.Add((index, choices));
+        }
+        return assigned;
     }
 
     /// <summary>
@@ -188,7 +296,8 @@ internal static class ApQueuedRelicClaims
     /// </summary>
     private static void CommitOwnerAssignments(
         Player player,
-        IReadOnlyList<(ApRelicAssignmentRequest Request, RelicModel Relic)> assigned)
+        IReadOnlyList<(ApRelicAssignmentRequest Request, RelicModel Relic)> assigned,
+        IReadOnlyList<(int Index, IReadOnlyList<RelicModel> Choices)> ancients)
     {
         ArchipelagoProgress progress = ArchipelagoClient.Progress;
         foreach ((ApRelicAssignmentRequest request, RelicModel relic) in assigned)
@@ -206,6 +315,9 @@ internal static class ApQueuedRelicClaims
                 );
             RelicCoupons.Activate(player);
         }
+        // The owner's own Ancient lookups and published progress see the drawn choices.
+        foreach ((int index, IReadOnlyList<RelicModel> choices) in ancients)
+            progress.AncientRelicChoiceAssignments[index] = choices.ToList();
         if (!ApRunData.PublishLocalProgress(player))
             MultiplayerSupport.InvalidateRunClaims("queued AP relic assignments could not be published");
     }
@@ -253,6 +365,48 @@ internal static class ApQueuedRelicClaims
         );
         if (claim.IsLocalOwner)
             ApMirroredRewardDispatcher.CommitDiscreteReward(index, ApMirroredRewardKind.Relic);
+        return new ApQueuedClaimResult(true, obtained);
+    }
+
+    private static async Task<ApQueuedClaimResult> ApplyAncientClaim(ApQueuedClaim<ApAncientClaimActionMessage> claim)
+    {
+        ApAncientClaimActionMessage message = claim.Message;
+        Player player = claim.Player;
+        int index = message.ReceivedItemIndex;
+        if (index >= 0 && ApQueuedClaims.IsReceiptClaimed(claim, index))
+        {
+            return ApQueuedClaims.Refuse(AncientClaimKind, message, player,
+                "its receipt was already claimed", "That AP Ancient relic was already claimed.");
+        }
+        List<string>? choices = index < 0 ? null : claim.OwnerState.QueuedAncientChoices.GetValueOrDefault(index);
+        string? refusal = index < 0 ? "it names no receipt"
+            : choices == null ? "its receipt has no assigned choices"
+            : message.OptionIndex < 0 || message.OptionIndex >= choices.Count ? $"it picks option {message.OptionIndex} of {choices.Count}"
+            : null;
+        if (refusal != null)
+            return ApQueuedClaims.Refuse(AncientClaimKind, message, player, refusal, "Could not claim that AP Ancient relic.");
+
+        RelicModel relic;
+        try
+        {
+            relic = ApMirroredRewardDispatcher.LoadRelic(choices![message.OptionIndex], $"{message.ApSlotId}:{index}");
+        }
+        catch (Exception ex)
+        {
+            return ApQueuedClaims.Refuse(AncientClaimKind, message, player,
+                $"its relic did not load ({ex.Message})", "Could not claim that AP Ancient relic.");
+        }
+        // As the menu's Ancient rows do: some saved-property setters mark a fresh model Disabled.
+        relic.Status = RelicStatus.Normal;
+
+        ApQueuedClaims.MarkReceiptClaimed(claim, index);
+        RelicModel obtained = await RelicCmd.Obtain(relic, player);
+        LogUtility.Info(
+            $"Applied queued AP Ancient claim {message.ClaimId} for player {player.NetId}: "
+                + $"receipt {index}, {obtained.Id}"
+        );
+        if (claim.IsLocalOwner)
+            ApMirroredRewardDispatcher.CommitDiscreteReward(index, ApMirroredRewardKind.Ancient);
         return new ApQueuedClaimResult(true, obtained);
     }
 }

@@ -38,12 +38,15 @@ public sealed class ApReceiptClaimActionMessage : ApQueuedClaimMessage
 }
 
 /// <summary>
-/// Asks every peer to assign relics to the owner's standard Relic receipts before the owner's AP
-/// menu opens, so each peer draws them from the same relic bag at the same point in the run.
+/// Asks every peer to assign relics to the owner's standard Relic receipts, and Ancient choices to
+/// their Progressive Ancient receipts, before the owner's AP menu opens. Each peer draws them at
+/// the same point in the run: a relic leaves the relic bag, and preparing an Ancient choice can
+/// roll the player's reward RNG (Dusty Tome).
 /// </summary>
 public sealed class ApRelicAssignmentActionMessage : ApQueuedClaimMessage
 {
     public List<ApRelicAssignmentRequest> Receipts { get; set; } = new();
+    public List<ApAncientAssignmentRequest> Ancients { get; set; } = new();
 }
 
 public sealed class ApRelicAssignmentRequest
@@ -52,4 +55,27 @@ public sealed class ApRelicAssignmentRequest
     // A receipt past the run's anytime relics spends one of the owner's banked natural relic
     // rewards, as the host's menu approval records it today.
     public bool RequiresBank { get; set; }
+}
+
+/// <summary>
+/// The owner's recipe for one Progressive Ancient's three choices, as
+/// <c>ArchipelagoProgress.TryGetAncientDrawRequest</c> works it out from the owner's AP receipts
+/// and settings. Every peer draws the choices from it.
+/// </summary>
+public sealed class ApAncientAssignmentRequest
+{
+    public int ReceivedItemIndex { get; set; }
+    public string ChoiceKey { get; set; } = string.Empty;
+    // The act whose Ancients the choices come from, and the pool act (null for True Chaos).
+    public int AncientActIndex { get; set; }
+    public int? PoolActIndex { get; set; }
+    // Balanced pools draw from a single Ancient of that act.
+    public bool Balanced { get; set; }
+}
+
+/// <summary>One queued Ancient claim: the receipt and which of its three assigned relics was picked.</summary>
+public sealed class ApAncientClaimActionMessage : ApQueuedClaimMessage
+{
+    public int ReceivedItemIndex { get; set; }
+    public int OptionIndex { get; set; }
 }
