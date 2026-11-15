@@ -12,17 +12,17 @@ public static class Patches_APRewardTravel
     private static class CloseAtTravelStart
     {
         [HarmonyPrefix]
-        private static void Prefix(out int? __state) =>
+        private static void Prefix(out bool __state) =>
             __state = ArchipelagoRewardUI.BeginTravel();
 
         [HarmonyPostfix]
-        private static void Postfix(ref Task __result, int? __state)
+        private static void Postfix(ref Task __result, bool __state)
         {
-            if (__state is int apLifecycleVersion)
-                __result = FinishTravel(__result, apLifecycleVersion);
+            if (__state)
+                __result = FinishTravel(__result);
         }
 
-        private static async Task FinishTravel(Task travel, int apLifecycleVersion)
+        private static async Task FinishTravel(Task travel)
         {
             try
             {
@@ -30,7 +30,7 @@ public static class Patches_APRewardTravel
             }
             finally
             {
-                ArchipelagoRewardUI.EndTravel(apLifecycleVersion);
+                ArchipelagoRewardUI.EndTravel();
             }
         }
     }

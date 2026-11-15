@@ -54,7 +54,6 @@ public static class ApMirroredRewardDispatcher
     /// <summary>Opens the local player's current AP receipt catalog as a native reward screen.</summary>
     public static async Task<bool> OpenMenu()
     {
-        int apLifecycleVersion = ArchipelagoRewardUI.ApLifecycleVersion;
         Player? player = GameUtility.CurrentPlayer;
         if (player?.RunState is not RunState runState)
             return false;
@@ -88,8 +87,7 @@ public static class ApMirroredRewardDispatcher
             IReadOnlySet<int>? approvedRelics = multiplayer
                 ? await ApQueuedRelicClaims.PrepareMenu(player)
                 : null;
-            if (apLifecycleVersion != ArchipelagoRewardUI.ApLifecycleVersion
-                || (multiplayer && !ArchipelagoRewardUI.CanBuildMenuAfterAwait(apLifecycleVersion)))
+            if (multiplayer && !ArchipelagoRewardUI.CanBuildMenuAfterAwait())
                 return false;
             spec = BuildOwnerMenuSpec(player, runState, approvedRelics, queuedClaims: multiplayer);
             rewards = DecodeRewards(spec);
