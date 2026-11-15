@@ -41,7 +41,7 @@ Item Pool owns Bonus Items, the Filler Items table, and Traps, which all share t
 
 Boons owns the options that make runs easier without changing logic: the `boons` set and the share of shops that are Blitz merchants. `Boon.ts` maps each canonical name to its display name, effect, table group and whether it works in multiplayer; `ModifierTable.vue`, shared with Run Modifiers, edits only the ordered list of selected names, and `compiler/applyBoonOptions.ts` rejects names the generated schema no longer accepts. Unlike Challenges, Boons need no opt-in.
 
-Progression includes Use New Logic and the shared Archipelago settings: progression balancing and accessibility. Progression balancing is an integral 0-99 value; the named Disabled, Normal, and Extreme buttons are presentation shortcuts for 0, 50, and 99 rather than separate compiler concepts.
+Progression holds the shared Archipelago settings: progression balancing and accessibility. Progression balancing is an integral 0-99 value; the named Disabled, Normal, and Extreme buttons are presentation shortcuts for 0, 50, and 99 rather than separate compiler concepts.
 
 Death Link hides received-effect controls until its controlling option is enabled. The wizard requires one received effect: Death Fragment, nonlethal Max HP damage, or Die. Selecting Die clears both nonlethal effects. Python exposes only `enable_death_fragments` and `death_link_damage_percent`, so `applyDeathLinkOptions.ts` maps disabled damage to 0 and Die to 100 while suppressing the mutually exclusive fragment setting. Do not reproduce that technical coupling in the Vue component.
 

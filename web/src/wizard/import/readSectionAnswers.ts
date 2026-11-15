@@ -546,13 +546,12 @@ export function readChallengeAnswers(
  * Reads Progression answers.
  *
  * @param options - Resolved option values.
- * @returns Logic version, progression balancing and accessibility answers.
+ * @returns Progression balancing and accessibility answers.
  */
 export function readProgressionAnswers(
   options: CompiledOptions,
 ): ProgressionAnswers {
   return {
-    useNewLogic: options[PROGRESSION_OPTION_KEYS.useNewLogic] as boolean,
     progressionBalancing: options[
       PROGRESSION_OPTION_KEYS.progressionBalancing
     ] as number,

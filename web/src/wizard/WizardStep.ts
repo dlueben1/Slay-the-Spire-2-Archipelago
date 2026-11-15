@@ -999,26 +999,9 @@ export const progressionSetupStep: WizardStep = {
   id: "progression",
   title: "Progression",
   description:
-    "Choose generation logic, progression balancing, and accessibility.",
+    "Choose progression balancing and accessibility.",
   sectionKey: "progression",
   questions: [
-    {
-      id: "use-new-logic",
-      control: {
-        kind: "checkbox",
-        field: "useNewLogic",
-        label: "Use New Logic",
-        description:
-          "Allow extra cards and relics to make up for missing progression items. Disable to use the previous logic.",
-      },
-      help: (answers) =>
-        answers.progression.useNewLogic &&
-        !answers.checks.types.includeFloorChecks &&
-        !answers.checks.types.goldSanity &&
-        !answers.checks.types.potionSanity
-          ? "Previous logic will still be used because Floor Checks, Gold Rewards, and Potion Drops are all disabled."
-          : "Previous logic is used automatically when Floor Checks, Gold Rewards, and Potion Drops are all disabled.",
-    },
     {
       id: "progression-balancing",
       title: "How strongly should Archipelago balance progression items?",

@@ -758,7 +758,6 @@ class SlayTheSpire2World(World):
             "required_game_features": self.required_game_features(),
         }
         slot_data.update(self.options.as_dict(
-            "use_new_logic",
             "lock_characters",
             "seeded",
             "run_modifiers",
@@ -855,12 +854,9 @@ class SlayTheSpire2World(World):
         return slot_data
 
     def _setup_ut(self, slot_data: dict[str, Any]) -> None:
-        self.options.use_new_logic.value = self.options.use_new_logic.from_any(slot_data.get("use_new_logic", True)).value
         # Reconstruct the generated mode; do not rerun fallback selection on tracker input.
         self.effective_logic = slot_data.get("effective_logic", "new")
-        self.logic_fallback_reason = (
-            FALLBACK_REASON if self.options.use_new_logic and self.effective_logic == "old" else None
-        )
+        self.logic_fallback_reason = FALLBACK_REASON if self.effective_logic == "old" else None
         self.options.lock_characters.value = slot_data['lock_characters']
         # Seeded Run changes Act 1 power checks.
         self.options.seeded.value = slot_data['seeded']

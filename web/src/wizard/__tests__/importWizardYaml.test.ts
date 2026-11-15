@@ -373,10 +373,9 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
     },
   ],
   [
-    "disabled progression balancing, minimal accessibility and old logic",
+    "disabled progression balancing and minimal accessibility",
     (answers) => {
       answers.progression = {
-        useNewLogic: !answers.progression.useNewLogic,
         progressionBalancing: 0,
         accessibility: "minimal",
       };

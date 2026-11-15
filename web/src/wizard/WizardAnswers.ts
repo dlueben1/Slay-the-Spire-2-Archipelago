@@ -249,7 +249,6 @@ export interface AncientAnswers {
 }
 
 export interface ProgressionAnswers {
-  useNewLogic: boolean;
   progressionBalancing: number;
   accessibility: AccessibilityMode;
 }
@@ -693,10 +692,6 @@ export function createDefaultWizardAnswers(
       ),
     },
     progression: {
-      useNewLogic: getBooleanDefault(
-        catalog,
-        PROGRESSION_OPTION_KEYS.useNewLogic,
-      ),
       progressionBalancing: getNumberDefault(
         catalog,
         PROGRESSION_OPTION_KEYS.progressionBalancing,

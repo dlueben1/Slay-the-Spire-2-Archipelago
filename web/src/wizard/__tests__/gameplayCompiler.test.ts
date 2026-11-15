@@ -108,7 +108,6 @@ function compilesConfiguredGameplaySections(): void {
     shuffleAllCards: true,
   };
   answers.progression = {
-    useNewLogic: true,
     progressionBalancing: 99,
     accessibility: "minimal",
   };

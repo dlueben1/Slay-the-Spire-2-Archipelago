@@ -5,13 +5,7 @@ import { createDefaultFillerAnswers } from "../FillerItem";
 import { selectGuidedOptions } from "../GuidedOption";
 import { TRAP_ITEM_DEFINITIONS, TRAP_WEIGHTS } from "../TrapItem";
 import { createDefaultWizardAnswers } from "../WizardAnswers";
-import {
-  itemPoolSetupStep,
-  getVisibleQuestionIds,
-  progressionSetupStep,
-  getQuestionById,
-  resolveQuestionHelp,
-} from "../WizardStep";
+import { itemPoolSetupStep, getVisibleQuestionIds } from "../WizardStep";
 import { compileWizardAnswers } from "../compiler/compileWizardAnswers";
 
 function defaults() {
@@ -22,27 +16,23 @@ function defaults() {
   );
 }
 
-it("exports every trap weight and both logic choices through the guided YAML", () => {
+it("exports every trap weight through the guided YAML", () => {
   const answers = defaults();
   answers.itemPool.traps.chance = 60;
   TRAP_ITEM_DEFINITIONS.forEach((item, index) => {
     answers.itemPool.traps.weights[item.id] = TRAP_WEIGHTS[index % 4]!;
   });
-  for (const useNewLogic of [true, false]) {
-    answers.progression.useNewLogic = useNewLogic;
-    const guided = selectGuidedOptions(
-      compileWizardAnswers(answers, optionCatalog),
+  const guided = selectGuidedOptions(
+    compileWizardAnswers(answers, optionCatalog),
+  );
+  const yaml = buildWizardYaml("Alice", guided);
+  expect(yaml).toContain("  trap_chance: 60\n");
+  TRAP_ITEM_DEFINITIONS.forEach((item, index) => {
+    expect(guided[item.optionKey]).toBe(TRAP_WEIGHTS[index % 4]);
+    expect(yaml).toContain(
+      `  ${item.optionKey}: "${TRAP_WEIGHTS[index % 4]}"\n`,
     );
-    const yaml = buildWizardYaml("Alice", guided);
-    expect(yaml).toContain("  trap_chance: 60\n");
-    expect(yaml).toContain(`  use_new_logic: ${useNewLogic}\n`);
-    TRAP_ITEM_DEFINITIONS.forEach((item, index) => {
-      expect(guided[item.optionKey]).toBe(TRAP_WEIGHTS[index % 4]);
-      expect(yaml).toContain(
-        `  ${item.optionKey}: "${TRAP_WEIGHTS[index % 4]}"\n`,
-      );
-    });
-  }
+  });
 });
 
 it("allows disabled traps but rejects an enabled empty mix and invalid percentages", () => {
@@ -62,7 +52,7 @@ it("allows disabled traps but rejects an enabled empty mix and invalid percentag
   }
 });
 
-it("reveals trap weights when enabled and explains the automatic old-logic fallback", () => {
+it("reveals trap weights when enabled", () => {
   const answers = defaults();
   answers.itemPool.traps.chance = 0;
   expect(getVisibleQuestionIds(itemPoolSetupStep, answers)).not.toContain(
@@ -72,17 +62,4 @@ it("reveals trap weights when enabled and explains the automatic old-logic fallb
   expect(getVisibleQuestionIds(itemPoolSetupStep, answers)).toContain(
     "trap-weights",
   );
-  answers.progression.useNewLogic = true;
-  Object.assign(answers.checks.types, {
-    includeFloorChecks: false,
-    goldSanity: false,
-    potionSanity: false,
-  });
-  expect(
-    resolveQuestionHelp(
-      getQuestionById(progressionSetupStep, "use-new-logic"),
-      answers,
-    ),
-  ).toContain("Previous logic will still be used");
-  expect(compileWizardAnswers(answers, optionCatalog).use_new_logic).toBe(true);
 });

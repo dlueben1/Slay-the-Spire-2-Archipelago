@@ -72,7 +72,6 @@ export const ANCIENT_OPTION_KEYS = {
 
 /** Generated option keys owned by the Progression compiler. */
 export const PROGRESSION_OPTION_KEYS = {
-  useNewLogic: "use_new_logic",
   progressionBalancing: "progression_balancing",
   accessibility: "accessibility",
 } as const;

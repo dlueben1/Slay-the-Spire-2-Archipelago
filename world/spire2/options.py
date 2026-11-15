@@ -1,7 +1,7 @@
 import typing
 from dataclasses import dataclass
 
-from Options import OptionSet, OptionList, Range, Toggle, DefaultOnToggle, Visibility, Choice, TextChoice, OptionDict, \
+from Options import OptionSet, OptionList, Range, Toggle, Visibility, Choice, TextChoice, OptionDict, \
     PerGameCommonOptions, OptionGroup, DeathLink as ArchipelagoDeathLink
 
 from schema import Schema, Optional, And, Or
@@ -11,18 +11,6 @@ from .constants import NUM_CUSTOM, ASCENSIONS
 
 # Vanilla and predefined characters, plus every registered generic Custom Character block.
 MAX_ROSTER_SIZE = len(character_list) + len(PREDEFINED_CHARACTERS) + NUM_CUSTOM
-
-
-class UseNewLogic(DefaultOnToggle):
-    """Use the new logic. Disable to use the previous 1.1.X and below logic.
-    New logic allows more random item order—for example, Extra relics and cards can help supplement missing ancients or rests.
-    One example is that old logic required your progressive starter card+relic to beat your 1st elite but new logic
-    no longer requires this as 'Power' can be made up with extra cards/relics. Similar cases for ancients/smiths/rests.
-
-    Old logic is used automatically (regardless of this option) when floor, gold, and potion checks
-    are all disabled and this is the only world in the generation, to reduce failed generations.
-    """
-    display_name = "Use New Logic"
 
 
 class Characters(OptionSet):
@@ -1059,7 +1047,6 @@ class Spire2Options(PerGameCommonOptions):
     ascension_down: AscensionDown
 
     # Main game flow
-    use_new_logic: UseNewLogic
     ancient_relic_location: AncientRelicLocation
     ancient_relic_pool: AncientRelicPool
     relic_rewards_available_anytime: RelicRewardsAvailableAnytime

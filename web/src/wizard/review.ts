@@ -657,11 +657,7 @@ export function summarizeProgressionAnswers(
     answers.accessibility === "full"
       ? "All locations must remain reachable."
       : "Only goal-required locations must remain reachable.";
-
-  const logic = answers.useNewLogic
-    ? "New logic is enabled (falls back to previous logic if floor, gold, and potion checks are all disabled)."
-    : "Previous logic is enabled.";
-  return `${logic} ${progression} ${accessibility}`;
+  return `${progression} ${accessibility}`;
 }
 
 /**

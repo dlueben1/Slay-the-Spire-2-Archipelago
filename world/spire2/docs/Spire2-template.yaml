@@ -134,9 +134,6 @@ Slay the Spire II:
   # multiplayer, the host's chance applies. Beta branch only (normal shops on the main branch).
   blitz_merchant_chance: 0
 
-  # true uses the current "power"-based logic; false uses the older logic
-  use_new_logic: true
-
   # How hard the generator tries to move your progression items earlier. 0-99; 50 is normal.
   progression_balancing: 50
 

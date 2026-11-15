@@ -12,11 +12,11 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "bf17421e2a635d2fd366a987500fb08d7095d1574e233b8c45afe23f279c3575"
+      "sha256": "8a54ca5462db6546215748a8ce777e0feb5337a71ba153f1670bdc8b73c9d6c6"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "693bad2202670fb8085e6f33107b139f7f2af89693ef4c9070936531c91e149a"
+      "sha256": "e68443d6c12ef24dbc03c4525f5f658c8c649d3a0bc1e599476094ffced2401c"
     }
   },
   "characters": {
@@ -139,7 +139,6 @@
     "unlocked_character",
     "ascension",
     "ascension_down",
-    "use_new_logic",
     "ancient_relic_location",
     "ancient_relic_pool",
     "relic_rewards_available_anytime",
@@ -247,7 +246,6 @@
     {
       "name": "Game Options",
       "option_keys": [
-        "use_new_logic",
         "progression_balancing",
         "accessibility",
         "ancient_relic_location",
@@ -1061,42 +1059,6 @@
       "allow_custom_values": false,
       "supports_weighting": false,
       "group": "Character Options"
-    },
-    "use_new_logic": {
-      "key": "use_new_logic",
-      "class_name": "UseNewLogic",
-      "module": "worlds.spire2.options",
-      "kind": "toggle",
-      "display_name": "Use New Logic",
-      "description": "Use the new logic. Disable to use the previous 1.1.X and below logic.\nNew logic allows more random item order—for example, Extra relics and cards can help supplement missing ancients or rests.\nOne example is that old logic required your progressive starter card+relic to beat your 1st elite but new logic\nno longer requires this as 'Power' can be made up with extra cards/relics. Similar cases for ancients/smiths/rests.\n\nOld logic is used automatically (regardless of this option) when floor, gold, and potion checks\nare all disabled and this is the only world in the generation, to reduce failed generations.",
-      "default": true,
-      "raw_default": 1,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "false",
-          "display_name": "False",
-          "value": 0
-        },
-        {
-          "name": "true",
-          "display_name": "True",
-          "value": 1
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Game Options"
     },
     "ancient_relic_location": {
       "key": "ancient_relic_location",
