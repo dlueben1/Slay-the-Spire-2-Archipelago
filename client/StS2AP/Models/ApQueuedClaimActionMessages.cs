@@ -79,3 +79,17 @@ public sealed class ApAncientClaimActionMessage : ApQueuedClaimMessage
     public int ReceivedItemIndex { get; set; }
     public int OptionIndex { get; set; }
 }
+
+/// <summary>
+/// One queued card reward claim. Every peer generates or reloads the offer in the action and
+/// waits there for the owner's pick.
+/// </summary>
+public sealed class ApCardClaimActionMessage : ApQueuedClaimMessage
+{
+    public int ReceivedItemIndex { get; set; }
+    public bool IsRare { get; set; }
+    // The act whose upgrade odds a regular reward uses; null for a rare one or the current act.
+    public int? ActIndex { get; set; }
+    // The owner's Strict Card Rewards setting, which adds Discard to the picker on every peer.
+    public bool StrictCardRewards { get; set; }
+}

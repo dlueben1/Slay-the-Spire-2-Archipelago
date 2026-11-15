@@ -392,6 +392,17 @@ public static class ApMirroredRewardDispatcher
 
         switch (kind)
         {
+            case ApMirroredRewardKind.Card when queuedClaims:
+            {
+                // Only the recipe: the claim action generates the offer, or reloads the one it
+                // revealed, on every peer.
+                bool rare = receipt.Item.GetCharacterItemType() == ItemTable.APItem.RareCardReward;
+                spec.IsRareCardReward = rare;
+                spec.CardRewardActIndex = rare ? null : GameUtility.GetCardRewardActIndex(itemIndex, player);
+                spec.MaterializationStrategyId = ReplicatedCardStrategyId;
+                spec.QueuedClaimId = Guid.NewGuid();
+                break;
+            }
             case ApMirroredRewardKind.Card:
             {
                 bool rare = receipt.Item.GetCharacterItemType() == ItemTable.APItem.RareCardReward;
@@ -555,7 +566,7 @@ public static class ApMirroredRewardDispatcher
 
     private static Reward BuildNativeReward(MirroredReward spec, Guid? queuedClaimId, Player owner) =>
         spec.Match<Reward>(
-            card => BuildCardReward(spec.Origin, card, owner),
+            card => BuildCardReward(spec.Origin, card, owner, queuedClaimId),
             potion => new ApNativePotionReward(
                 LoadPotion(potion.Model, spec.Origin.ReceiptIdentity), owner, spec.Origin, potion.Model, queuedClaimId),
             relic => BuildStandardRelicReward(spec.Origin, relic, owner, queuedClaimId),
@@ -565,8 +576,16 @@ public static class ApMirroredRewardDispatcher
                 DeserializeRelic(relic), owner, spec.Origin, ApMirroredRewardKind.Bonus,
                 queuedClaimId, serializedBonusRelic: relic));
 
-    private static Reward BuildCardReward(RewardOrigin origin, CardRewardData card, Player player)
+    private static Reward BuildCardReward(RewardOrigin origin, CardRewardData card, Player player, Guid? queuedClaimId)
     {
+        // A queued card row is only a stub: its claim action holds the offer on every peer.
+        if (queuedClaimId != null)
+        {
+            ApNativeCardReward stub = RestoreCardReward(origin, card.Configuration, player, Array.Empty<CardModel>());
+            stub.QueuedClaimId = queuedClaimId;
+            return stub;
+        }
+
         if (!ReplicaCardAssignments.TryGetValue(
                 (player.NetId, origin.ReceivedItemIndex),
                 out ApNativeCardReward? reward))
@@ -778,6 +797,72 @@ public static class ApMirroredRewardDispatcher
             origin,
             configuration
         );
+
+    /// <summary>
+    /// Generates a queued card claim's offer with the receipt's AP RNG, as a first reveal does on
+    /// the replicated path. Runs on every peer inside the claim action.
+    /// </summary>
+    internal static Task<List<CardCreationResult>> GenerateQueuedCardOffer(
+        Player player,
+        int apSlotId,
+        int itemIndex,
+        bool rare,
+        int? actIndex) =>
+        GenerateCardChoices(QueuedCardSpec(player, apSlotId, itemIndex, rare, actIndex, revealed: false, canReroll: false),
+            player, strictChain: false);
+
+    /// <summary>
+    /// The card reward a queued card claim action picks from. It is not a menu row: it carries the
+    /// offer, the Discard rule under Strict Card Rewards, and native rerolls.
+    /// </summary>
+    internal static ApNativeCardReward CreateQueuedCardOffer(
+        Player player,
+        int apSlotId,
+        int itemIndex,
+        bool rare,
+        int? actIndex,
+        IReadOnlyList<CardCreationResult> cards,
+        bool canReroll,
+        bool hasBeenRerolled,
+        bool strictCardRewards)
+    {
+        ApMirroredRewardSpec spec = QueuedCardSpec(player, apSlotId, itemIndex, rare, actIndex, revealed: true, canReroll);
+        var reward = new ApNativeCardReward(
+            cards,
+            player,
+            CreateCardOptions(player, rare).WithFlags(CardCreationFlags.IsCardReward),
+            MirroredRewardAdapter.Origin(spec),
+            MirroredRewardAdapter.CardConfiguration(spec)
+        )
+        {
+            RequiresCommitment = strictCardRewards,
+        };
+        reward._hasBeenRerolled = hasBeenRerolled;
+        // A reroll regenerates through the native Populate, which a menu row only allows once open.
+        reward.AllowPopulate();
+        return reward;
+    }
+
+    private static ApMirroredRewardSpec QueuedCardSpec(
+        Player player,
+        int apSlotId,
+        int itemIndex,
+        bool rare,
+        int? actIndex,
+        bool revealed,
+        bool canReroll) =>
+        new()
+        {
+            ApSlotId = apSlotId,
+            ReceivedItemIndex = itemIndex,
+            OwnerNetId = player.NetId,
+            Kind = ApMirroredRewardKind.Card,
+            IsRareCardReward = rare,
+            CardRewardActIndex = rare ? null : actIndex,
+            CardHasBeenRevealed = revealed,
+            CardCanReroll = canReroll,
+            MaterializationStrategyId = ReplicatedCardStrategyId,
+        };
 
     internal static CardReward RestorePersistedCardAssignment(
         int itemIndex,
@@ -1010,7 +1095,7 @@ public static class ApMirroredRewardDispatcher
         }
     }
 
-    private static string SerializeCard(CardModel card) => Serialize(card.ToSerializable());
+    internal static string SerializeCard(CardModel card) => Serialize(card.ToSerializable());
 
     internal static string SerializeRelic(RelicModel relic) =>
         Serialize((relic.IsMutable ? relic : relic.ToMutable()).ToSerializable());
@@ -1209,6 +1294,17 @@ public static class ApMirroredRewardDispatcher
         internal bool HasBeenRevealed => _configuration.HasBeenRevealed;
         internal string MaterializationStrategyId => _configuration.Policy.StrategyId;
 
+        /// <summary>
+        /// Set when this row is a queued claim (<see cref="ApQueuedCardClaims"/>). The row is then a
+        /// stub without cards: its claim action generates or reloads the offer on every peer.
+        /// </summary>
+        internal Guid? QueuedClaimId { get; set; }
+
+        // A queued row's offer counts as revealed once its claim action recorded it.
+        private bool IsRevealed => QueuedClaimId != null
+            ? ApQueuedCardClaims.GetRevealedOffer(Player, _itemIndex) != null
+            : HasBeenRevealed;
+
         /// <summary>Set for each menu from its owner's Strict Card Rewards setting.</summary>
         internal bool RequiresCommitment { get; set; }
 
@@ -1277,12 +1373,14 @@ public static class ApMirroredRewardDispatcher
         // can always be reopened, so offers revealed before the setting was enabled cannot deadlock.
         internal bool IsLockedByAnotherReveal() =>
             RequiresCommitment
-            && !HasBeenRevealed
+            && !IsRevealed
             && LocalContext.IsMe(Player)
-            && ArchipelagoClient.Progress.CardAssignments
-                .Any(entry => entry.Key != _itemIndex
-                    && entry.Value is ApNativeCardReward { HasBeenRevealed: true } other
-                    && other.CanOfferDiscard);
+            && (QueuedClaimId != null
+                ? ApQueuedCardClaims.HasOtherDiscardableOffer(Player, _itemIndex)
+                : ArchipelagoClient.Progress.CardAssignments
+                    .Any(entry => entry.Key != _itemIndex
+                        && entry.Value is ApNativeCardReward { HasBeenRevealed: true } other
+                        && other.CanOfferDiscard));
 
         public bool HasOriginText => true;
         public bool UseAncientStyle => false;
@@ -1371,7 +1469,9 @@ public static class ApMirroredRewardDispatcher
         {
             try
             {
-                return await SelectAndCommit();
+                return QueuedClaimId is Guid claimId
+                    ? await SelectQueued(claimId)
+                    : await SelectAndCommit();
             }
             finally
             {
@@ -1380,6 +1480,12 @@ public static class ApMirroredRewardDispatcher
                     ArchipelagoRewardUI.RefreshCardRewardLocks();
             }
         }
+
+        // The claim action shows the picker and applies the pick on every peer; this row only
+        // takes its turn.
+        private async Task<bool> SelectQueued(Guid claimId) =>
+            (await ApQueuedCardClaims.SelectRow(
+                claimId, _itemIndex, IsRare, RewardActIndex, RequiresCommitment, Player)).Applied;
 
         private async Task<bool> SelectAndCommit()
         {

@@ -35,6 +35,9 @@ public sealed class ApPlayerRunState
     // replica, so they can refuse a repeated claim alike; Progress.UsedItems is the owner's
     // published view and changes whenever a delta arrives.
     public List<int> QueuedClaimedReceiptIndexes { get; set; } = new();
+    // Card offers revealed by queued card claims and not resolved yet, by receipt index. Written
+    // only by that action, on every replica, instead of the owner-published CardAssignments.
+    public Dictionary<int, ApQueuedCardOfferState> QueuedCardOffers { get; set; } = new();
     // The three serialized relics each Progressive Ancient receipt offers, drawn by the queued
     // relic assignment action on every replica. Kept after a claim: later draws exclude them.
     public Dictionary<int, List<string>> QueuedAncientChoices { get; set; } = new();

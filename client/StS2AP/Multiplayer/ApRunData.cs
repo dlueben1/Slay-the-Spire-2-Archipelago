@@ -141,6 +141,7 @@ public static class ApRunData
             CombatTrapLimit = existing?.CombatTrapLimit ?? new CombatEffectLimit(),
             QueuedGoldClaimCursor = existing?.QueuedGoldClaimCursor,
             QueuedClaimedReceiptIndexes = existing?.QueuedClaimedReceiptIndexes ?? new List<int>(),
+            QueuedCardOffers = existing?.QueuedCardOffers ?? new Dictionary<int, ApQueuedCardOfferState>(),
             QueuedAncientChoices = existing?.QueuedAncientChoices ?? new Dictionary<int, List<string>>(),
         };
         // SyncLobbyOnChange makes this a contribution to the authoritative host staging
@@ -255,6 +256,26 @@ public static class ApRunData
         int position = state.QueuedClaimedReceiptIndexes.BinarySearch(receivedItemIndex);
         if (position < 0)
             state.QueuedClaimedReceiptIndexes.Insert(~position, receivedItemIndex);
+        _players.Set(runState, netId, state);
+        return true;
+    }
+
+    /// <summary>
+    /// Records or clears a card offer revealed by a queued card claim. The claim action calls
+    /// this identically on every replica; owner progress deltas never touch it.
+    /// </summary>
+    internal static bool RecordQueuedCardOffer(
+        RunState runState,
+        ulong netId,
+        int receivedItemIndex,
+        ApQueuedCardOfferState? offer)
+    {
+        if (!_initialized || !_players.TryGet(runState, netId, out ApPlayerRunState state))
+            return false;
+        if (offer == null)
+            state.QueuedCardOffers.Remove(receivedItemIndex);
+        else
+            state.QueuedCardOffers[receivedItemIndex] = offer;
         _players.Set(runState, netId, state);
         return true;
     }

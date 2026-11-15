@@ -494,11 +494,13 @@ public static class ArchipelagoRewardUI
             return false;
         }
 
-        // Match the exact screen held by an AP card reward, not just an arbitrary top overlay.
+        // Match the exact screen held by an AP card reward, not just an arbitrary top overlay. A
+        // queued card claim's picker belongs to its action's reward, not to a menu row.
         foreach (CardReward reward in _set.Rewards.OfType<CardReward>())
             if (TrySkipCardRewardSelection(reward, picker))
                 return true;
-        return false;
+        return ApQueuedCardClaims.OwnerPickerReward is { } queued
+            && TrySkipCardRewardSelection(queued, picker);
     }
 
     private static bool TrySkipCardRewardSelection(CardReward reward, NCardRewardSelectionScreen picker)
