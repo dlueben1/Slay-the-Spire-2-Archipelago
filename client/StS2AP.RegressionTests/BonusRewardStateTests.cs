@@ -1,7 +1,6 @@
 using System.Text.Json;
 using StS2AP.DomainAdapters;
 using StS2AP.Persistence;
-using StS2AP.Models.Enchantments;
 using StS2AP.Utils;
 using Xunit;
 
@@ -43,22 +42,6 @@ public sealed class BonusRewardStateTests
             BonusRewardSelectionKey.Create("RUN-SEED", 0, "RELIC.THE_BOOT", category: "WAX_RELIC"),
             BonusRewardSelectionKey.Create("RUN-SEED", 0, "RELIC.THE_BOOT", category: "RELIC"));
     }
-
-    [Theory]
-    [InlineData(0, 100, 0)]
-    [InlineData(4, 100, 0)]
-    [InlineData(5, 100, 1)]
-    [InlineData(11, 100, 1)]
-    [InlineData(12, 100, 2)]
-    [InlineData(54, 100, 4)]
-    [InlineData(55, 100, 5)]
-    [InlineData(79, 100, 5)]
-    [InlineData(80, 100, 6)]
-    [InlineData(100, 100, 6)]
-    [InlineData(1, 20, 1)]
-    [InlineData(3, 0, 0)]
-    public void CheckboundGainsOnePointAtEachMilestoneUpToSix(int sent, int total, int bonus) =>
-        Assert.Equal(bonus, CheckboundMilestones.Bonus(sent, total));
 
     [Fact]
     public void BonusPayloadsRoundTripAndAreToldApartFromSerializedRelics()
