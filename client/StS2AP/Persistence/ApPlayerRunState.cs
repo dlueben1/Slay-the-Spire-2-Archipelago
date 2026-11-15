@@ -2,8 +2,9 @@ namespace StS2AP.Persistence;
 
 /// <summary>
 /// One player's run contribution, keyed by the MegaCrit Net ID retained across rejoin. Progress
-/// is the owner's canonical view; Construction is the current process's independently advancing
-/// reward-construction cursor and the fixed host's reconnect baseline.
+/// is the owner's own view, kept by the host as its checkpoint and read by no other peer;
+/// everything else past the lobby fields is action-owned: advanced identically on every replica,
+/// and what other peers read about this player.
 /// </summary>
 public sealed class ApPlayerRunState
 {

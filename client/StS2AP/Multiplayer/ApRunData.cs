@@ -14,9 +14,10 @@ namespace StS2AP.Multiplayer;
 
 /// <summary>
 /// Owns the AP data embedded in MegaCrit's canonical run snapshot. Lobby methods stage the
-/// launch contract; mid-run progress changes are published immediately after local AP mutations,
-/// confirmed and relayed by the host, and durable only when the fixed host writes the next native
-/// checkpoint. There are no
+/// launch contract. Mid-run, action-owned state (receipt ledger, queued claims, natural relic
+/// decisions, construction counters) changes identically on every replica; each owner's own AP
+/// progress goes to the host only, and is durable only when the fixed host writes the next
+/// native checkpoint. There are no
 /// Frozen/Validated booleans: launch readiness must be derived from the current contributions,
 /// and the committed run snapshot is the lifecycle boundary that makes the mapping immutable.
 /// </summary>
