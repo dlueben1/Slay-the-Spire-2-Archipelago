@@ -35,7 +35,11 @@ internal static class Patches_APRewardSelectionOrder
         var run = reward.Player.RunState;
         __result = ObserveSelection(Queues.GetValue(reward.Player, _ => new ApRewardSelectionQueue()).Run(() =>
         {
-            if (RunManager.Instance.DebugOnlyGetState() != run || MultiplayerSupport.ClaimsInvalidated)
+            // Every peer has already accepted this selection through MegaCrit's reward sync, so
+            // run it even when this peer's own claims are disabled. Refusing it here would leave
+            // this peer's choice and reward ids behind the others and fail the next checksum.
+            // Claims stay blocked where they start: the AP reward menu's CanClaim checks.
+            if (RunManager.Instance.DebugOnlyGetState() != run)
                 throw new OperationCanceledException("AP reward selection belongs to an inactive run.");
             Reward? previous = s_entering;
             s_entering = reward;
