@@ -140,12 +140,12 @@ bonus_item_table: Dict[str, BonusItemData] = {
 }
 
 # Enchantments that ENCHANTMENT and ENCHANTED_CARDS bonus items can give, by the tier a YAML `Pools`
-# entry names. Random rolls draw only from these tiers. The client has the same table with each
+# entry names. Eager, Exposing and Checkbound are the mod's own enchantments. Random rolls draw only from these tiers. The client has the same table with each
 # enchantment's amount (`BonusEnchantmentCatalog`), and the web builder has a copy for its picker.
 BONUS_ENCHANTMENT_TIERS: Dict[str, tuple] = {
     'Common': ('Sharp', 'Nimble', 'Adroit', 'Steady', 'Swift', 'Vigorous'),
-    'Uncommon': ('Inky', 'Momentum', 'RoyallyApproved', 'Goopy'),
-    'Rare': ('Sown', 'Glam', 'Imbued', 'SoulsPower', 'Instinct', 'Spiral'),
+    'Uncommon': ('Inky', 'Momentum', 'RoyallyApproved', 'Goopy', 'Eager', 'Exposing'),
+    'Rare': ('Sown', 'Glam', 'Imbued', 'SoulsPower', 'Instinct', 'Spiral', 'Checkbound'),
 }
 # Allowed only when a YAML entry names them as its `Value`: they have a drawback or need a rest site.
 BONUS_ENCHANTMENTS_BY_VALUE_ONLY = ('Corrupted', 'Slither', 'SlumberingEssence', 'PerfectFit', 'Clone')

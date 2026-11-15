@@ -72,3 +72,5 @@ class TestBonusEntryValidation(unittest.TestCase):
         validate_bonus_entry("ENCHANTMENT", {"Value": "ROYALLY_APPROVED"})
         validate_bonus_entry("ENCHANTED_CARDS", {"Pools": ["Uncommon"]})
         validate_bonus_entry("MAX_HP", {"Value": "6"})
+        for name in ("Checkbound", "Eager", "Exposing"):
+            validate_bonus_entry("ENCHANTMENT", {"Value": name})

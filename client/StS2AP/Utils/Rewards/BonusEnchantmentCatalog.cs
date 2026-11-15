@@ -1,5 +1,7 @@
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Enchantments;
+using StS2AP.Models.Enchantments;
+using StS2AP.Multiplayer;
 using StS2AP.Models;
 
 namespace StS2AP.Utils;
@@ -8,7 +10,9 @@ namespace StS2AP.Utils;
 /// <param name="Name">The YAML name, the enchantment's class name (for example RoyallyApproved).</param>
 /// <param name="Tier">The YAML pool that rolls it, or null when it may only be named as a Value.</param>
 /// <param name="Amount">The badge amount it is applied with.</param>
-internal sealed record BonusEnchantment(string Name, string? Tier, int Amount, Func<EnchantmentModel> Canonical);
+/// <param name="SingleplayerOnly">Not rolled in multiplayer, where it would do nothing.</param>
+internal sealed record BonusEnchantment(
+    string Name, string? Tier, int Amount, Func<EnchantmentModel> Canonical, bool SingleplayerOnly = false);
 
 /// <summary>
 /// The enchantments bonus items may give, with their tiers and amounts. The tiers match
@@ -35,12 +39,17 @@ internal static class BonusEnchantmentCatalog
         Entry<Momentum>(Uncommon, 2),
         Entry<RoyallyApproved>(Uncommon, 1),
         Entry<Goopy>(Uncommon, 1),
+        // The mod's own enchantments (Models/Custom/Enchantments).
+        Entry<ApEager>(Uncommon, 1, "Eager"),
+        Entry<ApExposing>(Uncommon, 1, "Exposing"),
         Entry<Sown>(Rare, 1),
         Entry<Glam>(Rare, 1),
         Entry<Imbued>(Rare, 1),
         Entry<SoulsPower>(Rare, 1),
         Entry<Instinct>(Rare, 1),
         Entry<Spiral>(Rare, 1),
+        // Its bonus needs the AP session, which multiplayer guests do not have.
+        Entry<ApCheckbound>(Rare, 1, "Checkbound", singleplayerOnly: true),
         // Allowed only by name: they come with a drawback, or need a rest site (Clone).
         Entry<Corrupted>(null, 1),
         Entry<Slither>(null, 1),
@@ -49,8 +58,9 @@ internal static class BonusEnchantmentCatalog
         Entry<Clone>(null, 4),
     ];
 
-    private static BonusEnchantment Entry<T>(string? tier, int amount) where T : EnchantmentModel =>
-        new(typeof(T).Name, tier, amount, ModelDb.Enchantment<T>);
+    private static BonusEnchantment Entry<T>(
+        string? tier, int amount, string? name = null, bool singleplayerOnly = false) where T : EnchantmentModel =>
+        new(name ?? typeof(T).Name, tier, amount, ModelDb.Enchantment<T>, singleplayerOnly);
 
     /// <summary>Matches 'RoyallyApproved', 'royally approved' and 'ROYALLY_APPROVED' alike.</summary>
     public static string Normalize(string name) =>
@@ -76,6 +86,7 @@ internal static class BonusEnchantmentCatalog
         return All
             .Where(entry => entry.Tier != null
                 && definition.Pools.Any(pool => string.Equals(pool, entry.Tier, StringComparison.OrdinalIgnoreCase)))
+            .Where(entry => !entry.SingleplayerOnly || !MultiplayerSupport.IsMultiplayerScope)
             .ToList();
     }
 }

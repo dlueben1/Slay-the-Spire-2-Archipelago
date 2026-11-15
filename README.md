@@ -74,6 +74,7 @@ Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetai
 - [lamali292](https://github.com/lamali292) for their initial guide on creating mods for Slay the Spire 2!
 - [alwaysintreble](https://github.com/alwaysintreble/ArchipelagoBepInExPluginTemplate/tree/master) for their example Archipelago C# Plugin Template
 - [Spire Codex](https://spire-codex.com) for providing an awesome public API that helps us stay up-to-date with Slay the Spire 2 data for our item pools
+- The Eager and Exposing enchantment icons are [Power lightning](https://game-icons.net/1x1/lorc/power-lightning.html) and [Broken shield](https://game-icons.net/1x1/lorc/broken-shield.html) by Lorc from [game-icons.net](https://game-icons.net), under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), recoloured
 - All of the wonderful contributors to the project!
 
   <a href="https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/graphs/contributors">

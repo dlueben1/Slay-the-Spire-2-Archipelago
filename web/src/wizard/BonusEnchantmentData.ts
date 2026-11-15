@@ -35,14 +35,24 @@ export interface BonusEnchantmentInfo {
   amount: number;
 }
 
+/** Text and icon for the mod's own enchantments, which Spire Codex does not list. */
+interface CustomEnchantment {
+  displayName: string;
+  description: string;
+  imageUrl: string;
+}
+
 /**
  * Every enchantment a bonus may give. Tezcatara's Ember is deliberately absent. Those
  * without a tier have a drawback or need a rest site, so only a named choice gives them.
+ * Entries with `custom` are the mod's own enchantments; their text matches the client's
+ * enchantments.json.
  */
 const BONUS_ENCHANTMENTS: readonly {
   name: string;
   tier: BonusEnchantmentTier | null;
   amount: number;
+  custom?: CustomEnchantment;
 }[] = [
   { name: "Sharp", tier: "Common", amount: 2 },
   { name: "Nimble", tier: "Common", amount: 3 },
@@ -54,12 +64,44 @@ const BONUS_ENCHANTMENTS: readonly {
   { name: "Momentum", tier: "Uncommon", amount: 2 },
   { name: "RoyallyApproved", tier: "Uncommon", amount: 1 },
   { name: "Goopy", tier: "Uncommon", amount: 1 },
+  {
+    name: "Eager",
+    tier: "Uncommon",
+    amount: 1,
+    custom: {
+      displayName: "Eager",
+      description:
+        "The first time you draw this card each combat, it costs 1 less until played.",
+      imageUrl: "/static/images/enchantments/ap_eager.png",
+    },
+  },
+  {
+    name: "Exposing",
+    tier: "Uncommon",
+    amount: 1,
+    custom: {
+      displayName: "Exposing",
+      description: "This card applies 1 Vulnerable. Attacks only.",
+      imageUrl: "/static/images/enchantments/ap_exposing.png",
+    },
+  },
   { name: "Sown", tier: "Rare", amount: 1 },
   { name: "Glam", tier: "Rare", amount: 1 },
   { name: "Imbued", tier: "Rare", amount: 1 },
   { name: "SoulsPower", tier: "Rare", amount: 1 },
   { name: "Instinct", tier: "Rare", amount: 1 },
   { name: "Spiral", tier: "Rare", amount: 1 },
+  {
+    name: "Checkbound",
+    tier: "Rare",
+    amount: 1,
+    custom: {
+      displayName: "Checkbound",
+      description:
+        "+1 damage and Block each time this character's checks sent pass 5%, 12%, 22%, 36%, 55% and 80% (up to +6). Singleplayer only.",
+      imageUrl: "/static/images/enchantments/ap_checkbound.png",
+    },
+  },
   { name: "Corrupted", tier: null, amount: 1 },
   { name: "Slither", tier: null, amount: 1 },
   { name: "SlumberingEssence", tier: null, amount: 1 },
@@ -101,6 +143,14 @@ const generatedByKey = new Map<string, GeneratedEnchantment>(
 
 const enchantments: readonly BonusEnchantmentInfo[] = BONUS_ENCHANTMENTS.map(
   (entry) => {
+    if (entry.custom) {
+      return {
+        name: entry.name,
+        ...entry.custom,
+        tier: entry.tier,
+        amount: entry.amount,
+      };
+    }
     const generated = generatedByKey.get(normalizeEnchantmentName(entry.name));
     if (!generated) {
       throw new Error(
