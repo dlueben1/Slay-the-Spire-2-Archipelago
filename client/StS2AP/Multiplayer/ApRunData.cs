@@ -147,6 +147,7 @@ public static class ApRunData
             ReceiptLedger = existing?.ReceiptLedger ?? new List<ApLedgerReceipt>(),
             RelicRewardsAvailableAnytime = existing?.RelicRewardsAvailableAnytime,
             CheckedCampfireLocationIds = existing?.CheckedCampfireLocationIds ?? new HashSet<long>(),
+            RelicRewardsAttempted = existing?.RelicRewardsAttempted,
         };
         // SyncLobbyOnChange makes this a contribution to the authoritative host staging
         // session. On a client RitsuLib pushes the local PlayerRunSavedData payload with a
@@ -351,6 +352,18 @@ public static class ApRunData
         return added;
     }
 
+    /// <summary>
+    /// Raises a player's natural relic reward count. Natural relic decisions call this
+    /// identically on every replica (RelicReceiptMultiplayer).
+    /// </summary>
+    internal static void RecordRelicRewardsAttempted(RunState runState, ulong netId, int attempted)
+    {
+        if (!_initialized || !_players.TryGet(runState, netId, out ApPlayerRunState state))
+            return;
+        state.RelicRewardsAttempted = Math.Max(state.RelicRewardsAttempted ?? 0, attempted);
+        _players.Set(runState, netId, state);
+    }
+
     private static readonly IComparer<ApLedgerReceipt> LedgerOrder =
         Comparer<ApLedgerReceipt>.Create((left, right) => left.Index.CompareTo(right.Index));
 
@@ -507,7 +520,6 @@ public static class ApRunData
             return false;
 
         EnsureConstructionInitialized(state, state.Progress);
-        RelicReceiptMultiplayer.ReconcileProgress(runState, player, state.Progress);
         ArchipelagoClient.Progress = ArchipelagoProgress.FromRunProgressState(state.Progress, player);
         _lastPublishedLocalProgress = ArchipelagoClient.Progress.ToRunProgressState();
         return true;
@@ -596,7 +608,6 @@ public static class ApRunData
         _players.Set(runState, player.NetId, state);
         _localProgressRevision = revision;
         _lastPublishedLocalProgress = snapshot;
-        StandardRelicPool.ReserveAssignedChoices(player, snapshot);
         if (RunManager.Instance.NetService.Type == NetGameType.Host)
         {
             if (!BroadcastHostConfirmedProgress(snapshotMessage, deltaMessage))
@@ -620,13 +631,6 @@ public static class ApRunData
         Player? localPlayer = runState?.GetPlayer(RunManager.Instance.NetService.NetId);
         if (localPlayer != null)
             PublishLocalProgress(localPlayer);
-        if (runState != null)
-            foreach (Player player in runState.Players)
-                if (_players.TryGet(runState, player.NetId, out ApPlayerRunState state) && state.Progress.Initialized)
-                {
-                    RelicReceiptMultiplayer.ReconcileProgress(runState, player, state.Progress);
-                    _players.Set(runState, player.NetId, state);
-                }
     }
 
     /// <summary>
@@ -661,23 +665,12 @@ public static class ApRunData
             }
 
             if (context.Message.Revision <= state.ProgressRevision)
-            {
-                if (!isHost && context.Message.Revision == state.ProgressRevision)
-                {
-                    if (runState.GetPlayer(context.Message.OwnerNetId) is Player existingOwner)
-                        StandardRelicPool.ReserveAssignedChoices(existingOwner, state.Progress);
-                }
                 return;
-            }
 
             EnsureConstructionInitialized(state, context.Message.Progress);
             state.Progress = context.Message.Progress;
-            if (runState.GetPlayer(context.Message.OwnerNetId) is Player snapshotOwner)
-                RelicReceiptMultiplayer.ReconcileProgress(runState, snapshotOwner, state.Progress);
             state.ProgressRevision = context.Message.Revision;
             _players.Set(runState, context.Message.OwnerNetId, state);
-            if (runState.GetPlayer(context.Message.OwnerNetId) is Player confirmedOwner)
-                StandardRelicPool.ReserveAssignedChoices(confirmedOwner, state.Progress);
             if (isHost)
             {
                 if (!BroadcastHostConfirmedProgress(context.Message, deltaMessage: null))
@@ -719,15 +712,9 @@ public static class ApRunData
                 return;
             }
             if (context.Message.Revision <= state.ProgressRevision)
-            {
-                if (!isHost && context.Message.Revision == state.ProgressRevision)
-                {
-                    if (runState.GetPlayer(context.Message.OwnerNetId) is Player existingOwner)
-                        StandardRelicPool.ReserveAssignedChoices(existingOwner, state.Progress);
-                }
                 return;
-            }
-            
+
+
             // only can do 1 base revision difference, maybe we could repair a missing baseline 
             // i.e. support differences of more than 1 revision in the future?
             if (!state.Progress.Initialized
@@ -747,12 +734,8 @@ public static class ApRunData
             EnsureConstructionInitialized(state, state.Progress);
             ApRunProgressState updatedProgress = context.Message.Delta.ApplyToCopy(state.Progress);
             state.Progress = updatedProgress;
-            if (runState.GetPlayer(context.Message.OwnerNetId) is Player deltaOwner)
-                RelicReceiptMultiplayer.ReconcileProgress(runState, deltaOwner, state.Progress);
             state.ProgressRevision = context.Message.Revision;
             _players.Set(runState, context.Message.OwnerNetId, state);
-            if (runState.GetPlayer(context.Message.OwnerNetId) is Player confirmedOwner)
-                StandardRelicPool.ReserveAssignedChoices(confirmedOwner, state.Progress);
             if (isHost)
             {
                 if (!BroadcastHostConfirmedProgress(

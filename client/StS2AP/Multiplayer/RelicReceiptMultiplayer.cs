@@ -1,136 +1,36 @@
-using System.Text.Json;
+using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Hooks;
-using MegaCrit.Sts2.Core.Multiplayer.Game;
+using MegaCrit.Sts2.Core.Models.Relics;
+using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Utils;
-using STS2RitsuLib.Networking.Sidecar;
+using StS2AP.Utils.RunGraph;
+using static StS2AP.Data.ItemTable;
 
 namespace StS2AP.Multiplayer;
 
 /// <summary>
-/// Arbitrates chest receipt assignments before native treasure construction. AP-menu relics are
-/// assigned by a queued action instead (ApQueuedRelicClaims). These messages do not enter the
-/// native action queue: room entry may already be executing there.
+/// Pairs multiplayer AP Relic receipts with natural relic rewards (chests, Elites, Black Star) on
+/// every peer, from action-owned state alone: the receipt ledger, each player's natural relic
+/// count (<see cref="ApPlayerRunState.RelicRewardsAttempted"/>) and the reservations in
+/// <see cref="ApRelicReceiptState"/>. Each step happens where the host's action order fixes it, so
+/// every peer reaches the same result without a message:
+/// <list type="bullet">
+/// <item>a chest is decided at room entry, inside the move action;</item>
+/// <item>an Elite's waiting receipts are reserved as its combat ends, between actions; its
+/// rewards screen, built whenever each peer's UI gets there, takes them in order; the next map
+/// move settles what it took.</item>
+/// </list>
+/// AP-menu relics are assigned by the queued relic assignment action (ApQueuedRelicClaims), which
+/// spends the banks counted here.
 /// </summary>
 public static class RelicReceiptMultiplayer
 {
-    // A client's request for a chest decision it has not received.
-    private sealed class Request
-    {
-        public Request() { }
-        public Guid RunId { get; set; }
-        public ulong OwnerNetId { get; set; }
-        public string? RoomKey { get; set; }
-    }
-
-    private sealed class Reply
-    {
-        public Reply() { }
-        public Guid RunId { get; set; }
-        public ApRelicReceiptState.ChestDecision? Chest { get; set; }
-    }
-
-    private static readonly RitsuLibSidecarJsonSerializer<Request> RequestSerializer = new();
-    private static readonly RitsuLibSidecarJsonSerializer<Reply> ReplySerializer = new();
-    private static readonly RitsuLibSidecarMessageDescriptor<Request> RequestDescriptor = new(
-        ModEntry.ModId, "relic_receipt_request", RequestSerializer.Serialize,
-        RequestSerializer.Deserialize, Required: true);
-    private static readonly RitsuLibSidecarMessageDescriptor<Reply> ReplyDescriptor = new(
-        ModEntry.ModId, "relic_receipt_decision", ReplySerializer.Serialize,
-        ReplySerializer.Deserialize, Required: true);
-    // The same messages as native AP messages (ApNetMessages prototype). Handlers already
-    // run on the main thread, so they skip Post's main-loop hop.
-    private static readonly ApNetMessageDescriptor<Request> NativeRequest = new(
-        "relic_receipt_request", Json, FromJson<Request>,
-        context => Dispatch(() => HandleRequest(context.SenderNetId, context.Message)));
-    private static readonly ApNetMessageDescriptor<Reply> NativeReply = new(
-        "relic_receipt_decision", Json, FromJson<Reply>,
-        context => Dispatch(() =>
-        {
-            if (IsFromHost(context.SenderNetId))
-                ApplyReply(context.Message);
-        }));
-    private static readonly Dictionary<string, TaskCompletionSource> PendingChests = new();
-    private static readonly HashSet<string> ReadyPickers = new();
-    private static readonly HashSet<(string, ulong)> OpenedChests = new();
-    private static IDisposable? _requestSubscription;
-    private static IDisposable? _replySubscription;
-    private static int _runGeneration;
-
-    public static void Initialize()
-    {
-        ApNetMessages.Register(NativeRequest);
-        ApNetMessages.Register(NativeReply);
-        _requestSubscription ??= RitsuLibSidecarTypedMessageRegistry.Subscribe(
-            RequestDescriptor, context => Post(() => HandleRequest(context.SenderNetId, context.Message)));
-        _replySubscription ??= RitsuLibSidecarTypedMessageRegistry.Subscribe(
-            ReplyDescriptor, context => Post(() =>
-            {
-                if (MultiplayerSupport.TryGetHostNetId(RunManager.Instance.NetService, out ulong host)
-                    && context.SenderNetId == host)
-                    ApplyReply(context.Message);
-            }));
-    }
-
-    public static void EndRun()
-    {
-        Interlocked.Increment(ref _runGeneration);
-        foreach (var pending in PendingChests.Values) pending.TrySetCanceled();
-        PendingChests.Clear();
-        ReadyPickers.Clear();
-        OpenedChests.Clear();
-    }
-
-    private static void Post(Action action)
-    {
-        int generation = Volatile.Read(ref _runGeneration);
-        if (!RitsuLibSidecarGodotMainLoopScheduling.TryPostToMainLoop(() =>
-        {
-            if (generation != Volatile.Read(ref _runGeneration)) return;
-            try { action(); }
-            catch (Exception ex) { Fail(ex); }
-        }))
-            LogUtility.Error("Could not dispatch a relic receipt decision on the Godot main loop.");
-    }
-
-    private static void Dispatch(Action action)
-    {
-        try { action(); }
-        catch (Exception ex) { Fail(ex); }
-    }
-
-    private static bool IsFromHost(ulong sender) =>
-        MultiplayerSupport.TryGetHostNetId(RunManager.Instance.NetService, out ulong host) && sender == host;
-
-    private static byte[] Json<T>(T message) => JsonSerializer.SerializeToUtf8Bytes(message);
-
-    private static T FromJson<T>(ReadOnlySpan<byte> payload) where T : new() =>
-        JsonSerializer.Deserialize<T>(payload) ?? new T();
-
-    // Each send goes natively or through Sidecar by this process's switch; peers receive both.
-    private static bool SendToHost(Request request) => ApNetMessages.UseNative
-        ? ApNetMessages.SendToHost(NativeRequest, request)
-        : RitsuLibSidecarTypedMessageRegistry.SendToHost(RunManager.Instance.NetService, RequestDescriptor, request);
-
-    private static bool SendToPeer(ulong peer, Reply reply) => ApNetMessages.UseNative
-        ? ApNetMessages.SendToPeer(NativeReply, peer, reply)
-        : RitsuLibSidecarTypedMessageRegistry.SendToPeer(RunManager.Instance.NetService, peer, ReplyDescriptor, reply);
-
-    private static bool Broadcast(Reply reply) => ApNetMessages.UseNative
-        ? ApNetMessages.Broadcast(NativeReply, reply)
-        : RitsuLibSidecarTypedMessageRegistry.Broadcast(RunManager.Instance.NetService, ReplyDescriptor, reply);
-
-    private static void Fail(Exception ex)
-    {
-        LogUtility.Error($"AP relic receipt agreement failed: {ex}");
-        MultiplayerSupport.InvalidateRunClaims("Relic receipt agreement failed; reload the campaign.");
-    }
+    private const int MaxRelicRewards = ArchipelagoProgress._maxRelicRewards;
 
     public static string RoomKey(RunState run) => $"chest:{run.CurrentActIndex}:{run.CurrentMapCoord}";
-    private static string WaitKey(Guid runId, string roomKey) => $"{runId}:{roomKey}";
-    private static string WaitKey(RunState run) =>
-        WaitKey(ApRunData.GetSharedState(run).RunId, RoomKey(run));
+    private static string EliteKey(RunState run) => $"elite:{run.CurrentActIndex}:{run.CurrentMapCoord}";
     public static ApRelicReceiptState State(RunState run) => ApRunData.GetSharedState(run).RelicReceipts;
 
     public static bool IsReserved(Player player, int index) =>
@@ -141,124 +41,297 @@ public static class RelicReceiptMultiplayer
         !MultiplayerSupport.IsRealMultiplayerRun || player.RunState is RunState run
         && State(run).CanUseMenu(player.NetId, index);
 
-    public static async Task FreezeChest(RunState run)
+    // Reads of action-owned state, alike on every peer at an ordered point.
+
+    private static bool TryGetApPlayer(Player player, out RunState run, out ApPlayerRunState state)
+    {
+        run = null!;
+        state = null!;
+        if (player.RunState is not RunState playerRun || !ApReceiptLedger.TryGetState(player, out state))
+            return false;
+        run = playerRun;
+        return true;
+    }
+
+    private static int GetAttempted(ApPlayerRunState state) => state.RelicRewardsAttempted ?? 0;
+
+    private static int GetAnytime(ApPlayerRunState state) =>
+        Math.Clamp(state.RelicRewardsAvailableAnytime ?? 0, 0, MaxRelicRewards);
+
+    // The player's Relic receipts for their run's character, in AP order.
+    private static List<int> GetRelicReceipts(Player player, ApPlayerRunState state) =>
+        ApReceiptLedger.CharacterReceipts(player, state, APItem.Relic).Select(receipt => receipt.Index).ToList();
+
+    /// <summary>Whether this receipt is among the run's first anytime relics, which need no bank.</summary>
+    internal static bool IsAnytimeReceipt(Player player, ApPlayerRunState state, int index) =>
+        GetRelicReceipts(player, state).Take(GetAnytime(state)).Contains(index);
+
+    /// <summary>Whether the ledger holds this receipt as a Relic for the player's character.</summary>
+    internal static bool IsRelicReceipt(Player player, ApPlayerRunState state, int index) =>
+        ApReceiptLedger.HasReceipt(player, state, index, APItem.Relic);
+
+    /// <summary>Relic receipts past the anytime relics that nothing has taken yet, in AP order.</summary>
+    private static IEnumerable<int> GetWaitingReceipts(RunState run, Player player, ApPlayerRunState state)
+    {
+        ApRelicReceiptState receipts = State(run);
+        return GetRelicReceipts(player, state)
+            .Skip(GetAnytime(state))
+            .Where(index => receipts.Find(player.NetId, index) == null
+                && state.QueuedClaimedReceiptIndexes.BinarySearch(index) < 0);
+    }
+
+    internal static int GetAvailableBanks(RunState run, Player player, ApPlayerRunState state) =>
+        State(run).AvailableBanks(player.NetId, GetAttempted(state), MaxRelicRewards);
+
+    /// <summary>
+    /// The Relic receipts the owner's AP menu can offer: anytime relics and receipts with a menu
+    /// assignment, not yet claimed, and waiting receipts up to the player's banked natural relic
+    /// rewards. The relic assignment action checks the same rules on every peer.
+    /// </summary>
+    internal static IReadOnlyList<int> GetMenuCandidates(Player player)
+    {
+        if (!TryGetApPlayer(player, out RunState run, out ApPlayerRunState state))
+            return Array.Empty<int>();
+        ApRelicReceiptState receipts = State(run);
+        List<int> relics = GetRelicReceipts(player, state);
+        bool Unclaimed(int index) =>
+            state.QueuedClaimedReceiptIndexes.BinarySearch(index) < 0
+            && receipts.Find(player.NetId, index) is null or { Destination: ApRelicReceiptState.MenuDestination, Consumed: false };
+        IEnumerable<int> anytime = relics.Take(GetAnytime(state));
+        IEnumerable<int> assigned = relics.Where(index => receipts.CanUseMenu(player.NetId, index));
+        IEnumerable<int> waiting = GetWaitingReceipts(run, player, state)
+            .Take(Math.Max(0, GetAvailableBanks(run, player, state)));
+        return anytime.Concat(assigned).Concat(waiting).Where(Unclaimed).Distinct().Order().ToList();
+    }
+
+    /// <summary>
+    /// Every peer, at a run's launch: saves from before natural relic counts were action-owned
+    /// start from the count the host saved in the player's progress.
+    /// </summary>
+    public static void BindRun(RunState run)
+    {
+        foreach (Player player in run.Players)
+        {
+            if (ApReceiptLedger.TryGetState(player, out ApPlayerRunState state) && state.RelicRewardsAttempted == null)
+                ApRunData.RecordRelicRewardsAttempted(run, player.NetId, state.Progress.RelicRewardsAttempted);
+        }
+    }
+
+    /// <summary>
+    /// Every peer, at treasure room entry inside the move action: decides each player's chest. A
+    /// gated chest (one of the player's first ten natural relic rewards) keeps its native relic
+    /// only for a waiting receipt, which it takes right here; the chest counts as a natural relic
+    /// reward whether or not it is opened, since the room cannot be left unopened.
+    /// </summary>
+    public static void DecideChest(RunState run)
     {
         string roomKey = RoomKey(run);
-        string waitKey = WaitKey(run);
-        if (RunManager.Instance.NetService.Type == NetGameType.Host)
+        if (State(run).Chests.ContainsKey(roomKey))
         {
-            if (!State(run).Chests.TryGetValue(roomKey, out var decision))
+            // Loading a save made in this room: its decision already counted.
+            LogUtility.Info($"Treasure AP decision reused: room={roomKey}.");
+            return;
+        }
+
+        var decision = new ApRelicReceiptState.ChestDecision { RoomKey = roomKey };
+        foreach (Player player in run.Players)
+        {
+            bool apPlayer = TryGetApPlayer(player, out _, out ApPlayerRunState state);
+            int number = (apPlayer ? GetAttempted(state) : 0) + 1;
+            bool generates = Hook.ShouldGenerateTreasure(run, player);
+            bool gated = generates && apPlayer
+                && MultiplayerLocationChecks.TryGetCheckSettings(player, out _)
+                && number <= MaxRelicRewards;
+            decision.Candidates.Add(new ApRelicReceiptState.Candidate
             {
-                decision = new() { RoomKey = roomKey };
-                foreach (Player player in run.Players)
-                {
-                    int number = MultiplayerLocationChecks.GetRelicRewardsAttempted(player) + 1;
-                    bool generates = Hook.ShouldGenerateTreasure(run, player);
-                    bool gated = generates && MultiplayerLocationChecks.TryGetCheckSettings(player, out _)
-                        && number <= ArchipelagoProgress._maxRelicRewards;
-                    decision.Candidates.Add(new()
-                    {
-                        PlayerNetId = player.NetId, GeneratesRelic = generates, ApGated = gated,
-                        RewardNumber = number,
-                        ReceiptIndex = gated ? RelicRewardUtility.FindWaitingReceiptIndexForNaturalReward(player) : null,
-                    });
-                }
-                ApRunData.ModifyRelicReceipts(run, state => state.AddChest(decision));
-                LogUtility.Info($"Treasure AP decision frozen: room={roomKey}, " + string.Join(", ",
-                    decision.Candidates.Select(c => $"player={c.PlayerNetId}/keep={c.Keep}/receipt={c.ReceiptIndex}")));
+                PlayerNetId = player.NetId, GeneratesRelic = generates, ApGated = gated, RewardNumber = number,
+                ReceiptIndex = gated ? GetWaitingReceipts(run, player, state).Select(index => (int?)index).FirstOrDefault() : null,
+            });
+            if (generates && apPlayer)
+                ApRunData.RecordRelicRewardsAttempted(run, player.NetId, number);
+        }
+
+        ApRunData.ModifyRelicReceipts(run, receipts =>
+        {
+            receipts.Chests[roomKey] = decision;
+            foreach (ApRelicReceiptState.Candidate candidate in decision.Candidates)
+            {
+                if (candidate.ReceiptIndex is not int index)
+                    continue;
+                receipts.TryReserve(candidate.PlayerNetId, index, roomKey, candidate.RewardNumber);
+                receipts.Consume(candidate.PlayerNetId, index, roomKey);
             }
-            // Publish the immutable receipt mask before the host enters native candidate generation.
-            // Every replica can then run MegaCrit's picker independently with the same RNG/bag state.
-            Publish(new Reply { RunId = ApRunData.GetSharedState(run).RunId, Chest = decision });
-            return;
-        }
-
-        // An early broadcast can arrive before local room entry. Otherwise ask for the same
-        // immutable decision; a host still entering the room publishes it before native generation.
-        if (State(run).Chests.ContainsKey(roomKey)) return;
-        var pending = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        PendingChests.Add(waitKey, pending);
-        try
+        });
+        foreach (ApRelicReceiptState.Candidate candidate in decision.Candidates)
         {
-            // The host's room-entry broadcast is the normal path. Ask directly only when that
-            // broadcast has not arrived promptly, covering late subscription/reconnect timing
-            // without adding a request/response trip to an ordinary chest entry.
-            if (await Task.WhenAny(pending.Task, Task.Delay(TimeSpan.FromSeconds(1))) != pending.Task
-                && !pending.Task.IsCompleted
-                && !SendToHost(new Request
-                    {
-                        RunId = ApRunData.GetSharedState(run).RunId,
-                        OwnerNetId = RunManager.Instance.NetService.NetId, RoomKey = roomKey,
-                    }))
-                throw new InvalidOperationException("Could not request the host chest decision.");
-            await pending.Task.WaitAsync(TimeSpan.FromSeconds(29));
+            if (candidate.ReceiptIndex is int index)
+                ApRunData.RecordQueuedReceiptClaim(run, candidate.PlayerNetId, index);
         }
-        catch (Exception ex)
-        {
-            if (MultiplayerSupport.IsRealMultiplayerRun && RunManager.Instance.DebugOnlyGetState() == run)
-                Fail(ex);
-            throw;
-        }
-        finally { PendingChests.Remove(waitKey); }
-    }
 
-    private static void HandleRequest(ulong sender, Request request)
-    {
-        if (RunManager.Instance.NetService.Type != NetGameType.Host
-            || sender != request.OwnerNetId || !TryRun(request.RunId, out var run)
-            || run.GetPlayer(sender) == null)
-            return;
-        if (request.RoomKey != null
-            && State(run).Chests.TryGetValue(request.RoomKey, out var chest)
-            && !SendToPeer(sender, new Reply { RunId = request.RunId, Chest = chest }))
-            throw new InvalidOperationException("Could not send the frozen chest decision to its requester.");
-    }
-
-    private static void Publish(Reply reply)
-    {
-        if (!Broadcast(reply))
-            throw new InvalidOperationException("Could not publish the host relic receipt decision.");
-        ApplyReply(reply);
-    }
-
-    private static void ApplyReply(Reply reply)
-    {
-        if (reply.Chest == null || !TryRun(reply.RunId, out var run)) return;
-        ApRunData.ModifyRelicReceipts(run, state => state.AddChest(reply.Chest));
-        if (PendingChests.TryGetValue($"{reply.RunId}:{reply.Chest.RoomKey}", out var chestPending))
-            chestPending.TrySetResult();
-    }
-
-    private static bool TryRun(Guid id, out RunState run)
-    {
-        run = RunManager.Instance.DebugOnlyGetState()!;
-        return run != null && MultiplayerSupport.IsRealMultiplayerRun
-            && ApRunData.TryGetSharedState(run, out var shared) && shared.RunId == id;
+        LogUtility.Info($"Treasure AP decision: room={roomKey}, " + string.Join(", ", decision.Candidates.Select(c =>
+            $"player={c.PlayerNetId}/reward={c.RewardNumber}/keep={c.Keep}/receipt={c.ReceiptIndex?.ToString() ?? "none"}")));
+        MirrorOwner(run);
     }
 
     public static ApRelicReceiptState.ChestDecision GetChest(RunState run) =>
         State(run).Chests.TryGetValue(RoomKey(run), out var decision) ? decision
-            : throw new InvalidOperationException("Native chest picker started without the host decision.");
+            : throw new InvalidOperationException("Native chest picker started without an AP chest decision.");
 
-    public static void MarkPickerReady(RunState run) => ReadyPickers.Add(WaitKey(run));
-    public static bool IsPickerReady(RunState run) => ReadyPickers.Contains(WaitKey(run));
-    public static bool MarkChestOpened(RunState run, ulong player)
+    /// <summary>
+    /// Every peer, as an Elite combat ends (between actions): reserves each player's waiting
+    /// receipts for the relic rewards the rewards screen will build, one per reward (two with
+    /// Black Star) and none past the player's tenth natural relic reward.
+    /// </summary>
+    public static void ReserveEliteReceipts(RunState run, CombatRoom room)
     {
-        if (!OpenedChests.Add((WaitKey(run), player))) return false;
-        ApRunData.ModifyRelicReceipts(run, state => state.Chests[RoomKey(run)].SettledPlayers.Add(player));
-        return true;
+        string key = EliteKey(run);
+        if (room.RoomType != RoomType.Elite || State(run).Elites.ContainsKey(key))
+            return;
+
+        var decision = new ApRelicReceiptState.EliteDecision { RoomKey = key };
+        foreach (Player player in run.Players)
+        {
+            if (!TryGetApPlayer(player, out _, out ApPlayerRunState state)
+                || !MultiplayerLocationChecks.TryGetCheckSettings(player, out _))
+            {
+                continue;
+            }
+            int attempted = GetAttempted(state);
+            int rewards = player.Relics.OfType<BlackStar>().Any() ? 2 : 1;
+            decision.Players.Add(new ApRelicReceiptState.EliteSources
+            {
+                PlayerNetId = player.NetId,
+                BaseAttempted = attempted,
+                Reserved = GetWaitingReceipts(run, player, state)
+                    .Take(Math.Max(0, Math.Min(rewards, MaxRelicRewards - attempted)))
+                    .ToList(),
+            });
+        }
+
+        ApRunData.ModifyRelicReceipts(run, receipts =>
+        {
+            receipts.Elites[key] = decision;
+            foreach (ApRelicReceiptState.EliteSources sources in decision.Players)
+            {
+                for (int i = 0; i < sources.Reserved.Count; i++)
+                    receipts.TryReserve(sources.PlayerNetId, sources.Reserved[i], key, sources.BaseAttempted + i + 1);
+            }
+        });
+        LogUtility.Info($"Elite AP relic receipts reserved: room={key}, " + string.Join(", ", decision.Players.Select(p =>
+            $"player={p.PlayerNetId}/attempted={p.BaseAttempted}/reserved=[{string.Join(",", p.Reserved)}]")));
     }
 
-    public static void ReconcileProgress(RunState run, Player player, ApRunProgressState progress)
+    /// <summary>
+    /// The rewards screen, on each peer when its UI builds it: numbers this player's next Elite
+    /// relic reward and says which reserved receipt keeps its native relic. Returns false past the
+    /// tenth natural relic reward, which has no AP check. Its effects wait for the next map move,
+    /// so nothing read before then depends on when this runs.
+    /// </summary>
+    public static bool TryTakeEliteReward(Player player, out int rewardNumber, out int? receiptIndex)
     {
-        var gated = MultiplayerLocationChecks.GetReplicatedRelicReceiptIndexes(player, progress)
-            .Skip(Math.Clamp(progress.RelicRewardsAvailableAnytimeForRun, 0, 10));
-        State(run).ReconcileProgress(player.NetId, progress, gated);
+        rewardNumber = 0;
+        receiptIndex = null;
+        if (!TryGetApPlayer(player, out RunState run, out ApPlayerRunState state))
+            return false;
+
+        string key = EliteKey(run);
+        int number = 0;
+        int? receipt = null;
+        ApRunData.ModifyRelicReceipts(run, receipts =>
+        {
+            // An Elite whose combat end this peer did not see (a loaded save) reserved nothing.
+            if (!receipts.Elites.TryGetValue(key, out var decision))
+                receipts.Elites[key] = decision = new ApRelicReceiptState.EliteDecision { RoomKey = key };
+            ApRelicReceiptState.EliteSources? sources = decision.Players.FirstOrDefault(p => p.PlayerNetId == player.NetId);
+            if (sources == null)
+            {
+                sources = new ApRelicReceiptState.EliteSources { PlayerNetId = player.NetId, BaseAttempted = GetAttempted(state) };
+                decision.Players.Add(sources);
+            }
+            int position = sources.Sources.Count;
+            number = sources.BaseAttempted + position + 1;
+            receipt = position < sources.Reserved.Count ? sources.Reserved[position] : null;
+            sources.Sources.Add(receipt);
+        });
+        rewardNumber = number;
+        receiptIndex = receipt;
+        LogUtility.Info($"Elite AP relic reward: room={key}, player={player.NetId}, reward={number}, "
+            + $"receipt={receipt?.ToString() ?? "none"}.");
+        return number <= MaxRelicRewards;
     }
 
-    public static void ConsumeChest(Player player, int index)
+    /// <summary>
+    /// Every peer, as the next map move starts: counts each Elite's relic rewards as natural relic
+    /// rewards, consumes the receipts they kept and frees the reservations they did not use.
+    /// </summary>
+    public static void SettleElites(RunState run)
     {
-        var run = (RunState)player.RunState;
-        ApRunData.ModifyRelicReceipts(run, state => state.Consume(player.NetId, index, RoomKey(run)));
+        ApRelicReceiptState state = State(run);
+        if (state.Elites.Count == 0)
+            return;
+
+        List<ApRelicReceiptState.EliteDecision> decisions = state.Elites.Values.ToList();
+        foreach (ApRelicReceiptState.EliteDecision decision in decisions)
+        {
+            foreach (ApRelicReceiptState.EliteSources sources in decision.Players)
+            {
+                ApRunData.RecordRelicRewardsAttempted(run, sources.PlayerNetId, sources.BaseAttempted + sources.Sources.Count);
+                HashSet<int> kept = sources.Sources.OfType<int>().ToHashSet();
+                ApRunData.ModifyRelicReceipts(run, receipts =>
+                {
+                    foreach (int index in sources.Reserved)
+                    {
+                        if (kept.Contains(index))
+                            receipts.Consume(sources.PlayerNetId, index, decision.RoomKey);
+                        else
+                            receipts.Release(sources.PlayerNetId, index);
+                    }
+                });
+                foreach (int index in kept)
+                    ApRunData.RecordQueuedReceiptClaim(run, sources.PlayerNetId, index);
+            }
+            LogUtility.Info($"Elite AP relic rewards settled: room={decision.RoomKey}, " + string.Join(", ",
+                decision.Players.Select(p => $"player={p.PlayerNetId}/rewards={p.Sources.Count}"
+                    + $"/kept=[{string.Join(",", p.Sources.OfType<int>())}]")));
+        }
+        ApRunData.ModifyRelicReceipts(run, receipts => receipts.Elites.Clear());
+        MirrorOwner(run);
+    }
+
+    /// <summary>
+    /// The local owner: copies its action-owned relic state into its own AP progress, which its
+    /// Relic Coupons counter, menu badge and checkpoint read.
+    /// </summary>
+    internal static void MirrorOwner(RunState run, bool spentBank = false, bool publish = true)
+    {
+        if (!MultiplayerSupport.IsLocalOwnApSlot
+            || LocalContext.GetMe(run) is not Player player
+            || !ApReceiptLedger.TryGetState(player, out ApPlayerRunState state))
+        {
+            return;
+        }
+
+        ArchipelagoProgress progress = ArchipelagoClient.Progress;
+        bool paired = false;
+        foreach ((int index, ApRelicReceiptState.Claim claim) in
+                 State(run).Claims.GetValueOrDefault(player.NetId) ?? new Dictionary<int, ApRelicReceiptState.Claim>())
+        {
+            if (claim.Destination == ApRelicReceiptState.MenuDestination || !claim.Consumed
+                || !progress.Items.IsRegistered(index) || progress.Items.IsUsed(index))
+            {
+                continue;
+            }
+            progress.Items.MarkUsed(index);
+            ApRunGraphRecorder.RecordItemClaim(index);
+            paired = true;
+        }
+        progress.RelicRewardsAttempted = GetAttempted(state);
+        progress.BankedRelicRewards = Math.Max(0, GetAvailableBanks(run, player, state));
+        if (paired || spentBank)
+            RelicCoupons.Activate(player);
+        else
+            RelicCoupons.RefreshCounter(player);
+        if (publish)
+            ApRunData.PublishLocalProgress(player);
     }
 }

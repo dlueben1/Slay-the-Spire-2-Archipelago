@@ -97,15 +97,6 @@ public static class MultiplayerLocationChecks
         return true;
     }
 
-    public static int GetRelicRewardsAttempted(Player player)
-    {
-        if (!MultiplayerSupport.IsRealMultiplayerRun || IsLocalProgressOwner(player))
-            return ArchipelagoClient.Progress.RelicRewardsAttempted;
-        return TryGetRemoteProgress(player, out ApRunProgressState progress)
-            ? progress.RelicRewardsAttempted
-            : int.MaxValue;
-    }
-
     private static int IncrementCounter(Player player, Counter counter)
     {
         if (!MultiplayerSupport.IsRealMultiplayerRun)
@@ -183,44 +174,6 @@ public static class MultiplayerLocationChecks
 
         construction = null!;
         return false;
-    }
-
-    internal static bool TryGetRemoteProgress(Player player, out ApRunProgressState progress)
-    {
-        if (player.RunState is RunState runState
-            && ApRunData.TryGetPlayerState(runState, player.NetId, out ApPlayerRunState state)
-            && state.Participation != ApParticipationKind.VanillaGuest)
-        {
-            progress = state.Progress;
-            return true;
-        }
-
-        progress = null!;
-        return false;
-    }
-
-    internal static IReadOnlyList<int> GetReplicatedRelicReceiptIndexes(
-        Player player,
-        ApRunProgressState progress)
-    {
-        long? characterOffset = player.GetAPCharacterNumber();
-        if (!characterOffset.HasValue)
-            return Array.Empty<int>();
-
-        IEnumerable<int> indexes = progress.RelicReceiptIndexesByCharacter.TryGetValue(
-            characterOffset.Value,
-            out List<int>? liveIndexes)
-                ? liveIndexes
-                : Array.Empty<int>();
-        if (player.RunState is RunState runState
-            && ApRunData.TryGetPlayerState(runState, player.NetId, out ApPlayerRunState state)
-            && state.InitialRelicReceiptIndexesByCharacter.TryGetValue(
-                characterOffset.Value,
-                out List<int>? initialIndexes))
-        {
-            indexes = indexes.Concat(initialIndexes);
-        }
-        return indexes.Distinct().Order().ToArray();
     }
 
     public static bool IsCheckWriter(Player player)

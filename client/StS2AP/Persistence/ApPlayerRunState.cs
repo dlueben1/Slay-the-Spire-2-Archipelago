@@ -52,4 +52,7 @@ public sealed class ApPlayerRunState
     // every replica as the option is chosen) or checked on the AP server, which the receipts
     // action carries like a receipt.
     public HashSet<long> CheckedCampfireLocationIds { get; set; } = new();
+    // Natural relic rewards (chests, Elites, Black Star) the player has had this run, counted on
+    // every replica where RelicReceiptMultiplayer decides them. Null in saves from before then.
+    public int? RelicRewardsAttempted { get; set; }
 }

@@ -80,52 +80,26 @@ public static class StandardRelicPool
     }
 
     /// <summary>
-    /// Reapplies persisted reservations when a multiplayer run is bound. Native bag removal is
-    /// idempotent, so this also heals saves created before every replica reserved AP assignments.
+    /// Reapplies the queued relic assignments' bag removals when a multiplayer run is bound.
+    /// Native bag removal is idempotent, so this also heals saves created before every replica
+    /// reserved AP assignments.
     /// </summary>
     public static void BindRun(RunState runState)
     {
+        if (!ApRunData.TryGetSharedState(runState, out ApRunSharedState shared))
+            return;
         foreach (Player player in runState.Players)
         {
-            if (ApRunData.TryGetPlayerState(
-                    runState,
-                    player.NetId,
-                    out ApPlayerRunState state
-                ) && state.Progress.Initialized)
-            {
-                ReserveAssignedChoices(player, state.Progress);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Reserves the exact standard relic models carried by host-confirmed AP progress. This uses
-    /// the existing progress transport rather than introducing a relic-specific network message.
-    /// </summary>
-    /// <remarks>
-    /// Only assignments whose menu reservation this peer already holds are reserved. A queued
-    /// relic assignment (<see cref="ApQueuedRelicClaims"/>) creates that reservation and takes the
-    /// relic out of the bags itself, in queue order; the owner's progress can reach a peer that has
-    /// not executed it yet, and taking the relic out then would change that peer's draw. An
-    /// approved menu assignment follows its host reservation; should its delta ever arrive first,
-    /// building the menu and the next delta still reserve it.
-    /// </remarks>
-    public static void ReserveAssignedChoices(Player player, ApRunProgressState progress)
-    {
-        ApRelicReceiptState? receipts = player.RunState is RunState runState
-            && ApRunData.TryGetSharedState(runState, out ApRunSharedState shared)
-                ? shared.RelicReceipts
-                : null;
-        foreach ((int itemIndex, List<string> assignments) in progress.RelicChoiceAssignments)
-        {
-            if (receipts?.Find(player.NetId, itemIndex) is not { Destination: ApRelicReceiptState.MenuDestination })
+            if (!shared.RelicReceipts.Claims.TryGetValue(player.NetId, out var claims))
                 continue;
-            foreach (string assignment in assignments)
+            foreach ((int itemIndex, ApRelicReceiptState.Claim claim) in claims)
             {
+                if (claim.MenuRelicAssignment == null)
+                    continue;
                 try
                 {
                     SerializableRelic serialized = JsonSerializer.Deserialize<SerializableRelic>(
-                        assignment,
+                        claim.MenuRelicAssignment,
                         SerializationUtility.CombinedOptions
                     ) ?? throw new InvalidOperationException("The serialized relic was empty.");
                     ReserveChoice(player, RelicModel.FromSerializable(serialized));

@@ -13,17 +13,17 @@ namespace StS2AP.Utils
         public override string CmdName => "ap";
 
         public override string Args =>
-            "report | deathlink | characters | nativemessages [on|off] | !command";
+            "report | deathlink | characters | !command";
 
         public override string Description =>
-            "AP report, DeathLink status, modded character IDs, multiplayer prototypes, and AP server commands";
+            "AP report, DeathLink status, modded character IDs, and AP server commands";
 
         public override bool IsNetworked => false;
 
         public override CompletionResult GetArgumentCompletions(Player? player, string[] args)
         {
             if (args.Length <= 1)
-                return CompleteArgument(["report", "deathlink", "characters", "nativemessages"], [], args.FirstOrDefault() ?? "", CompletionType.Subcommand);
+                return CompleteArgument(["report", "deathlink", "characters"], [], args.FirstOrDefault() ?? "", CompletionType.Subcommand);
             return base.GetArgumentCompletions(player, args);
         }
 
@@ -31,7 +31,7 @@ namespace StS2AP.Utils
         {
             if (args.Length == 0)
             {
-                return new CmdResult(false, "Usage: ap report | ap deathlink | ap characters | ap nativemessages [on|off] | ap !command");
+                return new CmdResult(false, "Usage: ap report | ap deathlink | ap characters | ap !command");
             }
 
             if (args[0].Equals("characters", StringComparison.OrdinalIgnoreCase))
@@ -56,8 +56,6 @@ namespace StS2AP.Utils
                 return new CmdResult(true, GetDeathLinkStatus(issuingPlayer));
             }
 
-            if (args[0].Equals("nativemessages", StringComparison.OrdinalIgnoreCase))
-                return SetNativeMessages(args);
 
             if (args[0].StartsWith("!", StringComparison.Ordinal))
             {
@@ -69,24 +67,7 @@ namespace StS2AP.Utils
                 return new CmdResult(true);
             }
 
-            return new CmdResult(false, "Unknown AP command. Use ap report, ap deathlink, ap characters, ap nativemessages, or ap !command.");
-        }
-
-        // Prototype switch: send AP's relic receipt messages as native game messages instead of
-        // RitsuLib Sidecar messages. Peers receive both, so players may differ in it.
-        private static CmdResult SetNativeMessages(string[] args)
-        {
-            if (args.Length == 2 && args[1].Equals("on", StringComparison.OrdinalIgnoreCase))
-                ApNetMessages.UseNative = true;
-            else if (args.Length == 2 && args[1].Equals("off", StringComparison.OrdinalIgnoreCase))
-                ApNetMessages.UseNative = false;
-            else if (args.Length != 1)
-                return new CmdResult(false, "Usage: ap nativemessages [on|off]");
-
-            string message = $"Native AP relic receipt messages are {OnOff(ApNetMessages.UseNative)} "
-                + "for messages this game sends (prototype).";
-            LogUtility.Info(message);
-            return new CmdResult(true, message);
+            return new CmdResult(false, "Unknown AP command. Use ap report, ap deathlink, ap characters, or ap !command.");
         }
 
         private static CmdResult ListModdedCharacters()

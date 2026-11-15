@@ -209,6 +209,7 @@ namespace StS2AP.Patches
                 }
 
                 StandardRelicPool.BindRun(__result);
+                RelicReceiptMultiplayer.BindRun(__result);
 
                 ArchipelagoCharTrackerUI.RemoveUI();
                 ArchipelagoGoalTrackerUI.RemoveUI();
@@ -264,6 +265,7 @@ namespace StS2AP.Patches
                 }
                 AscensionMultiplayer.SyncLocalProjection(__result);
                 RelicCoupons.EnsureOwnedBy(localPlayer);
+                RelicReceiptMultiplayer.MirrorOwner(__result, publish: false);
                 if (!ApRunData.PublishLocalProgress(localPlayer))
                 {
                     MultiplayerSupport.InvalidateRunClaims(

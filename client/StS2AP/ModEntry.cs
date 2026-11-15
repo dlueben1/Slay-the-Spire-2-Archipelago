@@ -42,7 +42,6 @@ namespace StS2AP
 
             // Initialize Utilities
             ApQueuedClaims.Initialize();
-            RelicReceiptMultiplayer.Initialize();
             ProgressiveStarterMultiplayer.Initialize();
             AscensionMultiplayer.Initialize();
             DeathLinkUtility.Initialize();

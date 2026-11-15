@@ -1,19 +1,23 @@
 namespace StS2AP.Persistence;
 
 /// <summary>
-/// Destinations for standard Relic receipts: a chest (decided by the host at room entry) or the AP
-/// menu (assigned by the queued relic assignment action). Player Net IDs deliberately remain part
-/// of the key: players can connect to the same AP slot but each has their own rewards.
+/// Where each player's standard Relic receipts went: a chest or an Elite's relic reward (natural
+/// relic sources, decided on every peer at ordered points), or the AP menu (assigned by the queued
+/// relic assignment action). Player Net IDs deliberately remain part of the key: players can
+/// connect to the same AP slot but each has their own rewards.
 /// </summary>
 public sealed class ApRelicReceiptState
 {
     public const string MenuDestination = "menu";
     public Dictionary<ulong, Dictionary<int, Claim>> Claims { get; set; } = new();
     public Dictionary<string, ChestDecision> Chests { get; set; } = new();
+    // Elite combats whose relic rewards have not settled yet, by room key.
+    public Dictionary<string, EliteDecision> Elites { get; set; } = new();
 
     public sealed class Claim
     {
         public string Destination { get; set; } = string.Empty;
+        // A natural source's claim is consumed once it settles; a menu claim once it is claimed.
         public bool Consumed { get; set; }
         public int RewardNumber { get; set; }
         public bool RequiresBank { get; set; }
@@ -24,7 +28,6 @@ public sealed class ApRelicReceiptState
     {
         public string RoomKey { get; set; } = string.Empty;
         public List<Candidate> Candidates { get; set; } = new();
-        public HashSet<ulong> SettledPlayers { get; set; } = new();
     }
 
     public sealed class Candidate
@@ -35,6 +38,27 @@ public sealed class ApRelicReceiptState
         public int RewardNumber { get; set; }
         public int? ReceiptIndex { get; set; }
         public bool Keep => GeneratesRelic && (!ApGated || ReceiptIndex.HasValue);
+    }
+
+    /// <summary>
+    /// One Elite combat's relic rewards. Receipts are reserved when the combat ends; the rewards
+    /// screen, built when each peer's UI gets there, takes them in order; the next map move settles
+    /// what it took.
+    /// </summary>
+    public sealed class EliteDecision
+    {
+        public string RoomKey { get; set; } = string.Empty;
+        public List<EliteSources> Players { get; set; } = new();
+    }
+
+    public sealed class EliteSources
+    {
+        public ulong PlayerNetId { get; set; }
+        // The player's natural relic count when the combat ended; its rewards are numbered after it.
+        public int BaseAttempted { get; set; }
+        public List<int> Reserved { get; set; } = new();
+        // One entry per relic reward the rewards screen built: the receipt it kept, or null.
+        public List<int?> Sources { get; set; } = new();
     }
 
     public Claim? Find(ulong player, int index) =>
@@ -57,25 +81,11 @@ public sealed class ApRelicReceiptState
         return true;
     }
 
-    public void AddChest(ChestDecision decision)
+    /// <summary>Drops a natural source's reservation that its rewards did not use.</summary>
+    public void Release(ulong player, int index)
     {
-        if (Chests.TryGetValue(decision.RoomKey, out var existing))
-        {
-            if (!existing.Candidates.Select(Key).SequenceEqual(decision.Candidates.Select(Key)))
-                throw new InvalidOperationException($"Conflicting chest decision {decision.RoomKey}.");
-            return;
-        }
-        // Validate the complete decision before changing any reservation.
-        foreach (var candidate in decision.Candidates.Where(c => c.ReceiptIndex.HasValue))
-        {
-            var claim = Find(candidate.PlayerNetId, candidate.ReceiptIndex!.Value);
-            if (claim != null && claim.Destination != decision.RoomKey)
-                throw new InvalidOperationException("Chest receipt already belongs to another reward.");
-        }
-        foreach (var candidate in decision.Candidates.Where(c => c.ReceiptIndex.HasValue))
-            TryReserve(candidate.PlayerNetId, candidate.ReceiptIndex!.Value,
-                decision.RoomKey, candidate.RewardNumber);
-        Chests.Add(decision.RoomKey, decision);
+        if (Find(player, index) is { Destination: not MenuDestination, Consumed: false })
+            Claims[player].Remove(index);
     }
 
     public void Consume(ulong player, int index, string destination)
@@ -90,41 +100,23 @@ public sealed class ApRelicReceiptState
     {
         var claim = Find(player, index);
         if (!CanUseMenu(player, index))
-            throw new InvalidOperationException("Cannot assign a relic without its host reservation.");
+            throw new InvalidOperationException("Cannot assign a relic without its menu reservation.");
         if (claim!.MenuRelicAssignment != null && claim.MenuRelicAssignment != serializedRelic)
             throw new InvalidOperationException("A reserved relic assignment cannot be rerolled.");
         claim.MenuRelicAssignment = serializedRelic;
     }
 
     /// <summary>
-    /// Owner progress can arrive after native construction or selection. Preserve completed
-    /// chest sources and exact menu assignments independently of that snapshot's age.
+    /// Banked natural relic rewards: each of the first ten natural sources earns one, a receipt a
+    /// natural source kept spends its own, and a menu receipt past the anytime relics spends one.
     /// </summary>
-    public void ReconcileProgress(ulong player, ApRunProgressState progress, IEnumerable<int> gatedIndexes)
+    public int AvailableBanks(ulong player, int relicRewardsAttempted, int maxRelicRewards)
     {
-        foreach (var chest in Chests.Values.Where(c => c.SettledPlayers.Contains(player)))
-            progress.RelicRewardsAttempted = Math.Max(progress.RelicRewardsAttempted,
-                chest.Candidates.Single(c => c.PlayerNetId == player).RewardNumber);
-        var gated = gatedIndexes.ToHashSet();
-        if (Claims.TryGetValue(player, out var claims))
-        {
-            foreach (var (index, claim) in claims)
-            {
-                if (claim.RequiresBank) gated.Add(index);
-                if (claim.Consumed)
-                {
-                    if (!progress.UsedItems.Contains(index)) progress.UsedItems.Add(index);
-                    progress.RelicChoiceAssignments.Remove(index);
-                }
-                else if (claim.MenuRelicAssignment != null && !progress.UsedItems.Contains(index))
-                    progress.RelicChoiceAssignments[index] = [claim.MenuRelicAssignment];
-            }
-        }
-        int paired = gated.Count(index => progress.UsedItems.Contains(index)
-            || progress.RelicChoiceAssignments.ContainsKey(index));
-        progress.BankedRelicRewards = Math.Max(0, Math.Min(progress.RelicRewardsAttempted, 10) - paired);
+        int spent = Claims.TryGetValue(player, out var claims)
+            ? claims.Values.Count(claim => claim.Destination == MenuDestination
+                ? claim.RequiresBank
+                : claim.Consumed)
+            : 0;
+        return Math.Min(relicRewardsAttempted, maxRelicRewards) - spent;
     }
-
-    private static (ulong, bool, bool, int, int?) Key(Candidate c) =>
-        (c.PlayerNetId, c.GeneratesRelic, c.ApGated, c.RewardNumber, c.ReceiptIndex);
 }

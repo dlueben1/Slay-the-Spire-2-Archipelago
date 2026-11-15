@@ -48,10 +48,9 @@ public sealed class ApRelicAssignmentActionMessage : ApQueuedClaimMessage
 
 public sealed class ApRelicAssignmentRequest
 {
+    // Every peer works out from the receipt ledger whether it spends a banked natural relic
+    // reward (one past the run's anytime relics does) and refuses it when none is left.
     public int ReceivedItemIndex { get; set; }
-    // A receipt past the run's anytime relics spends one of the owner's banked natural relic
-    // rewards, as the host's menu approval records it today.
-    public bool RequiresBank { get; set; }
 }
 
 /// <summary>

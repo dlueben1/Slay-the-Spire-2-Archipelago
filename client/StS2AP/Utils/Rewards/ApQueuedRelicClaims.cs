@@ -19,12 +19,10 @@ namespace StS2AP.Utils;
 /// </summary>
 /// <remarks>
 /// The assignment is recorded as a menu reservation in <see cref="ApRelicReceiptState"/>, with its
-/// relic in <see cref="ApRelicReceiptState.Claim.MenuRelicAssignment"/>, where the host's menu
-/// approval used to record it. Chest decisions skip reserved receipts, and bank reconciliation,
-/// reloads and reconnects read those reservations. Only this action writes them, on every peer in
-/// queue order. A chest
-/// decision is made during room entry inside the move action, so it is ordered against these
-/// actions too. Ancient choices have no such record, so they go to
+/// relic in <see cref="ApRelicReceiptState.Claim.MenuRelicAssignment"/>. Natural relic rewards
+/// (RelicReceiptMultiplayer) skip reserved receipts, and banks, reloads and reconnects read those
+/// reservations. Only this action writes them, on every peer in queue order; natural relic
+/// decisions are ordered against it too. Ancient choices have no such record, so they go to
 /// <see cref="ApPlayerRunState.QueuedAncientChoices"/>.
 /// </remarks>
 internal static class ApQueuedRelicClaims
@@ -33,8 +31,8 @@ internal static class ApQueuedRelicClaims
         actionKey: "relic_assignment",
         noun: "AP relic assignment",
         apply: ApplyAssignment,
-        describe: static message => "relic receipts [" + string.Join(", ", message.Receipts.Select(receipt =>
-                receipt.RequiresBank ? $"{receipt.ReceivedItemIndex} (banked)" : $"{receipt.ReceivedItemIndex}"))
+        describe: static message => "relic receipts ["
+            + string.Join(", ", message.Receipts.Select(receipt => receipt.ReceivedItemIndex))
             + "], Ancient receipts [" + string.Join(", ", message.Ancients.Select(ancient => ancient.ReceivedItemIndex)) + "]",
         notifiesOwnerOfRefusal: false
     );
@@ -56,24 +54,19 @@ internal static class ApQueuedRelicClaims
     /// <summary>
     /// Owner only, as the menu opens: assigns relics to the menu's Relic receipts and choices to its
     /// Progressive Ancient receipts that have none yet, and returns every Relic receipt the menu
-    /// can offer. The same Relic receipts the host's approval takes today: the run's anytime
-    /// relics, and waiting receipts up to the owner's banked natural relic rewards, without those
-    /// a chest took.
+    /// can offer: the run's anytime relics, and waiting receipts up to the player's banked natural
+    /// relic rewards, without those a chest or Elite took.
     /// </summary>
     internal static async Task<IReadOnlySet<int>> PrepareMenu(Player owner)
     {
         if (owner.RunState is not RunState runState)
             throw new InvalidOperationException("AP relic assignment needs a native run state.");
 
-        IReadOnlyList<int> candidates = RelicRewardUtility.GetMenuReservationCandidates(owner);
+        IReadOnlyList<int> candidates = RelicReceiptMultiplayer.GetMenuCandidates(owner);
         List<ApRelicAssignmentRequest> missing = candidates
             .Where(index => !HasUsableAssignment(runState, owner, index) && !IsTakenElsewhere(runState, owner, index))
             .Order()
-            .Select(index => new ApRelicAssignmentRequest
-            {
-                ReceivedItemIndex = index,
-                RequiresBank = !RelicRewardUtility.IsAnytimeReceiptIndex(owner, index),
-            })
+            .Select(index => new ApRelicAssignmentRequest { ReceivedItemIndex = index })
             .ToList();
 
         ApRunData.TryGetPlayerState(runState, owner.NetId, out ApPlayerRunState ownerState);
@@ -155,7 +148,8 @@ internal static class ApQueuedRelicClaims
     /// still free, with the same stable draw the owner made alone before
     /// (<see cref="ArchipelagoProgress.GetOrAssignRelicChoices"/>), and takes it out of the relic
     /// bags right away. A receipt that already has a relic keeps it, so reopening the menu never
-    /// rerolls one.
+    /// rerolls one. The receipt must be one of the player's Relic receipts in the ledger; one past
+    /// the anytime relics spends a banked natural relic reward, and is skipped when none is left.
     /// </summary>
     private static Task<ApQueuedClaimResult> ApplyAssignment(ApQueuedClaim<ApRelicAssignmentActionMessage> claim)
     {
@@ -181,7 +175,8 @@ internal static class ApQueuedRelicClaims
             }
         }
 
-        var assigned = new List<(ApRelicAssignmentRequest Request, RelicModel Relic)>();
+        var assigned = new List<(int Index, bool SpentBank, RelicModel Relic)>();
+        var skipped = new List<string>();
         foreach (ApRelicAssignmentRequest request in claim.Message.Receipts
                      .Where(request => request.ReceivedItemIndex >= 0)
                      .DistinctBy(request => request.ReceivedItemIndex)
@@ -196,6 +191,17 @@ internal static class ApQueuedRelicClaims
             {
                 continue;
             }
+            if (!RelicReceiptMultiplayer.IsRelicReceipt(player, claim.OwnerState, index))
+            {
+                skipped.Add($"{index} (not a Relic receipt in the ledger)");
+                continue;
+            }
+            bool requiresBank = !RelicReceiptMultiplayer.IsAnytimeReceipt(player, claim.OwnerState, index);
+            if (requiresBank && RelicReceiptMultiplayer.GetAvailableBanks(claim.RunState, player, claim.OwnerState) <= 0)
+            {
+                skipped.Add($"{index} (no banked natural relic reward)");
+                continue;
+            }
 
             RelicModel relic = StandardRelicPool.CreateChoices(
                 player,
@@ -208,23 +214,23 @@ internal static class ApQueuedRelicClaims
             ApRunData.ModifyRelicReceipts(claim.RunState, state =>
             {
                 state.TryReserve(player.NetId, index, ApRelicReceiptState.MenuDestination,
-                    requiresBank: request.RequiresBank);
+                    requiresBank: requiresBank);
                 state.AssignMenu(player.NetId, index, serialized);
             });
             reservedRelicIds.Add(relic.Id);
-            assigned.Add((request, relic));
+            assigned.Add((index, requiresBank, relic));
         }
 
         List<(int Index, IReadOnlyList<RelicModel> Choices)> ancients = AssignAncients(claim);
 
+        IEnumerable<string> outcome = assigned
+            .Select(entry => $"{entry.Index}={entry.Relic.Id}{(entry.SpentBank ? " (banked)" : "")}")
+            .Concat(ancients.Select(entry => $"{entry.Index}=[{string.Join(", ", entry.Choices.Select(relic => relic.Id))}]"))
+            .Concat(skipped.Select(entry => $"skipped {entry}"));
         ApQueuedClaims.LogApplied(AssignmentKind, claim.Message, player,
-            assigned.Count + ancients.Count == 0
-                ? "nothing new"
-                : string.Join(", ", assigned.Select(entry => $"{entry.Request.ReceivedItemIndex}={entry.Relic.Id}")
-                    .Concat(ancients.Select(entry =>
-                        $"{entry.Index}=[{string.Join(", ", entry.Choices.Select(relic => relic.Id))}]"))));
+            outcome.Any() ? string.Join(", ", outcome) : "nothing new");
         if (claim.IsLocalOwner && assigned.Count + ancients.Count > 0)
-            CommitOwnerAssignments(player, assigned, ancients);
+            CommitOwnerAssignments(claim.RunState, player, assigned, ancients);
         return Task.FromResult(new ApQueuedClaimResult(true));
     }
 
@@ -286,36 +292,21 @@ internal static class ApQueuedRelicClaims
     }
 
     /// <summary>
-    /// Owner only: what <see cref="RelicRewardUtility.ReconcileBankedRewards"/> does after it
-    /// assigns a relic, so the owner's menu, badge, coupons and published progress see it. Each
-    /// receipt past the anytime relics spends one banked natural relic reward.
+    /// Owner only: shows the assignments in the owner's own AP progress, which its menu badge,
+    /// Relic Coupons counter and checkpoint read. The banks come from the action-owned count.
     /// </summary>
     private static void CommitOwnerAssignments(
+        RunState runState,
         Player player,
-        IReadOnlyList<(ApRelicAssignmentRequest Request, RelicModel Relic)> assigned,
+        IReadOnlyList<(int Index, bool SpentBank, RelicModel Relic)> assigned,
         IReadOnlyList<(int Index, IReadOnlyList<RelicModel> Choices)> ancients)
     {
         ArchipelagoProgress progress = ArchipelagoClient.Progress;
-        foreach ((ApRelicAssignmentRequest request, RelicModel relic) in assigned)
-        {
-            // Like ReconcileBankedRewards, spend a bank only on a receipt not paired before.
-            bool alreadyPaired = progress.RelicChoiceAssignments.ContainsKey(request.ReceivedItemIndex);
-            progress.RelicChoiceAssignments[request.ReceivedItemIndex] = [relic];
-            if (!request.RequiresBank || alreadyPaired)
-                continue;
-            if (progress.BankedRelicRewards > 0)
-                progress.BankedRelicRewards--;
-            else
-                LogUtility.Warn(
-                    $"Queued AP relic assignment for receipt {request.ReceivedItemIndex} found no banked relic reward to spend."
-                );
-            RelicCoupons.Activate(player);
-        }
-        // The owner's own Ancient lookups and published progress see the drawn choices.
+        foreach ((int index, _, RelicModel relic) in assigned)
+            progress.RelicChoiceAssignments[index] = [relic];
         foreach ((int index, IReadOnlyList<RelicModel> choices) in ancients)
             progress.AncientRelicChoiceAssignments[index] = choices.ToList();
-        if (!ApRunData.PublishLocalProgress(player))
-            MultiplayerSupport.InvalidateRunClaims("queued AP relic assignments could not be published");
+        RelicReceiptMultiplayer.MirrorOwner(runState, spentBank: assigned.Any(entry => entry.SpentBank));
     }
 
     private static async Task<ApQueuedClaimResult> ApplyClaim(ApQueuedClaim<ApReceiptClaimActionMessage> claim)

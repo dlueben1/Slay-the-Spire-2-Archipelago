@@ -25,9 +25,9 @@ public sealed record ApNetMessageDescriptor<T>(
 public readonly record struct ApNetMessageContext<T>(T Message, ulong SenderNetId);
 
 /// <summary>
-/// Prototype, off by default (<c>ap nativemessages on</c>): sends AP's own multiplayer messages
-/// as a native message type of ours instead of RitsuLib Sidecar messages. Receiving always works,
-/// so peers may differ in the switch.
+/// AP's own multiplayer messages as a native message type of ours, the planned replacement for
+/// RitsuLib Sidecar messages. No message uses it yet: the relic receipt messages it was first
+/// tried on are gone, since every peer now decides chests itself.
 /// </summary>
 /// <remarks>
 /// The game registers <see cref="ArchipelagoNetMessage"/> like its own message types because the
@@ -44,9 +44,6 @@ public static class ApNetMessages
 
     private static readonly Dictionary<string, Registration> Registrations = new(StringComparer.Ordinal);
     private static INetGameService? _attached;
-
-    /// <summary>Whether this process sends AP messages natively. Receiving works either way.</summary>
-    public static bool UseNative { get; set; }
 
     public static void Register<T>(ApNetMessageDescriptor<T> descriptor)
     {
