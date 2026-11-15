@@ -309,6 +309,18 @@ public static class ApQueuedClaims
         return false;
     }
 
+    /// <summary>
+    /// Whether a queued claim already used up this receipt. Receipt claim kinds check it before
+    /// applying anything and call <see cref="MarkReceiptClaimed"/> once they use the receipt up.
+    /// </summary>
+    internal static bool IsReceiptClaimed<T>(ApQueuedClaim<T> claim, int receivedItemIndex)
+        where T : ApQueuedClaimMessage =>
+        claim.OwnerState.QueuedClaimedReceiptIndexes.BinarySearch(receivedItemIndex) >= 0;
+
+    internal static void MarkReceiptClaimed<T>(ApQueuedClaim<T> claim, int receivedItemIndex)
+        where T : ApQueuedClaimMessage =>
+        ApRunData.RecordQueuedReceiptClaim(claim.RunState, claim.Player.NetId, receivedItemIndex);
+
     /// <summary>A refused claim is a no-op on every peer, plus a notice for its owner.</summary>
     internal static ApQueuedClaimResult Refuse<T>(
         ApQueuedClaimKind<T> kind,

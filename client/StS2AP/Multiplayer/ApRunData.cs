@@ -140,6 +140,7 @@ public static class ApRunData
             LastConsumedTrapIndex = existing?.LastConsumedTrapIndex ?? -1,
             CombatTrapLimit = existing?.CombatTrapLimit ?? new CombatEffectLimit(),
             QueuedGoldClaimCursor = existing?.QueuedGoldClaimCursor,
+            QueuedClaimedReceiptIndexes = existing?.QueuedClaimedReceiptIndexes ?? new List<int>(),
         };
         // SyncLobbyOnChange makes this a contribution to the authoritative host staging
         // session. On a client RitsuLib pushes the local PlayerRunSavedData payload with a
@@ -238,6 +239,21 @@ public static class ApRunData
         if (!_initialized || !_players.TryGet(runState, netId, out ApPlayerRunState state))
             return false;
         state.QueuedGoldClaimCursor = Math.Max(state.QueuedGoldClaimCursor ?? 0, cursorAfter);
+        _players.Set(runState, netId, state);
+        return true;
+    }
+
+    /// <summary>
+    /// Marks an AP receipt used up by a queued claim. Claim actions call this identically on every
+    /// replica; owner progress deltas never touch it.
+    /// </summary>
+    internal static bool RecordQueuedReceiptClaim(RunState runState, ulong netId, int receivedItemIndex)
+    {
+        if (!_initialized || !_players.TryGet(runState, netId, out ApPlayerRunState state))
+            return false;
+        int position = state.QueuedClaimedReceiptIndexes.BinarySearch(receivedItemIndex);
+        if (position < 0)
+            state.QueuedClaimedReceiptIndexes.Insert(~position, receivedItemIndex);
         _players.Set(runState, netId, state);
         return true;
     }

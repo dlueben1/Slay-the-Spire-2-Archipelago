@@ -31,4 +31,8 @@ public sealed class ApPlayerRunState
     // Raw AP gold redeemed through queued gold claims; advanced only by that action, on every
     // replica. Null until the first one. Progress.GoldRedeemed is the owner's published view.
     public int? QueuedGoldClaimCursor { get; set; }
+    // AP receipts used up by queued claims, ascending. Written only by claim executors, on every
+    // replica, so they can refuse a repeated claim alike; Progress.UsedItems is the owner's
+    // published view and changes whenever a delta arrives.
+    public List<int> QueuedClaimedReceiptIndexes { get; set; } = new();
 }
