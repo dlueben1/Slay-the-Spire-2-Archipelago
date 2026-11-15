@@ -2,6 +2,7 @@ using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Multiplayer.Game.Lobby;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Runs;
+using StS2AP.Data;
 using StS2AP.Utils;
 using StS2AP.Domain;
 using StS2AP.DomainAdapters;
@@ -143,6 +144,8 @@ public static class ApRunData
             QueuedClaimedReceiptIndexes = existing?.QueuedClaimedReceiptIndexes ?? new List<int>(),
             QueuedCardOffers = existing?.QueuedCardOffers ?? new Dictionary<int, ApQueuedCardOfferState>(),
             QueuedAncientChoices = existing?.QueuedAncientChoices ?? new Dictionary<int, List<string>>(),
+            ReceiptLedger = existing?.ReceiptLedger ?? new List<ApLedgerReceipt>(),
+            RelicRewardsAvailableAnytime = existing?.RelicRewardsAvailableAnytime,
         };
         // SyncLobbyOnChange makes this a contribution to the authoritative host staging
         // session. On a client RitsuLib pushes the local PlayerRunSavedData payload with a
@@ -296,6 +299,45 @@ public static class ApRunData
         _players.Set(runState, netId, state);
         return true;
     }
+
+    /// <summary>
+    /// Appends the receipts this replica's ledger lacks, keeping it in index order, and records
+    /// the anytime relic count once. The receipts action calls this identically on every replica.
+    /// A receipt whose index is already recorded keeps its first item id.
+    /// </summary>
+    internal static int RecordLedgerReceipts(
+        RunState runState,
+        ulong netId,
+        IEnumerable<ApLedgerReceipt> receipts,
+        int? relicRewardsAvailableAnytime)
+    {
+        if (!_initialized || !_players.TryGet(runState, netId, out ApPlayerRunState state))
+            return 0;
+        int appended = 0;
+        foreach (ApLedgerReceipt receipt in receipts)
+        {
+            if (receipt.Index <= 0 || ArchipelagoIdCodec.IsArchipelagoReservedId(receipt.ItemId))
+                continue;
+            List<ApLedgerReceipt> ledger = state.ReceiptLedger;
+            if (ledger.Count == 0 || ledger[^1].Index < receipt.Index)
+            {
+                ledger.Add(new ApLedgerReceipt { Index = receipt.Index, ItemId = receipt.ItemId });
+                appended++;
+                continue;
+            }
+            int position = ledger.BinarySearch(receipt, LedgerOrder);
+            if (position >= 0)
+                continue;
+            ledger.Insert(~position, new ApLedgerReceipt { Index = receipt.Index, ItemId = receipt.ItemId });
+            appended++;
+        }
+        state.RelicRewardsAvailableAnytime ??= relicRewardsAvailableAnytime;
+        _players.Set(runState, netId, state);
+        return appended;
+    }
+
+    private static readonly IComparer<ApLedgerReceipt> LedgerOrder =
+        Comparer<ApLedgerReceipt>.Create((left, right) => left.Index.CompareTo(right.Index));
 
     /// <summary>
     /// Commits a managed action's per-player starter recipe to canonical run data. Managed

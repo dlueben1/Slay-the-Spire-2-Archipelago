@@ -110,6 +110,10 @@ namespace StS2AP.Patches
                 return;
             }
 
+            // Every peer records the receipt in queue order before any claim of it can follow.
+            if (liveDelivery)
+                ApReceiptLedger.ReceiveLiveReceipt(indexedInfo.Index);
+
             var Progress = ArchipelagoClient.Progress;
             var Settings = ArchipelagoClient.Settings;
             if (Settings == null)

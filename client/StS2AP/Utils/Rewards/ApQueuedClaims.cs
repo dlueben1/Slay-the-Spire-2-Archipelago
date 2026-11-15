@@ -136,6 +136,7 @@ public static class ApQueuedClaims
         ApNetActions.Register(ApQueuedRelicClaims.ClaimKind.Descriptor);
         ApNetActions.Register(ApQueuedRelicClaims.AncientClaimKind.Descriptor);
         ApNetActions.Register(ApQueuedCardClaims.ClaimKind.Descriptor);
+        ApNetActions.Register(ApReceiptLedger.Kind.Descriptor);
         _initialized = true;
     }
 
@@ -144,6 +145,7 @@ public static class ApQueuedClaims
         foreach (TaskCompletionSource<ApQueuedClaimResult> pending in Pending.Values)
             pending.TrySetResult(ApQueuedClaimResult.NotApplied);
         Pending.Clear();
+        ApReceiptLedger.EndRun();
     }
 
     /// <summary>
@@ -176,6 +178,20 @@ public static class ApQueuedClaims
         Player owner,
         Func<T> createMessage) where T : ApQueuedClaimMessage, new()
     {
+        T message = createMessage();
+        if (!TryAddress(message, claimId, owner))
+            return false;
+        bool requested = ApNetActions.Request(kind.Descriptor, message, owner.NetId);
+        LogRequested(kind, message, requested);
+        return requested;
+    }
+
+    /// <summary>
+    /// Fills in the header every claim shares: this run, a claim id, and the owner's player and
+    /// AP slot, which every peer checks before applying the claim.
+    /// </summary>
+    internal static bool TryAddress<T>(T message, Guid claimId, Player owner) where T : ApQueuedClaimMessage
+    {
         if (owner.RunState is not RunState runState
             || !ApRunData.TryGetSharedState(runState, out ApRunSharedState shared)
             || shared.RunId == Guid.Empty)
@@ -183,18 +199,19 @@ public static class ApQueuedClaims
             return false;
         }
 
-        T message = createMessage();
         message.RunId = shared.RunId;
         message.ClaimId = claimId;
         message.OwnerNetId = owner.NetId;
         message.ApSlotId = MultiplayerSupport.PreparedApSlotId ?? 0;
-        bool requested = ApNetActions.Request(kind.Descriptor, message, owner.NetId);
+        return true;
+    }
+
+    internal static void LogRequested<T>(ApQueuedClaimKind<T> kind, T message, bool requested)
+        where T : ApQueuedClaimMessage, new() =>
         LogUtility.Info(
-            $"{(requested ? "Requested" : "Could not request")} queued {kind.Noun} claim {claimId}: "
+            $"{(requested ? "Requested" : "Could not request")} queued {kind.Noun} claim {message.ClaimId}: "
                 + kind.Describe(message)
         );
-        return requested;
-    }
 
     internal static async Task Execute<T>(ApQueuedClaimKind<T> kind, ApNetActionContext<T> context)
         where T : ApQueuedClaimMessage, new()

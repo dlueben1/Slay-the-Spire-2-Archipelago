@@ -78,6 +78,18 @@ public sealed class ApAncientClaimActionMessage : ApQueuedClaimMessage
 }
 
 /// <summary>
+/// AP items the owner received that the receipt ledger may not have yet. Every peer appends the
+/// ones it lacks, by index, so a repeat (AP replays the whole history on every connection) is
+/// harmless.
+/// </summary>
+public sealed class ApReceiptsArrivedActionMessage : ApQueuedClaimMessage
+{
+    public List<ApLedgerReceipt> Receipts { get; set; } = new();
+    // The owner's anytime relic count for this run; only the first value a peer records counts.
+    public int? RelicRewardsAvailableAnytime { get; set; }
+}
+
+/// <summary>
 /// One queued card reward claim. Every peer generates or reloads the offer in the action and
 /// waits there for the owner's pick.
 /// </summary>

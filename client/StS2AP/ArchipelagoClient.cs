@@ -1413,6 +1413,7 @@ namespace StS2AP
             }
             MultiplayerSupport.RestoreFrozenHostSettingsForActiveRun();
             AscensionMultiplayer.QueueReconnectReconciliation();
+            ApReceiptLedger.QueueReconnectSync();
             return true;
         }
 

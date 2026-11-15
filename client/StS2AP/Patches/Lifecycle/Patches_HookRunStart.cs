@@ -277,6 +277,8 @@ namespace StS2AP.Patches
                     MultiplayerSupport.InvalidateRunClaims(bindError);
                     return;
                 }
+                // Before any claim this player requests: claims are checked against the ledger.
+                ApReceiptLedger.BeginRun(localPlayer);
                 AscensionMultiplayer.BeginRun(__result, localPlayer);
                 ProgressiveStarterMultiplayer.BeginRun(__result, localPlayer);
                 if (MultiplayerSupport.IsLocalOwnApSlot)

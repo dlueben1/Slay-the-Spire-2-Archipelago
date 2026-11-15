@@ -41,4 +41,11 @@ public sealed class ApPlayerRunState
     // The three serialized relics each Progressive Ancient receipt offers, drawn by the queued
     // relic assignment action on every replica. Kept after a claim: later draws exclude them.
     public Dictionary<int, List<string>> QueuedAncientChoices { get; set; } = new();
+    // The player's AP receipts in index order, recorded by the queued "receipts arrived" action
+    // on every replica (ApReceiptLedger). Other players' AP items are read from here, never from
+    // the owner's published Progress, so every peer sees them at the same point in the run.
+    public List<ApLedgerReceipt> ReceiptLedger { get; set; } = new();
+    // How many of the player's first Relic receipts need no natural relic reward this run. The
+    // owner's value at run start, set once by the first receipts action; null until then.
+    public int? RelicRewardsAvailableAnytime { get; set; }
 }
