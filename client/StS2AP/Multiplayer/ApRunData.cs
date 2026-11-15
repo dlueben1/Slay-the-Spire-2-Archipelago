@@ -229,6 +229,19 @@ public static class ApRunData
     }
 
     /// <summary>
+    /// Advances a player's queued gold claim cursor. The queued gold action calls this
+    /// identically on every replica; owner progress deltas never touch it.
+    /// </summary>
+    internal static bool RecordQueuedGoldClaim(RunState runState, ulong netId, int cursorAfter)
+    {
+        if (!_initialized || !_players.TryGet(runState, netId, out ApPlayerRunState state))
+            return false;
+        state.QueuedGoldClaimCursor = Math.Max(state.QueuedGoldClaimCursor ?? 0, cursorAfter);
+        _players.Set(runState, netId, state);
+        return true;
+    }
+
+    /// <summary>
     /// Commits a managed action's per-player starter recipe to canonical run data. Managed
     /// actions execute on every replica, so this mutation must be made identically everywhere.
     /// </summary>

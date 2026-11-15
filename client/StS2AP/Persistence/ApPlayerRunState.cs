@@ -28,4 +28,7 @@ public sealed class ApPlayerRunState
     // Trap receipts have their own cutoff: consuming one must never skip an earlier buff.
     public int LastConsumedTrapIndex { get; set; } = -1;
     public CombatEffectLimit CombatTrapLimit { get; set; } = new();
+    // Raw AP gold redeemed through queued gold claims; advanced only by that action, on every
+    // replica. Null until the first one. Progress.GoldRedeemed is the owner's published view.
+    public int? QueuedGoldClaimCursor { get; set; }
 }

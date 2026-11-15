@@ -13,17 +13,17 @@ namespace StS2AP.Utils
         public override string CmdName => "ap";
 
         public override string Args =>
-            "report | deathlink | characters | !command";
+            "report | deathlink | characters | queuedgold [on|off] | !command";
 
         public override string Description =>
-            "AP report, DeathLink status, modded character IDs, and AP server commands";
+            "AP report, DeathLink status, modded character IDs, queued gold prototype, and AP server commands";
 
         public override bool IsNetworked => false;
 
         public override CompletionResult GetArgumentCompletions(Player? player, string[] args)
         {
             if (args.Length <= 1)
-                return CompleteArgument(["report", "deathlink", "characters"], [], args.FirstOrDefault() ?? "", CompletionType.Subcommand);
+                return CompleteArgument(["report", "deathlink", "characters", "queuedgold"], [], args.FirstOrDefault() ?? "", CompletionType.Subcommand);
             return base.GetArgumentCompletions(player, args);
         }
 
@@ -31,7 +31,7 @@ namespace StS2AP.Utils
         {
             if (args.Length == 0)
             {
-                return new CmdResult(false, "Usage: ap report | ap deathlink | ap characters | ap !command");
+                return new CmdResult(false, "Usage: ap report | ap deathlink | ap characters | ap queuedgold [on|off] | ap !command");
             }
 
             if (args[0].Equals("characters", StringComparison.OrdinalIgnoreCase))
@@ -56,6 +56,9 @@ namespace StS2AP.Utils
                 return new CmdResult(true, GetDeathLinkStatus(issuingPlayer));
             }
 
+            if (args[0].Equals("queuedgold", StringComparison.OrdinalIgnoreCase))
+                return SetQueuedGold(args);
+
             if (args[0].StartsWith("!", StringComparison.Ordinal))
             {
                 string sendMe = string.Join(" ", args);
@@ -66,7 +69,25 @@ namespace StS2AP.Utils
                 return new CmdResult(true);
             }
 
-            return new CmdResult(false, "Unknown AP command. Use ap report, ap deathlink, ap characters, or ap !command.");
+            return new CmdResult(false, "Unknown AP command. Use ap report, ap deathlink, ap characters, ap queuedgold, or ap !command.");
+        }
+
+        // Prototype switch for multiplayer AP gold claims as queued native actions. It lasts until
+        // the game closes and applies to AP menus opened afterwards; only the claiming player's
+        // switch matters.
+        private static CmdResult SetQueuedGold(string[] args)
+        {
+            if (args.Length == 2 && args[1].Equals("on", StringComparison.OrdinalIgnoreCase))
+                ApQueuedGoldClaims.Enabled = true;
+            else if (args.Length == 2 && args[1].Equals("off", StringComparison.OrdinalIgnoreCase))
+                ApQueuedGoldClaims.Enabled = false;
+            else if (args.Length != 1)
+                return new CmdResult(false, "Usage: ap queuedgold [on|off]");
+
+            string message = $"Queued AP gold claims are {OnOff(ApQueuedGoldClaims.Enabled)} for AP menus opened from now on "
+                + "(multiplayer only; prototype).";
+            LogUtility.Info(message);
+            return new CmdResult(true, message);
         }
 
         private static CmdResult ListModdedCharacters()

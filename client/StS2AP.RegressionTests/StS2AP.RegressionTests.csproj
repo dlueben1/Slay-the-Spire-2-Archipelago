@@ -61,6 +61,7 @@
     <Compile Include="..\StS2AP\Utils\Actions\NonCombatActionAdmissionState.cs" Link="Utils\Actions\NonCombatActionAdmissionState.cs" />
     <Compile Include="..\StS2AP\Utils\DeathLink\DeathLinkEventLedger.cs" Link="Utils\DeathLink\DeathLinkEventLedger.cs" />
     <Compile Include="..\StS2AP\Utils\Rewards\UniversalBuffGold.cs" Link="Utils\Rewards\UniversalBuffGold.cs" />
+    <Compile Include="..\StS2AP\Utils\Rewards\QueuedGoldClaimRule.cs" Link="Utils\Rewards\QueuedGoldClaimRule.cs" />
     <Compile Include="..\StS2AP\Data\ItemTable.cs" Link="Data\ItemTable.cs" />
     <Compile Include="..\StS2AP\Utils\Rewards\CombatEffectActionMessage.cs" Link="Utils\Rewards\CombatEffectActionMessage.cs" />
     <Compile Include="..\StS2AP\Utils\Rewards\CombatEffectReceiptQueue.cs" Link="Utils\Rewards\CombatEffectReceiptQueue.cs" />

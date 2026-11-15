@@ -283,6 +283,7 @@ public static class ApMirroredRewardDispatcher
                 SourceAmount = gold.SourceAmount,
                 GrantedAmount = gold.GrantedAmount,
                 RedeemedRawAfter = gold.RedeemedRawAfter,
+                QueuedClaimId = ApQueuedGoldClaims.ShouldQueueNewClaims ? Guid.NewGuid() : null,
             };
         }
 
@@ -485,7 +486,7 @@ public static class ApMirroredRewardDispatcher
     {
         var rewards = new List<Reward>();
         if (menu.Gold != null)
-            rewards.Add(new ApNativeGoldReward(menu.Gold.ToClaim(), owner));
+            rewards.Add(new ApNativeGoldReward(menu.Gold.ToClaim(), menu.Gold.QueuedClaimId, owner));
 
         foreach (MirroredReward spec in assignments)
         {
@@ -959,7 +960,7 @@ public static class ApMirroredRewardDispatcher
         bool UseAncientStyle { get; }
     }
 
-    private sealed class ApNativeGoldReward(ApGoldClaim claim, Player player)
+    private sealed class ApNativeGoldReward(ApGoldClaim claim, Guid? queuedClaimId, Player player)
         : GoldReward(claim.GrantedAmount, player), IApNativeReward
     {
         public bool CanClaim(out string reason) => MultiplayerSupport.CanClaimGold(out reason);
@@ -968,6 +969,10 @@ public static class ApMirroredRewardDispatcher
 
         protected override async Task<bool> OnSelect()
         {
+            // A queued claim's action applies the gold on every peer; this row only takes its turn.
+            if (queuedClaimId is Guid claimId)
+                return await ApQueuedGoldClaims.SelectRow(claimId, claim, Player);
+
             // Known edge case: removing Poverty while this menu stays open leaves this offer underpaying.
             bool applied = await base.OnSelect();
             if (applied && LocalContext.IsMe(Player))
