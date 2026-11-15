@@ -86,7 +86,7 @@ public static class MultiplayerLocationChecks
             return false;
 
         bool localOwner = IsLocalProgressOwner(player);
-        if (!TryGetConstructionState(player, localOwner, out ApReplicaConstructionState construction)
+        if (!TryGetConstructionState(player, out ApReplicaConstructionState construction)
             || !construction.TryMarkBossCompensation(act))
         {
             return false;
@@ -112,7 +112,7 @@ public static class MultiplayerLocationChecks
         }
 
         bool localOwner = IsLocalProgressOwner(player);
-        if (!TryGetConstructionState(player, localOwner, out ApReplicaConstructionState construction))
+        if (!TryGetConstructionState(player, out ApReplicaConstructionState construction))
             return int.MaxValue;
 
         int result = counter switch
@@ -150,25 +150,16 @@ public static class MultiplayerLocationChecks
 
     private static bool TryGetConstructionState(
         Player player,
-        bool localOwner,
         out ApReplicaConstructionState construction)
     {
+        // Every replica's counters start from the run's saved state at launch
+        // (ApRunData.BindConstruction), and only construction advances them.
         if (player.RunState is RunState runState
             && ApRunData.TryGetPlayerState(runState, player.NetId, out ApPlayerRunState state)
-            && state.Participation != ApParticipationKind.VanillaGuest)
+            && state.Participation != ApParticipationKind.VanillaGuest
+            && state.Construction is { Initialized: true })
         {
-            ApRunProgressState baseline;
-            if (state.Progress.Initialized)
-                baseline = state.Progress;
-            else if (localOwner)
-                baseline = ArchipelagoClient.Progress.ToRunProgressState();
-            else
-            {
-                construction = null!;
-                return false;
-            }
-
-            construction = ApRunData.EnsureConstructionInitialized(state, baseline);
+            construction = state.Construction;
             return true;
         }
 

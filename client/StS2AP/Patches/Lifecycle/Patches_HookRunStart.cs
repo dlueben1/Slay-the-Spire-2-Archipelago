@@ -210,6 +210,7 @@ namespace StS2AP.Patches
 
                 StandardRelicPool.BindRun(__result);
                 RelicReceiptMultiplayer.BindRun(__result);
+                ApRunData.BindConstruction(__result);
 
                 ArchipelagoCharTrackerUI.RemoveUI();
                 ArchipelagoGoalTrackerUI.RemoveUI();
