@@ -2,6 +2,7 @@ using System.Text.Json;
 using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Entities.Multiplayer;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Models;
@@ -21,15 +22,16 @@ internal readonly record struct ApQueuedClaimResult(bool Applied, AbstractModel?
 }
 
 /// <summary>
-/// A queued claim on its way through an executor: the owner's message and the replicated run
-/// state it was validated against.
+/// A queued claim on its way through an executor: the owner's message, the replicated run state it
+/// was validated against, and its action's choice context for a claim that asks its owner to choose.
 /// </summary>
 internal sealed record ApQueuedClaim<T>(
     T Message,
     Player Player,
     RunState RunState,
     ApRunSharedState Shared,
-    ApPlayerRunState OwnerState
+    ApPlayerRunState OwnerState,
+    PlayerChoiceContext ChoiceContext
 ) where T : ApQueuedClaimMessage
 {
     internal bool IsLocalOwner => LocalContext.IsMe(Player);
@@ -99,10 +101,10 @@ internal sealed class ApQueuedClaimKind<T> where T : ApQueuedClaimMessage, new()
 }
 
 /// <summary>
-/// Prototype, off by default (<c>ap queuedclaims on</c>): multiplayer AP claims of gold, potions,
-/// bonus wax relics and standard relics run as native queued actions, executed on every peer in the
-/// host's action order, instead of applying when a replicated reward selection arrives. Standard
-/// relics are also assigned by one, before the menu opens.
+/// Prototype, off by default (<c>ap queuedclaims on</c>): multiplayer AP claims (gold, potions,
+/// bonus wax relics and relics) run as native queued actions, executed on every peer in the
+/// host's action order, instead of applying when a replicated reward selection arrives. Relics
+/// are also assigned by one, before the menu opens.
 /// </summary>
 /// <remarks>
 /// A replicated selection is handled whenever it arrives, so one peer can apply a claim before a
@@ -127,8 +129,9 @@ public static class ApQueuedClaims
     // on every peer; only the order relative to a stuck earlier row is at stake.
     private static readonly TimeSpan RowTimeout = TimeSpan.FromSeconds(10);
 
-    // How long a row waits for this peer to execute its action.
-    private static readonly TimeSpan ExecutionTimeout = TimeSpan.FromSeconds(30);
+    // How long a row waits for its action to start executing on this peer. Only the start is timed:
+    // a card claim then pauses for its owner's pick, which may legitimately take much longer.
+    private static readonly TimeSpan StartTimeout = TimeSpan.FromSeconds(30);
 
     private readonly record struct AttemptKey(Guid ClaimId, int Attempt);
 
@@ -136,6 +139,9 @@ public static class ApQueuedClaims
     private sealed class Meeting
     {
         public TaskCompletionSource RowReached { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource Started { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public TaskCompletionSource<ApQueuedClaimResult> Executed { get; } =
@@ -151,8 +157,7 @@ public static class ApQueuedClaims
     private static bool _initialized;
 
     /// <summary>
-    /// Whether this process's new AP menus offer gold, potions, bonus wax relics and standard
-    /// relics as queued claims. Only the claim owner's switch matters: the menu tells every peer
+    /// Whether this process's new AP menus offer their rewards as queued claims. Only the claim owner's switch matters: the menu tells every peer
     /// how each row works.
     /// </summary>
     public static bool Enabled { get; set; }
@@ -180,6 +185,7 @@ public static class ApQueuedClaims
         foreach (Meeting meeting in Meetings.Values)
         {
             meeting.RowReached.TrySetResult();
+            meeting.Started.TrySetResult();
             meeting.Executed.TrySetResult(ApQueuedClaimResult.NotApplied);
         }
         Meetings.Clear();
@@ -212,18 +218,32 @@ public static class ApQueuedClaims
             return ApQueuedClaimResult.NotApplied;
         }
 
+        if (!await WaitForStart(meeting, kind, claimId, player))
+        {
+            MultiplayerSupport.InvalidateRunClaims($"queued {kind.Noun} claim {claimId} did not execute");
+            return ApQueuedClaimResult.NotApplied;
+        }
+        return await meeting.Executed.Task;
+    }
+
+    private static async Task<bool> WaitForStart<T>(
+        Meeting meeting,
+        ApQueuedClaimKind<T> kind,
+        Guid claimId,
+        Player player) where T : ApQueuedClaimMessage, new()
+    {
         try
         {
-            return await meeting.Executed.Task.WaitAsync(ExecutionTimeout);
+            await meeting.Started.Task.WaitAsync(StartTimeout);
+            return true;
         }
         catch (TimeoutException)
         {
             LogUtility.Error(
-                $"Queued {kind.Noun} claim {claimId} attempt {attempt} for player {player.NetId} did not "
-                    + $"execute within {ExecutionTimeout.TotalSeconds:0} seconds."
+                $"Queued {kind.Noun} {claimId} for player {player.NetId} did not start executing within "
+                    + $"{StartTimeout.TotalSeconds:0} seconds."
             );
-            MultiplayerSupport.InvalidateRunClaims($"queued {kind.Noun} claim {claimId} did not execute");
-            return ApQueuedClaimResult.NotApplied;
+            return false;
         }
     }
 
@@ -241,19 +261,9 @@ public static class ApQueuedClaims
         Meeting meeting = GetOrAdd(key);
         if (!TryRequest(kind, key.ClaimId, key.Attempt, owner, createMessage))
             return ApQueuedClaimResult.NotApplied;
-
-        try
-        {
-            return await meeting.Executed.Task.WaitAsync(ExecutionTimeout);
-        }
-        catch (TimeoutException)
-        {
-            LogUtility.Error(
-                $"Queued {kind.Noun} {key.ClaimId} for player {owner.NetId} did not execute within "
-                    + $"{ExecutionTimeout.TotalSeconds:0} seconds."
-            );
+        if (!await WaitForStart(meeting, kind, key.ClaimId, owner))
             return ApQueuedClaimResult.NotApplied;
-        }
+        return await meeting.Executed.Task;
     }
 
     private static bool TryRequest<T>(
@@ -297,6 +307,7 @@ public static class ApQueuedClaims
         }
 
         Meeting meeting = GetOrAdd(new AttemptKey(message.ClaimId, message.Attempt));
+        meeting.Started.TrySetResult();
         ApQueuedClaimResult result = ApQueuedClaimResult.NotApplied;
         try
         {
@@ -315,7 +326,7 @@ public static class ApQueuedClaims
 
             // A menu row tells its owner why nothing happened; an owner waiting on a row-less
             // action reports the failure itself.
-            if (!TryGetClaim(message, context.Player, out ApQueuedClaim<T> claim, out string reason))
+            if (!TryGetClaim(message, context.Player, context.PlayerChoiceContext, out ApQueuedClaim<T> claim, out string reason))
             {
                 result = Refuse(kind, message, context.Player, reason,
                     kind.WaitsForMenuRow ? $"Could not claim that {kind.Noun}." : null);
@@ -336,6 +347,7 @@ public static class ApQueuedClaims
     private static bool TryGetClaim<T>(
         T message,
         Player player,
+        PlayerChoiceContext choiceContext,
         out ApQueuedClaim<T> claim,
         out string reason) where T : ApQueuedClaimMessage
     {
@@ -356,7 +368,7 @@ public static class ApQueuedClaims
             reason = $"it names AP slot {message.ApSlotId}, not the player's slot {ownerState.ApSlotId}";
         else
         {
-            claim = new ApQueuedClaim<T>(message, player, runState, shared, ownerState);
+            claim = new ApQueuedClaim<T>(message, player, runState, shared, ownerState, choiceContext);
             return true;
         }
         return false;
