@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
@@ -69,6 +70,28 @@ public static class RelicReceiptMultiplayer
             TreasureProceedReadySerializer.Deserialize,
             Required: true
         );
+    // The same four messages as native AP messages (ApNetMessages prototype). Handlers already
+    // run on the main thread, so they skip Post's main-loop hop.
+    private static readonly ApNetMessageDescriptor<Request> NativeRequest = new(
+        "relic_receipt_request", Json, FromJson<Request>,
+        context => Dispatch(() => HandleRequest(context.SenderNetId, context.Message)));
+    private static readonly ApNetMessageDescriptor<Reply> NativeReply = new(
+        "relic_receipt_decision", Json, FromJson<Reply>,
+        context => Dispatch(() =>
+        {
+            if (IsFromHost(context.SenderNetId))
+                ApplyReply(context.Message);
+        }));
+    private static readonly ApNetMessageDescriptor<TreasureProceedReady> NativeTreasureProceedReadyRequest = new(
+        "treasure_proceed_ready_request", Json, FromJson<TreasureProceedReady>,
+        context => Dispatch(() => HandleTreasureProceedReady(context.SenderNetId, context.Message)));
+    private static readonly ApNetMessageDescriptor<TreasureProceedReady> NativeTreasureProceedReadyDecision = new(
+        "treasure_proceed_ready_decision", Json, FromJson<TreasureProceedReady>,
+        context => Dispatch(() =>
+        {
+            if (IsFromHost(context.SenderNetId))
+                ApplyTreasureProceedReady(context.Message);
+        }));
     private static readonly Dictionary<Guid, TaskCompletionSource<Reply>> PendingMenus = new();
     private static readonly Dictionary<string, TaskCompletionSource> PendingChests = new();
     private static readonly HashSet<string> ReadyPickers = new();
@@ -84,6 +107,10 @@ public static class RelicReceiptMultiplayer
 
     public static void Initialize()
     {
+        ApNetMessages.Register(NativeRequest);
+        ApNetMessages.Register(NativeReply);
+        ApNetMessages.Register(NativeTreasureProceedReadyRequest);
+        ApNetMessages.Register(NativeTreasureProceedReadyDecision);
         _requestSubscription ??= RitsuLibSidecarTypedMessageRegistry.Subscribe(
             RequestDescriptor, context => Post(() => HandleRequest(context.SenderNetId, context.Message)));
         _replySubscription ??= RitsuLibSidecarTypedMessageRegistry.Subscribe(
@@ -142,6 +169,43 @@ public static class RelicReceiptMultiplayer
             LogUtility.Error("Could not dispatch a relic receipt decision on the Godot main loop.");
     }
 
+    private static void Dispatch(Action action)
+    {
+        try { action(); }
+        catch (Exception ex) { Fail(ex); }
+    }
+
+    private static bool IsFromHost(ulong sender) =>
+        MultiplayerSupport.TryGetHostNetId(RunManager.Instance.NetService, out ulong host) && sender == host;
+
+    private static byte[] Json<T>(T message) => JsonSerializer.SerializeToUtf8Bytes(message);
+
+    private static T FromJson<T>(ReadOnlySpan<byte> payload) where T : new() =>
+        JsonSerializer.Deserialize<T>(payload) ?? new T();
+
+    // Each send goes natively or through Sidecar by this process's switch; peers receive both.
+    private static bool SendToHost(Request request) => ApNetMessages.UseNative
+        ? ApNetMessages.SendToHost(NativeRequest, request)
+        : RitsuLibSidecarTypedMessageRegistry.SendToHost(RunManager.Instance.NetService, RequestDescriptor, request);
+
+    private static bool SendToHost(TreasureProceedReady ready) => ApNetMessages.UseNative
+        ? ApNetMessages.SendToHost(NativeTreasureProceedReadyRequest, ready)
+        : RitsuLibSidecarTypedMessageRegistry.SendToHost(
+            RunManager.Instance.NetService, TreasureProceedReadyRequestDescriptor, ready);
+
+    private static bool SendToPeer(ulong peer, Reply reply) => ApNetMessages.UseNative
+        ? ApNetMessages.SendToPeer(NativeReply, peer, reply)
+        : RitsuLibSidecarTypedMessageRegistry.SendToPeer(RunManager.Instance.NetService, peer, ReplyDescriptor, reply);
+
+    private static bool Broadcast(Reply reply) => ApNetMessages.UseNative
+        ? ApNetMessages.Broadcast(NativeReply, reply)
+        : RitsuLibSidecarTypedMessageRegistry.Broadcast(RunManager.Instance.NetService, ReplyDescriptor, reply);
+
+    private static bool Broadcast(TreasureProceedReady decision) => ApNetMessages.UseNative
+        ? ApNetMessages.Broadcast(NativeTreasureProceedReadyDecision, decision)
+        : RitsuLibSidecarTypedMessageRegistry.Broadcast(
+            RunManager.Instance.NetService, TreasureProceedReadyDecisionDescriptor, decision);
+
     private static void Fail(Exception ex)
     {
         LogUtility.Error($"AP relic receipt agreement failed: {ex}");
@@ -182,8 +246,7 @@ public static class RelicReceiptMultiplayer
         {
             if (RunManager.Instance.NetService.Type == NetGameType.Host)
                 HandleRequest(player.NetId, request);
-            else if (!RitsuLibSidecarTypedMessageRegistry.SendToHost(
-                RunManager.Instance.NetService, RequestDescriptor, request))
+            else if (!SendToHost(request))
                 throw new InvalidOperationException("Could not request relic menu reservations.");
             var reply = await pending.Task.WaitAsync(TimeSpan.FromSeconds(15));
             if (RunManager.Instance.DebugOnlyGetState() != run)
@@ -237,8 +300,7 @@ public static class RelicReceiptMultiplayer
             // without adding a request/response trip to an ordinary chest entry.
             if (await Task.WhenAny(pending.Task, Task.Delay(TimeSpan.FromSeconds(1))) != pending.Task
                 && !pending.Task.IsCompleted
-                && !RitsuLibSidecarTypedMessageRegistry.SendToHost(RunManager.Instance.NetService,
-                    RequestDescriptor, new Request
+                && !SendToHost(new Request
                     {
                         RunId = ApRunData.GetSharedState(run).RunId,
                         OwnerNetId = RunManager.Instance.NetService.NetId, RoomKey = roomKey,
@@ -264,11 +326,7 @@ public static class RelicReceiptMultiplayer
         if (request.RoomKey != null)
         {
             if (State(run).Chests.TryGetValue(request.RoomKey, out var chest)
-                && !RitsuLibSidecarTypedMessageRegistry.SendToPeer(
-                    RunManager.Instance.NetService,
-                    sender,
-                    ReplyDescriptor,
-                    new Reply { RunId = request.RunId, Chest = chest }))
+                && !SendToPeer(sender, new Reply { RunId = request.RunId, Chest = chest }))
                 throw new InvalidOperationException("Could not send the frozen chest decision to its requester.");
             return;
         }
@@ -288,7 +346,7 @@ public static class RelicReceiptMultiplayer
 
     private static void Publish(Reply reply)
     {
-        if (!RitsuLibSidecarTypedMessageRegistry.Broadcast(RunManager.Instance.NetService, ReplyDescriptor, reply))
+        if (!Broadcast(reply))
             throw new InvalidOperationException("Could not publish the host relic receipt decision.");
         ApplyReply(reply);
     }
@@ -350,10 +408,7 @@ public static class RelicReceiptMultiplayer
             return;
         }
 
-        if (!RitsuLibSidecarTypedMessageRegistry.SendToHost(
-                RunManager.Instance.NetService,
-                TreasureProceedReadyRequestDescriptor,
-                ready))
+        if (!SendToHost(ready))
         {
             throw new InvalidOperationException(
                 "Could not report treasure proceed readiness to the host."
@@ -396,10 +451,7 @@ public static class RelicReceiptMultiplayer
             PlayerNetId = RunManager.Instance.NetService.NetId,
             AllPlayersReady = true,
         };
-        if (!RitsuLibSidecarTypedMessageRegistry.Broadcast(
-                RunManager.Instance.NetService,
-                TreasureProceedReadyDecisionDescriptor,
-                decision))
+        if (!Broadcast(decision))
         {
             throw new InvalidOperationException(
                 "Could not publish treasure proceed readiness to every player."

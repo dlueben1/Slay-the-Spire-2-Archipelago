@@ -13,17 +13,17 @@ namespace StS2AP.Utils
         public override string CmdName => "ap";
 
         public override string Args =>
-            "report | deathlink | characters | queuedgold [on|off] | !command";
+            "report | deathlink | characters | queuedgold [on|off] | nativemessages [on|off] | !command";
 
         public override string Description =>
-            "AP report, DeathLink status, modded character IDs, queued gold prototype, and AP server commands";
+            "AP report, DeathLink status, modded character IDs, multiplayer prototypes, and AP server commands";
 
         public override bool IsNetworked => false;
 
         public override CompletionResult GetArgumentCompletions(Player? player, string[] args)
         {
             if (args.Length <= 1)
-                return CompleteArgument(["report", "deathlink", "characters", "queuedgold"], [], args.FirstOrDefault() ?? "", CompletionType.Subcommand);
+                return CompleteArgument(["report", "deathlink", "characters", "queuedgold", "nativemessages"], [], args.FirstOrDefault() ?? "", CompletionType.Subcommand);
             return base.GetArgumentCompletions(player, args);
         }
 
@@ -31,7 +31,7 @@ namespace StS2AP.Utils
         {
             if (args.Length == 0)
             {
-                return new CmdResult(false, "Usage: ap report | ap deathlink | ap characters | ap queuedgold [on|off] | ap !command");
+                return new CmdResult(false, "Usage: ap report | ap deathlink | ap characters | ap queuedgold [on|off] | ap nativemessages [on|off] | ap !command");
             }
 
             if (args[0].Equals("characters", StringComparison.OrdinalIgnoreCase))
@@ -59,6 +59,9 @@ namespace StS2AP.Utils
             if (args[0].Equals("queuedgold", StringComparison.OrdinalIgnoreCase))
                 return SetQueuedGold(args);
 
+            if (args[0].Equals("nativemessages", StringComparison.OrdinalIgnoreCase))
+                return SetNativeMessages(args);
+
             if (args[0].StartsWith("!", StringComparison.Ordinal))
             {
                 string sendMe = string.Join(" ", args);
@@ -69,7 +72,7 @@ namespace StS2AP.Utils
                 return new CmdResult(true);
             }
 
-            return new CmdResult(false, "Unknown AP command. Use ap report, ap deathlink, ap characters, ap queuedgold, or ap !command.");
+            return new CmdResult(false, "Unknown AP command. Use ap report, ap deathlink, ap characters, ap queuedgold, ap nativemessages, or ap !command.");
         }
 
         // Prototype switch for multiplayer AP gold claims as queued native actions. It lasts until
@@ -86,6 +89,23 @@ namespace StS2AP.Utils
 
             string message = $"Queued AP gold claims are {OnOff(ApQueuedGoldClaims.Enabled)} for AP menus opened from now on "
                 + "(multiplayer only; prototype).";
+            LogUtility.Info(message);
+            return new CmdResult(true, message);
+        }
+
+        // Prototype switch: send AP's relic receipt messages as native game messages instead of
+        // RitsuLib Sidecar messages. Peers receive both, so players may differ in it.
+        private static CmdResult SetNativeMessages(string[] args)
+        {
+            if (args.Length == 2 && args[1].Equals("on", StringComparison.OrdinalIgnoreCase))
+                ApNetMessages.UseNative = true;
+            else if (args.Length == 2 && args[1].Equals("off", StringComparison.OrdinalIgnoreCase))
+                ApNetMessages.UseNative = false;
+            else if (args.Length != 1)
+                return new CmdResult(false, "Usage: ap nativemessages [on|off]");
+
+            string message = $"Native AP relic receipt messages are {OnOff(ApNetMessages.UseNative)} "
+                + "for messages this game sends (prototype).";
             LogUtility.Info(message);
             return new CmdResult(true, message);
         }
