@@ -2,7 +2,7 @@
  * @file Presentation model for configured Bonus Items.
  *
  * Maps the semantic `BonusItemAnswer` state to the image/name/details triple used by
- * the Checks & Rewards table and the Review list, so both renderers stay in sync and
+ * the Item Pool table and the Review list, so both renderers stay in sync and
  * never duplicate relic lookups.
  */
 

@@ -1,5 +1,5 @@
 /**
- * @file Translates Checks & Rewards answers into generated sanity options.
+ * @file Translates the Checks step's check-types grid into generated sanity options.
  *
  * These toggles decide which ordinary game events become Archipelago locations and
  * rewards. Neow, floor, campfire, gold, potion, and card-reward behavior is kept together so
@@ -8,7 +8,7 @@
  */
 
 import type { OptionCatalog } from "../../generated/optionCatalog";
-import type { CheckAnswers } from "../WizardAnswers";
+import type { CheckTypeAnswers } from "../WizardAnswers";
 import { CHECK_OPTION_KEYS } from "../WizardOptionKey";
 import type { CompiledOptions } from "./applyCharacterOptions";
 
@@ -23,7 +23,7 @@ import type { CompiledOptions } from "./applyCharacterOptions";
  */
 export function applyCheckOptions(
   target: CompiledOptions,
-  answers: CheckAnswers,
+  answers: CheckTypeAnswers,
   catalog: OptionCatalog,
 ): void {
   // Detect schema drift before writing any part of this section.

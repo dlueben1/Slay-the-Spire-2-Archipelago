@@ -92,33 +92,33 @@ function summarizesConfiguredCounts(): void {
 }
 
 /**
- * Verifies the Checks & Rewards review section carries the structured rows.
+ * Verifies the Item Pool review section carries the structured rows.
  *
  * @returns Nothing; Vitest records assertion failures.
  */
-function attachesRowsToChecksAndRewardsSection(): void {
+function attachesRowsToItemPoolSection(): void {
   const answers = createTestAnswers();
-  answers.checksAndRewards.bonusItems = [
+  answers.itemPool.bonusItems = [
     { kind: "WAX_RELIC", mode: "specific", relicId: "FAKE_STRIKE_DUMMY" },
   ];
 
   const sections = buildWizardReviewSections(answers);
-  const checksSection = sections.find(
-    (section) => section.title === "Checks & Rewards",
+  const itemPoolSection = sections.find(
+    (section) => section.title === "Item Pool",
   );
 
-  // The combined section must mention the configured count and list the row.
-  expect(checksSection?.summary).toContain(
+  // The section must mention the configured count and list the row.
+  expect(itemPoolSection?.summary).toContain(
     "one Bonus Item is added to the item pool",
   );
-  expect(checksSection?.items).toHaveLength(1);
-  expect(checksSection?.items?.[0]?.name).toBe(
+  expect(itemPoolSection?.items).toHaveLength(1);
+  expect(itemPoolSection?.items?.[0]?.name).toBe(
     `Wax ${getRelicById("FAKE_STRIKE_DUMMY").name}`,
   );
 
   // Other sections never carry structured item rows.
   for (const section of sections) {
-    if (section.title !== "Checks & Rewards") {
+    if (section.title !== "Item Pool") {
       expect(section.items ?? []).toEqual([]);
     }
   }
@@ -133,10 +133,7 @@ function registerBonusItemsReviewTests(): void {
   it("summarizes the empty state explicitly", summarizesEmptyBonusItems);
   it("projects configured rows in order", projectsConfiguredRowsInOrder);
   it("summarizes singular and plural counts", summarizesConfiguredCounts);
-  it(
-    "attaches rows to the Checks & Rewards section",
-    attachesRowsToChecksAndRewardsSection,
-  );
+  it("attaches rows to the Item Pool section", attachesRowsToItemPoolSection);
 }
 
 // Register the documented test callbacks as one focused review suite.

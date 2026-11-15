@@ -192,27 +192,27 @@ function coversEveryGeneratedRunModifier(): void {
  *
  * @returns Nothing; Vitest records assertion failures.
  */
-function placesChallengeKeysAfterDeathLink(): void {
+function placesChallengeKeysBeforeDeathLink(): void {
   const keys = getGuidedOptionKeys();
-  const lastDeathLinkKey = keys.indexOf(DEATH_LINK_OPTION_KEYS.damagePercent);
+  const firstDeathLinkKey = keys.indexOf(DEATH_LINK_OPTION_KEYS.enabled);
 
   const challengeKeys = Object.values(CHALLENGE_OPTION_KEYS);
 
   expect(
-    keys.slice(lastDeathLinkKey + 1, lastDeathLinkKey + 1 + challengeKeys.length),
+    keys.slice(firstDeathLinkKey - challengeKeys.length, firstDeathLinkKey),
   ).toEqual(challengeKeys);
 }
 
 /**
- * Verifies the step carries its warning and sits between Death Link and Progression.
+ * Verifies the step carries its warning and sits between Boons and Multiworld.
  *
  * @returns Nothing; Vitest records assertion failures.
  */
 function warnsBeforeAnyChallenge(): void {
   const stepIds = wizardSteps.map((step) => step.id);
 
-  expect(stepIds.indexOf("challenges")).toBe(stepIds.indexOf("death-link") + 1);
-  expect(stepIds.indexOf("progression")).toBe(
+  expect(stepIds.indexOf("challenges")).toBe(stepIds.indexOf("boons") + 1);
+  expect(stepIds.indexOf("multiworld")).toBe(
     stepIds.indexOf("challenges") + 1,
   );
   expect(challengeSetupStep.warning?.title).toBeTruthy();
@@ -310,8 +310,8 @@ function registerChallengesTests(): void {
   );
   it("lists every generated Run Modifier", coversEveryGeneratedRunModifier);
   it(
-    "places challenge keys after Death Link",
-    placesChallengeKeysAfterDeathLink,
+    "places challenge keys just before Death Link",
+    placesChallengeKeysBeforeDeathLink,
   );
   it("warns on the Challenges step", warnsBeforeAnyChallenge);
   it("asks three times before opting in", asksThreeTimesBeforeOptingIn);

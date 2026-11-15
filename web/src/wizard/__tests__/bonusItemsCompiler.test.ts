@@ -36,7 +36,7 @@ import { createDefaultFillerAnswers } from "../FillerItem";
 import { getGuidedOptionKeys } from "../GuidedOption";
 import { createDefaultWizardAnswers } from "../WizardAnswers";
 import { BONUS_ITEM_OPTION_KEY } from "../WizardOptionKey";
-import { checkSetupStep } from "../WizardStep";
+import { itemPoolSetupStep } from "../WizardStep";
 import { compileWizardAnswers } from "../compiler/compileWizardAnswers";
 
 /**
@@ -218,7 +218,7 @@ function compilesEmptyBonusItemsDefault(): void {
  */
 function compilesBothWaxRelicModes(): void {
   const answers = createTestAnswers();
-  answers.checksAndRewards.bonusItems = [
+  answers.itemPool.bonusItems = [
     { kind: "WAX_RELIC", mode: "specific", relicId: CUSTOM_POOL_RELIC_ID },
     { kind: "WAX_RELIC", mode: "random", pools: ["Common", "Uncommon"] },
   ];
@@ -239,12 +239,12 @@ function compilesBothWaxRelicModes(): void {
  */
 function compilesDuplicatesAndManyRows(): void {
   const answers = createTestAnswers();
-  const duplicate: (typeof answers.checksAndRewards.bonusItems)[number] = {
+  const duplicate: (typeof answers.itemPool.bonusItems)[number] = {
     kind: "WAX_RELIC",
     mode: "specific",
     relicId: STANDARD_RELIC_ID,
   };
-  answers.checksAndRewards.bonusItems = Array.from({ length: 40 }, () => ({
+  answers.itemPool.bonusItems = Array.from({ length: 40 }, () => ({
     ...duplicate,
   }));
 
@@ -266,7 +266,7 @@ function compilesDuplicatesAndManyRows(): void {
 function rejectsInvalidBonusItemAnswers(): void {
   // An excluded relic cannot be selected even when hand-constructed.
   const blacklisted = createTestAnswers();
-  blacklisted.checksAndRewards.bonusItems = [
+  blacklisted.itemPool.bonusItems = [
     { kind: "WAX_RELIC", mode: "specific", relicId: BLACKLISTED_RELIC_ID },
   ];
   expect(() => compileWizardAnswers(blacklisted, optionCatalog)).toThrow(
@@ -275,7 +275,7 @@ function rejectsInvalidBonusItemAnswers(): void {
 
   // An unknown relic ID fails with the same eligibility message.
   const unknown = createTestAnswers();
-  unknown.checksAndRewards.bonusItems = [
+  unknown.itemPool.bonusItems = [
     { kind: "WAX_RELIC", mode: "specific", relicId: "NOT_A_RELIC" },
   ];
   expect(() => compileWizardAnswers(unknown, optionCatalog)).toThrow(
@@ -284,7 +284,7 @@ function rejectsInvalidBonusItemAnswers(): void {
 
   // Random mode requires at least one pool.
   const emptyPools = createTestAnswers();
-  emptyPools.checksAndRewards.bonusItems = [
+  emptyPools.itemPool.bonusItems = [
     { kind: "WAX_RELIC", mode: "random", pools: [] },
   ];
   expect(() => compileWizardAnswers(emptyPools, optionCatalog)).toThrow(
@@ -293,7 +293,7 @@ function rejectsInvalidBonusItemAnswers(): void {
 
   // Unknown pool names are rejected against the source-driven pool registry.
   const unknownPool = createTestAnswers();
-  unknownPool.checksAndRewards.bonusItems = [
+  unknownPool.itemPool.bonusItems = [
     { kind: "WAX_RELIC", mode: "random", pools: ["NotAPool"] },
   ];
   expect(() => compileWizardAnswers(unknownPool, optionCatalog)).toThrow(
@@ -302,7 +302,7 @@ function rejectsInvalidBonusItemAnswers(): void {
 
   // Duplicate pools in one row are rejected to keep YAML deterministic.
   const duplicatePools = createTestAnswers();
-  duplicatePools.checksAndRewards.bonusItems = [
+  duplicatePools.itemPool.bonusItems = [
     { kind: "WAX_RELIC", mode: "random", pools: ["Rare", "Rare"] },
   ];
   expect(() => compileWizardAnswers(duplicatePools, optionCatalog)).toThrow(
@@ -327,12 +327,14 @@ function ownsBonusItemsExactlyOnce(): void {
 }
 
 /**
- * Verifies Bonus Items sits between Shop Sanity and Filler Items in the UI order.
+ * Verifies Bonus Items comes before Filler Items on the Item Pool step.
  *
  * @returns Nothing; Vitest records assertion failures.
  */
 function placesBonusItemsBeforeFiller(): void {
-  const questionIds = checkSetupStep.questions.map((question) => question.id);
+  const questionIds = itemPoolSetupStep.questions.map(
+    (question) => question.id,
+  );
   const bonusIndex = questionIds.indexOf("bonus-items");
   const fillerIndex = questionIds.indexOf("filler-weights");
 
@@ -378,7 +380,7 @@ function rendersDisplayRows(): void {
  */
 function compilesEveryBonusKind(): void {
   const answers = createTestAnswers();
-  answers.checksAndRewards.bonusItems = [
+  answers.itemPool.bonusItems = [
     { kind: "RELIC", mode: "specific", relicId: STANDARD_RELIC_ID },
     { kind: "RELIC", mode: "random", pools: ["Rare"] },
     { kind: "ENCHANTMENT", mode: "random", tiers: ["Common", "Rare"] },
@@ -408,7 +410,7 @@ function rejectsInvalidNewBonusKinds(): void {
   const cases: [
     (typeof createTestAnswers extends () => infer T
       ? T
-      : never)["checksAndRewards"]["bonusItems"][number],
+      : never)["itemPool"]["bonusItems"][number],
     string,
   ][] = [
     [
@@ -428,7 +430,7 @@ function rejectsInvalidNewBonusKinds(): void {
   ];
   for (const [item, message] of cases) {
     const answers = createTestAnswers();
-    answers.checksAndRewards.bonusItems = [item];
+    answers.itemPool.bonusItems = [item];
     expect(() => compileWizardAnswers(answers, optionCatalog)).toThrow(message);
   }
 }
@@ -503,7 +505,7 @@ function registerBonusItemsTests(): void {
   it("compiles duplicates and many rows", compilesDuplicatesAndManyRows);
   it("rejects invalid answers", rejectsInvalidBonusItemAnswers);
   it("owns bonus_items exactly once", ownsBonusItemsExactlyOnce);
-  it("sits between Shop Sanity and Filler Items", placesBonusItemsBeforeFiller);
+  it("comes before Filler Items", placesBonusItemsBeforeFiller);
   it("renders display rows for both modes", rendersDisplayRows);
   it("compiles every bonus kind", compilesEveryBonusKind);
   it("rejects invalid enchantment and Max HP rows", rejectsInvalidNewBonusKinds);

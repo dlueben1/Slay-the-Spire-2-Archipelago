@@ -142,7 +142,7 @@ function compileBonusItem(
  * Applies player-facing Bonus Item answers to the generated `bonus_items` option.
  *
  * @param target - Fresh complete option object assembled by the root compiler.
- * @param answers - Ordered Bonus Item answers from the Checks & Rewards table.
+ * @param answers - Ordered Bonus Item answers from the Item Pool table.
  * @param catalog - Generated schema used to detect missing or drifted options.
  * @returns Nothing; replaces the `bonus_items` entry in the supplied snapshot.
  * @throws When the generated option is missing, has the wrong kind, or any row is invalid.

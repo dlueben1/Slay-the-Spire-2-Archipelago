@@ -6,7 +6,7 @@ import { selectGuidedOptions } from "../GuidedOption";
 import { TRAP_ITEM_DEFINITIONS, TRAP_WEIGHTS } from "../TrapItem";
 import { createDefaultWizardAnswers } from "../WizardAnswers";
 import {
-  checkSetupStep,
+  itemPoolSetupStep,
   getVisibleQuestionIds,
   progressionSetupStep,
   getQuestionById,
@@ -24,9 +24,9 @@ function defaults() {
 
 it("exports every trap weight and both logic choices through the guided YAML", () => {
   const answers = defaults();
-  answers.checksAndRewards.traps.chance = 60;
+  answers.itemPool.traps.chance = 60;
   TRAP_ITEM_DEFINITIONS.forEach((item, index) => {
-    answers.checksAndRewards.traps.weights[item.id] = TRAP_WEIGHTS[index % 4]!;
+    answers.itemPool.traps.weights[item.id] = TRAP_WEIGHTS[index % 4]!;
   });
   for (const useNewLogic of [true, false]) {
     answers.progression.useNewLogic = useNewLogic;
@@ -48,32 +48,32 @@ it("exports every trap weight and both logic choices through the guided YAML", (
 it("allows disabled traps but rejects an enabled empty mix and invalid percentages", () => {
   const answers = defaults();
   for (const item of TRAP_ITEM_DEFINITIONS)
-    answers.checksAndRewards.traps.weights[item.id] = "none";
-  answers.checksAndRewards.traps.chance = 0;
+    answers.itemPool.traps.weights[item.id] = "none";
+  answers.itemPool.traps.chance = 0;
   expect(() => compileWizardAnswers(answers, optionCatalog)).not.toThrow();
-  answers.checksAndRewards.traps.chance = 20;
+  answers.itemPool.traps.chance = 20;
   expect(() => compileWizardAnswers(answers, optionCatalog)).toThrow(
     "Enable at least one trap",
   );
-  answers.checksAndRewards.traps.weights.vakuu = "high";
+  answers.itemPool.traps.weights.vakuu = "high";
   for (const chance of [-1, 100.5, 101]) {
-    answers.checksAndRewards.traps.chance = chance;
+    answers.itemPool.traps.chance = chance;
     expect(() => compileWizardAnswers(answers, optionCatalog)).toThrow();
   }
 });
 
 it("reveals trap weights when enabled and explains the automatic old-logic fallback", () => {
   const answers = defaults();
-  answers.checksAndRewards.traps.chance = 0;
-  expect(getVisibleQuestionIds(checkSetupStep, answers)).not.toContain(
+  answers.itemPool.traps.chance = 0;
+  expect(getVisibleQuestionIds(itemPoolSetupStep, answers)).not.toContain(
     "trap-weights",
   );
-  answers.checksAndRewards.traps.chance = 1;
-  expect(getVisibleQuestionIds(checkSetupStep, answers)).toContain(
+  answers.itemPool.traps.chance = 1;
+  expect(getVisibleQuestionIds(itemPoolSetupStep, answers)).toContain(
     "trap-weights",
   );
   answers.progression.useNewLogic = true;
-  Object.assign(answers.checksAndRewards.checks, {
+  Object.assign(answers.checks.types, {
     includeFloorChecks: false,
     goldSanity: false,
     potionSanity: false,

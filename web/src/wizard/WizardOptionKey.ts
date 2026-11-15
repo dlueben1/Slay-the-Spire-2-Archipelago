@@ -30,6 +30,11 @@ export const RUN_OPTION_KEYS = {
   removeOpRelics: "remove_op_relics",
   releaseOnVictory: "release_on_victory",
   seeded: "seeded",
+} as const;
+
+/** Generated option keys owned by the Boons compiler. */
+export const BOON_OPTION_KEYS = {
+  boons: "boons",
   blitzMerchantChance: "blitz_merchant_chance",
 } as const;
 
@@ -53,13 +58,13 @@ export const CHALLENGE_OPTION_KEYS = {
   strictCardRewards: "strict_card_rewards",
 } as const;
 
-/** Generated option keys owned by Checks & Rewards' Starting Equipment subsection. */
+/** Generated option keys owned by the Checks step's Starting Equipment subsection. */
 export const STARTING_EQUIPMENT_OPTION_KEYS = {
   progressiveStarterCard: "progressive_starter_card",
   progressiveStarterRelic: "progressive_starter_relic",
 } as const;
 
-/** Generated option keys owned by the Ancient subsection of Checks & Rewards. */
+/** Generated option keys owned by the Ancient questions of Run Settings. */
 export const ANCIENT_OPTION_KEYS = {
   relicLocation: "ancient_relic_location",
   relicPool: "ancient_relic_pool",
@@ -72,7 +77,7 @@ export const PROGRESSION_OPTION_KEYS = {
   accessibility: "accessibility",
 } as const;
 
-/** Generated option keys owned by the Checks & Rewards compiler. */
+/** Generated option keys owned by the Checks step's check-types grid. */
 export const CHECK_OPTION_KEYS = {
   neowSanity: "neow_sanity",
   includeFloorChecks: "include_floor_checks",

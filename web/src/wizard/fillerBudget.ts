@@ -67,7 +67,7 @@ function getCharacterSlots(
     slots += 1;
   }
 
-  const equipment = answers.checksAndRewards.startingEquipment;
+  const equipment = answers.checks.startingEquipment;
   if (
     resolveStarter(
       starterOverrides?.progressiveStarterCard,
@@ -125,7 +125,7 @@ function getSlotsByCharacter(answers: WizardAnswers): Map<string, number> {
 
 /** Slots Bonus Items and Sight items take. Sight items only count while challenges are on. */
 function getUsedSlots(answers: WizardAnswers): number {
-  let used = answers.checksAndRewards.bonusItems.length;
+  let used = answers.itemPool.bonusItems.length;
   const challenges = answers.challenges;
   if (challenges.enabled) {
     used +=
@@ -148,7 +148,7 @@ function getUsedSlots(answers: WizardAnswers): number {
  */
 export function getFillerBudget(answers: WizardAnswers): FillerBudget {
   const used = getUsedSlots(answers);
-  const floorChecks = answers.checksAndRewards.checks.includeFloorChecks;
+  const floorChecks = answers.checks.types.includeFloorChecks;
 
   if (!floorChecks) {
     return {

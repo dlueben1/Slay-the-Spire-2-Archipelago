@@ -11,13 +11,15 @@ import type {
   AscensionConfigurationAnswers,
   AncientAnswers,
   BonusItemAnswer,
+  BoonAnswers,
   ChallengeAnswers,
   CharacterAnswers,
   CharacterStarterOverrides,
-  CheckAnswers,
-  ChecksAndRewardsAnswers,
+  ChecksAnswers,
+  CheckTypeAnswers,
   DeathLinkAnswers,
   FillerAnswers,
+  ItemPoolAnswers,
   ProgressionAnswers,
   RunAnswers,
   ShopCardAnswers,
@@ -26,6 +28,7 @@ import type {
   ShopRelicKindId,
   ShopStockAnswers,
   ShopAnswers,
+  ShopsAnswers,
   SightCopies,
   StartingEquipmentAnswers,
   WizardAnswers,
@@ -39,6 +42,7 @@ import {
   getSelectedBetaOnlyCharacters,
 } from "./CharacterRoster";
 import { getActiveBetaOnlyChallenges } from "./betaOnlyOptions";
+import { BOONS } from "./Boon";
 import { RUN_MODIFIERS } from "./RunModifier";
 
 export interface WizardReviewSection {
@@ -395,7 +399,8 @@ const SHOP_POTION_KIND_LABELS: readonly [ShopPotionKindId, string][] = [
  * Summarizes the run settings that affect an individual climb.
  *
  * @param answers - Valid current Run Settings answers.
- * @returns A compact paragraph describing Relic availability and removal, victory, and seeds.
+ * @returns A compact paragraph describing Relic availability and removal, victory, seeds,
+ * and Ancient rewards.
  */
 export function summarizeRunAnswers(answers: RunAnswers): string {
   const immediateRelics =
@@ -423,11 +428,29 @@ export function summarizeRunAnswers(answers: RunAnswers): string {
     ? "Each character uses a fixed seed."
     : "Runs are not assigned fixed seeds.";
 
+  const ancients = summarizeAncientAnswers(answers.ancients);
+
+  return `${immediateRelics} ${opRelics} ${victoryRelease} ${seeded} ${ancients}`;
+}
+
+/**
+ * Summarizes the selected Boons and Blitz merchants.
+ *
+ * @param answers - Current Boons answers.
+ * @returns A sentence or two naming what makes runs easier, or that nothing does.
+ */
+export function summarizeBoonAnswers(answers: BoonAnswers): string {
+  const names = BOONS.filter((boon) =>
+    answers.selected.includes(boon.optionName),
+  ).map((boon) => boon.name);
+  const boons = names.length
+    ? `${joinNames(names)} ${names.length === 1 ? "applies" : "apply"} to every run; logic ignores ${names.length === 1 ? "it" : "them"}.`
+    : "No Boons are selected.";
   const blitzMerchants = answers.blitzMerchantChance
     ? ` ${answers.blitzMerchantChance}% of shops are Blitz merchants. They are very strong and logic ignores them; they need the game's beta branch.`
     : "";
 
-  return `${immediateRelics} ${opRelics} ${victoryRelease} ${seeded}${blitzMerchants}`;
+  return `${boons}${blitzMerchants}`;
 }
 
 /**
@@ -606,7 +629,7 @@ export function summarizeStartingEquipmentAnswers(
   return `Progressive ${joinNames(enabled)} are enabled by default.`;
 }
 
-/** Summarizes the Ancient choices displayed above additional checks. */
+/** Summarizes the Ancient choices on Run Settings. */
 export function summarizeAncientAnswers(answers: AncientAnswers): string {
   // Translate Ancient timing into language about how the player claims rewards.
   const timing =
@@ -644,10 +667,10 @@ export function summarizeProgressionAnswers(
 /**
  * Summarizes enabled check and reward categories.
  *
- * @param answers - Valid current Checks & Rewards answers.
+ * @param answers - Valid current check-type answers.
  * @returns A sentence listing enabled optional location and reward behavior.
  */
-export function summarizeCheckAnswers(answers: CheckAnswers): string {
+export function summarizeCheckAnswers(answers: CheckTypeAnswers): string {
   // Collect only enabled categories using concise review labels.
   const enabled: string[] = [];
 
@@ -718,7 +741,7 @@ export function summarizeShopAnswers(answers: ShopAnswers): string {
 /**
  * Summarizes the configured Bonus Items subsection.
  *
- * @param answers - Ordered Bonus Item answers from the Checks & Rewards table.
+ * @param answers - Ordered Bonus Item answers from the Item Pool table.
  * @returns A sentence covering the empty state or the configured item count.
  */
 export function summarizeBonusItemAnswers(answers: BonusItemAnswer[]): string {
@@ -736,10 +759,10 @@ export function summarizeBonusItemAnswers(answers: BonusItemAnswer[]): string {
 /**
  * Builds structured review rows for every configured Bonus Item.
  *
- * @param answers - Ordered Bonus Item answers from the Checks & Rewards table.
+ * @param answers - Ordered Bonus Item answers from the Item Pool table.
  * @returns Image/name/details rows in the player's configured order.
  * @remarks Delegates all relic resolution to the shared display helper so the
- * review list matches the Checks & Rewards table exactly.
+ * review list matches the Item Pool table exactly.
  */
 export function buildBonusItemReviewRows(
   answers: BonusItemAnswer[],
@@ -748,36 +771,48 @@ export function buildBonusItemReviewRows(
 }
 
 /**
- * Summarizes the option families in the combined Checks & Rewards step.
+ * Summarizes the Checks step.
  *
- * @param answers - Valid Starting Equipment, Ancient, check, Shop, and filler answers.
- * @returns One paragraph following the same order as the combined step UI.
- * @remarks The focused summary functions remain reusable while this facade mirrors
- * the consolidated answer model and visible review section.
+ * @param answers - Valid Starting Equipment and check-type answers.
+ * @returns One paragraph following the step's order.
  */
-export function summarizeChecksAndRewardsAnswers(
-  answers: ChecksAndRewardsAnswers,
-): string {
-  // Summarize each independently compiled family through its focused prose helper.
+export function summarizeChecksAnswers(answers: ChecksAnswers): string {
   const startingEquipment = summarizeStartingEquipmentAnswers(
     answers.startingEquipment,
-    answers.checks.includeFloorChecks,
+    answers.types.includeFloorChecks,
   );
-  const checks = summarizeCheckAnswers(answers.checks);
-  const ancients = summarizeAncientAnswers(answers.ancients);
+  const checks = summarizeCheckAnswers(answers.types);
+  return `${checks} ${startingEquipment}`;
+}
+
+/**
+ * Summarizes the Shops step.
+ *
+ * @param answers - Valid Shop Sanity and shop stock answers.
+ * @returns One paragraph following the step's order.
+ */
+export function summarizeShopsAnswers(answers: ShopsAnswers): string {
   const shop = summarizeShopAnswers(answers.shop);
   const shopCards = summarizeShopCardAnswers(answers.shopCards);
   const shopRelics = summarizeShopRelicAnswers(answers.shopRelics);
   const shopPotions = summarizeShopPotionAnswers(answers.shopPotions);
+  return `${shop} ${shopCards} ${shopRelics} ${shopPotions}`;
+}
+
+/**
+ * Summarizes the Item Pool step.
+ *
+ * @param answers - Valid Bonus Item, filler and trap answers.
+ * @returns One paragraph following the step's order; Bonus Items are listed separately.
+ */
+export function summarizeItemPoolAnswers(answers: ItemPoolAnswers): string {
   const bonusItems = summarizeBonusItemAnswers(answers.bonusItems);
   const filler = summarizeFillerAnswers(answers.filler);
   const traps =
     answers.traps.chance === 0
       ? "Traps are disabled."
       : `${answers.traps.chance}% of filler slots become traps, with ${Object.values(answers.traps.weights).filter((weight) => weight !== "none").length} trap types enabled. At most one queued trap applies per player per turn.`;
-
-  // Preserve the visible subsection order in the final combined review paragraph.
-  return `${startingEquipment} ${ancients} ${checks} ${shop} ${shopCards} ${shopRelics} ${shopPotions} ${bonusItems} ${filler} ${traps}`;
+  return `${bonusItems} ${filler} ${traps}`;
 }
 
 /**
@@ -834,24 +869,27 @@ export function buildWizardReviewSections(
       title: "Character Setup",
       summary: summarizeCharacterAnswers(
         answers.characters,
-        answers.checksAndRewards.checks.includeFloorChecks,
+        answers.checks.types.includeFloorChecks,
       ),
       warning: describeBetaOnlyCharacters(answers.characters),
     },
     { title: "Run Settings", summary: summarizeRunAnswers(answers.run) },
+    { title: "Checks", summary: summarizeChecksAnswers(answers.checks) },
+    { title: "Shops", summary: summarizeShopsAnswers(answers.shops) },
     {
-      title: "Checks & Rewards",
-      summary: summarizeChecksAndRewardsAnswers(answers.checksAndRewards),
-      items: buildBonusItemReviewRows(answers.checksAndRewards.bonusItems),
+      title: "Item Pool",
+      summary: summarizeItemPoolAnswers(answers.itemPool),
+      items: buildBonusItemReviewRows(answers.itemPool.bonusItems),
     },
-    {
-      title: "Death Link",
-      summary: summarizeDeathLinkAnswers(answers.deathLink),
-    },
+    { title: "Boons", summary: summarizeBoonAnswers(answers.boons) },
     {
       title: "Challenges",
       summary: summarizeChallengeAnswers(answers.challenges),
       warning: describeChallengeWarnings(answers.challenges),
+    },
+    {
+      title: "Death Link",
+      summary: summarizeDeathLinkAnswers(answers.deathLink),
     },
     {
       title: "Progression",

@@ -14,6 +14,7 @@ import {
   getDefaultAscensionLevels,
   type AscensionLevel,
 } from "./AscensionModifier";
+import { getOrderedBoons } from "./Boon";
 import { getOrderedRunModifiers } from "./RunModifier";
 import { createDefaultShopCardWeights } from "./ShopCardKind";
 import {
@@ -22,6 +23,7 @@ import {
   SHOP_RELIC_KIND_DEFINITIONS,
 } from "./ShopStockKind";
 import {
+  BOON_OPTION_KEYS,
   CHALLENGE_OPTION_KEYS,
   CHECK_OPTION_KEYS,
   DEATH_LINK_OPTION_KEYS,
@@ -195,6 +197,14 @@ export interface RunAnswers {
   removeOpRelics: OpRelicRemovalAnswers;
   releaseOnVictory: boolean;
   seeded: boolean;
+  /** When and from which pool Progressive Ancient rewards are offered. */
+  ancients: AncientAnswers;
+}
+
+/** Helpful run modifiers that logic does not account for. */
+export interface BoonAnswers {
+  /** Canonical Boon names in `BOONS` order. */
+  selected: string[];
   /** Percent of shops that are Blitz merchants. Only the game's beta branch has them. */
   blitzMerchantChance: number;
 }
@@ -227,7 +237,7 @@ export interface ChallengeAnswers {
   strictCardRewards: boolean;
 }
 
-/** Progressive starting card and relic choices presented under Checks & Rewards. */
+/** Progressive starting card and relic choices presented on the Checks step. */
 export interface StartingEquipmentAnswers {
   progressiveStarterCard: boolean;
   progressiveStarterRelic: boolean;
@@ -244,7 +254,8 @@ export interface ProgressionAnswers {
   accessibility: AccessibilityMode;
 }
 
-export interface CheckAnswers {
+/** The additional check and reward categories in the Checks step's grid. */
+export interface CheckTypeAnswers {
   neowSanity: boolean;
   includeFloorChecks: boolean;
   campfireSanity: boolean;
@@ -277,14 +288,22 @@ export interface ShopStockAnswers<KindId extends string> {
   weights: Record<KindId, FillerWeightLevel>;
 }
 
-export interface ChecksAndRewardsAnswers {
+/** Checks step: which locations exist, plus the starter items Floor Checks make room for. */
+export interface ChecksAnswers {
   startingEquipment: StartingEquipmentAnswers;
-  ancients: AncientAnswers;
-  checks: CheckAnswers;
+  types: CheckTypeAnswers;
+}
+
+/** Shops step: Shop Sanity and what shops sell, which work independently. */
+export interface ShopsAnswers {
   shop: ShopAnswers;
   shopCards: ShopCardAnswers;
   shopRelics: ShopStockAnswers<ShopRelicKindId>;
   shopPotions: ShopStockAnswers<ShopPotionKindId>;
+}
+
+/** Item Pool step: what fills the item pool besides progression. */
+export interface ItemPoolAnswers {
   bonusItems: BonusItemAnswer[];
   filler: FillerAnswers;
   traps: TrapAnswers;
@@ -302,8 +321,11 @@ export interface WizardAnswers {
   playerName: string;
   characters: CharacterAnswers;
   run: RunAnswers;
+  checks: ChecksAnswers;
+  shops: ShopsAnswers;
+  itemPool: ItemPoolAnswers;
+  boons: BoonAnswers;
   challenges: ChallengeAnswers;
-  checksAndRewards: ChecksAndRewardsAnswers;
   deathLink: DeathLinkAnswers;
   progression: ProgressionAnswers;
 }
@@ -533,10 +555,18 @@ export function createDefaultWizardAnswers(
         RUN_OPTION_KEYS.releaseOnVictory,
       ),
       seeded: getBooleanDefault(catalog, RUN_OPTION_KEYS.seeded),
-      blitzMerchantChance: getNumberDefault(
-        catalog,
-        RUN_OPTION_KEYS.blitzMerchantChance,
-      ),
+      ancients: {
+        relicLocation: getChoiceDefault(
+          catalog,
+          ANCIENT_OPTION_KEYS.relicLocation,
+          ["start_of_act", "anytime"],
+        ),
+        relicPool: getChoiceDefault(catalog, ANCIENT_OPTION_KEYS.relicPool, [
+          "balanced",
+          "chaos",
+          "true_chaos",
+        ]),
+      },
     },
     challenges: {
       // Challenges are opt-in regardless of their generated defaults.
@@ -578,7 +608,7 @@ export function createDefaultWizardAnswers(
         CHALLENGE_OPTION_KEYS.strictCardRewards,
       ),
     },
-    checksAndRewards: {
+    checks: {
       startingEquipment: {
         progressiveStarterCard: getBooleanDefault(
           catalog,
@@ -589,19 +619,7 @@ export function createDefaultWizardAnswers(
           STARTING_EQUIPMENT_OPTION_KEYS.progressiveStarterRelic,
         ),
       },
-      ancients: {
-        relicLocation: getChoiceDefault(
-          catalog,
-          ANCIENT_OPTION_KEYS.relicLocation,
-          ["start_of_act", "anytime"],
-        ),
-        relicPool: getChoiceDefault(catalog, ANCIENT_OPTION_KEYS.relicPool, [
-          "balanced",
-          "chaos",
-          "true_chaos",
-        ]),
-      },
-      checks: {
+      types: {
         neowSanity: getBooleanDefault(catalog, CHECK_OPTION_KEYS.neowSanity),
         includeFloorChecks: getBooleanDefault(
           catalog,
@@ -621,6 +639,8 @@ export function createDefaultWizardAnswers(
           CHECK_OPTION_KEYS.shuffleAllCards,
         ),
       },
+    },
+    shops: {
       shop: {
         enabled: getBooleanDefault(catalog, SHOP_OPTION_KEYS.enabled),
         cardSlots: getNumberDefault(catalog, SHOP_OPTION_KEYS.cardSlots),
@@ -656,10 +676,21 @@ export function createDefaultWizardAnswers(
           catalog,
         ),
       },
+    },
+    itemPool: {
       // Bonus Items start empty; each one is added deliberately through the table UI.
       bonusItems: [],
       filler,
       traps: createDefaultTrapAnswers(catalog),
+    },
+    boons: {
+      selected: getOrderedBoons(
+        getStringSetDefault(catalog, BOON_OPTION_KEYS.boons),
+      ),
+      blitzMerchantChance: getNumberDefault(
+        catalog,
+        BOON_OPTION_KEYS.blitzMerchantChance,
+      ),
     },
     progression: {
       useNewLogic: getBooleanDefault(

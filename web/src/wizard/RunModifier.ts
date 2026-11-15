@@ -8,6 +8,8 @@
  * Challenges compiler rejects any name the regenerated schema no longer accepts.
  */
 
+import type { ModifierTableRow } from "./ModifierTableRow";
+
 export type RunModifierGroup = "combat" | "deck" | "resources";
 
 export interface RunModifier {
@@ -109,6 +111,16 @@ export const RUN_MODIFIERS: readonly RunModifier[] = [
     group: "resources",
   },
 ];
+
+/** Run Modifier rows for `ModifierTable.vue`, badged with their starting act. */
+export const RUN_MODIFIER_TABLE_ROWS: readonly ModifierTableRow<RunModifierGroup>[] =
+  RUN_MODIFIERS.map((modifier) => ({
+    optionName: modifier.optionName,
+    name: modifier.name,
+    effect: modifier.effect,
+    badge: `Act ${modifier.startsInAct}+`,
+    group: modifier.group,
+  }));
 
 /**
  * Orders selected Run Modifiers for stable state, review, and YAML compilation.

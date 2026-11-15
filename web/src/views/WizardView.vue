@@ -2,13 +2,16 @@
 import type { TabsItem } from "@nuxt/ui";
 import { computed, reactive, ref, watch, type Component } from "vue";
 import { useRouter } from "vue-router";
+import BoonsStep from "../components/wizard/steps/BoonsStep.vue";
 import ChallengesStep from "../components/wizard/steps/ChallengesStep.vue";
 import CharacterSetupStep from "../components/wizard/steps/CharacterSetupStep.vue";
-import CheckSetupStep from "../components/wizard/steps/CheckSetupStep.vue";
+import ChecksStep from "../components/wizard/steps/ChecksStep.vue";
 import DeathLinkStep from "../components/wizard/steps/DeathLinkStep.vue";
+import ItemPoolStep from "../components/wizard/steps/ItemPoolStep.vue";
 import ProgressionStep from "../components/wizard/steps/ProgressionStep.vue";
 import ReviewStep from "../components/wizard/steps/ReviewStep.vue";
 import RunSettingsStep from "../components/wizard/steps/RunSettingsStep.vue";
+import ShopsStep from "../components/wizard/steps/ShopsStep.vue";
 import { provideWizardAnswers } from "../components/wizard/core/wizardAnswersContext";
 import { optionCatalog } from "../generated/optionCatalog";
 import { buildWizardYaml } from "../services/YamlService";
@@ -28,16 +31,29 @@ import {
 import { selectGuidedOptions } from "../wizard/GuidedOption";
 import { compileWizardAnswers } from "../wizard/compiler/compileWizardAnswers";
 import { buildWizardReviewSections } from "../wizard/review";
-import { wizardSteps, type WizardSectionKey } from "../wizard/WizardStep";
+import {
+  wizardSteps,
+  type WizardSectionKey,
+  type WizardStep,
+} from "../wizard/WizardStep";
 
 /** Component responsible for each answer section declared by `wizardSteps`. */
 const sectionStepComponents: Record<WizardSectionKey, Component> = {
   characters: CharacterSetupStep,
   run: RunSettingsStep,
-  checksAndRewards: CheckSetupStep,
-  deathLink: DeathLinkStep,
+  checks: ChecksStep,
+  shops: ShopsStep,
+  itemPool: ItemPoolStep,
+  boons: BoonsStep,
   challenges: ChallengesStep,
+  deathLink: DeathLinkStep,
   progression: ProgressionStep,
+};
+
+/** Steps that were merged into another, so a saved position still lands nearby. */
+const RENAMED_STEP_IDS: Readonly<Record<string, string>> = {
+  "death-link": "multiworld",
+  progression: "multiworld",
 };
 
 const availableCharacters = optionCatalog.options.characters?.valid_keys ?? [];
@@ -62,7 +78,8 @@ provideWizardAnswers(answers);
 
 /** Index of a step by ID, or -1 when no step has that ID. */
 function findStepIndex(stepId: string): number {
-  return wizardSteps.findIndex((step) => step.id === stepId);
+  const currentId = RENAMED_STEP_IDS[stepId] ?? stepId;
+  return wizardSteps.findIndex((step) => step.id === currentId);
 }
 
 const stepIndex = ref(Math.max(0, findStepIndex(savedState?.stepId ?? "")));
@@ -297,44 +314,60 @@ const activeStep = computed(
   () => wizardSteps[stepIndex.value] ?? wizardSteps[0]!,
 );
 
-/** Component registered for the active answer section; Review is rendered separately. */
-const activeSectionComponent = computed(() => {
-  const sectionKey = activeStep.value.sectionKey;
-  return sectionKey ? sectionStepComponents[sectionKey] : null;
-});
+/** One answer section shown on the active step, with the component that edits it. */
+interface ActiveSectionPart {
+  sectionKey: WizardSectionKey;
+  component: Component;
+}
 
-/** Reactive answer object owned by the active section step. */
-const activeSectionAnswers = computed(() => {
-  const sectionKey = activeStep.value.sectionKey;
-  return sectionKey ? answers[sectionKey] : null;
-});
+/**
+ * Lists the answer sections shown on a step, in display order.
+ *
+ * @param step - Declarative step; a combined step lists its parts, others their own section.
+ * @returns One entry per section; empty for Review.
+ */
+function getSectionParts(step: WizardStep): ActiveSectionPart[] {
+  const sectionSteps = step.parts ?? [step];
+  const parts: ActiveSectionPart[] = [];
+
+  for (const sectionStep of sectionSteps) {
+    if (sectionStep.sectionKey) {
+      parts.push({
+        sectionKey: sectionStep.sectionKey,
+        component: sectionStepComponents[sectionStep.sectionKey],
+      });
+    }
+  }
+
+  return parts;
+}
+
+/** Sections, and their components, rendered for the active step. */
+const activeSectionParts = computed(() => getSectionParts(activeStep.value));
 
 /** Extra presentation data required by the two bespoke section components. */
-const activeSectionProps = computed<Record<string, unknown>>(() => {
-  if (activeStep.value.sectionKey === "characters") {
+function getSectionProps(
+  sectionKey: WizardSectionKey,
+): Record<string, unknown> {
+  if (sectionKey === "characters") {
     return { availableCharacters };
   }
 
-  if (activeStep.value.sectionKey === "checksAndRewards") {
+  if (sectionKey === "itemPool") {
     return { fillerItems };
   }
 
   return {};
-});
+}
 
 /**
- * Applies a complete section value emitted by the active registered component.
+ * Applies a complete section value emitted by a registered section component.
  *
+ * @param sectionKey - Section the emitting component edits.
  * @param value - Immutable section answer object emitted through component `v-model`.
  * @returns Nothing; mutates only the root reactive model owned by this view.
  */
-function setActiveSectionAnswers(value: object): void {
-  const sectionKey = activeStep.value.sectionKey;
-
-  if (!sectionKey) {
-    return;
-  }
-
+function setSectionAnswers(sectionKey: WizardSectionKey, value: object): void {
   // Preserve the provided section reference while applying the child's immutable value.
   Object.assign(answers[sectionKey], value);
 }
@@ -595,13 +628,16 @@ function next(): void {
         :yaml="yamlPreview"
         :player-name="answers.playerName"
       />
-      <component
-        :is="activeSectionComponent"
-        v-else-if="activeSectionComponent && activeSectionAnswers"
-        :model-value="activeSectionAnswers"
-        v-bind="activeSectionProps"
-        @update:model-value="setActiveSectionAnswers"
-      />
+      <div v-else class="space-y-10">
+        <component
+          :is="part.component"
+          v-for="part in activeSectionParts"
+          :key="part.sectionKey"
+          :model-value="answers[part.sectionKey]"
+          v-bind="getSectionProps(part.sectionKey)"
+          @update:model-value="setSectionAnswers(part.sectionKey, $event)"
+        />
+      </div>
       <template #footer
         ><div class="flex items-center justify-between gap-4">
           <p class="text-sm text-error">{{ error }}</p>
@@ -618,7 +654,7 @@ function next(): void {
               class="cursor-pointer"
               @click="next"
               >{{
-                activeStepId === "progression"
+                wizardSteps[stepIndex + 1]?.id === "review"
                   ? "Review & Download"
                   : "Continue"
               }}</UButton

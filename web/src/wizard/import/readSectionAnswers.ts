@@ -19,6 +19,7 @@ import {
   findBonusEnchantment,
 } from "../BonusEnchantmentData";
 import { FILLER_ITEM_DEFINITIONS, FILLER_WEIGHT_NAMES } from "../FillerItem";
+import { getOrderedBoons } from "../Boon";
 import { getOrderedRunModifiers } from "../RunModifier";
 import { SHOP_CARD_KIND_DEFINITIONS } from "../ShopCardKind";
 import {
@@ -31,20 +32,24 @@ import {
   SIGHT_COPY_COUNTS,
   type BonusItemAnswer,
   type BonusItemKind,
+  type BoonAnswers,
   type ChallengeAnswers,
-  type ChecksAndRewardsAnswers,
+  type ChecksAnswers,
   type DeathLinkAnswers,
   type FillerAnswers,
+  type ItemPoolAnswers,
   type FillerWeightLevel,
   type ProgressionAnswers,
   type RunAnswers,
   type ShopCardAnswers,
+  type ShopsAnswers,
   type ShopStockAnswers,
   type SightCopies,
 } from "../WizardAnswers";
 import {
   ANCIENT_OPTION_KEYS,
   BONUS_ITEM_OPTION_KEY,
+  BOON_OPTION_KEYS,
   CHALLENGE_OPTION_KEYS,
   CHECK_OPTION_KEYS,
   DEATH_LINK_OPTION_KEYS,
@@ -94,7 +99,7 @@ function sameOptionValue(left: unknown, right: unknown): boolean {
  * Reads Run Settings answers.
  *
  * @param options - Resolved option values.
- * @returns Relic availability and removal, victory release, and seeding answers.
+ * @returns Relic availability and removal, victory release, seeding, and Ancient answers.
  */
 export function readRunAnswers(options: CompiledOptions): RunAnswers {
   const removed = options[RUN_OPTION_KEYS.removeOpRelics] as string[];
@@ -108,7 +113,14 @@ export function readRunAnswers(options: CompiledOptions): RunAnswers {
     },
     releaseOnVictory: options[RUN_OPTION_KEYS.releaseOnVictory] as boolean,
     seeded: options[RUN_OPTION_KEYS.seeded] as boolean,
-    blitzMerchantChance: options[RUN_OPTION_KEYS.blitzMerchantChance] as number,
+    ancients: {
+      relicLocation: options[
+        ANCIENT_OPTION_KEYS.relicLocation
+      ] as RunAnswers["ancients"]["relicLocation"],
+      relicPool: options[
+        ANCIENT_OPTION_KEYS.relicPool
+      ] as RunAnswers["ancients"]["relicPool"],
+    },
   };
 }
 
@@ -310,16 +322,45 @@ function readShopStockAnswers<KindId extends string>(
 }
 
 /**
- * Reads Checks & Rewards answers.
+ * Reads Checks answers.
  *
  * @param options - Resolved option values.
- * @param warn - Receives warnings for Bonus Items and Shop settings.
- * @returns Starting Equipment, Ancient, check, Shop, Bonus Item, filler and trap answers.
+ * @returns Starting Equipment and check-type answers.
  */
-export function readChecksAndRewardsAnswers(
+export function readChecksAnswers(options: CompiledOptions): ChecksAnswers {
+  return {
+    startingEquipment: {
+      progressiveStarterCard: options[
+        STARTING_EQUIPMENT_OPTION_KEYS.progressiveStarterCard
+      ] as boolean,
+      progressiveStarterRelic: options[
+        STARTING_EQUIPMENT_OPTION_KEYS.progressiveStarterRelic
+      ] as boolean,
+    },
+    types: {
+      neowSanity: options[CHECK_OPTION_KEYS.neowSanity] as boolean,
+      includeFloorChecks: options[
+        CHECK_OPTION_KEYS.includeFloorChecks
+      ] as boolean,
+      campfireSanity: options[CHECK_OPTION_KEYS.campfireSanity] as boolean,
+      goldSanity: options[CHECK_OPTION_KEYS.goldSanity] as boolean,
+      potionSanity: options[CHECK_OPTION_KEYS.potionSanity] as boolean,
+      shuffleAllCards: options[CHECK_OPTION_KEYS.shuffleAllCards] as boolean,
+    },
+  };
+}
+
+/**
+ * Reads Shops answers.
+ *
+ * @param options - Resolved option values.
+ * @param warn - Receives a warning when Shop Sanity has no slots to shuffle.
+ * @returns Shop Sanity and shop stock answers.
+ */
+export function readShopsAnswers(
   options: CompiledOptions,
   warn: Warn,
-): ChecksAndRewardsAnswers {
+): ShopsAnswers {
   const shop = {
     enabled: options[SHOP_OPTION_KEYS.enabled] as boolean,
     cardSlots: options[SHOP_OPTION_KEYS.cardSlots] as number,
@@ -327,9 +368,7 @@ export function readChecksAndRewardsAnswers(
     relicSlots: options[SHOP_OPTION_KEYS.relicSlots] as number,
     potionSlots: options[SHOP_OPTION_KEYS.potionSlots] as number,
     removeSlots: options[SHOP_OPTION_KEYS.removeSlots] as boolean,
-    costs: options[
-      SHOP_OPTION_KEYS.costs
-    ] as ChecksAndRewardsAnswers["shop"]["costs"],
+    costs: options[SHOP_OPTION_KEYS.costs] as ShopsAnswers["shop"]["costs"],
   };
 
   // The Python world turns Shop Sanity off when it has no locations to add.
@@ -346,47 +385,7 @@ export function readChecksAndRewardsAnswers(
     shop.enabled = false;
   }
 
-  const rawBonusItems = options[BONUS_ITEM_OPTION_KEY] as unknown[];
-  const bonusItems: BonusItemAnswer[] = [];
-  rawBonusItems.forEach((entry, index) => {
-    const item = readBonusItem(entry, `Bonus Item ${index + 1}`, warn);
-    if (item) {
-      bonusItems.push(item);
-    }
-  });
-
-  const trapWeights = {} as ChecksAndRewardsAnswers["traps"]["weights"];
-  for (const item of TRAP_ITEM_DEFINITIONS) {
-    trapWeights[item.id] = options[item.optionKey] as TrapWeight;
-  }
-
   return {
-    startingEquipment: {
-      progressiveStarterCard: options[
-        STARTING_EQUIPMENT_OPTION_KEYS.progressiveStarterCard
-      ] as boolean,
-      progressiveStarterRelic: options[
-        STARTING_EQUIPMENT_OPTION_KEYS.progressiveStarterRelic
-      ] as boolean,
-    },
-    ancients: {
-      relicLocation: options[
-        ANCIENT_OPTION_KEYS.relicLocation
-      ] as ChecksAndRewardsAnswers["ancients"]["relicLocation"],
-      relicPool: options[
-        ANCIENT_OPTION_KEYS.relicPool
-      ] as ChecksAndRewardsAnswers["ancients"]["relicPool"],
-    },
-    checks: {
-      neowSanity: options[CHECK_OPTION_KEYS.neowSanity] as boolean,
-      includeFloorChecks: options[
-        CHECK_OPTION_KEYS.includeFloorChecks
-      ] as boolean,
-      campfireSanity: options[CHECK_OPTION_KEYS.campfireSanity] as boolean,
-      goldSanity: options[CHECK_OPTION_KEYS.goldSanity] as boolean,
-      potionSanity: options[CHECK_OPTION_KEYS.potionSanity] as boolean,
-      shuffleAllCards: options[CHECK_OPTION_KEYS.shuffleAllCards] as boolean,
-    },
     shop,
     shopCards: readShopCardAnswers(options),
     shopRelics: readShopStockAnswers(
@@ -399,12 +398,65 @@ export function readChecksAndRewardsAnswers(
       SHOP_POTION_OPTION_KEY,
       SHOP_POTION_KIND_DEFINITIONS,
     ),
+  };
+}
+
+/**
+ * Reads Item Pool answers.
+ *
+ * @param options - Resolved option values.
+ * @param warn - Receives warnings for Bonus Items that cannot be loaded.
+ * @returns Bonus Item, filler and trap answers.
+ */
+export function readItemPoolAnswers(
+  options: CompiledOptions,
+  warn: Warn,
+): ItemPoolAnswers {
+  const rawBonusItems = options[BONUS_ITEM_OPTION_KEY] as unknown[];
+  const bonusItems: BonusItemAnswer[] = [];
+  rawBonusItems.forEach((entry, index) => {
+    const item = readBonusItem(entry, `Bonus Item ${index + 1}`, warn);
+    if (item) {
+      bonusItems.push(item);
+    }
+  });
+
+  const trapWeights = {} as ItemPoolAnswers["traps"]["weights"];
+  for (const item of TRAP_ITEM_DEFINITIONS) {
+    trapWeights[item.id] = options[item.optionKey] as TrapWeight;
+  }
+
+  return {
     bonusItems,
     filler: readFillerAnswers(options),
     traps: {
       chance: options[TRAP_CHANCE_OPTION_KEY] as number,
       weights: trapWeights,
     },
+  };
+}
+
+/**
+ * Reads Boons answers.
+ *
+ * @param options - Resolved option values.
+ * @param warn - Receives a warning for Boon names the builder does not know.
+ * @returns Selected Boons and the Blitz merchant percentage.
+ */
+export function readBoonAnswers(
+  options: CompiledOptions,
+  warn: Warn,
+): BoonAnswers {
+  const raw = options[BOON_OPTION_KEYS.boons] as string[];
+  const selected = getOrderedBoons(raw);
+  for (const name of raw) {
+    if (!selected.includes(name)) {
+      warn(`Boons: left out '${name}', which is not a Boon the builder knows.`);
+    }
+  }
+  return {
+    selected,
+    blitzMerchantChance: options[BOON_OPTION_KEYS.blitzMerchantChance] as number,
   };
 }
 

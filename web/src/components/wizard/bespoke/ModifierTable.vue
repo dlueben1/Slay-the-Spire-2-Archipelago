@@ -1,38 +1,46 @@
-<script setup lang="ts">
-import {
-  getOrderedRunModifiers,
-  RUN_MODIFIER_GROUPS,
-  RUN_MODIFIERS,
-} from "../../../wizard/RunModifier";
+<script setup lang="ts" generic="Group extends string">
+import type {
+  ModifierTableGroup,
+  ModifierTableRow,
+} from "../../../wizard/ModifierTableRow";
 
 /**
- * Run Modifier checklist styled like the Ascension table.
+ * Checklist of run modifiers styled like the Ascension table, used for Run Modifiers
+ * and Boons.
  *
- * Rows come from `RUN_MODIFIERS`, grouped under `RUN_MODIFIER_GROUPS`, with a badge for
- * the act in which each modifier starts. The component edits only the ordered list of
- * selected canonical names; the Challenges compiler owns the YAML mapping.
+ * Rows are listed under their group headings, each with a short badge (such as the act
+ * a modifier starts in). The component edits only the list of selected canonical
+ * names, which it emits in row order; each step's compiler owns the YAML mapping.
  */
 const props = defineProps<{
   modelValue: string[];
+  rows: readonly ModifierTableRow<Group>[];
+  groups: readonly ModifierTableGroup<Group>[];
+  /** Accessible table name. */
+  label: string;
+  /** Heading of the name column. */
+  columnLabel: string;
+  /** Width every badge shares, so the names line up; fits `Act 2+` by default. */
+  badgeWidth?: string;
 }>();
 
 const emit = defineEmits<{
   "update:modelValue": [value: string[]];
 }>();
 
-const groups = RUN_MODIFIER_GROUPS.map((group) => ({
+const groupedRows = props.groups.map((group) => ({
   ...group,
-  modifiers: RUN_MODIFIERS.filter((modifier) => modifier.group === group.id),
+  rows: props.rows.filter((row) => row.group === group.id),
 }));
 
 /**
- * Turns one Run Modifier on or off.
+ * Turns one row on or off.
  *
  * @param optionName - Canonical name of the changed row.
  * @param value - Boolean-like value emitted by Nuxt UI's checkbox.
- * @returns Nothing; emits the selection in catalog order for a binary change.
+ * @returns Nothing; emits the selection in row order for a binary change.
  */
-function setModifierEnabled(optionName: string, value: unknown): void {
+function setRowEnabled(optionName: string, value: unknown): void {
   // Binary answers never store Nuxt UI's optional indeterminate state.
   if (typeof value !== "boolean") {
     return;
@@ -46,25 +54,35 @@ function setModifierEnabled(optionName: string, value: unknown): void {
     selected.delete(optionName);
   }
 
-  emit("update:modelValue", getOrderedRunModifiers(selected));
+  emit(
+    "update:modelValue",
+    props.rows
+      .filter((row) => selected.has(row.optionName))
+      .map((row) => row.optionName),
+  );
 }
 </script>
 
 <template>
-  <div class="modifier-table" role="table" aria-label="Run Modifiers">
+  <div
+    class="modifier-table"
+    role="table"
+    :aria-label="label"
+    :style="{ '--modifier-badge-width': badgeWidth ?? '3.5rem' }"
+  >
     <div class="modifier-table__header" role="row">
-      <span role="columnheader">Modifier</span>
+      <span role="columnheader">{{ columnLabel }}</span>
       <span role="columnheader">Enabled</span>
     </div>
 
-    <template v-for="group in groups" :key="group.id">
+    <template v-for="group in groupedRows" :key="group.id">
       <div class="modifier-table__group" role="row">
         <span role="rowheader">{{ group.title }}</span>
       </div>
 
       <div
-        v-for="modifier in group.modifiers"
-        :key="modifier.optionName"
+        v-for="row in group.rows"
+        :key="row.optionName"
         class="modifier-table__row"
         role="row"
       >
@@ -75,24 +93,22 @@ function setModifierEnabled(optionName: string, value: unknown): void {
             size="sm"
             class="modifier-table__act"
           >
-            Act {{ modifier.startsInAct }}+
+            {{ row.badge }}
           </UBadge>
 
           <div>
-            <strong>{{ modifier.name }}</strong>
-            <p>{{ modifier.effect }}</p>
+            <strong>{{ row.name }}</strong>
+            <p>{{ row.effect }}</p>
           </div>
         </div>
 
         <div class="modifier-table__checkbox" role="cell">
           <UCheckbox
-            :model-value="modelValue.includes(modifier.optionName)"
-            :aria-label="`Enable ${modifier.name}`"
+            :model-value="modelValue.includes(row.optionName)"
+            :aria-label="`Enable ${row.name}`"
             color="primary"
             class="cursor-pointer"
-            @update:model-value="
-              setModifierEnabled(modifier.optionName, $event)
-            "
+            @update:model-value="setRowEnabled(row.optionName, $event)"
           />
         </div>
       </div>
@@ -175,7 +191,7 @@ function setModifierEnabled(optionName: string, value: unknown): void {
 }
 
 .modifier-table__act {
-  min-width: 3.5rem;
+  min-width: var(--modifier-badge-width);
   flex: none;
   justify-content: center;
   border-radius: 9999px;
