@@ -83,6 +83,19 @@ public static class ApReceiptLedger
 
     private static void RequestNewReceipts(Player owner, string reason)
     {
+        try
+        {
+            TryRequestNewReceipts(owner, reason);
+        }
+        catch (Exception ex)
+        {
+            // Item processing calls this; a failure here must not stop the item itself.
+            LogUtility.Error($"Could not record new AP receipts ({reason}) for the other players: {ex}");
+        }
+    }
+
+    private static void TryRequestNewReceipts(Player owner, string reason)
+    {
         if (!MultiplayerSupport.IsRealMultiplayerRun
             || !MultiplayerSupport.IsLocalOwnApSlot
             || owner.RunState is not RunState runState
@@ -128,18 +141,23 @@ public static class ApReceiptLedger
                 RelicRewardsAvailableAnytime = batch == 0 ? anytime : null,
                 CheckedCampfireLocationIds = batch == 0 ? campfires : new List<long>(),
             };
-            Request(owner, message, reason);
+            // Later batches must not overtake one that could not be sent.
+            if (!Request(owner, message, reason))
+                return;
+            if (message.Receipts.Count > 0)
+                _requestedThrough = Math.Max(_requestedThrough, message.Receipts[^1].Index);
+            RequestedCampfires.UnionWith(message.CheckedCampfireLocationIds);
         }
-        if (receipts.Count > 0)
-            _requestedThrough = Math.Max(_requestedThrough, receipts[^1].Index);
-        RequestedCampfires.UnionWith(campfires);
     }
 
-    private static void Request(Player owner, ApReceiptsArrivedActionMessage message, string reason)
+    private static bool Request(Player owner, ApReceiptsArrivedActionMessage message, string reason)
     {
         Guid claimId = Guid.NewGuid();
         if (!ApQueuedClaims.TryAddress(message, claimId, owner))
-            return;
+        {
+            LogUtility.Error($"Could not record new AP receipts ({reason}): the run has no AP run id.");
+            return false;
+        }
         Guid runId = message.RunId;
         ManagedActionRequestScheduler.RequestOrDefer(
             claimId,
@@ -159,6 +177,7 @@ public static class ApReceiptLedger
                 LogUtility.Error($"Could not record new AP receipts for the other players: {failure}");
             }
         );
+        return true;
     }
 
     private static Task<ApQueuedClaimResult> Apply(ApQueuedClaim<ApReceiptsArrivedActionMessage> claim)
