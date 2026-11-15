@@ -99,9 +99,10 @@ internal sealed class ApQueuedClaimKind<T> where T : ApQueuedClaimMessage, new()
 }
 
 /// <summary>
-/// Prototype, off by default (<c>ap queuedclaims on</c>): multiplayer AP claims of gold, potions
-/// and bonus wax relics run as native queued actions, executed on every peer in the host's action
-/// order, instead of applying when a replicated reward selection arrives.
+/// Prototype, off by default (<c>ap queuedclaims on</c>): multiplayer AP claims of gold, potions,
+/// bonus wax relics and standard relics run as native queued actions, executed on every peer in the
+/// host's action order, instead of applying when a replicated reward selection arrives. Standard
+/// relics are also assigned by one, before the menu opens.
 /// </summary>
 /// <remarks>
 /// A replicated selection is handled whenever it arrives, so one peer can apply a claim before a
@@ -150,15 +151,15 @@ public static class ApQueuedClaims
     private static bool _initialized;
 
     /// <summary>
-    /// Whether this process's new AP menus offer gold, potions and bonus wax relics as queued
-    /// claims. Only the claim owner's switch matters: the menu tells every peer
+    /// Whether this process's new AP menus offer gold, potions, bonus wax relics and standard
+    /// relics as queued claims. Only the claim owner's switch matters: the menu tells every peer
     /// how each row works.
     /// </summary>
     public static bool Enabled { get; set; }
 
     /// <summary>
     /// Whether a menu opened now uses queued claims. A menu reads it once when it starts opening,
-    /// so all of its rows go the same way.
+    /// so all of its rows, and the relic assignments it waits for, go the same way.
     /// </summary>
     internal static bool IsActive => Enabled && MultiplayerSupport.IsRealMultiplayerRun;
 
@@ -169,6 +170,8 @@ public static class ApQueuedClaims
         ApNetActions.Register(ApQueuedGoldClaims.Kind.Descriptor);
         ApNetActions.Register(ApQueuedReceiptClaims.PotionKind.Descriptor);
         ApNetActions.Register(ApQueuedReceiptClaims.BonusRelicKind.Descriptor);
+        ApNetActions.Register(ApQueuedRelicClaims.AssignmentKind.Descriptor);
+        ApNetActions.Register(ApQueuedRelicClaims.ClaimKind.Descriptor);
         _initialized = true;
     }
 
@@ -225,8 +228,8 @@ public static class ApQueuedClaims
     }
 
     /// <summary>
-    /// Owner only: requests a row-less action, such as one that prepares a menu before it opens,
-    /// and waits until this peer has executed it. A timeout disables nothing: the action
+    /// Owner only: requests a row-less action, such as the relic assignments a menu needs before it
+    /// opens, and waits until this peer has executed it. A timeout disables nothing: the action
     /// still executes alike on every peer whenever it comes, and a retry finds its effect there.
     /// </summary>
     internal static async Task<ApQueuedClaimResult> RequestAndWait<T>(

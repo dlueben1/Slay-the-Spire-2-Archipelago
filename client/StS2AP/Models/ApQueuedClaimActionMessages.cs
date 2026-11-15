@@ -26,12 +26,30 @@ public sealed class ApGoldClaimActionMessage : ApQueuedClaimMessage
 }
 
 /// <summary>
-/// One queued claim of an AP receipt whose reward the owner materialized when the menu was built:
-/// a potion rolled with AP RNG, or an assigned bonus wax relic.
+/// One queued claim of an AP receipt: a potion rolled with AP RNG when the owner built the menu,
+/// an assigned bonus wax relic, or a standard relic.
 /// </summary>
 public sealed class ApReceiptClaimActionMessage : ApQueuedClaimMessage
 {
     public int ReceivedItemIndex { get; set; }
-    // The reward in MegaCrit's save schema, exactly as the menu row offered it.
+    // The reward in MegaCrit's save schema, exactly as the menu row offered it. Empty for a
+    // standard relic, which every peer reads from its own assignment instead.
     public string SerializedModel { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Asks every peer to assign relics to the owner's standard Relic receipts before the owner's AP
+/// menu opens, so each peer draws them from the same relic bag at the same point in the run.
+/// </summary>
+public sealed class ApRelicAssignmentActionMessage : ApQueuedClaimMessage
+{
+    public List<ApRelicAssignmentRequest> Receipts { get; set; } = new();
+}
+
+public sealed class ApRelicAssignmentRequest
+{
+    public int ReceivedItemIndex { get; set; }
+    // A receipt past the run's anytime relics spends one of the owner's banked natural relic
+    // rewards, as the host's menu approval records it today.
+    public bool RequiresBank { get; set; }
 }

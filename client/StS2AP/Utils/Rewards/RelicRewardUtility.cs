@@ -356,11 +356,18 @@ namespace StS2AP.Utils
             MultiplayerLocationChecks.PublishLocalProgress(player);
         }
 
-        private static bool IsAnytimeReceipt(IndexedItemInfo receipt, Player player)
+        private static bool IsAnytimeReceipt(IndexedItemInfo receipt, Player player) =>
+            IsAnytimeReceiptIndex(player, receipt.Index);
+
+        /// <summary>
+        /// Whether this Relic receipt is among the run's first X, which need no banked natural
+        /// relic reward. The host's menu approval draws the same line over its receipt catalog.
+        /// </summary>
+        internal static bool IsAnytimeReceiptIndex(Player player, int receiptIndex)
         {
             return GetRelicReceipts(player)
                 .Take(GetAvailableAnytimeForRun())
-                .Any(candidate => candidate.Index == receipt.Index);
+                .Any(candidate => candidate.Index == receiptIndex);
         }
 
         private sealed record RelicReceiptCache(
