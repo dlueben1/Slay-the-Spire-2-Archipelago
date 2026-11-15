@@ -139,6 +139,7 @@ public static class ApRunData
             CombatBuffLimit = existing?.CombatBuffLimit ?? new CombatEffectLimit(),
             LastConsumedTrapIndex = existing?.LastConsumedTrapIndex ?? -1,
             CombatTrapLimit = existing?.CombatTrapLimit ?? new CombatEffectLimit(),
+            QueuedGoldClaimCursor = existing?.QueuedGoldClaimCursor,
         };
         // SyncLobbyOnChange makes this a contribution to the authoritative host staging
         // session. On a client RitsuLib pushes the local PlayerRunSavedData payload with a

@@ -283,7 +283,7 @@ public static class ApMirroredRewardDispatcher
                 SourceAmount = gold.SourceAmount,
                 GrantedAmount = gold.GrantedAmount,
                 RedeemedRawAfter = gold.RedeemedRawAfter,
-                QueuedClaimId = ApQueuedGoldClaims.ShouldQueueNewClaims ? Guid.NewGuid() : null,
+                QueuedClaimId = ApQueuedClaims.NewClaimId(),
             };
         }
 

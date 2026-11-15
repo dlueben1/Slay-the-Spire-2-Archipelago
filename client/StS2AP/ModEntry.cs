@@ -42,7 +42,7 @@ namespace StS2AP
 
             // Initialize Utilities
             ApMirroredRewardDispatcher.Initialize();
-            ApQueuedGoldClaims.Initialize();
+            ApQueuedClaims.Initialize();
             RelicReceiptMultiplayer.Initialize();
             ProgressiveStarterMultiplayer.Initialize();
             AscensionMultiplayer.Initialize();

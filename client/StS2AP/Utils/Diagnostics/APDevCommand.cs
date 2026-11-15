@@ -13,7 +13,7 @@ namespace StS2AP.Utils
         public override string CmdName => "ap";
 
         public override string Args =>
-            "report | deathlink | characters | queuedgold [on|off] | nativemessages [on|off] | !command";
+            "report | deathlink | characters | queuedclaims [on|off] | nativemessages [on|off] | !command";
 
         public override string Description =>
             "AP report, DeathLink status, modded character IDs, multiplayer prototypes, and AP server commands";
@@ -23,7 +23,7 @@ namespace StS2AP.Utils
         public override CompletionResult GetArgumentCompletions(Player? player, string[] args)
         {
             if (args.Length <= 1)
-                return CompleteArgument(["report", "deathlink", "characters", "queuedgold", "nativemessages"], [], args.FirstOrDefault() ?? "", CompletionType.Subcommand);
+                return CompleteArgument(["report", "deathlink", "characters", "queuedclaims", "nativemessages"], [], args.FirstOrDefault() ?? "", CompletionType.Subcommand);
             return base.GetArgumentCompletions(player, args);
         }
 
@@ -31,7 +31,7 @@ namespace StS2AP.Utils
         {
             if (args.Length == 0)
             {
-                return new CmdResult(false, "Usage: ap report | ap deathlink | ap characters | ap queuedgold [on|off] | ap nativemessages [on|off] | ap !command");
+                return new CmdResult(false, "Usage: ap report | ap deathlink | ap characters | ap queuedclaims [on|off] | ap nativemessages [on|off] | ap !command");
             }
 
             if (args[0].Equals("characters", StringComparison.OrdinalIgnoreCase))
@@ -56,8 +56,8 @@ namespace StS2AP.Utils
                 return new CmdResult(true, GetDeathLinkStatus(issuingPlayer));
             }
 
-            if (args[0].Equals("queuedgold", StringComparison.OrdinalIgnoreCase))
-                return SetQueuedGold(args);
+            if (args[0].Equals("queuedclaims", StringComparison.OrdinalIgnoreCase))
+                return SetQueuedClaims(args);
 
             if (args[0].Equals("nativemessages", StringComparison.OrdinalIgnoreCase))
                 return SetNativeMessages(args);
@@ -72,23 +72,23 @@ namespace StS2AP.Utils
                 return new CmdResult(true);
             }
 
-            return new CmdResult(false, "Unknown AP command. Use ap report, ap deathlink, ap characters, ap queuedgold, ap nativemessages, or ap !command.");
+            return new CmdResult(false, "Unknown AP command. Use ap report, ap deathlink, ap characters, ap queuedclaims, ap nativemessages, or ap !command.");
         }
 
-        // Prototype switch for multiplayer AP gold claims as queued native actions. It lasts until
-        // the game closes and applies to AP menus opened afterwards; only the claiming player's
-        // switch matters.
-        private static CmdResult SetQueuedGold(string[] args)
+        // Prototype switch for multiplayer AP claims (so far only gold) as queued native actions.
+        // It lasts until the game closes and applies to AP menus opened afterwards; only the
+        // claiming player's switch matters.
+        private static CmdResult SetQueuedClaims(string[] args)
         {
             if (args.Length == 2 && args[1].Equals("on", StringComparison.OrdinalIgnoreCase))
-                ApQueuedGoldClaims.Enabled = true;
+                ApQueuedClaims.Enabled = true;
             else if (args.Length == 2 && args[1].Equals("off", StringComparison.OrdinalIgnoreCase))
-                ApQueuedGoldClaims.Enabled = false;
+                ApQueuedClaims.Enabled = false;
             else if (args.Length != 1)
-                return new CmdResult(false, "Usage: ap queuedgold [on|off]");
+                return new CmdResult(false, "Usage: ap queuedclaims [on|off]");
 
-            string message = $"Queued AP gold claims are {OnOff(ApQueuedGoldClaims.Enabled)} for AP menus opened from now on "
-                + "(multiplayer only; prototype).";
+            string message = $"Queued AP claims (gold so far) are {OnOff(ApQueuedClaims.Enabled)} "
+                + "for AP menus opened from now on (multiplayer only; prototype).";
             LogUtility.Info(message);
             return new CmdResult(true, message);
         }
