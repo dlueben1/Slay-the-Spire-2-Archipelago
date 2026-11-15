@@ -21,8 +21,6 @@ internal static class ParticipantAdapter
             Participation = IdentityInput(state.Participation, state.ApRoomSeed, state.ApTeamId, state.ApSlotId),
             HasSettings = state.SlotSettings != null,
             ReceiptSourceReady = state.ReceiptSourceReady,
-            RelicReceipts = state.InitialRelicReceiptIndexesByCharacter?.Select(
-                pair => new KeyValuePair<long, IReadOnlyList<int>>(pair.Key, pair.Value))!,
             ProgressiveAncients = state.InitialProgressiveAncientsByCharacter!,
         });
     }

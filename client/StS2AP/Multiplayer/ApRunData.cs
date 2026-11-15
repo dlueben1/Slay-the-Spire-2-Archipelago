@@ -95,10 +95,6 @@ public static class ApRunData
             SlotSettings = participation == ApParticipationKind.OwnApSlot
                 ? MultiplayerSupport.CreateEffectiveHostSettingsSnapshot()
                 : null,
-            InitialRelicReceiptIndexesByCharacter = participation ==
-                    ApParticipationKind.VanillaGuest
-                ? new Dictionary<long, List<int>>()
-                : progress.GetRelicReceiptIndexSnapshot(),
             InitialProgressiveAncientsByCharacter = participation ==
                     ApParticipationKind.VanillaGuest
                 ? new Dictionary<long, int>()
@@ -745,21 +741,10 @@ public static class ApRunData
         && (left.SlotSettings == null) == (right.SlotSettings == null)
         && left.SlotSettings?.AncientRelicLocation == right.SlotSettings?.AncientRelicLocation
         && left.SlotSettings?.AncientRelicPool == right.SlotSettings?.AncientRelicPool
-        && RelicReceiptMapsEqual(
-            left.InitialRelicReceiptIndexesByCharacter,
-            right.InitialRelicReceiptIndexesByCharacter)
         && CountMapsEqual(
             left.InitialProgressiveAncientsByCharacter,
             right.InitialProgressiveAncientsByCharacter)
         && left.ReceiptSourceReady == right.ReceiptSourceReady;
-
-    private static bool RelicReceiptMapsEqual(
-        IReadOnlyDictionary<long, List<int>> left,
-        IReadOnlyDictionary<long, List<int>> right) =>
-        left.Count == right.Count
-        && left.All(pair =>
-            right.TryGetValue(pair.Key, out List<int>? values)
-            && pair.Value.SequenceEqual(values));
 
     private static bool CountMapsEqual(
         IReadOnlyDictionary<long, int> left,

@@ -14,7 +14,6 @@ public sealed class ApPlayerRunState
     public int? ApTeamId { get; set; }
     public int? ApSlotId { get; set; }
     public ArchipelagoSettings? SlotSettings { get; set; }
-    public Dictionary<long, List<int>> InitialRelicReceiptIndexesByCharacter { get; set; } = new();
     public Dictionary<long, int> InitialProgressiveAncientsByCharacter { get; set; } = new();
     public bool ReceiptSourceReady { get; set; }
     public ApRunProgressState Progress { get; set; } = new();

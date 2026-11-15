@@ -19,7 +19,6 @@ public sealed class ApRelicReceiptState
         public string Destination { get; set; } = string.Empty;
         // A natural source's claim is consumed once it settles; a menu claim once it is claimed.
         public bool Consumed { get; set; }
-        public int RewardNumber { get; set; }
         public bool RequiresBank { get; set; }
         public string? MenuRelicAssignment { get; set; }
     }
@@ -67,7 +66,7 @@ public sealed class ApRelicReceiptState
     public bool CanUseMenu(ulong player, int index) =>
         Find(player, index) is { Destination: MenuDestination, Consumed: false };
 
-    public bool TryReserve(ulong player, int index, string destination, int rewardNumber = 0, bool requiresBank = false)
+    public bool TryReserve(ulong player, int index, string destination, bool requiresBank = false)
     {
         if (Find(player, index) is Claim existing)
             return existing.Destination == destination && !existing.Consumed;
@@ -75,7 +74,7 @@ public sealed class ApRelicReceiptState
             Claims[player] = claims = new();
         claims.Add(index, new Claim
         {
-            Destination = destination, RewardNumber = rewardNumber,
+            Destination = destination,
             RequiresBank = requiresBank || destination != MenuDestination,
         });
         return true;

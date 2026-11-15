@@ -80,7 +80,6 @@ type ParticipantContributionInput =
       Participation: ParticipationInput
       HasSettings: bool
       ReceiptSourceReady: bool
-      RelicReceipts: IEnumerable<KeyValuePair<int64, IReadOnlyList<int>>>
       ProgressiveAncients: IReadOnlyDictionary<int64, int> }
 
 /// A decision about the current input, not a retained contribution or a launch authorization.
@@ -94,19 +93,13 @@ type ContributionReadiness =
         | Rejected error -> rejected.Invoke(error)
 
     static member private ValidateReceipts(input: ParticipantContributionInput) =
-        if isNull input.RelicReceipts || isNull input.ProgressiveAncients then
-            Error (ContributionError.InvalidReceipts "Missing initial receipt collections.")
+        if isNull input.ProgressiveAncients then
+            Error (ContributionError.InvalidReceipts "Missing initial Progressive Ancient counts.")
         else
-            let indexes = HashSet<int>()
             let mutable valid = true
-            for KeyValue(character, receipts) in input.RelicReceipts do
-                if character < 1L || isNull receipts then valid <- false
-                else
-                    for index in receipts do
-                        if index < 0 || not (indexes.Add(index)) then valid <- false
             for KeyValue(character, count) in input.ProgressiveAncients do
                 if character < 1L || count < 0 then valid <- false
-            if not valid then Error (ContributionError.InvalidReceipts "Invalid character, receipt index, duplicate receipt, or Ancient count.")
+            if not valid then Error (ContributionError.InvalidReceipts "Invalid character or Ancient count.")
             else Ok ()
 
     /// Evaluates one current contribution, not the whole roster and not the player's Ready click.

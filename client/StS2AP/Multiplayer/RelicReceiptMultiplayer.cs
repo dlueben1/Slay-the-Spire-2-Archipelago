@@ -158,7 +158,7 @@ public static class RelicReceiptMultiplayer
             {
                 if (candidate.ReceiptIndex is not int index)
                     continue;
-                receipts.TryReserve(candidate.PlayerNetId, index, roomKey, candidate.RewardNumber);
+                receipts.TryReserve(candidate.PlayerNetId, index, roomKey);
                 receipts.Consume(candidate.PlayerNetId, index, roomKey);
             }
         });
@@ -213,8 +213,8 @@ public static class RelicReceiptMultiplayer
             receipts.Elites[key] = decision;
             foreach (ApRelicReceiptState.EliteSources sources in decision.Players)
             {
-                for (int i = 0; i < sources.Reserved.Count; i++)
-                    receipts.TryReserve(sources.PlayerNetId, sources.Reserved[i], key, sources.BaseAttempted + i + 1);
+                foreach (int index in sources.Reserved)
+                    receipts.TryReserve(sources.PlayerNetId, index, key);
             }
         });
         LogUtility.Info($"Elite AP relic receipts reserved: room={key}, " + string.Join(", ", decision.Players.Select(p =>

@@ -13,7 +13,7 @@ public sealed class RelicReceiptTests
     public void ChestReservationWinsOverALaterMenuRequest()
     {
         var state = new ApRelicReceiptState();
-        Assert.True(state.TryReserve(11, 100, Chest, rewardNumber: 1));
+        Assert.True(state.TryReserve(11, 100, Chest));
         Assert.False(state.TryReserve(11, 100, ApRelicReceiptState.MenuDestination));
         Assert.False(state.CanUseMenu(11, 100));
     }
@@ -23,7 +23,7 @@ public sealed class RelicReceiptTests
     {
         var state = new ApRelicReceiptState();
         Assert.True(state.TryReserve(11, 100, ApRelicReceiptState.MenuDestination));
-        Assert.False(state.TryReserve(11, 100, Elite, rewardNumber: 3));
+        Assert.False(state.TryReserve(11, 100, Elite));
         Assert.True(state.CanUseMenu(11, 100));
     }
 
@@ -31,7 +31,7 @@ public sealed class RelicReceiptTests
     public void PlayersSharingAReceiptIndexHaveIndependentReservations()
     {
         var state = new ApRelicReceiptState();
-        state.TryReserve(11, 100, Chest, rewardNumber: 1);
+        state.TryReserve(11, 100, Chest);
         state.Consume(11, 100, Chest);
         Assert.True(state.TryReserve(22, 100, ApRelicReceiptState.MenuDestination));
         Assert.True(state.Find(11, 100)!.Consumed && !state.Find(22, 100)!.Consumed);
@@ -59,7 +59,7 @@ public sealed class RelicReceiptTests
     {
         var state = new ApRelicReceiptState();
         // Two chests: the first paired receipt 100, the second had no receipt waiting.
-        state.TryReserve(11, 100, Chest, rewardNumber: 1);
+        state.TryReserve(11, 100, Chest);
         state.Consume(11, 100, Chest);
         Assert.Equal(1, state.AvailableBanks(11, relicRewardsAttempted: 2, maxRelicRewards: 10));
     }
@@ -84,8 +84,8 @@ public sealed class RelicReceiptTests
     public void EliteReservationsSettle()
     {
         var state = new ApRelicReceiptState();
-        state.TryReserve(11, 100, Elite, rewardNumber: 3);
-        state.TryReserve(11, 101, Elite, rewardNumber: 4);
+        state.TryReserve(11, 100, Elite);
+        state.TryReserve(11, 101, Elite);
         // The combat ended with two natural rewards so far and two reserved receipts.
         Assert.Equal(2, state.AvailableBanks(11, relicRewardsAttempted: 2, maxRelicRewards: 10));
         Assert.False(state.TryReserve(11, 101, ApRelicReceiptState.MenuDestination));
@@ -103,7 +103,7 @@ public sealed class RelicReceiptTests
     {
         var state = new ApRelicReceiptState();
         state.TryReserve(11, 100, ApRelicReceiptState.MenuDestination);
-        state.TryReserve(11, 101, Chest, rewardNumber: 1);
+        state.TryReserve(11, 101, Chest);
         state.Consume(11, 101, Chest);
         state.Release(11, 100);
         state.Release(11, 101);
@@ -117,7 +117,7 @@ public sealed class RelicReceiptTests
         var state = new ApRelicReceiptState();
         state.TryReserve(22, 101, ApRelicReceiptState.MenuDestination, requiresBank: true);
         state.AssignMenu(22, 101, "exact saved relic JSON");
-        state.TryReserve(11, 100, Chest, rewardNumber: 1);
+        state.TryReserve(11, 100, Chest);
         state.Consume(11, 100, Chest);
         state.Chests[Chest] = new()
         {

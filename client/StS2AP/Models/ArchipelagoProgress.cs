@@ -722,7 +722,6 @@ namespace StS2AP.Models
                 BonusRelicAssignments = new(BonusRelicAssignments),
                 BankedRelicRewards = BankedRelicRewards,
                 RelicRewardsAvailableAnytimeForRun = RelicRewardsAvailableAnytimeForRun,
-                RelicReceiptIndexesByCharacter = GetRelicReceiptIndexSnapshot(),
                 GoldRewardsAttempted = GoldRewardsAttempted,
                 PotionRewardsAttempted = PotionRewardsAttempted,
                 BossRewardsDistributed = BossRewardsDistributed,
@@ -793,17 +792,6 @@ namespace StS2AP.Models
                     .ToList(),
             };
         }
-
-        public Dictionary<long, List<int>> GetRelicReceiptIndexSnapshot() =>
-            AllReceivedItems
-                .Where(receipt =>
-                    ArchipelagoIdCodec.IsCharacterItemId(receipt.Item.ItemId)
-                    && receipt.Item.GetCharacterItemType() == APItem.Relic)
-                .GroupBy(receipt => receipt.Item.GetAPCharacterNumber())
-                .ToDictionary(
-                    group => group.Key,
-                    group => group.Select(receipt => receipt.Index).Distinct().Order().ToList()
-                );
 
         public SerializableAP ToSerializable(SerializableRun run)
         {
