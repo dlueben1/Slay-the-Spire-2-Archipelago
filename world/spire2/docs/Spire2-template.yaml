@@ -61,6 +61,15 @@ Slay the Spire II:
   # DO NOT MAKE THIS NUMBER EQUAL TO YOUR ascension as Ascension 1 is necessary for relic checks
   ascension_down: []
 
+  #########
+  # Boons #
+  #########
+
+  # Helpful modifiers for every run; logic ignores them. Names (case-sensitive):
+  #   Wayfinder, SecondWind, EmberEnchanting, CompoundInterest, Gilded,
+  #   SpringCleaning, LoyalCustomer, CampfireBrewing. Details are on the website.
+  boons: []
+
   ##############
   # Challenges #
   ##############

@@ -714,6 +714,39 @@ class RunModifiers(OptionSet):
     default = frozenset()
 
 
+class Boons(OptionSet):
+    """Helpful modifiers for every run. Logic does not account for them. Names are case-sensitive.
+    Only Compound Interest, Gilded and Loyal Customer work in multiplayer, where the host's choice
+    applies to the whole run; multiplayer runs leave out the others.
+
+    - 'Wayfinder': Three times per act, travel to any room in the next row, ignoring the paths.
+    - 'SecondWind': Once per act, survive a killing blow and heal 25% of your max HP.
+    - 'EmberEnchanting': Campfires let you enchant a card with a random enchantment. This uses up
+      the campfire and needs the same Progressive Smith as upgrading.
+    - 'CompoundInterest': At the start of Act 2 and of Act 3, gain 20% of the gold you hold, up to
+      100.
+    - 'Gilded': Gain 30% more gold, including gold from Archipelago items.
+    - 'SpringCleaning': After the Act 1 and Act 2 bosses, choose one: remove a card, transform a
+      card, or upgrade 2 random cards.
+    - 'LoyalCustomer': Each purchase makes the rest of that shop 15% cheaper, up to 45%.
+      Archipelago checks in the shop count and get the discount too.
+    - 'CampfireBrewing': Once per campfire, brew a random potion. You can still rest or upgrade
+      afterwards."""
+    display_name = "Boons"
+    valid_keys_casefold = False
+    valid_keys = {
+        "Wayfinder",
+        "SecondWind",
+        "EmberEnchanting",
+        "CompoundInterest",
+        "Gilded",
+        "SpringCleaning",
+        "LoyalCustomer",
+        "CampfireBrewing",
+    }
+    default = frozenset()
+
+
 class EnemyHpScaling(Range):
     """Extra max HP for every enemy in Acts 2 and 3, as a percentage. Act 1 is unchanged. Stacks with
     Ascension. Logic does not account for it. In multiplayer, the host's value applies to the whole
@@ -1120,6 +1153,8 @@ class Spire2Options(PerGameCommonOptions):
     confused_trap_weight: ConfusedTrapWeight
     sloth_trap_weight: SlothTrapWeight
     dazed_trap_weight: DazedTrapWeight
+
+    boons: Boons
 
     # Challenges
     run_modifiers: RunModifiers

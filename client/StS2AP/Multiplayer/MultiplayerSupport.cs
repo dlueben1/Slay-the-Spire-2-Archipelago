@@ -927,6 +927,7 @@ public static class MultiplayerSupport
             GoldSanity = source.GoldSanity,
             BonusItems = source.BonusItems.ToArray(),
             RunModifiers = source.RunModifiers.ToList(),
+            Boons = source.Boons.ToList(),
             EnemyHpScaling = source.EnemyHpScaling,
             EnemyDamageScaling = source.EnemyDamageScaling,
             DreadMode = source.DreadMode,

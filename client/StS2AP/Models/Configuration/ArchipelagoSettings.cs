@@ -143,6 +143,12 @@ namespace StS2AP.Models
         /// </summary>
         public List<string> RunModifiers { get; set; } = new();
 
+        /// <summary>
+        /// Boons names from the YAML (for example "Wayfinder"): helpful modifiers that a new run
+        /// adds; see <see cref="ApRunModifiers"/>.
+        /// </summary>
+        public List<string> Boons { get; set; } = new();
+
         /// <summary>Extra enemy max HP in Acts 2 and 3, in percent (0-15).</summary>
         public int EnemyHpScaling { get; set; }
 
