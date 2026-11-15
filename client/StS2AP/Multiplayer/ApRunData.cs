@@ -549,10 +549,6 @@ public static class ApRunData
         return true;
     }
 
-    public static bool IsReceiptUsed(RunState runState, ulong netId, int receivedItemIndex) =>
-        _players.TryGet(runState, netId, out ApPlayerRunState state)
-        && state.Progress.UsedItems.Contains(receivedItemIndex);
-
     /// <summary>Forgets the local publication baseline; host-carried run data is untouched.</summary>
     public static void EndRun()
     {

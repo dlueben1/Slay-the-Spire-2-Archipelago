@@ -55,7 +55,7 @@ public static class ApMirroredRewardDispatcher
     public static async Task<bool> OpenMenu()
     {
         Player? player = GameUtility.CurrentPlayer;
-        if (player?.RunState is not RunState runState)
+        if (player?.RunState is not RunState)
             return false;
 
         if (ArchipelagoRewardUI.IsOpen)
@@ -89,7 +89,7 @@ public static class ApMirroredRewardDispatcher
                 : null;
             if (multiplayer && !ArchipelagoRewardUI.CanBuildMenuAfterAwait())
                 return false;
-            spec = BuildOwnerMenuSpec(player, runState, approvedRelics, queuedClaims: multiplayer);
+            spec = BuildOwnerMenuSpec(player, approvedRelics, queuedClaims: multiplayer);
             rewards = DecodeRewards(spec);
         }
         catch (Exception ex)
@@ -147,25 +147,12 @@ public static class ApMirroredRewardDispatcher
     /// </param>
     private static ApRewardMenuSpec BuildOwnerMenuSpec(
         Player player,
-        RunState runState,
         IReadOnlySet<int>? approvedRelics,
         bool queuedClaims)
     {
-        Guid runId = Guid.Empty;
-        if (MultiplayerSupport.IsRealMultiplayerRun)
-        {
-            if (!ApRunData.TryGetSharedState(runState, out ApRunSharedState shared)
-                || shared.RunId == Guid.Empty)
-            {
-                throw new InvalidOperationException("No shared AP run state exists.");
-            }
-            runId = shared.RunId;
-        }
-
         int apSlotId = MultiplayerSupport.PreparedApSlotId ?? 0;
         var menu = new ApRewardMenuSpec
         {
-            RunId = runId,
             MenuId = Guid.NewGuid(),
             ApSlotId = apSlotId,
             OwnerNetId = player.NetId,

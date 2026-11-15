@@ -5,7 +5,6 @@ namespace StS2AP.Models;
 /// </summary>
 public sealed class ApRewardMenuSpec
 {
-    public Guid RunId { get; set; }
     public Guid MenuId { get; set; } = Guid.NewGuid();
     public int ApSlotId { get; set; }
     public ulong OwnerNetId { get; set; }
