@@ -12,7 +12,6 @@ using MegaCrit.Sts2.Core.Multiplayer.Game.Lobby;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Data;
 using StS2AP.Extensions;
-using STS2RitsuLib.Networking.ManagedActions;
 using static StS2AP.Data.ItemTable;
 
 namespace StS2AP.Utils;
@@ -26,9 +25,8 @@ public static class AscensionMultiplayer
 {
     private const string ActionKey = "ascension_down";
 
-    private static readonly RitsuLibManagedNetActionDescriptor<ApAscensionDownActionMessage>
+    private static readonly ApNetActionDescriptor<ApAscensionDownActionMessage>
         ActionDescriptor = new(
-            ModuleId: ModEntry.ModId,
             ActionKey: ActionKey,
             Serialize: static message => JsonSerializer.SerializeToUtf8Bytes(message),
             Deserialize: DeserializeMessage,
@@ -47,7 +45,7 @@ public static class AscensionMultiplayer
         if (_initialized)
             return;
 
-        RitsuLibManagedNetActions.Register(ActionDescriptor);
+        ApNetActions.Register(ActionDescriptor);
         _initialized = true;
     }
 
@@ -402,12 +400,7 @@ public static class AscensionMultiplayer
         ManagedActionRequestScheduler.RequestOrDefer(
             message.ActionId,
             $"Ascension Down receipt {receipt.Index}",
-            () => RitsuLibManagedNetActions.Request(
-                RunManager.Instance,
-                ActionDescriptor,
-                message,
-                owner.NetId
-            ),
+            () => ApNetActions.Request(ActionDescriptor, message, owner.NetId),
             () => IsCurrentRequest(message),
             () => LogUtility.Info(
                 $"Requested managed Ascension Down receipt {receipt.Index} "
@@ -440,7 +433,7 @@ public static class AscensionMultiplayer
     }
 
     private static async Task ExecuteAction(
-        RitsuLibManagedNetActionContext<ApAscensionDownActionMessage> context)
+        ApNetActionContext<ApAscensionDownActionMessage> context)
     {
         ApAscensionDownActionMessage message = context.Message;
         if (!TryValidateAction(message, context.Player, out RunState runState))

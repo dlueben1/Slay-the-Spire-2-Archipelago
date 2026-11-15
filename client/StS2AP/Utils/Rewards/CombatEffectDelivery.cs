@@ -12,7 +12,6 @@ using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.DomainAdapters;
-using STS2RitsuLib.Networking.ManagedActions;
 using static StS2AP.Data.ItemTable;
 
 namespace StS2AP.Utils;
@@ -29,14 +28,13 @@ namespace StS2AP.Utils;
 internal sealed class CombatEffectDelivery
 {
     private readonly bool _trap;
-    private readonly RitsuLibManagedNetActionDescriptor<CombatEffectActionMessage> ActionDescriptor;
+    private readonly ApNetActionDescriptor<CombatEffectActionMessage> ActionDescriptor;
 
     public CombatEffectDelivery(bool trap)
     {
         _trap = trap;
         _queue = new CombatEffectReceiptQueue(traps: trap);
         ActionDescriptor = new(
-            ModuleId: ModEntry.ModId,
             ActionKey: trap ? "universal_combat_trap" : "universal_combat_buff",
             Serialize: static message => JsonSerializer.SerializeToUtf8Bytes(message),
             Deserialize: DeserializeMessage,
@@ -74,7 +72,7 @@ internal sealed class CombatEffectDelivery
     {
         if (_initialized)
             return;
-        RitsuLibManagedNetActions.Register(ActionDescriptor);
+        ApNetActions.Register(ActionDescriptor);
         _initialized = true;
     }
 
@@ -253,8 +251,7 @@ internal sealed class CombatEffectDelivery
             _pendingAction = message;
             try
             {
-                if (RitsuLibManagedNetActions.Request(
-                        RunManager.Instance, ActionDescriptor, message, player.NetId))
+                if (ApNetActions.Request(ActionDescriptor, message, player.NetId))
                 {
                     _lastRequestError = null;
                     return;
@@ -293,7 +290,7 @@ internal sealed class CombatEffectDelivery
     /// Runs on every peer against the native action's receiving player. Every replica records
     /// consumption in run data; only that player's client updates its AP storage and notification.
     /// </summary>
-    private async Task ExecuteAction(RitsuLibManagedNetActionContext<CombatEffectActionMessage> context)
+    private async Task ExecuteAction(ApNetActionContext<CombatEffectActionMessage> context)
     {
         var message = context.Message;
         Player player = context.Player; // The native action owner is the only combat effect target.

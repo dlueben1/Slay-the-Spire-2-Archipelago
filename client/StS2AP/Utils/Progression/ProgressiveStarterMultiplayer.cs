@@ -10,7 +10,6 @@ using MegaCrit.Sts2.Core.Saves.Runs;
 using StS2AP.Extensions;
 using StS2AP.Domain;
 using StS2AP.DomainAdapters;
-using STS2RitsuLib.Networking.ManagedActions;
 
 namespace StS2AP.Utils;
 
@@ -28,9 +27,8 @@ public static class ProgressiveStarterMultiplayer
 
     private const string ActionKey = "progressive_starter";
 
-    private static readonly RitsuLibManagedNetActionDescriptor<ApProgressiveStarterActionMessage>
+    private static readonly ApNetActionDescriptor<ApProgressiveStarterActionMessage>
         ActionDescriptor = new(
-            ModuleId: ModEntry.ModId,
             ActionKey: ActionKey,
             Serialize: static message => JsonSerializer.SerializeToUtf8Bytes(message),
             Deserialize: DeserializeMessage,
@@ -48,7 +46,7 @@ public static class ProgressiveStarterMultiplayer
         if (_initialized)
             return;
 
-        RitsuLibManagedNetActions.Register(ActionDescriptor);
+        ApNetActions.Register(ActionDescriptor);
         _initialized = true;
     }
 
@@ -354,12 +352,7 @@ public static class ProgressiveStarterMultiplayer
         ManagedActionRequestScheduler.RequestOrDefer(
             message.ActionId,
             $"Progressive Starter {description}",
-            () => RitsuLibManagedNetActions.Request(
-                RunManager.Instance,
-                ActionDescriptor,
-                message,
-                owner.NetId
-            ),
+            () => ApNetActions.Request(ActionDescriptor, message, owner.NetId),
             () => IsCurrentRequest(message),
             () => LogUtility.Info(
                 $"Requested managed Progressive Starter {description} {message.ActionId} "
@@ -406,7 +399,7 @@ public static class ProgressiveStarterMultiplayer
     }
 
     private static async Task ExecuteAction(
-        RitsuLibManagedNetActionContext<ApProgressiveStarterActionMessage> context)
+        ApNetActionContext<ApProgressiveStarterActionMessage> context)
     {
         ApProgressiveStarterActionMessage message = context.Message;
         if (!TryValidate(message, context.Player, out RunState runState, out var targets))
