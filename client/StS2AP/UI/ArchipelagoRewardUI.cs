@@ -29,8 +29,6 @@ public static class ArchipelagoRewardUI
         "Multiplayer AP rewards can only be claimed outside combat.";
     private const string NativeChoiceBlockedMessage =
         "Finish the current card or relic selection before opening AP rewards.";
-    private const string TreasureRoomBlockedMessage =
-        "Wait until every player is ready to proceed before opening AP rewards.";
     private const string TravelBlockedMessage =
         "AP rewards are unavailable while traveling to another room.";
 
@@ -140,8 +138,7 @@ public static class ArchipelagoRewardUI
     {
         if (IsOpen || _opening)
             return;
-        if (TryBlockTravel() || TryBlockMultiplayerCombatOpen()
-            || TryBlockTreasureRoomOpen() || TryBlockNativeChoiceOpen())
+        if (TryBlockTravel() || TryBlockMultiplayerCombatOpen() || TryBlockNativeChoiceOpen())
             return;
 
         _opening = true;
@@ -155,7 +152,6 @@ public static class ArchipelagoRewardUI
     internal static bool CanBuildMenuAfterAwait(int apLifecycleVersion) =>
         Travel.CanOpen(apLifecycleVersion, RunManager.Instance.NetService.IsGameLoading)
         && !TryBlockMultiplayerCombatOpen()
-        && !TryBlockTreasureRoomOpen()
         && !TryBlockNativeChoiceOpen();
 
     private static async Task OpenOnMainThread(int apLifecycleVersion)
@@ -170,7 +166,6 @@ public static class ArchipelagoRewardUI
             // guard. Repeat both checks before OpenMenu creates a synchronized RewardsSet.
             if (apLifecycleVersion != Travel.ApLifecycleVersion || TryBlockTravel()
                 || TryBlockMultiplayerCombatOpen()
-                || TryBlockTreasureRoomOpen()
                 || TryBlockNativeChoiceOpen())
                 return;
             PrepareForOpen();
@@ -404,28 +399,6 @@ public static class ArchipelagoRewardUI
         ShowBlockedMessage(
             NativeChoiceBlockedMessage,
             blockedByCombat: false,
-            includeInDevConsole: false
-        );
-        return true;
-    }
-
-    private static bool TryBlockTreasureRoomOpen()
-    {
-        if (!MultiplayerSupport.IsRealMultiplayerRun || NRun.Instance?.TreasureRoom == null)
-            return false;
-        if (RunManager.Instance.DebugOnlyGetState() is RunState run
-            && RelicReceiptMultiplayer.IsTreasureProceedReadyForApMenu(run))
-        {
-            return false;
-        }
-
-        // TreasureRoom.DoExtraRewardsIfNeeded constructs one native RewardsSet per player.
-        // Different replicas can reach that construction several seconds apart, so inserting
-        // an AP RewardsSet anywhere in this room can give the same set ID different meanings.
-        ShowBlockedMessage(
-            TreasureRoomBlockedMessage,
-            blockedByCombat: false,
-            emphasized: true,
             includeInDevConsole: false
         );
         return true;
