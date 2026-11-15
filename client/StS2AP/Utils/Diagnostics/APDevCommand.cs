@@ -75,9 +75,9 @@ namespace StS2AP.Utils
             return new CmdResult(false, "Unknown AP command. Use ap report, ap deathlink, ap characters, ap queuedclaims, ap nativemessages, or ap !command.");
         }
 
-        // Prototype switch for multiplayer AP claims (so far only gold) as queued native actions.
-        // It lasts until the game closes and applies to AP menus opened afterwards; only the
-        // claiming player's switch matters.
+        // Prototype switch for multiplayer AP claims (gold, potions, bonus wax relics) as queued
+        // native actions. It lasts until the game closes and applies to AP menus opened
+        // afterwards; only the claiming player's switch matters.
         private static CmdResult SetQueuedClaims(string[] args)
         {
             if (args.Length == 2 && args[1].Equals("on", StringComparison.OrdinalIgnoreCase))
@@ -87,7 +87,7 @@ namespace StS2AP.Utils
             else if (args.Length != 1)
                 return new CmdResult(false, "Usage: ap queuedclaims [on|off]");
 
-            string message = $"Queued AP claims (gold so far) are {OnOff(ApQueuedClaims.Enabled)} "
+            string message = $"Queued AP claims (gold, potions, bonus wax relics) are {OnOff(ApQueuedClaims.Enabled)} "
                 + "for AP menus opened from now on (multiplayer only; prototype).";
             LogUtility.Info(message);
             return new CmdResult(true, message);

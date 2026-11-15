@@ -52,5 +52,11 @@ public sealed class ApMirroredRewardSpec
     // CONFIRM: the datatype of serialized models, why string?
     public List<string> SerializedModels { get; set; } = new();
 
+    /// <summary>
+    /// Set when the owner claims this reward as a queued action (<c>ApQueuedClaims</c>); every
+    /// peer's row then waits for that action instead of applying the reward itself.
+    /// </summary>
+    public Guid? QueuedClaimId { get; set; }
+
     public ApGrantId GrantId => new(ApSlotId, ReceivedItemIndex);
 }

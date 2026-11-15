@@ -12,7 +12,7 @@ namespace StS2AP.Utils;
 
 /// <summary>What a queued claim did on this peer, for its menu row.</summary>
 /// <param name="ClaimedModel">
-/// The model the action obtained, if any, so the owner's reward screen can animate it from the
+/// The potion or relic the action obtained, so the owner's reward screen can animate it from the
 /// row into the inventory as it does for a vanilla reward.
 /// </param>
 internal readonly record struct ApQueuedClaimResult(bool Applied, AbstractModel? ClaimedModel = null)
@@ -59,7 +59,7 @@ internal sealed class ApQueuedClaimKind<T> where T : ApQueuedClaimMessage, new()
         );
     }
 
-    /// <summary>What the claim is called in logs and notices, such as "AP gold".</summary>
+    /// <summary>What the claim is called in logs and notices, such as "AP potion".</summary>
     internal string Noun { get; }
 
     /// <summary>
@@ -90,9 +90,9 @@ internal sealed class ApQueuedClaimKind<T> where T : ApQueuedClaimMessage, new()
 }
 
 /// <summary>
-/// Prototype, off by default (<c>ap queuedclaims on</c>): multiplayer AP claims (so far only
-/// gold) run as native queued actions, executed on every peer in the host's action order, instead
-/// of applying when a replicated reward selection arrives.
+/// Prototype, off by default (<c>ap queuedclaims on</c>): multiplayer AP claims of gold, potions
+/// and bonus wax relics run as native queued actions, executed on every peer in the host's action
+/// order, instead of applying when a replicated reward selection arrives.
 /// </summary>
 /// <remarks>
 /// A replicated selection is handled whenever it arrives, so one peer can apply a claim before a
@@ -107,7 +107,7 @@ internal sealed class ApQueuedClaimKind<T> where T : ApQueuedClaimMessage, new()
 /// inside the player's AP selection order (after earlier AP rows finished), every peer's row waits
 /// for this peer to execute it, and the executor waits for the row's turn on this peer before
 /// applying. That rendezvous keeps a queued claim at its row's place among the replicated
-/// selections, so a relic taken just before the gold sees the same gold everywhere. It is
+/// selections, so a relic taken just before a potion sees the same belt everywhere. It is
 /// scaffolding: once the menu is owner-local the action queue alone orders claims, and the
 /// rendezvous goes.
 /// </remarks>
@@ -141,7 +141,8 @@ public static class ApQueuedClaims
     private static bool _initialized;
 
     /// <summary>
-    /// Whether this process's new AP menus offer queued claims where a reward kind supports them. Only the claim owner's switch matters: the menu tells every peer how each row works.
+    /// Whether this process's new AP menus offer gold, potions and bonus wax relics as queued
+    /// claims. Only the claim owner's switch matters: the menu tells every peer how each row works.
     /// </summary>
     public static bool Enabled { get; set; }
 
@@ -154,6 +155,8 @@ public static class ApQueuedClaims
         if (_initialized)
             return;
         ApNetActions.Register(ApQueuedGoldClaims.Kind.Descriptor);
+        ApNetActions.Register(ApQueuedReceiptClaims.PotionKind.Descriptor);
+        ApNetActions.Register(ApQueuedReceiptClaims.BonusRelicKind.Descriptor);
         _initialized = true;
     }
 

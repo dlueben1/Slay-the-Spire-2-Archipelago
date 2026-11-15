@@ -405,6 +405,7 @@ public static class ApMirroredRewardDispatcher
                     break;
                 }
                 spec.SerializedModels.Add(SerializeRelic(relic));
+                spec.QueuedClaimId = ApQueuedClaims.NewClaimId();
                 break;
             }
             case ApMirroredRewardKind.Relic:
@@ -435,6 +436,7 @@ public static class ApMirroredRewardDispatcher
                 }
 
                 spec.SerializedModels.Add(SerializePotion(potion!));
+                spec.QueuedClaimId = ApQueuedClaims.NewClaimId();
                 break;
             }
             case ApMirroredRewardKind.Ancient:
@@ -488,9 +490,10 @@ public static class ApMirroredRewardDispatcher
         if (menu.Gold != null)
             rewards.Add(new ApNativeGoldReward(menu.Gold.ToClaim(), menu.Gold.QueuedClaimId, owner));
 
-        foreach (MirroredReward spec in assignments)
+        // DecodeRewards keeps the menu's order, so each decoded reward pairs with its wire entry.
+        for (int i = 0; i < assignments.Count; i++)
         {
-            Reward reward = BuildNativeReward(spec, owner);
+            Reward reward = BuildNativeReward(assignments[i], menu.Rewards[i].QueuedClaimId, owner);
             if (reward is ApNativeCardReward card)
                 card.RequiresCommitment = menu.StrictCardRewards;
             rewards.Add(reward);
@@ -499,13 +502,16 @@ public static class ApMirroredRewardDispatcher
         return new RewardsSet(owner).WithCustomRewards(rewards);
     }
 
-    private static Reward BuildNativeReward(MirroredReward spec, Player owner) => spec.Match<Reward>(
-        card => BuildCardReward(spec.Origin, card, owner),
-        potion => new ApNativePotionReward(LoadPotionAssignment(spec.Origin, potion), owner, spec.Origin),
-        relic => BuildStandardRelicReward(spec.Origin, relic, owner),
-        choices => BuildAncientReward(spec.Origin, choices, owner),
-        reason => new ApUnavailableReward(spec.Origin.ItemName, reason, owner, spec.Origin),
-        relic => new ApNativeRelicReward(DeserializeRelic(relic), owner, spec.Origin, ApMirroredRewardKind.Bonus));
+    private static Reward BuildNativeReward(MirroredReward spec, Guid? queuedClaimId, Player owner) =>
+        spec.Match<Reward>(
+            card => BuildCardReward(spec.Origin, card, owner),
+            potion => new ApNativePotionReward(
+                LoadPotion(potion.Model, spec.Origin.ReceiptIdentity), owner, spec.Origin, potion.Model, queuedClaimId),
+            relic => BuildStandardRelicReward(spec.Origin, relic, owner),
+            choices => BuildAncientReward(spec.Origin, choices, owner),
+            reason => new ApUnavailableReward(spec.Origin.ItemName, reason, owner, spec.Origin),
+            relic => new ApNativeRelicReward(
+                DeserializeRelic(relic), owner, spec.Origin, ApMirroredRewardKind.Bonus, relic, queuedClaimId));
 
     private static Reward BuildCardReward(RewardOrigin origin, CardRewardData card, Player player)
     {
@@ -529,21 +535,37 @@ public static class ApMirroredRewardDispatcher
 
     /// <summary>
     /// The owner rolls each potion once and every menu carries that exact model, so all players
-    /// load the same potion from the same message and there is no second copy to compare.
+    /// load the same potion from the same message and there is no second copy to compare. A
+    /// queued potion claim loads it again from its action the same way.
     /// </summary>
-    private static PotionModel LoadPotionAssignment(RewardOrigin origin, PotionRewardData assignment)
+    internal static PotionModel LoadPotion(string model, string receiptIdentity)
     {
-        SerializablePotion serialized = Deserialize<SerializablePotion>(assignment.Model);
+        SerializablePotion serialized = Deserialize<SerializablePotion>(model);
         PotionModel potion = PotionModel.FromSerializable(serialized);
         // An unknown ID loads as DeprecatedPotion, which would give this player a different potion.
         if (potion.Id != serialized.Id)
         {
             throw new InvalidOperationException(
-                $"AP potion assignment {origin.ReceiptIdentity} names {serialized.Id}, "
+                $"AP potion assignment {receiptIdentity} names {serialized.Id}, "
                     + "which this game does not have."
             );
         }
         return potion;
+    }
+
+    /// <summary>Loads a relic from a queued claim's action, refusing IDs this game does not have.</summary>
+    internal static RelicModel LoadRelic(string model, string receiptIdentity)
+    {
+        SerializableRelic serialized = Deserialize<SerializableRelic>(model);
+        RelicModel relic = RelicModel.FromSerializable(serialized);
+        // An unknown ID loads as DeprecatedRelic, which would give this player a different relic.
+        if (relic.Id != serialized.Id)
+        {
+            throw new InvalidOperationException(
+                $"AP relic {receiptIdentity} names {serialized.Id}, which this game does not have."
+            );
+        }
+        return relic;
     }
 
     private static Reward BuildAncientReward(RewardOrigin origin, IReadOnlyList<string> models, Player player)
@@ -986,6 +1008,10 @@ public static class ApMirroredRewardDispatcher
         private readonly int _itemIndex;
         private readonly ApMirroredRewardKind _kind;
         private readonly LocString _description;
+        // Only bonus wax relics are queued claims so far; standard relics and Ancients still
+        // apply their effect in this replicated selection.
+        private readonly string? _serializedRelic;
+        private readonly Guid? _queuedClaimId;
 
         public override LocString Description => _description;
 
@@ -993,12 +1019,19 @@ public static class ApMirroredRewardDispatcher
             RelicModel relic,
             Player player,
             RewardOrigin spec,
-            ApMirroredRewardKind kind)
+            ApMirroredRewardKind kind,
+            string? serializedRelic = null,
+            Guid? queuedClaimId = null)
             : base(relic, player)
         {
             _itemIndex = spec.ReceivedItemIndex;
             _kind = kind;
             _description = CreateApDescription(relic.Title, spec);
+            if (kind == ApMirroredRewardKind.Bonus && serializedRelic != null)
+            {
+                _serializedRelic = serializedRelic;
+                _queuedClaimId = queuedClaimId;
+            }
         }
 
         public bool CanClaim(out string reason) =>
@@ -1008,6 +1041,16 @@ public static class ApMirroredRewardDispatcher
 
         protected override async Task<bool> OnSelect()
         {
+            // A queued claim's action obtains the relic on every peer; this row only takes its turn.
+            if (_queuedClaimId is Guid claimId)
+            {
+                ApQueuedClaimResult result = await ApQueuedReceiptClaims.SelectBonusRelicRow(
+                    claimId, _itemIndex, _serializedRelic!, Player);
+                // The reward screen finds the relic to animate by instance, as for potions below.
+                ClaimedRelic = result.ClaimedModel as RelicModel;
+                return result.Applied;
+            }
+
             if (_kind == ApMirroredRewardKind.Relic && !RelicReceiptMultiplayer.CanUseMenu(Player, _itemIndex))
                 throw new InvalidOperationException($"AP relic receipt {Player.NetId}:{_itemIndex} is not approved for this menu.");
             bool applied = await base.OnSelect();
@@ -1025,17 +1068,23 @@ public static class ApMirroredRewardDispatcher
     {
         private readonly int _itemIndex;
         private readonly LocString _description;
+        private readonly string _serializedPotion;
+        private readonly Guid? _queuedClaimId;
 
         public override LocString Description => _description;
 
         public ApNativePotionReward(
             PotionModel potion,
             Player player,
-            RewardOrigin spec)
+            RewardOrigin spec,
+            string serializedPotion,
+            Guid? queuedClaimId)
             : base(potion, player)
         {
             _itemIndex = spec.ReceivedItemIndex;
             _description = CreateApDescription(potion.Title, spec);
+            _serializedPotion = serializedPotion;
+            _queuedClaimId = queuedClaimId;
         }
 
         public bool CanClaim(out string reason) =>
@@ -1045,6 +1094,17 @@ public static class ApMirroredRewardDispatcher
 
         protected override async Task<bool> OnSelect()
         {
+            // A queued claim's action procures the potion on every peer; this row only takes its turn.
+            if (_queuedClaimId is Guid claimId)
+            {
+                ApQueuedClaimResult result = await ApQueuedReceiptClaims.SelectPotionRow(
+                    claimId, _itemIndex, _serializedPotion, Player);
+                // The reward screen animates the claimed potion from this row into the belt, and
+                // looks it up there by instance: the action's, not this row's display copy.
+                ClaimedPotion = result.ClaimedModel as PotionModel;
+                return result.Applied;
+            }
+
             bool applied = await base.OnSelect();
             if (applied && LocalContext.IsMe(Player))
                 CommitDiscreteReward(_itemIndex, ApMirroredRewardKind.Potion);
