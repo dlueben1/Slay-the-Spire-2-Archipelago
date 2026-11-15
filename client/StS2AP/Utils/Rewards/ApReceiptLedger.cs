@@ -38,13 +38,19 @@ public static class ApReceiptLedger
     // receipt sends only what earlier requests did not. Run start and reconnect go back to the
     // ledger's own last index, which resends anything a lost request left out.
     private static int _requestedThrough;
+    // Campfire checks this process has asked to record in the current run, for the same reason.
+    private static readonly HashSet<long> RequestedCampfires = new();
 
-    internal static void EndRun() => _requestedThrough = 0;
+    internal static void EndRun()
+    {
+        _requestedThrough = 0;
+        RequestedCampfires.Clear();
+    }
 
     /// <summary>Owner: records every receipt the ledger lacks, and the run's anytime relics.</summary>
     public static void BeginRun(Player localPlayer)
     {
-        _requestedThrough = 0;
+        EndRun();
         RequestNewReceipts(localPlayer, "run start");
     }
 
@@ -55,7 +61,7 @@ public static class ApReceiptLedger
         {
             if (GameUtility.CurrentPlayer is not Player localPlayer)
                 return;
-            _requestedThrough = 0;
+            EndRun();
             RequestNewReceipts(localPlayer, "reconnect");
         }).CallDeferred();
     }
@@ -66,6 +72,13 @@ public static class ApReceiptLedger
         if (receivedItemIndex <= _requestedThrough || GameUtility.CurrentPlayer is not Player localPlayer)
             return;
         RequestNewReceipts(localPlayer, $"receipt {receivedItemIndex}");
+    }
+
+    /// <summary>Owner: the AP server reported checked locations, which may include campfires.</summary>
+    public static void ReceiveCheckedLocations()
+    {
+        if (GameUtility.CurrentPlayer is Player localPlayer)
+            RequestNewReceipts(localPlayer, "checked locations");
     }
 
     private static void RequestNewReceipts(Player owner, string reason)
@@ -96,7 +109,14 @@ public static class ApReceiptLedger
                 ArchipelagoProgress._maxRelicRewards
             )
             : null;
-        if (receipts.Count == 0 && anytime == null)
+        List<long> campfires = ArchipelagoClient.CheckedLocations
+            .Concat(ArchipelagoClient.Progress.PendingLocationChecks)
+            .Where(LocationData.IsCampfireLocationId)
+            .Where(id => !state.CheckedCampfireLocationIds.Contains(id) && !RequestedCampfires.Contains(id))
+            .Distinct()
+            .Order()
+            .ToList();
+        if (receipts.Count == 0 && anytime == null && campfires.Count == 0)
             return;
 
         int batches = Math.Max(1, (receipts.Count + MaxReceiptsPerAction - 1) / MaxReceiptsPerAction);
@@ -106,11 +126,13 @@ public static class ApReceiptLedger
             {
                 Receipts = receipts.Skip(batch * MaxReceiptsPerAction).Take(MaxReceiptsPerAction).ToList(),
                 RelicRewardsAvailableAnytime = batch == 0 ? anytime : null,
+                CheckedCampfireLocationIds = batch == 0 ? campfires : new List<long>(),
             };
             Request(owner, message, reason);
         }
         if (receipts.Count > 0)
             _requestedThrough = Math.Max(_requestedThrough, receipts[^1].Index);
+        RequestedCampfires.UnionWith(campfires);
     }
 
     private static void Request(Player owner, ApReceiptsArrivedActionMessage message, string reason)
@@ -133,6 +155,7 @@ public static class ApReceiptLedger
                 // The next live receipt or reconnect sends these again.
                 if (message.Receipts.Count > 0)
                     _requestedThrough = Math.Min(_requestedThrough, message.Receipts[0].Index - 1);
+                RequestedCampfires.ExceptWith(message.CheckedCampfireLocationIds);
                 LogUtility.Error($"Could not record new AP receipts for the other players: {failure}");
             }
         );
@@ -147,6 +170,11 @@ public static class ApReceiptLedger
             message.Receipts,
             message.RelicRewardsAvailableAnytime
         );
+        int campfires = ApRunData.RecordCampfireChecks(
+            claim.RunState,
+            claim.Player.NetId,
+            message.CheckedCampfireLocationIds
+        );
         List<ApLedgerReceipt> ledger = claim.OwnerState.ReceiptLedger;
         ApQueuedClaims.LogApplied(
             Kind,
@@ -154,9 +182,10 @@ public static class ApReceiptLedger
             claim.Player,
             $"appended {appended}; ledger holds {ledger.Count} through index "
                 + $"{(ledger.Count > 0 ? ledger[^1].Index : 0)}, anytime relics "
-                + $"{claim.OwnerState.RelicRewardsAvailableAnytime?.ToString() ?? "unset"}"
+                + $"{claim.OwnerState.RelicRewardsAvailableAnytime?.ToString() ?? "unset"}, "
+                + $"campfire checks +{campfires} = {claim.OwnerState.CheckedCampfireLocationIds.Count}"
         );
-        return Task.FromResult(new ApQueuedClaimResult(appended > 0));
+        return Task.FromResult(new ApQueuedClaimResult(appended + campfires > 0));
     }
 
     private static string Describe(ApReceiptsArrivedActionMessage message)
@@ -164,9 +193,11 @@ public static class ApReceiptLedger
         string receipts = message.Receipts.Count == 0
             ? "no receipts"
             : $"{message.Receipts.Count} receipt(s) {message.Receipts[0].Index}..{message.Receipts[^1].Index}";
-        return message.RelicRewardsAvailableAnytime is int anytime
-            ? $"{receipts}, anytime relics {anytime}"
-            : receipts;
+        if (message.RelicRewardsAvailableAnytime is int anytime)
+            receipts += $", anytime relics {anytime}";
+        if (message.CheckedCampfireLocationIds.Count > 0)
+            receipts += $", campfire checks [{string.Join(",", message.CheckedCampfireLocationIds)}]";
+        return receipts;
     }
 
     // Readers. Each reads only the ledger, which the receipts action alone writes, so a reader at
@@ -198,6 +229,10 @@ public static class ApReceiptLedger
         }
         return null;
     }
+
+    /// <summary>How many receipts of one character item type this character has.</summary>
+    internal static int CountCharacterReceipts(ApPlayerRunState state, APItem type, long characterOffset) =>
+        state.ReceiptLedger.Count(receipt => receipt.IsCharacterItem(type, characterOffset));
 
     /// <summary>The player's receipts of one character item type for their run's character.</summary>
     internal static IEnumerable<ApLedgerReceipt> CharacterReceipts(

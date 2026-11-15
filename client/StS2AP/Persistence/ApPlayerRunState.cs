@@ -48,4 +48,8 @@ public sealed class ApPlayerRunState
     // How many of the player's first Relic receipts need no natural relic reward this run. The
     // owner's value at run start, set once by the first receipts action; null until then.
     public int? RelicRewardsAvailableAnytime { get; set; }
+    // Campfire checks this player's rest sites no longer offer: taken at a rest site (recorded on
+    // every replica as the option is chosen) or checked on the AP server, which the receipts
+    // action carries like a receipt.
+    public HashSet<long> CheckedCampfireLocationIds { get; set; } = new();
 }

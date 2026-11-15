@@ -1750,6 +1750,8 @@ namespace StS2AP
                         && MultiplayerSupport.IsLocalOwnApSlot
                         && GameUtility.CurrentPlayer is { } player)
                     {
+                        // Rest sites read campfire checks from the receipts action on every peer.
+                        ApReceiptLedger.ReceiveCheckedLocations();
                         // !collect bypasses the local check writer. Publish its campfire
                         // changes so every replica builds options from the updated owner state.
                         if (!MultiplayerLocationChecks.PublishEffectiveCheckProgress(player))

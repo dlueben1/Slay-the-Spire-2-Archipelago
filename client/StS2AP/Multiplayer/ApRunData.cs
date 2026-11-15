@@ -146,6 +146,7 @@ public static class ApRunData
             QueuedAncientChoices = existing?.QueuedAncientChoices ?? new Dictionary<int, List<string>>(),
             ReceiptLedger = existing?.ReceiptLedger ?? new List<ApLedgerReceipt>(),
             RelicRewardsAvailableAnytime = existing?.RelicRewardsAvailableAnytime,
+            CheckedCampfireLocationIds = existing?.CheckedCampfireLocationIds ?? new HashSet<long>(),
         };
         // SyncLobbyOnChange makes this a contribution to the authoritative host staging
         // session. On a client RitsuLib pushes the local PlayerRunSavedData payload with a
@@ -334,6 +335,20 @@ public static class ApRunData
         state.RelicRewardsAvailableAnytime ??= relicRewardsAvailableAnytime;
         _players.Set(runState, netId, state);
         return appended;
+    }
+
+    /// <summary>
+    /// Records campfire checks a player's rest sites no longer offer. Rest-site options and the
+    /// receipts action call this identically on every replica.
+    /// </summary>
+    internal static int RecordCampfireChecks(RunState runState, ulong netId, IEnumerable<long> locationIds)
+    {
+        if (!_initialized || !_players.TryGet(runState, netId, out ApPlayerRunState state))
+            return 0;
+        int added = locationIds.Count(state.CheckedCampfireLocationIds.Add);
+        if (added > 0)
+            _players.Set(runState, netId, state);
+        return added;
     }
 
     private static readonly IComparer<ApLedgerReceipt> LedgerOrder =
@@ -586,7 +601,6 @@ public static class ApRunData
         {
             if (!BroadcastHostConfirmedProgress(snapshotMessage, deltaMessage))
                 return false;
-            AncientMultiplayer.ConfirmProgress(runState, player.NetId, revision, snapshot);
         }
         return true;
     }
@@ -652,12 +666,6 @@ public static class ApRunData
                 {
                     if (runState.GetPlayer(context.Message.OwnerNetId) is Player existingOwner)
                         StandardRelicPool.ReserveAssignedChoices(existingOwner, state.Progress);
-                    AncientMultiplayer.ConfirmProgress(
-                        runState,
-                        context.Message.OwnerNetId,
-                        context.Message.Revision,
-                        context.Message.Progress
-                    );
                 }
                 return;
             }
@@ -675,12 +683,6 @@ public static class ApRunData
                 if (!BroadcastHostConfirmedProgress(context.Message, deltaMessage: null))
                     return;
             }
-            AncientMultiplayer.ConfirmProgress(
-                runState,
-                context.Message.OwnerNetId,
-                context.Message.Revision,
-                state.Progress
-            );
         });
         if (!posted)
             LogUtility.Error("Could not schedule the AP progress snapshot on the game main loop.");
@@ -722,12 +724,6 @@ public static class ApRunData
                 {
                     if (runState.GetPlayer(context.Message.OwnerNetId) is Player existingOwner)
                         StandardRelicPool.ReserveAssignedChoices(existingOwner, state.Progress);
-                    AncientMultiplayer.ConfirmProgress(
-                        runState,
-                        context.Message.OwnerNetId,
-                        context.Message.Revision,
-                        state.Progress
-                    );
                 }
                 return;
             }
@@ -767,12 +763,6 @@ public static class ApRunData
                     return;
                 }
             }
-            AncientMultiplayer.ConfirmProgress(
-                runState,
-                context.Message.OwnerNetId,
-                context.Message.Revision,
-                state.Progress
-            );
         });
         if (!posted)
             LogUtility.Error("Could not schedule the AP progress delta on the game main loop.");
