@@ -163,6 +163,7 @@ public static class ApQueuedClaims
         Register(ApQueuedRelicClaims.AncientClaimKind);
         Register(ApQueuedCardClaims.ClaimKind);
         Register(ApReceiptLedger.Kind);
+        Register(ApReceiptLedger.CombatKind);
         CombatManager.Instance.CombatEnded += _ => CancelActionsLeftAtCombatEnd();
         _initialized = true;
     }
