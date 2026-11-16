@@ -17,6 +17,10 @@
     "web_world": {
       "path": "world/spire2/web_world.py",
       "sha256": "c0001a3cb0ac2959142472973dcc2611418cc184f250b0bf7091747d3a4ba924"
+    },
+    "items": {
+      "path": "world/spire2/items.py",
+      "sha256": "e96ec2d5e3e66fb15673980917efd5ad8dbca082c2d550d6a1b4577bede0bda3"
     }
   },
   "characters": {
@@ -117,6 +121,411 @@
     ],
     "beta_only": [
       "Fool"
+    ]
+  },
+  "items": {
+    "character_items": [
+      {
+        "name": "Card Reward",
+        "groups": [
+          "Card Rewards"
+        ]
+      },
+      {
+        "name": "Rare Card Reward",
+        "groups": [
+          "Card Rewards",
+          "Rare Card Rewards"
+        ]
+      },
+      {
+        "name": "Relic",
+        "groups": [
+          "Relics"
+        ]
+      },
+      {
+        "name": "Progressive Ancient",
+        "groups": [
+          "Ancients"
+        ]
+      },
+      {
+        "name": "One Gold",
+        "groups": []
+      },
+      {
+        "name": "Five Gold",
+        "groups": []
+      },
+      {
+        "name": "Combat Gold",
+        "groups": [
+          "Gold"
+        ]
+      },
+      {
+        "name": "Elite Gold",
+        "groups": [
+          "Gold"
+        ]
+      },
+      {
+        "name": "Boss Gold",
+        "groups": [
+          "Gold"
+        ]
+      },
+      {
+        "name": "Progressive Rest",
+        "groups": [
+          "Campfire Upgrades"
+        ]
+      },
+      {
+        "name": "Progressive Smith",
+        "groups": [
+          "Campfire Upgrades"
+        ]
+      },
+      {
+        "name": "Shop Card Slot",
+        "groups": [
+          "Shop Slots"
+        ]
+      },
+      {
+        "name": "Shop Colorless Card Slot",
+        "groups": [
+          "Shop Slots"
+        ]
+      },
+      {
+        "name": "Shop Relic Slot",
+        "groups": [
+          "Shop Slots"
+        ]
+      },
+      {
+        "name": "Shop Potion Slot",
+        "groups": [
+          "Shop Slots"
+        ]
+      },
+      {
+        "name": "Progressive Shop Remove",
+        "groups": [
+          "Shop Slots"
+        ]
+      },
+      {
+        "name": "Unlock",
+        "groups": [
+          "Character Unlocks"
+        ]
+      },
+      {
+        "name": "Potion",
+        "groups": [
+          "Potions"
+        ]
+      },
+      {
+        "name": "Progressive Starter Card",
+        "groups": [
+          "Starter Upgrades"
+        ]
+      },
+      {
+        "name": "Progressive Starter Relic",
+        "groups": [
+          "Starter Upgrades"
+        ]
+      },
+      {
+        "name": "Disable Swarming Elites",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Weary Traveler",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Poverty",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Tight Belt",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Ascender's Bane",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Inflation",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Scarcity",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Tough Enemies",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Deadly Enemies",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Double Boss",
+        "groups": [
+          "Ascension Downs"
+        ]
+      }
+    ],
+    "universal_items": [
+      {
+        "name": "Free Attack",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Free Power",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Free Skill",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Dexterity",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Strength",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Plating",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Friendship",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Post-Combat Card Upgrade",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Post-Combat Card Removal",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Additional Card Reward",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Buffer",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Vigor",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Thorns",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Artifact",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Intent Sight",
+        "groups": [
+          "Sights"
+        ]
+      },
+      {
+        "name": "Health Sight",
+        "groups": [
+          "Sights"
+        ]
+      },
+      {
+        "name": "Pile Sight",
+        "groups": [
+          "Sights"
+        ]
+      },
+      {
+        "name": "Map Sight",
+        "groups": [
+          "Sights"
+        ]
+      },
+      {
+        "name": "Card Sight",
+        "groups": [
+          "Sights"
+        ]
+      },
+      {
+        "name": "Weak Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Frail Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Vulnerable Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "No Draw Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Tangled Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Vakuu Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Confused Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Sloth Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Dazed Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Bonus Wax Relic",
+        "groups": [
+          "Bonus Items"
+        ]
+      },
+      {
+        "name": "Bonus Relic",
+        "groups": [
+          "Bonus Items"
+        ]
+      },
+      {
+        "name": "Bonus Enchantment",
+        "groups": [
+          "Bonus Items"
+        ]
+      },
+      {
+        "name": "Bonus Enchanted Cards",
+        "groups": [
+          "Bonus Items"
+        ]
+      },
+      {
+        "name": "Bonus Max HP",
+        "groups": [
+          "Bonus Items"
+        ]
+      },
+      {
+        "name": "Bonus Cards",
+        "groups": [
+          "Bonus Items"
+        ]
+      }
+    ],
+    "groups": [
+      "Ancients",
+      "Ascension Downs",
+      "Bonus Items",
+      "Buffs",
+      "Campfire Upgrades",
+      "Card Rewards",
+      "Character Unlocks",
+      "Gold",
+      "Potions",
+      "Rare Card Rewards",
+      "Relics",
+      "Shop Slots",
+      "Sights",
+      "Starter Upgrades",
+      "Traps",
+      "Everything"
     ]
   },
   "option_order": [
