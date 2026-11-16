@@ -41,7 +41,10 @@ export interface WizardQuestion {
 }
 
 /** Answer sections addressable by wizard steps; the player name is document metadata. */
-export type WizardSectionKey = Exclude<keyof WizardAnswers, "playerName">;
+export type WizardSectionKey = Exclude<
+  keyof WizardAnswers,
+  "playerName" | "keptOptions"
+>;
 
 /** Prominent caution shown above a step's questions. */
 export interface WizardStepWarning {
@@ -1115,14 +1118,48 @@ export const progressionSetupStep: WizardStep = {
   ],
 };
 
-/** Death Link and Progression, shown together because each is short. */
+/** Starting items, starting hints, and where items may be placed. */
+export const itemsSetupStep: WizardStep = {
+  id: "items",
+  title: "Items & Hints",
+  description:
+    "Choose items to start with, items to know the location of from the start, and items to keep in or out of your world.",
+  sectionKey: "items",
+  questions: [
+    {
+      id: "starting-inventory",
+      title: "Which items should you start with?",
+      description:
+        "You receive these when you connect, on top of the items in the Multiworld. Modded characters without a predefined name aren't listed, because their item names depend on the roster Archipelago generates.",
+    },
+    {
+      id: "start-hints",
+      title: "Which items should be hinted from the start?",
+      description:
+        "Archipelago tells you where these items are as soon as the game starts, without spending hint points.",
+    },
+    {
+      id: "local-items",
+      title: "Which items should stay in your own world?",
+      description: "These items are only placed at your own locations.",
+    },
+    {
+      id: "non-local-items",
+      title: "Which items should go to other players' worlds?",
+      description:
+        "These items are only placed at other players' locations. An item can't be in both lists.",
+    },
+  ],
+};
+
+/** Death Link, Progression, and Items & Hints, shown together because each is short. */
 export const multiworldSetupStep: WizardStep = {
   id: "multiworld",
   title: "Multiworld",
   description:
-    "Choose whether deaths are shared with other players, and how Archipelago places your items.",
+    "Choose whether deaths are shared with other players, how Archipelago places your items, and what you start with.",
   questions: [],
-  parts: [deathLinkSetupStep, progressionSetupStep],
+  parts: [deathLinkSetupStep, progressionSetupStep, itemsSetupStep],
 };
 
 /** Declarative step and question ordering for the guided wizard. */

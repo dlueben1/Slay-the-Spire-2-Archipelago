@@ -335,6 +335,27 @@ export interface ItemPoolAnswers {
   traps: TrapAnswers;
 }
 
+/** One stack of items the player starts with. */
+export interface StartingItemAnswer {
+  /** The owning character, or null for an item no character owns. */
+  character: string | null;
+  /** Item name as the catalog lists it, without the character. */
+  item: string;
+  count: number;
+}
+
+/**
+ * Items & Hints step: Archipelago's starting inventory, starting hints, and where items
+ * may be placed. Hints and placement take item group names, plus any item names a
+ * hand-written YAML listed.
+ */
+export interface ItemAnswers {
+  startingInventory: StartingItemAnswer[];
+  startHints: string[];
+  localItems: string[];
+  nonLocalItems: string[];
+}
+
 export interface DeathLinkAnswers {
   enabled: boolean;
   receiveFragment: boolean;
@@ -354,6 +375,13 @@ export interface WizardAnswers {
   challenges: ChallengeAnswers;
   deathLink: DeathLinkAnswers;
   progression: ProgressionAnswers;
+  items: ItemAnswers;
+  /**
+   * Settings from an imported YAML that the builder does not ask about, such as item
+   * links or plando, keyed by option name and kept as written so the builder's YAML
+   * still has them.
+   */
+  keptOptions: Record<string, unknown>;
 }
 
 /**
@@ -724,6 +752,13 @@ export function createDefaultWizardAnswers(
         ["full", "minimal"],
       ),
     },
+    items: {
+      startingInventory: [],
+      startHints: [],
+      localItems: [],
+      nonLocalItems: [],
+    },
+    keptOptions: {},
     deathLink: {
       enabled: getBooleanDefault(catalog, DEATH_LINK_OPTION_KEYS.enabled),
       receiveFragment: getBooleanDefault(
