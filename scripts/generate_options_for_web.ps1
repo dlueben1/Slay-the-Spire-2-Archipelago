@@ -110,6 +110,17 @@ class Tutorial:
         self.kwargs = kwargs
 
 base_classes_module.Tutorial = Tutorial
+
+# items.py builds its tables with ItemClassification flags. The catalog only needs item names and
+# groups, so every flag reads as 0 and combining flags still works.
+class _AnyFlag(type):
+    def __getattr__(cls, name):
+        return 0
+
+class ItemClassification(metaclass=_AnyFlag):
+    pass
+
+base_classes_module.ItemClassification = ItemClassification
 sys.modules["BaseClasses"] = base_classes_module
 
 worlds_package = types.ModuleType("worlds")
@@ -146,6 +157,7 @@ constants_module = load_module_as("worlds.spire2.constants", world_dir / "consta
 characters_module = load_module_as("worlds.spire2.characters", world_dir / "characters.py")
 options_module = load_module_as("worlds.spire2.options", options_path)
 web_world_module = load_module_as("worlds.spire2.web_world", web_world_path)
+items_module = load_module_as("worlds.spire2.items", world_dir / "items.py")
 
 import Options as ap_options
 
@@ -518,6 +530,44 @@ if missing_keys:
         + ", ".join(missing_keys)
     )
 
+def compile_items() -> dict:
+    """Item names and groups for the builder's starting inventory, hint and locality questions.
+
+    Every character has its own copy of each character item, named "<character> <item>", so the
+    catalog lists the items once and the builder adds the names of the characters in a roster.
+    Each item lists the item groups it belongs to, besides Archipelago's "Everything".
+    """
+    item_groups = items_module.item_groups
+
+    def groups_of(name: str) -> list[str]:
+        return sorted(group for group, names in item_groups.items() if name in names)
+
+    sample_character = characters_module.VANILLA_CHARACTERS[0].name
+    character_items = [
+        {"name": name, "groups": groups_of(f"{sample_character} {name}")}
+        for name, data in items_module.base_item_table.items()
+        if data.code is not None
+    ]
+    universal_tables = (
+        items_module.universal_items,
+        items_module.challenge_item_table,
+        items_module.trap_item_table,
+        items_module.universal_bonus_items,
+    )
+    universal_items = [
+        {"name": name, "groups": groups_of(name)}
+        for table in universal_tables
+        for name, data in table.items()
+        if data.code is not None
+    ]
+    return {
+        "character_items": character_items,
+        "universal_items": universal_items,
+        # Archipelago adds "Everything" to every game's item groups.
+        "groups": sorted(item_groups) + ["Everything"],
+    }
+
+
 compiled = {
     "schema_version": 1,
     "game": "Slay the Spire 2",
@@ -538,6 +588,10 @@ compiled = {
             "path": "world/spire2/web_world.py",
             "sha256": file_sha256(web_world_path),
         },
+        "items": {
+            "path": "world/spire2/items.py",
+            "sha256": file_sha256(world_dir / "items.py"),
+        },
     },
     # Only characters without a predefined name use the limited generic Custom Character slots,
     # so the wizard needs the predefined roster to apply the same per-roster limit as the APWorld.
@@ -554,6 +608,7 @@ compiled = {
             if definition.beta_only
         ],
     },
+    "items": compile_items(),
     "option_order": option_order,
     "groups": compiled_groups,
     "options": compiled_options,
