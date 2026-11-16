@@ -8,6 +8,7 @@ using StS2AP.Utils;
 using StS2AP.Domain;
 using StS2AP.DomainAdapters;
 using STS2RitsuLib;
+using STS2RitsuLib.Networking.Sidecar;
 using STS2RitsuLib.RunData;
 
 namespace StS2AP.Multiplayer;
@@ -27,13 +28,18 @@ public static class ApRunData
     private static RunSavedData<ApRunSharedState> _sharedRun = null!;
     private static PlayerRunSavedData<ApPlayerRunState> _players = null!;
     // Each owner's AP progress, client -> host, kept in the run's save as that owner's checkpoint.
-    private static readonly ApNetMessageDescriptor<ApProgressCheckpointMessage> ProgressCheckpoint = new(
-        "progress_checkpoint",
-        static message => JsonSerializer.SerializeToUtf8Bytes(message),
-        static payload => JsonSerializer.Deserialize<ApProgressCheckpointMessage>(payload)
-            ?? new ApProgressCheckpointMessage(),
-        OnProgressCheckpointReceived
-    );
+    // A Sidecar sync message behaves like the game's own run messages: reliable and ordered with
+    // them, held while the host loads a run and released at launch, handled on the main thread.
+    private static readonly RitsuLibSidecarSyncMessageDescriptor<ApProgressCheckpointMessage>
+        ProgressCheckpoint = new(
+            ModuleId: ModEntry.ModId,
+            MessageKey: "progress_checkpoint",
+            Serialize: static message => JsonSerializer.SerializeToUtf8Bytes(message),
+            Deserialize: static payload => JsonSerializer.Deserialize<ApProgressCheckpointMessage>(payload)
+                ?? new ApProgressCheckpointMessage(),
+            Handle: OnProgressCheckpointReceived,
+            ShouldBuffer: true
+        );
     private static bool _initialized;
     // The progress this process last sent (or restored), so an unchanged view is not resent.
     private static byte[]? _lastPublishedLocalProgress;
@@ -64,7 +70,7 @@ public static class ApRunData
         );
 
         _initialized = true;
-        ApNetMessages.Register(ProgressCheckpoint);
+        RitsuLibSidecarSyncMessages.Register(ProgressCheckpoint);
         RitsuLibFramework.SubscribeLifecycle<RunSavedDataPreparingEvent>(OnRunDataPreparing);
         RitsuLibFramework.SubscribeLifecycle<RunSavedDataLobbyStagingEvent>(OnLobbyStagingChanged);
     }
@@ -495,8 +501,8 @@ public static class ApRunData
     }
 
     /// <summary>
-    /// Sends the local owner's complete AP progress to the host whenever it changed, as one native
-    /// message; the host keeps it in the run's save, the checkpoint that restores this owner's AP
+    /// Sends the local owner's complete AP progress to the host whenever it changed, as one Sidecar
+    /// sync message; the host keeps it in the run's save, the checkpoint that restores this owner's AP
     /// view on continue or rejoin (the rejoin response carries it back). No other peer reads it:
     /// they build this player's AP state from action-owned run state (the receipt ledger, queued
     /// claims, natural relic decisions). A late-run snapshot is a few kilobytes, so there is no
@@ -520,12 +526,15 @@ public static class ApRunData
             return true;
 
         if (RunManager.Instance.NetService.Type != NetGameType.Host
-            && !ApNetMessages.SendToHost(ProgressCheckpoint, new ApProgressCheckpointMessage
-            {
-                RunId = shared.RunId,
-                OwnerNetId = player.NetId,
-                Progress = snapshot,
-            }))
+            && !RitsuLibSidecarSyncMessages.SendToHost(
+                RunManager.Instance,
+                ProgressCheckpoint,
+                new ApProgressCheckpointMessage
+                {
+                    RunId = shared.RunId,
+                    OwnerNetId = player.NetId,
+                    Progress = snapshot,
+                }))
         {
             return false;
         }
@@ -554,26 +563,29 @@ public static class ApRunData
 
     /// <summary>
     /// Host: stores a client's AP progress as that client's checkpoint. Only the owner may send
-    /// its own; native messages keep their order, so the newest snapshot wins.
+    /// its own: on the host, the sender is the peer the packet came from. Messages keep their
+    /// order, so the newest snapshot wins.
     /// </summary>
-    private static void OnProgressCheckpointReceived(ApNetMessageContext<ApProgressCheckpointMessage> context)
+    private static Task OnProgressCheckpointReceived(
+        RitsuLibSidecarSyncMessageContext<ApProgressCheckpointMessage> context)
     {
-        if (RunManager.Instance.NetService.Type != NetGameType.Host)
-            return;
+        if (!context.IsHostIngest || RunManager.Instance.NetService.Type != NetGameType.Host)
+            return Task.CompletedTask;
         ApProgressCheckpointMessage message = context.Message;
         if (context.SenderNetId != message.OwnerNetId)
         {
             LogUtility.Error($"Rejected AP progress for {message.OwnerNetId} sent by {context.SenderNetId}.");
-            return;
+            return Task.CompletedTask;
         }
         if (!message.Progress.Initialized
             || !TryGetProgressOwner(message.RunId, message.OwnerNetId, out RunState runState, out ApPlayerRunState state))
         {
-            return;
+            return Task.CompletedTask;
         }
 
         state.Progress = message.Progress;
         _players.Set(runState, message.OwnerNetId, state);
+        return Task.CompletedTask;
     }
 
     /// <summary>
