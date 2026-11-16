@@ -958,15 +958,19 @@ namespace StS2AP.Patches
                 if (MultiplayerSupport.IsLocalGuest)
                     return;
 
-                // Find the first character on the screen
+                // The game has already selected the preferred character before
+                // this postfix runs, so the SelectCharacter patch skipped its
+                // refresh while the tracker did not exist yet. Build the tracker
+                // for that character, not the first button: the first button
+                // (usually Ironclad) may not be in this slot, which would leave
+                // every label at its placeholder.
                 Control charButtonContainer = __instance.GetNode<Control>(
                     "CharSelectButtons/ButtonContainer"
                 );
 
-                NCharacterSelectButton firstButton =
-                    charButtonContainer.GetChild<NCharacterSelectButton>(0);
-
-                CharacterModel character = firstButton.Character;
+                CharacterModel character =
+                    __instance._selectedButton?.Character
+                    ?? charButtonContainer.GetChild<NCharacterSelectButton>(0).Character;
 
                 // Setup the character tracker UI
                 ArchipelagoCharTrackerUI.InjectUI(character);
