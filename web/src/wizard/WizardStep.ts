@@ -644,13 +644,13 @@ export const challengeSetupStep: WizardStep = {
             field: "sightBonuses.intent",
             label: "Intent Sight: Forewarned",
             description:
-              "Start each combat with Forewarned: when enemy attacks deal you no damage on their turn, draw 1 more card next turn.",
+              "Start each combat with Forewarned: for each enemy whose attacks your Block stops completely on its turn, draw 1 more card and gain 1 Energy next turn.",
           },
           {
             field: "sightBonuses.health",
             label: "Health Sight: Aged Cheese",
             description:
-              "Gain Aged Cheese: after defeating an Elite, raise your Max HP by 2.",
+              "Gain Aged Cheese: after defeating an Elite or a boss, raise your Max HP by 3.",
           },
           {
             field: "sightBonuses.pile",

@@ -110,8 +110,8 @@ Slay the Spire II:
   hidden_cards: 0
 
   # Sights whose second copy adds a bonus; a Sight left out stops at undoing its Hidden option.
-  #   IntentSight: Forewarned each combat; take no attack damage on the enemy turn to draw 1 more card.
-  #   HealthSight: Aged Cheese; each Elite you defeat raises your Max HP by 2.
+  #   IntentSight: Forewarned each combat; each enemy whose attacks you fully block gives +1 card and +1 Energy next turn.
+  #   HealthSight: Aged Cheese; each Elite or boss you defeat raises your Max HP by 3.
   #   PileSight: the draw pile shows cards in draw order.
   #   MapSight: the map shows your next 2 fights, next elite and next 2 ? rooms.
   #   CardSight: card rewards offer 1 more card, and Act 1 card rewards can be upgraded.

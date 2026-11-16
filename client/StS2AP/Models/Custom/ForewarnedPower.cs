@@ -14,17 +14,19 @@ namespace StS2AP.Models;
 
 /// <summary>
 /// The Intent Sight bonus, given at the start of each combat by <c>Patches_IntentSightBonus</c>.
-/// When enemies attack on their turn and none of it gets through your Block, you draw 1 more card
-/// next turn. Damage that Block stops still reaches this hook, so a fully blocked hit counts as an
-/// attack. A turn with no attack gives nothing.
+/// Each enemy is judged on its own: for every enemy that attacked on the enemy turn and got none
+/// of it through your Block, you draw 1 more card and gain 1 Energy next turn. Damage that Block
+/// stops still reaches this hook, so a fully blocked hit counts as an attack. An enemy that
+/// doesn't attack gives nothing.
 /// </summary>
 [RegisterPower]
 public sealed class ForewarnedPower : ModPowerTemplate
 {
-    private const int CardsDrawn = 1;
+    private const int CardsPerBlockedEnemy = 1;
+    private const int EnergyPerBlockedEnemy = 1;
 
-    private bool _attackedThisEnemyTurn;
-    private bool _attackGotThrough;
+    // Each enemy that attacked this enemy turn, and whether any of its damage got through.
+    private readonly Dictionary<Creature, bool> _attackGotThrough = new();
 
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
@@ -35,10 +37,7 @@ public sealed class ForewarnedPower : ModPowerTemplate
     public override Task AfterSideTurnStart(CombatSide side, IReadOnlyList<Creature> participants, ICombatState combatState)
     {
         if (side == CombatSide.Enemy)
-        {
-            _attackedThisEnemyTurn = false;
-            _attackGotThrough = false;
-        }
+            _attackGotThrough.Clear();
         return Task.CompletedTask;
     }
 
@@ -53,9 +52,8 @@ public sealed class ForewarnedPower : ModPowerTemplate
         // Move marks damage from an enemy's attack intent, not from Thorns-like powers.
         if (target != Owner || dealer is not { IsEnemy: true } || !props.HasFlag(ValueProp.Move))
             return Task.CompletedTask;
-        _attackedThisEnemyTurn = true;
-        if (result.UnblockedDamage > 0)
-            _attackGotThrough = true;
+        bool gotThrough = result.UnblockedDamage > 0;
+        _attackGotThrough[dealer] = _attackGotThrough.GetValueOrDefault(dealer) || gotThrough;
         return Task.CompletedTask;
     }
 
@@ -64,10 +62,14 @@ public sealed class ForewarnedPower : ModPowerTemplate
         CombatSide side,
         IEnumerable<Creature> participants)
     {
-        if (side != CombatSide.Enemy || !_attackedThisEnemyTurn || _attackGotThrough || Owner.IsDead)
+        if (side != CombatSide.Enemy || Owner.IsDead)
+            return;
+        int blockedEnemies = _attackGotThrough.Count(entry => !entry.Value);
+        if (blockedEnemies == 0)
             return;
         Flash();
-        // The game's own next-turn draw, which counts toward the player's coming hand draw.
-        await PowerCmd.Apply<DrawCardsNextTurnPower>(choiceContext, Owner, CardsDrawn, Owner, null);
+        // The game's own next-turn powers, which pay out with the player's coming turn.
+        await PowerCmd.Apply<DrawCardsNextTurnPower>(choiceContext, Owner, CardsPerBlockedEnemy * blockedEnemies, Owner, null);
+        await PowerCmd.Apply<EnergyNextTurnPower>(choiceContext, Owner, EnergyPerBlockedEnemy * blockedEnemies, Owner, null);
     }
 }
