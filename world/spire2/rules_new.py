@@ -11,8 +11,8 @@ from .characters import CharacterConfig, DEFAULT_STARTER_POWER, character_regist
 from .logic_table import (
     ANCIENT_POWER_BY_TIER, BOSS_GOLD, COMBAT_GOLD, ELITE_GOLD, ELITE_RELIC_REWARDS, FULL_SHOP_PAGE_VALUE,
     PATH_RELIC_REWARDS, RARE_CARD_POWER, REGIONS, RELIC_POWER, REST_POWER_BY_ACT, REST_SHARE_WHILE_SMITHING,
-    SHOP_GOLD_BY_COST_MODE, SHOP_REMOVE_POWER_BY_TIER, SHOP_SLOT_VALUES, SIGHT_BONUS_POWER_BY_ACT,
-    SMITH_POWER_BY_TIER,
+    SHOP_GOLD_BY_COST_MODE, SHOP_REMOVE_POWER_BY_TIER, SHOP_SLOT_VALUES, SIGHT_BONUS_FIRST_ACT,
+    SIGHT_BONUS_POWER, SMITH_POWER_BY_TIER,
     PowerCheck, card_reward_strength, card_reward_table, gold_sanity_run_gold, last_elite, normal_run_gold,
 )
 from .options import AncientRelicLocation
@@ -68,9 +68,11 @@ SIGHT_ITEMS = (("Intent Sight", "IntentSight", "hidden_intents"), ("Health Sight
 
 
 def sight_bonus_power(options: 'Spire2Options', act: int) -> tuple[tuple[str, float], ...]:
-    """The Sight items whose second copy adds power in this act: those with at least two copies in
-    the pool and a bonus the player left on."""
-    return tuple((item, SIGHT_BONUS_POWER_BY_ACT[item][act - 1]) for item, key, option in SIGHT_ITEMS
+    """The Sight items whose second copy adds power in this act: from SIGHT_BONUS_FIRST_ACT, those
+    with at least two copies in the pool and a bonus the player left on."""
+    if act < SIGHT_BONUS_FIRST_ACT:
+        return ()
+    return tuple((item, SIGHT_BONUS_POWER[item]) for item, key, option in SIGHT_ITEMS
                  if getattr(options, option).value >= 2 and key in options.sight_bonuses.value)
 
 

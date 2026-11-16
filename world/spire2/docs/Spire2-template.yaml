@@ -115,7 +115,7 @@ Slay the Spire II:
   #   PileSight: the draw pile shows cards in draw order.
   #   MapSight: the map shows your next 2 fights, next elite and next 2 ? rooms.
   #   CardSight: card rewards offer 1 more card, and Act 1 card rewards can be upgraded.
-  # Logic counts each bonus as extra power. Intent, Health and Card Sight bonuses are singleplayer
+  # Logic counts each bonus as extra power in Act 3. Intent, Health and Card Sight bonuses are singleplayer
   # only, but logic still counts them.
   sight_bonuses: [IntentSight, HealthSight, PileSight, MapSight, CardSight]
 

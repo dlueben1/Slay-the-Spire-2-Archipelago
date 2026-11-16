@@ -508,7 +508,7 @@ class SightBonuses(OptionSet):
     - 'MapSight': The map shows your next 2 fights, your next elite and what your next 2 ? rooms will be.
     - 'CardSight': Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.
 
-    Logic counts each bonus as extra power. The Intent, Health and Card Sight bonuses are
+    Logic counts each bonus as extra power in Act 3. The Intent, Health and Card Sight bonuses are
     singleplayer only, but logic still counts them."""
     display_name = "Sight Bonuses"
     valid_keys_casefold = False

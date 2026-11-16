@@ -12,7 +12,7 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "1cb5c7913371187924fa9c840762cf10f0ede7d948c45ab08552511d5c3d653e"
+      "sha256": "66e99cbe6ad4b0a876990632517794f92b0ecbb075528c0b57691a982d56e2e3"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
@@ -4448,7 +4448,7 @@
       "module": "worlds.spire2.options",
       "kind": "set",
       "display_name": "Sight Bonuses",
-      "description": "Sight items whose second copy adds a bonus. A Sight left out stops at undoing its Hidden\noption. Names are case-sensitive.\n\n- 'IntentSight': Start each combat with Forewarned: for each enemy whose attacks your Block stops\n  completely on its turn, draw 1 more card next turn.\n- 'HealthSight': Gain Aged Cheese: after defeating an Elite or a boss, raise your Max HP by 3.\n- 'PileSight': The draw pile shows cards in the order you will draw them.\n- 'MapSight': The map shows your next 2 fights, your next elite and what your next 2 ? rooms will be.\n- 'CardSight': Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.\n\nLogic counts each bonus as extra power. The Intent, Health and Card Sight bonuses are\nsingleplayer only, but logic still counts them.",
+      "description": "Sight items whose second copy adds a bonus. A Sight left out stops at undoing its Hidden\noption. Names are case-sensitive.\n\n- 'IntentSight': Start each combat with Forewarned: for each enemy whose attacks your Block stops\n  completely on its turn, draw 1 more card next turn.\n- 'HealthSight': Gain Aged Cheese: after defeating an Elite or a boss, raise your Max HP by 3.\n- 'PileSight': The draw pile shows cards in the order you will draw them.\n- 'MapSight': The map shows your next 2 fights, your next elite and what your next 2 ? rooms will be.\n- 'CardSight': Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.\n\nLogic counts each bonus as extra power in Act 3. The Intent, Health and Card Sight bonuses are\nsingleplayer only, but logic still counts them.",
       "default": [
         "CardSight",
         "HealthSight",

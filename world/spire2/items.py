@@ -235,17 +235,19 @@ trap_item_table: Dict[str, ItemData] = {
 
 # Universal items that undo a challenge option, one ID range for all of them: 800-899.
 # Each is added to the pool only when its option is on. Logic counts only a second copy's Sight
-# Bonus (SIGHT_BONUS_POWER_BY_ACT); every copy is progression so players treat Sights as worth chasing.
+# Bonus, and only in Act 3 (SIGHT_BONUS_POWER). Sights are progression so players see them as worth
+# buying in other games' shops; deprioritized and skip_balancing keep generation placing them
+# almost like useful items, so finding them stays a surprise.
 # Each Hidden option sets how many copies of its Sight item are added.
 # Any copy undoes the whole challenge. The client keeps a one-step-per-copy rule commented out in
 # ChallengeSightItems.UnlockedSteps: the first Intent Sight showed intents without numbers, the
 # first Health Sight showed only your own side's health.
 challenge_item_table: Dict[str, ItemData] = {
-    "Intent Sight": ItemData(800, ItemType.INTENT_SIGHT, ItemClassification.progression | ItemClassification.useful),
-    "Health Sight": ItemData(801, ItemType.HEALTH_SIGHT, ItemClassification.progression | ItemClassification.useful),
-    "Pile Sight": ItemData(802, ItemType.PILE_SIGHT, ItemClassification.progression | ItemClassification.useful),
-    "Map Sight": ItemData(803, ItemType.MAP_SIGHT, ItemClassification.progression | ItemClassification.useful),
-    "Card Sight": ItemData(804, ItemType.CARD_SIGHT, ItemClassification.progression | ItemClassification.useful),
+    "Intent Sight": ItemData(800, ItemType.INTENT_SIGHT, ItemClassification.progression_deprioritized_skip_balancing),
+    "Health Sight": ItemData(801, ItemType.HEALTH_SIGHT, ItemClassification.progression_deprioritized_skip_balancing),
+    "Pile Sight": ItemData(802, ItemType.PILE_SIGHT, ItemClassification.progression_deprioritized_skip_balancing),
+    "Map Sight": ItemData(803, ItemType.MAP_SIGHT, ItemClassification.progression_deprioritized_skip_balancing),
+    "Card Sight": ItemData(804, ItemType.CARD_SIGHT, ItemClassification.progression_deprioritized_skip_balancing),
 }
 
 # `universal_bonus_items` is keyed by the actual Archipelago item name (like "Bonus Wax Relic").
