@@ -66,6 +66,7 @@
             BonusEnchantment = 602,
             BonusEnchantedCards = 603,
             BonusMaxHp = 604,
+            BonusCards = 605,
 
             // Universal traps; IDs match trap_item_table in the APWorld.
             WeakTrap = 700,
@@ -140,6 +141,7 @@
             { 602, "Bonus Enchantment" },
             { 603, "Bonus Enchanted Cards" },
             { 604, "Bonus Max HP" },
+            { 605, "Bonus Cards" },
             { 700, "Weak Trap" },
             { 701, "Frail Trap" },
             { 702, "Vulnerable Trap" },
@@ -240,6 +242,7 @@
               case APItem.BonusEnchantment:
               case APItem.BonusEnchantedCards:
               case APItem.BonusMaxHp:
+              case APItem.BonusCards:
                     return true;
               case APItem.SwarmingElites:
               case APItem.WearyTraveler:

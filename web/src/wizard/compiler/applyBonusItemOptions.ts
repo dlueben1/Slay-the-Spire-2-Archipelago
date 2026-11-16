@@ -15,6 +15,7 @@ import {
   findBonusEnchantment,
   isBonusEnchantmentTier,
 } from "../BonusEnchantmentData";
+import { formatBonusCardPool, parseBonusCardPool } from "../BonusCardData";
 import { isBonusRelicPool, isEligibleSpecificRelicId } from "../BonusRelicData";
 import {
   isEnchantmentBonusItem,
@@ -68,6 +69,41 @@ function compileEnchantmentItem(
 }
 
 /**
+ * Validates and converts a Bonus Cards row.
+ *
+ * @throws When the row names no card or has an invalid or repeated pool.
+ */
+function compileCardsItem(
+  item: Extract<BonusItemAnswer, { kind: "CARDS" }>,
+  context: string,
+): CompiledBonusItem {
+  if (item.mode === "specific") {
+    const card = item.card.trim();
+    if (!card) {
+      throw new Error(`${context} must name a card.`);
+    }
+    return { CARDS: { Value: card } };
+  }
+
+  if (!Array.isArray(item.pools) || item.pools.length === 0) {
+    throw new Error(`${context} must have at least one card pool.`);
+  }
+  const pools: string[] = [];
+  for (const pool of item.pools) {
+    const parts = parseBonusCardPool(pool);
+    if ("error" in parts) {
+      throw new Error(`${context} has card pool '${pool}', which is not valid: ${parts.error}.`);
+    }
+    const canonical = formatBonusCardPool(parts);
+    if (pools.includes(canonical)) {
+      throw new Error(`${context} has card pool '${canonical}' more than once.`);
+    }
+    pools.push(canonical);
+  }
+  return { CARDS: { Pools: pools } };
+}
+
+/**
  * Validates and converts one semantic Bonus Item answer.
  *
  * @param item - Player-facing Bonus Item answer to compile.
@@ -96,6 +132,10 @@ function compileBonusItem(
 
   if (isEnchantmentBonusItem(item)) {
     return compileEnchantmentItem(item, context);
+  }
+
+  if (item.kind === "CARDS") {
+    return compileCardsItem(item, context);
   }
 
   if (item.kind !== "WAX_RELIC" && item.kind !== "RELIC") {

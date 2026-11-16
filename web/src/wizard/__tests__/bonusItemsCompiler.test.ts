@@ -32,6 +32,13 @@ import {
   BONUS_ENCHANTMENT_TIERS,
   getBonusEnchantments,
 } from "../BonusEnchantmentData";
+import {
+  BONUS_CARD_CHARACTERS,
+  BONUS_CARD_RARITIES,
+  BONUS_CARD_SOURCES,
+  BONUS_CARD_TYPES,
+  parseBonusCardPool,
+} from "../BonusCardData";
 import { createDefaultFillerAnswers } from "../FillerItem";
 import { getGuidedOptionKeys } from "../GuidedOption";
 import { createDefaultWizardAnswers } from "../WizardAnswers";
@@ -387,6 +394,8 @@ function compilesEveryBonusKind(): void {
     { kind: "ENCHANTMENT", mode: "specific", enchantment: "royally approved" },
     { kind: "ENCHANTED_CARDS", mode: "specific", enchantment: "Swift" },
     { kind: "MAX_HP", amount: 6 },
+    { kind: "CARDS", mode: "random", pools: ["attack regent", "Rare Colourless upgraded", "Random"] },
+    { kind: "CARDS", mode: "specific", card: " Apotheosis " },
   ];
 
   const options = compileWizardAnswers(answers, optionCatalog);
@@ -398,6 +407,8 @@ function compilesEveryBonusKind(): void {
     { ENCHANTMENT: { Value: "RoyallyApproved" } },
     { ENCHANTED_CARDS: { Value: "Swift" } },
     { MAX_HP: { Value: 6 } },
+    { CARDS: { Pools: ["Regent Attack", "Upgraded Colorless Rare", "Random"] } },
+    { CARDS: { Value: "Apotheosis" } },
   ]);
 }
 
@@ -427,6 +438,12 @@ function rejectsInvalidNewBonusKinds(): void {
     ],
     [{ kind: "MAX_HP", amount: 0 }, "between 1 and 50 Max HP"],
     [{ kind: "MAX_HP", amount: 51 }, "between 1 and 50 Max HP"],
+    [{ kind: "CARDS", mode: "random", pools: [] }, "at least one card pool"],
+    [{ kind: "CARDS", mode: "random", pools: ["Event Rare"] }, "Event cards have no Common"],
+    [{ kind: "CARDS", mode: "random", pools: ["Colorless Common"] }, "no Common colorless cards"],
+    [{ kind: "CARDS", mode: "random", pools: ["Random Attack"] }, "Random can only be combined"],
+    [{ kind: "CARDS", mode: "random", pools: ["Rare", "rare"] }, "more than once"],
+    [{ kind: "CARDS", mode: "specific", card: " " }, "must name a card"],
   ];
   for (const [item, message] of cases) {
     const answers = createTestAnswers();
@@ -459,6 +476,30 @@ function matchesApworldEnchantmentTiers(): void {
 }
 
 /**
+ * Verifies the builder's card pool words match the APWorld's, which validates YAMLs.
+ *
+ * @returns Nothing; Vitest records assertion failures.
+ */
+function matchesApworldCardPoolWords(): void {
+  const items = readFileSync(
+    new URL("../../../../world/spire2/items.py", import.meta.url),
+    "utf8",
+  );
+  const tuple = (name: string) => {
+    const match = new RegExp(`^${name} = \\(([^)]*)\\)`, "m").exec(items);
+    expect(match, `items.py ${name}`).not.toBeNull();
+    return [...match![1]!.matchAll(/'([A-Za-z]+)'/g)].map((word) => word[1]);
+  };
+  expect([...BONUS_CARD_CHARACTERS]).toEqual(tuple("BONUS_CARD_CHARACTERS"));
+  expect([...BONUS_CARD_SOURCES].slice(BONUS_CARD_CHARACTERS.length)).toEqual(
+    tuple("BONUS_CARD_SOURCES"),
+  );
+  expect([...BONUS_CARD_TYPES]).toEqual(tuple("BONUS_CARD_TYPES"));
+  expect([...BONUS_CARD_RARITIES]).toEqual(tuple("BONUS_CARD_RARITIES"));
+  expect(parseBonusCardPool("Fool Power")).toMatchObject({ source: "Fool", type: "Power" });
+}
+
+/**
  * Verifies the new kinds render rows with art and readable names.
  *
  * @returns Nothing; Vitest records assertion failures.
@@ -486,6 +527,10 @@ function rendersNewDisplayRows(): void {
     getBonusItemDisplayRow({ kind: "RELIC", mode: "random", pools: ["Rare"] })
       .name,
   ).toBe("Random Relic");
+  expect(
+    getBonusItemDisplayRow({ kind: "CARDS", mode: "random", pools: ["Regent Attack", "Random"] })
+      .details,
+  ).toBe("Choose 1 of 3 from: Regent Attack, Random");
 }
 
 function registerBonusItemsTests(): void {
@@ -510,6 +555,7 @@ function registerBonusItemsTests(): void {
   it("compiles every bonus kind", compilesEveryBonusKind);
   it("rejects invalid enchantment and Max HP rows", rejectsInvalidNewBonusKinds);
   it("matches the APWorld's enchantment tiers", matchesApworldEnchantmentTiers);
+  it("matches the APWorld's card pool words", matchesApworldCardPoolWords);
   it("renders rows for the new kinds", rendersNewDisplayRows);
 }
 

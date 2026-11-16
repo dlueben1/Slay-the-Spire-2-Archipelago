@@ -14,6 +14,8 @@ internal sealed class BonusRewardPayload
     [JsonPropertyName("enchantment")] public string? Enchantment { get; set; }
     [JsonPropertyName("amount")] public int Amount { get; set; }
     [JsonPropertyName("cards")] public List<string>? Cards { get; set; }
+    // The CARDS bonus's pools as the reward describes them, such as "Regent Attack, Colorless Rare".
+    [JsonPropertyName("label")] public string? Label { get; set; }
 
     public string ToJson() => JsonSerializer.Serialize(this);
 

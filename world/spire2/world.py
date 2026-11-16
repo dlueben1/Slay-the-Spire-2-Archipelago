@@ -21,7 +21,7 @@ from .characters import (CharacterConfig, character_list, vanilla_character_ids,
 from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET, GENERIC_CHARACTER_BLOCKS
 from .items import (item_table, chars_to_items, bonus_item_table, ItemType, base_event_item_pairs, ItemData,
                     item_groups, BONUS_ENCHANTMENT_TIERS, BONUS_ENCHANTMENT_VALUES, BONUS_MAX_HP_LIMIT,
-                    normalize_bonus_enchantment)
+                    normalize_bonus_enchantment, parse_bonus_card_pool)
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
 from .options import Spire2Options
 
@@ -56,8 +56,8 @@ def sparse_placement_rank(item: 'SlayTheSpire2Item') -> int:
 
 
 def validate_bonus_entry(bonus_type: str, selector: dict) -> None:
-    """Rejects bonus entries the client could not honour. Relic names are checked by the client,
-    which knows the game's relics; the other types are checked here."""
+    """Rejects bonus entries the client could not honour. Relic and card names are checked by the
+    client, which knows the game's relics and cards; the rest is checked here."""
     pools = selector.get("Pools")
     value = selector.get("Value")
     if bonus_type == "MAX_HP":
@@ -77,6 +77,15 @@ def validate_bonus_entry(bonus_type: str, selector: dict) -> None:
                 f"Unknown {bonus_type} enchantment '{value}'. "
                 f"Supported enchantments: {', '.join(BONUS_ENCHANTMENT_VALUES.values())}"
             )
+    elif bonus_type == "CARDS":
+        if pools is not None:
+            for pool in pools:
+                try:
+                    parse_bonus_card_pool(pool)
+                except ValueError as reason:
+                    raise OptionError(f"CARDS bonus pool '{pool}' is not valid: {reason}.") from None
+        elif not isinstance(value, str):
+            raise OptionError("A CARDS bonus item's Value must be a card name, not a number.")
     elif isinstance(value, int):
         raise OptionError(f"A {bonus_type} bonus item's Value must be a relic name, not a number.")
 

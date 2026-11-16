@@ -19,6 +19,7 @@ namespace StS2AP.Models
         public const string EnchantmentCategory = "ENCHANTMENT";
         public const string EnchantedCardsCategory = "ENCHANTED_CARDS";
         public const string MaxHpCategory = "MAX_HP";
+        public const string CardsCategory = "CARDS";
 
         public string Category { get; }
 

@@ -31,6 +31,7 @@ class ItemType(Enum):
     BONUS_ENCHANTMENT = auto()
     BONUS_ENCHANTED_CARDS = auto()
     BONUS_MAX_HP = auto()
+    BONUS_CARDS = auto()
     INTENT_SIGHT = auto()
     HEALTH_SIGHT = auto()
     PILE_SIGHT = auto()
@@ -137,6 +138,10 @@ bonus_item_table: Dict[str, BonusItemData] = {
         'Bonus Max HP',
         ItemData(604, ItemType.BONUS_MAX_HP, ItemClassification.useful),
     ),
+    'CARDS': BonusItemData(
+        'Bonus Cards',
+        ItemData(605, ItemType.BONUS_CARDS, ItemClassification.useful),
+    ),
 }
 
 # Enchantments that ENCHANTMENT and ENCHANTED_CARDS bonus items can give, by the tier a YAML `Pools`
@@ -151,6 +156,56 @@ BONUS_ENCHANTMENT_TIERS: Dict[str, tuple] = {
 BONUS_ENCHANTMENTS_BY_VALUE_ONLY = ('Corrupted', 'Slither', 'SlumberingEssence', 'PerfectFit', 'Clone')
 
 BONUS_MAX_HP_LIMIT = 50
+
+# The words a CARDS bonus `Pools` entry is built from: at most one source, one card type and one
+# rarity, plus Upgraded. With no source, the cards come from the run's own character. The client
+# has the same words in `BonusCardPools`, and the web builder has a copy for its picker.
+BONUS_CARD_CHARACTERS = ('Ironclad', 'Silent', 'Defect', 'Necrobinder', 'Regent', 'Fool')
+BONUS_CARD_SOURCES = (*BONUS_CARD_CHARACTERS, 'Other', 'Colorless', 'Event', 'Ancient')
+BONUS_CARD_TYPES = ('Attack', 'Skill', 'Power')
+BONUS_CARD_RARITIES = ('Common', 'Uncommon', 'Rare')
+BONUS_CARD_RANDOM = 'Random'
+BONUS_CARD_UPGRADED = 'Upgraded'
+# British spelling accepted for the source.
+BONUS_CARD_ALIASES = {'colourless': 'Colorless'}
+
+
+def parse_bonus_card_pool(entry: str) -> Dict[str, str]:
+    """Splits a CARDS pool such as 'Regent Attack' or 'Colorless Rare Upgraded' into its parts.
+    Raises ValueError with a player-facing reason when the entry can't be honoured."""
+    categories = (
+        ('source', BONUS_CARD_SOURCES),
+        ('type', BONUS_CARD_TYPES),
+        ('rarity', BONUS_CARD_RARITIES),
+        ('random', (BONUS_CARD_RANDOM,)),
+        ('upgraded', (BONUS_CARD_UPGRADED,)),
+    )
+    parts: Dict[str, str] = {}
+    words = entry.split()
+    if not words:
+        raise ValueError("a pool can't be empty")
+    for word in words:
+        key = word.lower()
+        name = BONUS_CARD_ALIASES.get(key)
+        category = 'source' if name else None
+        for candidate_category, names in categories:
+            if category:
+                break
+            name = next((known for known in names if known.lower() == key), None)
+            if name:
+                category = candidate_category
+        if not category:
+            raise ValueError(f"'{word}' is not a card source, type, rarity, Random or Upgraded")
+        if category in parts:
+            raise ValueError(f"it names more than one {category}")
+        parts[category] = name
+    if 'random' in parts and set(parts) - {'random', 'upgraded'}:
+        raise ValueError("Random can only be combined with Upgraded")
+    if parts.get('source') in ('Event', 'Ancient') and 'rarity' in parts:
+        raise ValueError(f"{parts['source']} cards have no Common, Uncommon or Rare")
+    if parts.get('source') == 'Colorless' and parts.get('rarity') == 'Common':
+        raise ValueError("there are no Common colorless cards")
+    return parts
 
 
 def normalize_bonus_enchantment(name: str) -> str:

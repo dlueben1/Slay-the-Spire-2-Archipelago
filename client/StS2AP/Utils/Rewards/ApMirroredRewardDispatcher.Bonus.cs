@@ -42,21 +42,28 @@ public static partial class ApMirroredRewardDispatcher
                 return new ApBonusEnchantReward(enchantment, payload.Amount, owner, origin);
             }
             case BonusItemDefinition.EnchantedCardsCategory:
-            {
-                if (!BonusCardRewards.TryGetValue((owner.NetId, origin.ReceivedItemIndex), out ApBonusCardReward? reward))
-                {
-                    List<CardModel> cards = (payload.Cards ?? [])
-                        .Select(json => owner.RunState.LoadCard(Deserialize<SerializableCard>(json), owner))
-                        .ToList();
-                    reward = new ApBonusCardReward(cards, owner, origin);
-                    BonusCardRewards[(owner.NetId, origin.ReceivedItemIndex)] = reward;
-                }
-                return reward;
-            }
+                return BonusCardReward(payload, owner, origin, "Choose an enchanted card");
+            case BonusItemDefinition.CardsCategory:
+                return BonusCardReward(payload, owner, origin,
+                    string.IsNullOrEmpty(payload.Label) ? "Choose a card" : $"Choose a card: {payload.Label}");
             default:
                 return new ApUnavailableReward(origin.ItemName,
                     $"This version of the mod does not know the bonus '{payload.Category}'.", owner, origin);
         }
+    }
+
+    private static ApBonusCardReward BonusCardReward(
+        BonusRewardPayload payload, Player owner, RewardOrigin origin, string description)
+    {
+        if (!BonusCardRewards.TryGetValue((owner.NetId, origin.ReceivedItemIndex), out ApBonusCardReward? reward))
+        {
+            List<CardModel> cards = (payload.Cards ?? [])
+                .Select(json => owner.RunState.LoadCard(Deserialize<SerializableCard>(json), owner))
+                .ToList();
+            reward = new ApBonusCardReward(cards, owner, origin, description);
+            BonusCardRewards[(owner.NetId, origin.ReceivedItemIndex)] = reward;
+        }
+        return reward;
     }
 
     /// <summary>Gain max HP (and as much current HP), like the game's max HP relics.</summary>
@@ -189,7 +196,7 @@ public static partial class ApMirroredRewardDispatcher
         public override void MarkContentAsSeen() { }
     }
 
-    /// <summary>A card reward whose three cards were rolled and enchanted when the bonus was assigned.</summary>
+    /// <summary>A card reward whose cards were rolled (and for Enchanted Cards, enchanted) when the bonus was assigned.</summary>
     private sealed class ApBonusCardReward : CardReward, IApNativeReward
     {
         private readonly int _itemIndex;
@@ -197,13 +204,13 @@ public static partial class ApMirroredRewardDispatcher
 
         public override LocString Description => _description;
 
-        public ApBonusCardReward(IReadOnlyList<CardModel> cards, Player player, RewardOrigin origin)
+        public ApBonusCardReward(IReadOnlyList<CardModel> cards, Player player, RewardOrigin origin, string description)
             : base(cards, CardCreationSource.Other, player,
                 new CardCreationOptions([player.Character.CardPool], CardCreationSource.Other,
                     CardRarityOddsType.RegularEncounter))
         {
             _itemIndex = origin.ReceivedItemIndex;
-            _description = CreateApDescription("Choose an enchanted card", origin);
+            _description = CreateApDescription(description, origin);
         }
 
         public bool CanClaim(out string reason) =>

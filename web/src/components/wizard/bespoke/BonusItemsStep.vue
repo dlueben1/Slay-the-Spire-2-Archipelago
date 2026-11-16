@@ -10,6 +10,7 @@ import type {
   BonusItemKind,
 } from "../../../wizard/WizardAnswers";
 import type { WizardQuestion as WizardQuestionDefinition } from "../../../wizard/WizardStep";
+import BonusCardsDialog from "./BonusCardsDialog.vue";
 import EnchantmentDialog from "./EnchantmentDialog.vue";
 import MaxHpDialog from "./MaxHpDialog.vue";
 import WaxRelicDialog from "./WaxRelicDialog.vue";
@@ -43,6 +44,7 @@ const addMenuItems: DropdownMenuItem[] = (
     ["ENCHANTMENT", "Add Enchantment"],
     ["ENCHANTED_CARDS", "Add Enchanted Cards"],
     ["MAX_HP", "Add Max HP"],
+    ["CARDS", "Add Card Reward"],
   ] as const
 ).map(([kind, label]) => ({
   label,
@@ -280,6 +282,12 @@ function submitBonusItem(item: BonusItemAnswer): void {
       v-else-if="dialogKind === 'ENCHANTMENT' || dialogKind === 'ENCHANTED_CARDS'"
       v-model:open="isDialogOpen"
       :kind="dialogKind"
+      :edit-item="editItem"
+      @submit="submitBonusItem"
+    />
+    <BonusCardsDialog
+      v-else-if="dialogKind === 'CARDS'"
+      v-model:open="isDialogOpen"
       :edit-item="editItem"
       @submit="submitBonusItem"
     />

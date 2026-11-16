@@ -49,7 +49,8 @@ export type BonusItemKind =
   | "RELIC"
   | "ENCHANTMENT"
   | "ENCHANTED_CARDS"
-  | "MAX_HP";
+  | "MAX_HP"
+  | "CARDS";
 
 /** Bonus item types that grant a relic: a Wax Relic melts, a Relic stays all run. */
 export type RelicBonusKind = "WAX_RELIC" | "RELIC";
@@ -91,13 +92,29 @@ export interface MaxHpBonusItem {
   amount: number;
 }
 
+/** A card reward that always offers one named card. */
+export interface SpecificCardsBonusItem {
+  kind: "CARDS";
+  mode: "specific";
+  card: string;
+}
+
+/** A card reward rolled from pools such as "Regent Attack", written as the YAML has them. */
+export interface PoolCardsBonusItem {
+  kind: "CARDS";
+  mode: "random";
+  pools: string[];
+}
+
 /** Discriminated union of every supported Bonus Item configuration. */
 export type BonusItemAnswer =
   | SpecificRelicBonusItem
   | RandomRelicBonusItem
   | SpecificEnchantmentBonusItem
   | RandomEnchantmentBonusItem
-  | MaxHpBonusItem;
+  | MaxHpBonusItem
+  | SpecificCardsBonusItem
+  | PoolCardsBonusItem;
 
 /** Whether a row gives an enchantment (enchant a card, or enchanted cards). */
 export function isEnchantmentBonusItem(

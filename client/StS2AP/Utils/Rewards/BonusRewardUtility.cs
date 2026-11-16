@@ -29,6 +29,7 @@ internal static class BonusRewardUtility
             [ItemTable.APItem.BonusEnchantment] = BonusItemDefinition.EnchantmentCategory,
             [ItemTable.APItem.BonusEnchantedCards] = BonusItemDefinition.EnchantedCardsCategory,
             [ItemTable.APItem.BonusMaxHp] = BonusItemDefinition.MaxHpCategory,
+            [ItemTable.APItem.BonusCards] = BonusItemDefinition.CardsCategory,
         };
 
     private const int EnchantedCardCount = 3;
@@ -69,6 +70,7 @@ internal static class BonusRewardUtility
             BonusItemDefinition.EnchantmentCategory => AssignEnchantment(definition, player, ordinal),
             BonusItemDefinition.EnchantedCardsCategory => AssignEnchantedCards(definition, player, ordinal),
             BonusItemDefinition.MaxHpCategory => AssignMaxHp(definition),
+            BonusItemDefinition.CardsCategory => AssignCards(definition, player, ordinal),
             _ => null,
         };
         if (assignment == null)
@@ -179,6 +181,30 @@ internal static class BonusRewardUtility
             CardCmd.Enchant(chosen.Canonical().ToMutable(), card, chosen.Amount);
         }
 
+        return new BonusAssignment(null, new BonusRewardPayload
+        {
+            Category = BonusItemDefinition.EnchantedCardsCategory,
+            Cards = SerializeAndRelease(cards, player),
+        });
+    }
+
+    /// <summary>Rolls the cards of a CARDS bonus from its pools, or offers the one card it names.</summary>
+    private static BonusAssignment? AssignCards(BonusItemDefinition definition, Player player, int ordinal)
+    {
+        Rng rng = CreateRng(player, ordinal, BonusItemDefinition.CardsCategory);
+        List<CardModel> cards = BonusCardPools.Roll(definition, player, rng);
+        if (cards.Count == 0)
+            return null;
+        return new BonusAssignment(null, new BonusRewardPayload
+        {
+            Category = BonusItemDefinition.CardsCategory,
+            Cards = SerializeAndRelease(cards, player),
+            Label = BonusCardPools.Label(definition),
+        });
+    }
+
+    private static List<string> SerializeAndRelease(List<CardModel> cards, Player player)
+    {
         List<string> serialized = cards
             .Select(card => JsonSerializer.Serialize(card.ToSerializable(), SerializationUtility.CombinedOptions))
             .ToList();
@@ -189,11 +215,7 @@ internal static class BonusRewardUtility
             foreach (CardModel card in cards)
                 runState.RemoveCard(card);
         }
-        return new BonusAssignment(null, new BonusRewardPayload
-        {
-            Category = BonusItemDefinition.EnchantedCardsCategory,
-            Cards = serialized,
-        });
+        return serialized;
     }
 
     private static BonusAssignment? AssignMaxHp(BonusItemDefinition definition)

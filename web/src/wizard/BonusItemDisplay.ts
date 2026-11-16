@@ -15,6 +15,11 @@ import {
   getRelicById,
   RANDOM_WAX_RELIC_NAME,
 } from "./BonusRelicData";
+import {
+  BONUS_CARDS_IMAGE_RELIC_ID,
+  describeBonusCardPool,
+  parseBonusCardPool,
+} from "./BonusCardData";
 import { isEnchantmentBonusItem, type BonusItemAnswer } from "./WizardAnswers";
 
 /** One renderable Bonus Item row. */
@@ -63,6 +68,29 @@ export function getBonusItemDisplayRow(
       imageUrl: getRandomEnchantmentImageUrl(),
       name: `${what}: random`,
       details: `From tiers: ${item.tiers.join(", ")}`,
+    };
+  }
+
+  if (item.kind === "CARDS") {
+    const imageUrl = getRelicById(BONUS_CARDS_IMAGE_RELIC_ID).imageUrl;
+    if (item.mode === "specific") {
+      return {
+        imageUrl,
+        name: `Card: ${item.card}`,
+        details: "A card reward offering this one card.",
+      };
+    }
+    const pools = item.pools.map((pool) => {
+      const parts = parseBonusCardPool(pool);
+      if ("error" in parts) {
+        throw new Error(`Invalid bonus card pool '${pool}'.`);
+      }
+      return describeBonusCardPool(parts);
+    });
+    return {
+      imageUrl,
+      name: "Card reward",
+      details: `Choose 1 of 3 from: ${pools.join(", ")}`,
     };
   }
 

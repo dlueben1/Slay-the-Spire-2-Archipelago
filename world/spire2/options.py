@@ -603,6 +603,11 @@ class BonusItems(OptionList):
       enchantment as the Value.
     - ENCHANTED_CARDS: a card reward whose cards are all enchanted, from the same Pools or Value.
     - MAX_HP: gain this much max HP. Value only.
+    - CARDS: choose 1 of 3 cards. Each Pool can name a source (a character, Other, Colorless, Event
+      or Ancient; your own character if left out), a type (Attack, Skill, Power) and a rarity
+      (Common, Uncommon, Rare), such as 'Regent Attack' or 'Colorless Rare'. Add 'Upgraded' for
+      upgraded cards; 'Random' mixes sources card by card. Fool pools need game version 0.113 and
+      are skipped on older ones. Or name one card as the Value.
 
     For example:
 
@@ -617,6 +622,8 @@ class BonusItems(OptionList):
                 Value: Swift
             - MAX_HP:
                 Value: 6
+            - CARDS:
+                Pools: [Regent Attack, Colorless Rare]
 
 
     Generation fails if more bonus items are configured than there are filler slots.

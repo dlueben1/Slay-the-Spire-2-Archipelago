@@ -18,6 +18,7 @@ import {
   BONUS_ENCHANTMENT_TIERS,
   findBonusEnchantment,
 } from "../BonusEnchantmentData";
+import { formatBonusCardPool, parseBonusCardPool } from "../BonusCardData";
 import { FILLER_ITEM_DEFINITIONS, FILLER_WEIGHT_NAMES } from "../FillerItem";
 import { getOrderedBoons } from "../Boon";
 import { getOrderedRunModifiers } from "../RunModifier";
@@ -77,6 +78,7 @@ const BONUS_ITEM_KINDS: readonly BonusItemKind[] = [
   "ENCHANTMENT",
   "ENCHANTED_CARDS",
   "MAX_HP",
+  "CARDS",
 ];
 
 /**
@@ -188,6 +190,27 @@ function readEnchantmentTiers(
 }
 
 /**
+ * Reads the Pools of a Bonus Cards row, rewriting each in its canonical spelling.
+ *
+ * @returns The valid pools in YAML order, without duplicates.
+ */
+function readCardPools(rawPools: unknown[], context: string, warn: Warn): string[] {
+  const pools: string[] = [];
+  for (const rawPool of rawPools) {
+    const parts = parseBonusCardPool(String(rawPool));
+    if ("error" in parts) {
+      warn(`${context}: left out card pool ${describeValue(rawPool)}: ${parts.error}.`);
+      continue;
+    }
+    const pool = formatBonusCardPool(parts);
+    if (!pools.includes(pool)) {
+      pools.push(pool);
+    }
+  }
+  return pools;
+}
+
+/**
  * Reads one `bonus_items` entry as a Bonus Item row.
  *
  * @param entry - Raw list entry, such as `{WAX_RELIC: {Pools: [Common]}}`.
@@ -229,6 +252,23 @@ function readBonusItem(
   const rawPools = Array.isArray(selector.Pools)
     ? selector.Pools
     : [selector.Pools];
+
+  if (kind === "CARDS") {
+    if ("Value" in selector) {
+      const card = String(selector.Value).trim();
+      if (!card) {
+        warn(`${context}: left out a Bonus Cards item with an empty Value.`);
+        return null;
+      }
+      return { kind, mode: "specific", card };
+    }
+    const pools = readCardPools(rawPools, context, warn);
+    if (!pools.length) {
+      warn(`${context}: left out a Bonus Cards item without any valid pool.`);
+      return null;
+    }
+    return { kind, mode: "random", pools };
+  }
 
   if (kind === "ENCHANTMENT" || kind === "ENCHANTED_CARDS") {
     if ("Value" in selector) {

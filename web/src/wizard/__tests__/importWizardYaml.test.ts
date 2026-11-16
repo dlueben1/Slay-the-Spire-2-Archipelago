@@ -274,6 +274,8 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
         { kind: "ENCHANTMENT", mode: "specific", enchantment: "RoyallyApproved" },
         { kind: "ENCHANTED_CARDS", mode: "specific", enchantment: "Swift" },
         { kind: "MAX_HP", amount: 6 },
+        { kind: "CARDS", mode: "random", pools: ["Regent Attack", "Upgraded Colorless Rare", "Random"] },
+        { kind: "CARDS", mode: "specific", card: "Apotheosis" },
       ];
     },
   ],

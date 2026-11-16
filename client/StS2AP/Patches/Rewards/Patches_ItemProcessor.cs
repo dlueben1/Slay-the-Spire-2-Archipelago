@@ -402,6 +402,7 @@ namespace StS2AP.Patches
                 case APItem.BonusEnchantment:
                 case APItem.BonusEnchantedCards:
                 case APItem.BonusMaxHp:
+                case APItem.BonusCards:
                     ArchipelagoClient.Progress.Items.RegisterReceived(receipt);
                     break;
                 case APItem.IntentSight:
