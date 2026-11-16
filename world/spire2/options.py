@@ -446,7 +446,7 @@ class HiddenIntents(Range):
     mod's overlay.
     The value is how many Intent Sight items are added to the item pool, and 0 turns it off. Finding
     any one of them shows intents again for every character, with their numbers and the Intent Graph overlay, and
-    a second one adds its Sight Bonus. Does not change logic.
+    a second one adds its Sight Bonus, which logic counts.
     """
     display_name = "Hidden Intents"
     range_start = 0
@@ -457,7 +457,7 @@ class HiddenHealth(Range):
     """Health is hidden. Health bars stay full and show no numbers, the top bar shows no HP, and the
     poison and doom previews on health bars are hidden. Block is still shown. The value is how many Health Sight
     items are added to the item pool, and 0 turns it off. Finding any one of them shows everyone's health again
-    for every character, and a second one adds its Sight Bonus. Does not change logic.
+    for every character, and a second one adds its Sight Bonus, which logic counts.
     """
     display_name = "Hidden Health"
     range_start = 0
@@ -467,8 +467,8 @@ class HiddenHealth(Range):
 class HiddenPiles(Range):
     """The draw, discard and exhaust piles show "?" instead of a card count
     and can't be opened. The value is how many Pile Sight items are added to the item pool, and 0 turns it off.
-    Finding any one of them shows the piles again for every character, and a second one adds its Sight Bonus.
-    Does not change logic.
+    Finding any one of them shows the piles again for every character, and a second one adds its Sight Bonus,
+    which logic counts.
     """
     display_name = "Hidden Piles"
     range_start = 0
@@ -479,7 +479,7 @@ class HiddenMap(Range):
     """The map only shows the rooms you can move to next. Rooms further ahead show a closed eye 
     until you can reach them.
     The value is how many Map Sight items are added to the item pool, and 0 turns it off. Finding any one of them
-    shows the whole map again for every character, and a second one adds its Sight Bonus. Does not change logic.
+    shows the whole map again for every character, and a second one adds its Sight Bonus, which logic counts.
     """
     display_name = "Hidden Map"
     range_start = 0
@@ -490,7 +490,7 @@ class HiddenCards(Range):
     """Cards are unknown: their name, text and energy cost are hidden, their art is blurred and they
     show no tooltips.
     The value is how many Card Sight items are added to the item pool, and 0 turns it off. Finding any one of them
-    shows cards again for every character, and a second one adds its Sight Bonus. Does not change logic.
+    shows cards again for every character, and a second one adds its Sight Bonus, which logic counts.
     """
     display_name = "Hidden Cards"
     range_start = 0
@@ -508,7 +508,8 @@ class SightBonuses(OptionSet):
     - 'MapSight': The map shows your next 2 fights, your next elite and what your next 2 ? rooms will be.
     - 'CardSight': Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.
 
-    The Intent, Health and Card Sight bonuses are singleplayer only."""
+    Logic counts each bonus as extra power. The Intent, Health and Card Sight bonuses are
+    singleplayer only, but logic still counts them."""
     display_name = "Sight Bonuses"
     valid_keys_casefold = False
     valid_keys = {

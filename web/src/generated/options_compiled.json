@@ -12,7 +12,7 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "4828884ff0963f5e675bbd8c54fddbf676068c44ece1957392f5117fc2b61452"
+      "sha256": "1cb5c7913371187924fa9c840762cf10f0ede7d948c45ab08552511d5c3d653e"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
@@ -4318,7 +4318,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Hidden Intents",
-      "description": "Enemy intents are hidden, like Runic Dome in the first game, and so is the Intent Graph \nmod's overlay.\nThe value is how many Intent Sight items are added to the item pool, and 0 turns it off. Finding\nany one of them shows intents again for every character, with their numbers and the Intent Graph overlay, and\na second one adds its Sight Bonus. Does not change logic.",
+      "description": "Enemy intents are hidden, like Runic Dome in the first game, and so is the Intent Graph \nmod's overlay.\nThe value is how many Intent Sight items are added to the item pool, and 0 turns it off. Finding\nany one of them shows intents again for every character, with their numbers and the Intent Graph overlay, and\na second one adds its Sight Bonus, which logic counts.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -4344,7 +4344,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Hidden Health",
-      "description": "Health is hidden. Health bars stay full and show no numbers, the top bar shows no HP, and the\npoison and doom previews on health bars are hidden. Block is still shown. The value is how many Health Sight\nitems are added to the item pool, and 0 turns it off. Finding any one of them shows everyone's health again\nfor every character, and a second one adds its Sight Bonus. Does not change logic.",
+      "description": "Health is hidden. Health bars stay full and show no numbers, the top bar shows no HP, and the\npoison and doom previews on health bars are hidden. Block is still shown. The value is how many Health Sight\nitems are added to the item pool, and 0 turns it off. Finding any one of them shows everyone's health again\nfor every character, and a second one adds its Sight Bonus, which logic counts.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -4370,7 +4370,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Hidden Piles",
-      "description": "The draw, discard and exhaust piles show \"?\" instead of a card count\nand can't be opened. The value is how many Pile Sight items are added to the item pool, and 0 turns it off.\nFinding any one of them shows the piles again for every character, and a second one adds its Sight Bonus.\nDoes not change logic.",
+      "description": "The draw, discard and exhaust piles show \"?\" instead of a card count\nand can't be opened. The value is how many Pile Sight items are added to the item pool, and 0 turns it off.\nFinding any one of them shows the piles again for every character, and a second one adds its Sight Bonus,\nwhich logic counts.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -4396,7 +4396,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Hidden Map",
-      "description": "The map only shows the rooms you can move to next. Rooms further ahead show a closed eye \nuntil you can reach them.\nThe value is how many Map Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows the whole map again for every character, and a second one adds its Sight Bonus. Does not change logic.",
+      "description": "The map only shows the rooms you can move to next. Rooms further ahead show a closed eye \nuntil you can reach them.\nThe value is how many Map Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows the whole map again for every character, and a second one adds its Sight Bonus, which logic counts.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -4422,7 +4422,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Hidden Cards",
-      "description": "Cards are unknown: their name, text and energy cost are hidden, their art is blurred and they\nshow no tooltips.\nThe value is how many Card Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows cards again for every character, and a second one adds its Sight Bonus. Does not change logic.",
+      "description": "Cards are unknown: their name, text and energy cost are hidden, their art is blurred and they\nshow no tooltips.\nThe value is how many Card Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows cards again for every character, and a second one adds its Sight Bonus, which logic counts.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -4448,7 +4448,7 @@
       "module": "worlds.spire2.options",
       "kind": "set",
       "display_name": "Sight Bonuses",
-      "description": "Sight items whose second copy adds a bonus. A Sight left out stops at undoing its Hidden\noption. Names are case-sensitive.\n\n- 'IntentSight': Start each combat with Forewarned: for each enemy whose attacks your Block stops\n  completely on its turn, draw 1 more card next turn.\n- 'HealthSight': Gain Aged Cheese: after defeating an Elite or a boss, raise your Max HP by 3.\n- 'PileSight': The draw pile shows cards in the order you will draw them.\n- 'MapSight': The map shows your next 2 fights, your next elite and what your next 2 ? rooms will be.\n- 'CardSight': Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.\n\nThe Intent, Health and Card Sight bonuses are singleplayer only.",
+      "description": "Sight items whose second copy adds a bonus. A Sight left out stops at undoing its Hidden\noption. Names are case-sensitive.\n\n- 'IntentSight': Start each combat with Forewarned: for each enemy whose attacks your Block stops\n  completely on its turn, draw 1 more card next turn.\n- 'HealthSight': Gain Aged Cheese: after defeating an Elite or a boss, raise your Max HP by 3.\n- 'PileSight': The draw pile shows cards in the order you will draw them.\n- 'MapSight': The map shows your next 2 fights, your next elite and what your next 2 ? rooms will be.\n- 'CardSight': Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.\n\nLogic counts each bonus as extra power. The Intent, Health and Card Sight bonuses are\nsingleplayer only, but logic still counts them.",
       "default": [
         "CardSight",
         "HealthSight",
