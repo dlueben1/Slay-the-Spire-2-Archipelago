@@ -24,7 +24,8 @@ namespace StS2AP.Utils;
 /// </remarks>
 public static class ApReceiptLedger
 {
-    // Keeps one action's payload well under RitsuLibManagedNetActions.MaxPayloadBytes (about 40 bytes each).
+    // Keeps one action under RitsuLibManagedNetActions.MaxPayloadBytes (64 KB): a full batch is
+    // about 32 KB with large real ids, and 55 KB with every number at its widest.
     private const int MaxReceiptsPerAction = 1000;
 
     internal static readonly ApQueuedClaimKind<ApReceiptsArrivedActionMessage> Kind = new(
