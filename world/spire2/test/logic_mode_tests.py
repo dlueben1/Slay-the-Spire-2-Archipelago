@@ -1,7 +1,7 @@
 import io
 import unittest
 
-from BaseClasses import CollectionState, ItemClassification
+from BaseClasses import CollectionState
 from Fill import distribute_items_restrictive
 from test.general import setup_multiworld
 from worlds.AutoWorld import call_all
@@ -16,11 +16,8 @@ class LogicModeTests(unittest.TestCase):
         'ancient_relic_location': 'start_of_act',
     }
 
-    def test_gold_classification_follows_effective_logic_and_shops(self):
-        legacy_flags = {
-            'Elite Gold': ItemClassification.progression_deprioritized_skip_balancing,
-            'Boss Gold': ItemClassification.progression,
-        }
+    def test_gold_is_progression_exactly_when_logic_counts_it(self):
+        # Only whether gold is progression is checked: the other flags are tuning and change often.
         cases = [
             {'shop_sanity': shops, 'include_floor_checks': True, 'gold_sanity': True}
             for shops in (False, True)
@@ -31,24 +28,22 @@ class LogicModeTests(unittest.TestCase):
                                       options={'characters': ['Ironclad'], **options})
                 world = mw.worlds[1]
                 # New logic counts Elite and Boss Gold toward shop power whenever Gold Sanity is on,
-                # and Combat Gold toward each act's shop gold with Shop Sanity too.
+                # and Combat Gold toward each act's shop gold with Shop Sanity too. Old logic always
+                # counts Elite and Boss Gold.
                 new_logic = world.effective_logic == 'new'
-                useful_gold = new_logic and not world.options.gold_sanity
-                counted_combat_gold = new_logic and world.options.gold_sanity and world.options.shop_sanity
-                expected_flags = {
-                    **{suffix: ItemClassification.useful if useful_gold else legacy
-                       for suffix, legacy in legacy_flags.items()},
-                    'Combat Gold': (ItemClassification.progression_deprioritized_skip_balancing
-                                    if counted_combat_gold else ItemClassification.useful),
+                counted = {
+                    'Elite Gold': not new_logic or bool(world.options.gold_sanity),
+                    'Boss Gold': not new_logic or bool(world.options.gold_sanity),
+                    'Combat Gold': new_logic and bool(world.options.gold_sanity and world.options.shop_sanity),
                 }
-                for suffix, expected in expected_flags.items():
+                for suffix, expected in counted.items():
                     # Includes names used for modded characters and explicit item creation.
                     for character in ('Ironclad', 'Custom Character 1'):
-                        self.assertEqual(expected, world.create_item(f'{character} {suffix}').classification)
+                        self.assertEqual(expected, world.create_item(f'{character} {suffix}').advancement)
                     if world.options.gold_sanity:
                         items = [item for item in mw.itempool if item.name == f'Ironclad {suffix}']
                         self.assertTrue(items)
-                        self.assertTrue(all(item.classification == expected for item in items))
+                        self.assertTrue(all(item.advancement == expected for item in items))
                 distribute_items_restrictive(mw)
                 self.assertTrue(mw.can_beat_game())
                 self.assertTrue(mw.fulfills_accessibility())
