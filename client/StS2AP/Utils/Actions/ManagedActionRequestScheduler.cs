@@ -31,10 +31,13 @@ public static class ManagedActionRequestScheduler
         Func<bool> isStillCurrent,
         Action onSuccess,
         Action<string> onFailure,
-        Func<bool>? canRequest = null)
+        Func<bool>? canRequest = null,
+        bool firstAttemptNextFrame = false)
     {
         Func<bool> requestAllowed = canRequest ?? AlwaysAllowRequest;
-        if (requestAllowed() && tryRequest())
+        // A caller inside the game's own action handling (a cancellation, say) waits a frame, so
+        // the request doesn't re-enter the action queue it was called from.
+        if (!firstAttemptNextFrame && requestAllowed() && tryRequest())
         {
             onSuccess();
             return;
@@ -50,9 +53,12 @@ public static class ManagedActionRequestScheduler
             onFailure,
             DateTime.UtcNow + RequestTimeout
         );
-        LogUtility.Warn(
-            $"Managed action {description} is waiting for a safe action slot or network transport."
-        );
+        if (!firstAttemptNextFrame)
+        {
+            LogUtility.Warn(
+                $"Managed action {description} is waiting for a safe action slot or network transport."
+            );
+        }
 
         if (!TryHookProcessFrame())
         {

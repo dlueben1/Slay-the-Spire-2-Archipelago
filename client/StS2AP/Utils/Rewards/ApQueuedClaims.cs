@@ -1,7 +1,9 @@
 using System.Text.Json;
+using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Entities.Multiplayer;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.GameActions;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Runs;
@@ -46,7 +48,8 @@ internal sealed class ApQueuedClaimKind<T> where T : ApQueuedClaimMessage, new()
         string noun,
         Func<ApQueuedClaim<T>, Task<ApQueuedClaimResult>> apply,
         Func<T, string> describe,
-        bool notifiesOwnerOfRefusal = true)
+        bool notifiesOwnerOfRefusal = true,
+        GameActionType actionType = GameActionType.Any)
     {
         Noun = noun;
         Apply = apply;
@@ -58,12 +61,20 @@ internal sealed class ApQueuedClaimKind<T> where T : ApQueuedClaimMessage, new()
             Serialize: static message => JsonSerializer.SerializeToUtf8Bytes(message),
             Deserialize: DeserializeMessage,
             Execute: context => ApQueuedClaims.Execute(this, context),
-            // NonCombat actions are held while a combat runs and block their owner's queue if one
-            // reaches the front during combat. A claim that the host orders after a move into a
-            // combat room must still execute there, on every peer, and not stall that player.
-            ActionType: GameActionType.Any
+            // Any by default: NonCombat actions are held while a combat runs and block their
+            // owner's queue if one reaches the front during combat. A claim that the host orders
+            // after a move into a combat room must still execute there, on every peer, and not
+            // stall that player. A kind requested during combat is CombatPlayPhaseOnly instead
+            // (ApReceiptLedger.CombatKind).
+            ActionType: actionType
         );
     }
+
+    /// <summary>
+    /// Whether the game can drop this kind's action before it runs. An Any action always runs; a
+    /// CombatPlayPhaseOnly one is cancelled on every peer when the turn or the combat ends first.
+    /// </summary>
+    internal bool CanBeCancelled => Descriptor.ActionType != GameActionType.Any;
 
     /// <summary>What the claim is called in logs and notices, such as "AP potion".</summary>
     internal string Noun { get; }
@@ -85,6 +96,9 @@ internal sealed class ApQueuedClaimKind<T> where T : ApQueuedClaimMessage, new()
     internal bool NotifiesOwnerOfRefusal { get; }
 
     internal RitsuLibManagedNetActionDescriptor<T> Descriptor { get; }
+
+    /// <summary>The claim id in one of this kind's action payloads; empty if it doesn't read.</summary>
+    internal Guid ReadClaimId(byte[] payload) => DeserializeMessage(payload).ClaimId;
 
     private T DeserializeMessage(ReadOnlySpan<byte> bytes)
     {
@@ -118,6 +132,16 @@ public static class ApQueuedClaims
     // This peer's own requested claims, by claim id, until they execute here.
     private static readonly Dictionary<Guid, TaskCompletionSource<ApQueuedClaimResult>> Pending = new();
 
+    // This peer's own requested actions that the game may cancel before they run, by claim id,
+    // with what to do if it does.
+    private static readonly Dictionary<Guid, Action<string>> CancellationHandlers = new();
+
+    // How to read the claim id from the payload of each cancellable kind's action, by opcode.
+    private static readonly Dictionary<ulong, Func<byte[], Guid>> CancellableKinds = new();
+
+    // The run's action queues, watched for this peer's cancellable actions as they are enqueued.
+    private static ActionQueueSet? _watchedQueues;
+
     private static bool _initialized;
 
     /// <summary>
@@ -131,15 +155,23 @@ public static class ApQueuedClaims
     {
         if (_initialized)
             return;
-        RitsuLibManagedNetActions.Register(ApQueuedGoldClaims.Kind.Descriptor);
-        RitsuLibManagedNetActions.Register(ApQueuedReceiptClaims.PotionKind.Descriptor);
-        RitsuLibManagedNetActions.Register(ApQueuedReceiptClaims.BonusRelicKind.Descriptor);
-        RitsuLibManagedNetActions.Register(ApQueuedRelicClaims.AssignmentKind.Descriptor);
-        RitsuLibManagedNetActions.Register(ApQueuedRelicClaims.ClaimKind.Descriptor);
-        RitsuLibManagedNetActions.Register(ApQueuedRelicClaims.AncientClaimKind.Descriptor);
-        RitsuLibManagedNetActions.Register(ApQueuedCardClaims.ClaimKind.Descriptor);
-        RitsuLibManagedNetActions.Register(ApReceiptLedger.Kind.Descriptor);
+        Register(ApQueuedGoldClaims.Kind);
+        Register(ApQueuedReceiptClaims.PotionKind);
+        Register(ApQueuedReceiptClaims.BonusRelicKind);
+        Register(ApQueuedRelicClaims.AssignmentKind);
+        Register(ApQueuedRelicClaims.ClaimKind);
+        Register(ApQueuedRelicClaims.AncientClaimKind);
+        Register(ApQueuedCardClaims.ClaimKind);
+        Register(ApReceiptLedger.Kind);
+        CombatManager.Instance.CombatEnded += _ => CancelActionsLeftAtCombatEnd();
         _initialized = true;
+    }
+
+    private static void Register<T>(ApQueuedClaimKind<T> kind) where T : ApQueuedClaimMessage, new()
+    {
+        ulong opcode = RitsuLibManagedNetActions.Register(kind.Descriptor);
+        if (kind.CanBeCancelled)
+            CancellableKinds[opcode] = kind.ReadClaimId;
     }
 
     public static void EndRun()
@@ -147,8 +179,26 @@ public static class ApQueuedClaims
         foreach (TaskCompletionSource<ApQueuedClaimResult> pending in Pending.Values)
             pending.TrySetResult(ApQueuedClaimResult.NotApplied);
         Pending.Clear();
+        CancellationHandlers.Clear();
+        if (_watchedQueues != null)
+            _watchedQueues.ActionEnqueued -= OnActionEnqueued;
+        _watchedQueues = null;
         ApReceiptLedger.EndRun();
     }
+
+    /// <summary>
+    /// Owner, just before requesting an action of a cancellable kind: runs <paramref name="onCancelled"/>
+    /// once if the game cancels it before it runs here. A cancelled action runs on no peer: every
+    /// peer cancels the same waiting actions at turn and combat end, in the host's order.
+    /// </summary>
+    internal static void OnCancelled(Guid claimId, Action<string> onCancelled)
+    {
+        WatchForCancellations();
+        CancellationHandlers[claimId] = onCancelled;
+    }
+
+    /// <summary>Owner: the request was not made after all.</summary>
+    internal static void StopWatching(Guid claimId) => CancellationHandlers.Remove(claimId);
 
     /// <summary>
     /// Owner only: requests one claim and waits until this peer has executed it. There is no
@@ -243,10 +293,58 @@ public static class ApQueuedClaims
         }
         finally
         {
-            // Only the owner waits for its claims; other peers have no entry.
+            // Only the owner waits for its claims, or watches for their cancellation; other peers
+            // have no entry.
+            CancellationHandlers.Remove(message.ClaimId);
             if (Pending.Remove(message.ClaimId, out TaskCompletionSource<ApQueuedClaimResult>? pending))
                 pending.TrySetResult(result);
         }
+    }
+
+    private static void WatchForCancellations()
+    {
+        ActionQueueSet queues = RunManager.Instance.ActionQueueSet;
+        if (ReferenceEquals(queues, _watchedQueues))
+            return;
+        if (_watchedQueues != null)
+            _watchedQueues.ActionEnqueued -= OnActionEnqueued;
+        queues.ActionEnqueued += OnActionEnqueued;
+        _watchedQueues = queues;
+    }
+
+    /// <summary>
+    /// The owner's own cancellable action reaching its queue: the host's request, or the host's
+    /// announcement on a client. The game raises this before it may cancel an action that arrives
+    /// too late, so the cancellation is seen either way.
+    /// </summary>
+    private static void OnActionEnqueued(GameAction action)
+    {
+        if (action is not RitsuLibManagedGameAction managed
+            || !CancellableKinds.TryGetValue(managed.DescriptorOpcode, out Func<byte[], Guid>? readClaimId)
+            || !LocalContext.IsMe(managed.Player))
+        {
+            return;
+        }
+        Guid claimId = readClaimId(managed.Payload);
+        if (CancellationHandlers.ContainsKey(claimId))
+            managed.BeforeCancelled += _ => Cancelled(claimId, "the game cancelled its action as the turn or the combat ended");
+    }
+
+    /// <summary>
+    /// At this peer's combat end the game has cancelled every in-combat action not run here yet,
+    /// including requests it still held for the players' turn, which no peer ever enqueued. Every
+    /// peer runs actions in the same order, so an action that has not run here by now runs nowhere.
+    /// </summary>
+    private static void CancelActionsLeftAtCombatEnd()
+    {
+        foreach (Guid claimId in CancellationHandlers.Keys.ToList())
+            Cancelled(claimId, "combat ended before its action ran");
+    }
+
+    private static void Cancelled(Guid claimId, string reason)
+    {
+        if (CancellationHandlers.Remove(claimId, out Action<string>? onCancelled))
+            onCancelled(reason);
     }
 
     /// <summary>
