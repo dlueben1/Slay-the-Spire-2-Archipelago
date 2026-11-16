@@ -1,6 +1,7 @@
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Relics;
+using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.RelicPools;
 using MegaCrit.Sts2.Core.Rooms;
@@ -21,15 +22,16 @@ namespace StS2AP.Models;
 public sealed class AgedCheese : ModRelicTemplate
 {
     private const decimal MaxHpPerElite = 2m;
-    private const string CheeseIconPath = "res://images/cards/useful.png";
+    // Chosen Cheese's own art, at the paths RelicModel builds from its icon name.
+    private const string ChosenCheeseIconName = "chosen_cheese";
 
     // Granted by AP, never a reward, so it has no rarity Touch of Orobas could pick up.
     public override RelicRarity Rarity => RelicRarity.None;
 
     public override RelicAssetProfile AssetProfile { get; } = new(
-        IconPath: CheeseIconPath,
-        IconOutlinePath: CheeseIconPath,
-        BigIconPath: CheeseIconPath
+        IconPath: ImageHelper.GetImagePath($"atlases/relic_atlas.sprites/{ChosenCheeseIconName}.tres"),
+        IconOutlinePath: ImageHelper.GetImagePath($"atlases/relic_outline_atlas.sprites/{ChosenCheeseIconName}.tres"),
+        BigIconPath: ImageHelper.GetImagePath($"relics/{ChosenCheeseIconName}.png")
     );
 
     // AP grants this relic explicitly; it must never enter a natural reward pool.
