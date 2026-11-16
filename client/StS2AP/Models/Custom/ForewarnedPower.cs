@@ -15,7 +15,7 @@ namespace StS2AP.Models;
 /// <summary>
 /// The Intent Sight bonus, given at the start of each combat by <c>Patches_IntentSightBonus</c>.
 /// Each enemy is judged on its own: for every enemy that attacked on the enemy turn and got none
-/// of it through your Block, you draw 1 more card and gain 1 Energy next turn. Damage that Block
+/// of it through your Block, you draw 1 more card next turn. Damage that Block
 /// stops still reaches this hook, so a fully blocked hit counts as an attack. An enemy that
 /// doesn't attack gives nothing.
 /// </summary>
@@ -23,7 +23,6 @@ namespace StS2AP.Models;
 public sealed class ForewarnedPower : ModPowerTemplate
 {
     private const int CardsPerBlockedEnemy = 1;
-    private const int EnergyPerBlockedEnemy = 1;
 
     // Each enemy that attacked this enemy turn, and whether any of its damage got through.
     private readonly Dictionary<Creature, bool> _attackGotThrough = new();
@@ -68,8 +67,7 @@ public sealed class ForewarnedPower : ModPowerTemplate
         if (blockedEnemies == 0)
             return;
         Flash();
-        // The game's own next-turn powers, which pay out with the player's coming turn.
+        // The game's own next-turn draw, which counts toward the player's coming hand draw.
         await PowerCmd.Apply<DrawCardsNextTurnPower>(choiceContext, Owner, CardsPerBlockedEnemy * blockedEnemies, Owner, null);
-        await PowerCmd.Apply<EnergyNextTurnPower>(choiceContext, Owner, EnergyPerBlockedEnemy * blockedEnemies, Owner, null);
     }
 }

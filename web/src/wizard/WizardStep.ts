@@ -644,7 +644,7 @@ export const challengeSetupStep: WizardStep = {
             field: "sightBonuses.intent",
             label: "Intent Sight: Forewarned",
             description:
-              "Start each combat with Forewarned: for each enemy whose attacks your Block stops completely on its turn, draw 1 more card and gain 1 Energy next turn.",
+              "Start each combat with Forewarned: for each enemy whose attacks your Block stops completely on its turn, draw 1 more card next turn.",
           },
           {
             field: "sightBonuses.health",
