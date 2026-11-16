@@ -299,14 +299,19 @@ def create_item_groups(items: dict[str, ItemData]) -> dict[str, typing.Set[str]]
         "Buffs": set(),
         "Traps": set(),
         "Bonus Items": set(),
+        "Sights": set(),
     }
+    sight_types = {ItemType.INTENT_SIGHT, ItemType.HEALTH_SIGHT, ItemType.PILE_SIGHT, ItemType.MAP_SIGHT,
+                   ItemType.CARD_SIGHT}
 
     for item_name, item_data in items.items():
         if item_data.code is None:
             continue
 
         if item_data.type == ItemType.GOLD:
-            groups["Gold"].add(item_name)
+            # One and Five Gold are filler: a "!hint Gold" should not spend a hint on them.
+            if not item_name.endswith((" One Gold", " Five Gold")):
+                groups["Gold"].add(item_name)
         elif item_data.type == ItemType.CAMPFIRE:
             groups["Campfire Upgrades"].add(item_name)
         elif item_data.type in {
@@ -339,6 +344,8 @@ def create_item_groups(items: dict[str, ItemData]) -> dict[str, typing.Set[str]]
             groups["Buffs"].add(item_name)
         elif item_name in universal_bonus_items:
             groups["Bonus Items"].add(item_name)
+        elif item_data.type in sight_types:
+            groups["Sights"].add(item_name)
 
     return groups
 
