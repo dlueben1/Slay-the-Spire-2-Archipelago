@@ -26,12 +26,12 @@ public readonly record struct ApNetMessageContext<T>(T Message, ulong SenderNetI
 
 /// <summary>
 /// AP's own multiplayer messages, as a native message type of ours: AP's only network transport
-/// besides queued actions (<see cref="ApNetActions"/>). Today it carries each owner's progress
+/// besides queued actions (RitsuLib managed actions). Today it carries each owner's progress
 /// checkpoint to the host (ApRunData).
 /// </summary>
 /// <remarks>
 /// The game registers <see cref="ArchipelagoNetMessage"/> like its own message types because the
-/// AP assembly is a mod assembly, as it does <see cref="ArchipelagoNetAction"/>. Native messages
+/// AP assembly is a mod assembly. Native messages
 /// travel on the game's reliable channel, ordered with its own messages and actions. Clients can
 /// only send to the host, and the host sends to one client or to every client ready for
 /// broadcasts. Nothing is relayed automatically: a host that relays a client's message does so

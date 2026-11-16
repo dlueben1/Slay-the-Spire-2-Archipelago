@@ -8,6 +8,7 @@ using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Models;
 using StS2AP.Multiplayer;
 using StS2AP.Persistence;
+using STS2RitsuLib.Networking.ManagedActions;
 
 namespace StS2AP.Utils;
 
@@ -51,7 +52,8 @@ internal sealed class ApQueuedClaimKind<T> where T : ApQueuedClaimMessage, new()
         Apply = apply;
         Describe = describe;
         NotifiesOwnerOfRefusal = notifiesOwnerOfRefusal;
-        Descriptor = new ApNetActionDescriptor<T>(
+        Descriptor = new RitsuLibManagedNetActionDescriptor<T>(
+            ModuleId: ModEntry.ModId,
             ActionKey: actionKey,
             Serialize: static message => JsonSerializer.SerializeToUtf8Bytes(message),
             Deserialize: DeserializeMessage,
@@ -82,7 +84,7 @@ internal sealed class ApQueuedClaimKind<T> where T : ApQueuedClaimMessage, new()
     /// </summary>
     internal bool NotifiesOwnerOfRefusal { get; }
 
-    internal ApNetActionDescriptor<T> Descriptor { get; }
+    internal RitsuLibManagedNetActionDescriptor<T> Descriptor { get; }
 
     private T DeserializeMessage(ReadOnlySpan<byte> bytes)
     {
@@ -129,14 +131,14 @@ public static class ApQueuedClaims
     {
         if (_initialized)
             return;
-        ApNetActions.Register(ApQueuedGoldClaims.Kind.Descriptor);
-        ApNetActions.Register(ApQueuedReceiptClaims.PotionKind.Descriptor);
-        ApNetActions.Register(ApQueuedReceiptClaims.BonusRelicKind.Descriptor);
-        ApNetActions.Register(ApQueuedRelicClaims.AssignmentKind.Descriptor);
-        ApNetActions.Register(ApQueuedRelicClaims.ClaimKind.Descriptor);
-        ApNetActions.Register(ApQueuedRelicClaims.AncientClaimKind.Descriptor);
-        ApNetActions.Register(ApQueuedCardClaims.ClaimKind.Descriptor);
-        ApNetActions.Register(ApReceiptLedger.Kind.Descriptor);
+        RitsuLibManagedNetActions.Register(ApQueuedGoldClaims.Kind.Descriptor);
+        RitsuLibManagedNetActions.Register(ApQueuedReceiptClaims.PotionKind.Descriptor);
+        RitsuLibManagedNetActions.Register(ApQueuedReceiptClaims.BonusRelicKind.Descriptor);
+        RitsuLibManagedNetActions.Register(ApQueuedRelicClaims.AssignmentKind.Descriptor);
+        RitsuLibManagedNetActions.Register(ApQueuedRelicClaims.ClaimKind.Descriptor);
+        RitsuLibManagedNetActions.Register(ApQueuedRelicClaims.AncientClaimKind.Descriptor);
+        RitsuLibManagedNetActions.Register(ApQueuedCardClaims.ClaimKind.Descriptor);
+        RitsuLibManagedNetActions.Register(ApReceiptLedger.Kind.Descriptor);
         _initialized = true;
     }
 
@@ -181,7 +183,8 @@ public static class ApQueuedClaims
         T message = createMessage();
         if (!TryAddress(message, claimId, owner))
             return false;
-        bool requested = ApNetActions.Request(kind.Descriptor, message, owner.NetId);
+        bool requested = RitsuLibManagedNetActions.Request(
+            RunManager.Instance, kind.Descriptor, message, owner.NetId);
         LogRequested(kind, message, requested);
         return requested;
     }
@@ -213,7 +216,9 @@ public static class ApQueuedClaims
                 + kind.Describe(message)
         );
 
-    internal static async Task Execute<T>(ApQueuedClaimKind<T> kind, ApNetActionContext<T> context)
+    internal static async Task Execute<T>(
+        ApQueuedClaimKind<T> kind,
+        RitsuLibManagedNetActionContext<T> context)
         where T : ApQueuedClaimMessage, new()
     {
         T message = context.Message;

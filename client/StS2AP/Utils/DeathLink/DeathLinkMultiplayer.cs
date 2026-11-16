@@ -9,6 +9,7 @@ using MegaCrit.Sts2.Core.Entities.Multiplayer;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.ValueProps;
+using STS2RitsuLib.Networking.ManagedActions;
 
 namespace StS2AP.Utils;
 
@@ -35,8 +36,9 @@ public static class DeathLinkMultiplayer
     private static readonly DeathLinkEventLedger EventLedger = new();
     private static readonly HashSet<Guid> HandledInboundEvents = new();
 
-    private static readonly ApNetActionDescriptor<DeathLinkActionMessage>
+    private static readonly RitsuLibManagedNetActionDescriptor<DeathLinkActionMessage>
         CombatActionDescriptor = new(
+            ModuleId: ModEntry.ModId,
             ActionKey: CombatActionKey,
             Serialize: static message => JsonSerializer.SerializeToUtf8Bytes(message),
             Deserialize: DeserializeActionMessage,
@@ -55,7 +57,7 @@ public static class DeathLinkMultiplayer
         if (_initialized)
             return;
 
-        ApNetActions.Register(CombatActionDescriptor);
+        RitsuLibManagedNetActions.Register(CombatActionDescriptor);
         _initialized = true;
     }
 
@@ -243,7 +245,8 @@ public static class DeathLinkMultiplayer
         bool requested;
         try
         {
-            requested = ApNetActions.Request(CombatActionDescriptor, message, slotOwner.NetId);
+            requested = RitsuLibManagedNetActions.Request(
+                RunManager.Instance, CombatActionDescriptor, message, slotOwner.NetId);
         }
         catch (Exception ex)
         {
@@ -397,7 +400,7 @@ public static class DeathLinkMultiplayer
     }
 
     private static async Task ExecuteDamageAction(
-        ApNetActionContext<DeathLinkActionMessage> context)
+        RitsuLibManagedNetActionContext<DeathLinkActionMessage> context)
     {
         DeathLinkActionMessage message = context.Message;
         bool localOwnerOwnsAdmission = LocalContext.IsMe(context.Player);

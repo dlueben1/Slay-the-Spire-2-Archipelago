@@ -4,6 +4,7 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Data;
 using StS2AP.Extensions;
+using STS2RitsuLib.Networking.ManagedActions;
 using static StS2AP.Data.ItemTable;
 
 namespace StS2AP.Utils;
@@ -23,7 +24,7 @@ namespace StS2AP.Utils;
 /// </remarks>
 public static class ApReceiptLedger
 {
-    // Keeps one action's payload well under ApNetActions.MaxPayloadBytes (about 40 bytes each).
+    // Keeps one action's payload well under RitsuLibManagedNetActions.MaxPayloadBytes (about 40 bytes each).
     private const int MaxReceiptsPerAction = 1000;
 
     internal static readonly ApQueuedClaimKind<ApReceiptsArrivedActionMessage> Kind = new(
@@ -162,7 +163,8 @@ public static class ApReceiptLedger
         ManagedActionRequestScheduler.RequestOrDefer(
             claimId,
             $"AP receipts ({reason})",
-            () => ApNetActions.Request(Kind.Descriptor, message, owner.NetId),
+            () => RitsuLibManagedNetActions.Request(
+                RunManager.Instance, Kind.Descriptor, message, owner.NetId),
             () => MultiplayerSupport.IsRealMultiplayerRun
                 && RunManager.Instance.DebugOnlyGetState() is RunState runState
                 && ApRunData.TryGetSharedState(runState, out ApRunSharedState shared)
