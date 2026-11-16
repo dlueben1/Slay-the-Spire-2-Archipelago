@@ -50,6 +50,10 @@ describe("answer persistence", () => {
       Ironclad: { progressiveStarterCard: "enabled" },
     };
     answers.shops.shop.cardSlots = 4;
+    answers.items.startingInventory = [
+      { character: null, item: "Strength", count: 2 },
+    ];
+    answers.keptOptions = { item_links: [{ name: "Shared" }] };
 
     saveWizardState(storage, { answers, stepId: "checks" });
     const restored = loadSavedWizardState(storage, createDefaults());

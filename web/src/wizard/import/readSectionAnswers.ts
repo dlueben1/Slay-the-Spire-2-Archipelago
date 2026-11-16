@@ -21,6 +21,12 @@ import {
 import { formatBonusCardPool, parseBonusCardPool } from "../BonusCardData";
 import { FILLER_ITEM_DEFINITIONS, FILLER_WEIGHT_NAMES } from "../FillerItem";
 import { getOrderedBoons } from "../Boon";
+import {
+  findItemGroup,
+  getStartingItemChoices,
+  parseItemName,
+} from "../ItemNames";
+import { STARTING_ITEM_MAX_COUNT } from "../compiler/applyItemOptions";
 import { getOrderedRunModifiers } from "../RunModifier";
 import { SHOP_CARD_KIND_DEFINITIONS } from "../ShopCardKind";
 import {
@@ -38,6 +44,8 @@ import {
   type ChallengeAnswers,
   type ChecksAnswers,
   type DeathLinkAnswers,
+  type ItemAnswers,
+  type StartingItemAnswer,
   type FillerAnswers,
   type ItemPoolAnswers,
   type FillerWeightLevel,
@@ -55,6 +63,7 @@ import {
   CHALLENGE_OPTION_KEYS,
   CHECK_OPTION_KEYS,
   DEATH_LINK_OPTION_KEYS,
+  ITEM_OPTION_KEYS,
   OP_RELIC_CATEGORY_KEYS,
   PROGRESSION_OPTION_KEYS,
   RUN_OPTION_KEYS,
@@ -606,5 +615,134 @@ export function readProgressionAnswers(
     accessibility: options[
       PROGRESSION_OPTION_KEYS.accessibility
     ] as ProgressionAnswers["accessibility"],
+  };
+}
+
+/**
+ * Reads a hint or placement list, keeping the group and item names the builder knows.
+ *
+ * @param value - The resolved option value.
+ * @param label - The question's name, for warnings.
+ * @param catalog - Generated item catalog.
+ * @param warn - Receives a warning for names that are neither an item nor a group.
+ * @returns Canonical names in the order written.
+ */
+function readItemNameList(
+  value: unknown,
+  label: string,
+  catalog: OptionCatalog,
+  warn: (message: string) => void,
+): string[] {
+  const names: string[] = [];
+  const ignored: string[] = [];
+
+  for (const entry of Array.isArray(value) ? value : []) {
+    const text = String(entry);
+    const parsed = parseItemName(text, catalog);
+    const name =
+      findItemGroup(text, catalog) ??
+      (parsed &&
+        (parsed.character === null
+          ? parsed.item
+          : `${parsed.character} ${parsed.item}`));
+    if (name === null) {
+      ignored.push(`'${text}'`);
+    } else if (!names.includes(name)) {
+      names.push(name);
+    }
+  }
+
+  if (ignored.length) {
+    warn(
+      `${label}: ignored ${ignored.join(", ")}, which ${ignored.length === 1 ? "isn't an item or item group" : "aren't items or item groups"}.`,
+    );
+  }
+  return names;
+}
+
+/**
+ * Reads the starting inventory, keeping the stacks the builder can show.
+ *
+ * @param value - The resolved `start_inventory` mapping of item names to counts.
+ * @param catalog - Generated item catalog.
+ * @param warn - Receives a warning for items the builder can't show.
+ * @returns One stack per item.
+ */
+function readStartingInventory(
+  value: unknown,
+  catalog: OptionCatalog,
+  warn: (message: string) => void,
+): StartingItemAnswer[] {
+  const stacks: StartingItemAnswer[] = [];
+  const ignored: string[] = [];
+
+  for (const [name, count] of Object.entries(
+    (value ?? {}) as Record<string, unknown>,
+  )) {
+    const parsed = parseItemName(name, catalog);
+    const startable =
+      parsed !== null &&
+      !parsed.character?.startsWith("Custom Character ") &&
+      getStartingItemChoices(parsed.character, catalog).some(
+        (choice) => choice.name === parsed.item,
+      );
+    if (
+      !startable ||
+      typeof count !== "number" ||
+      !Number.isInteger(count) ||
+      count < 1 ||
+      count > STARTING_ITEM_MAX_COUNT
+    ) {
+      ignored.push(`'${name}'`);
+      continue;
+    }
+    stacks.push({ character: parsed.character, item: parsed.item, count });
+  }
+
+  if (ignored.length) {
+    warn(
+      `Starting Inventory: left out ${ignored.join(", ")}. The builder only shows items of built-in and predefined characters and universal items other than traps and Bonus Items, with counts from 1 to ${STARTING_ITEM_MAX_COUNT}.`,
+    );
+  }
+  return stacks;
+}
+
+/**
+ * Reads Items & Hints answers.
+ *
+ * @param options - Resolved option values.
+ * @param catalog - Generated item catalog.
+ * @param warn - Receives warnings for names the builder can't keep.
+ * @returns Starting items, starting hints, and placement lists.
+ */
+export function readItemAnswers(
+  options: CompiledOptions,
+  catalog: OptionCatalog,
+  warn: (message: string) => void,
+): ItemAnswers {
+  return {
+    startingInventory: readStartingInventory(
+      options[ITEM_OPTION_KEYS.startInventory],
+      catalog,
+      warn,
+    ),
+    startHints: readItemNameList(
+      options[ITEM_OPTION_KEYS.startHints],
+      "Starting Hints",
+      catalog,
+      warn,
+    ),
+    localItems: readItemNameList(
+      options[ITEM_OPTION_KEYS.localItems],
+      "Local Items",
+      catalog,
+      warn,
+    ),
+    nonLocalItems: readItemNameList(
+      options[ITEM_OPTION_KEYS.nonLocalItems],
+      "Non-local Items",
+      catalog,
+      warn,
+    ),
   };
 }

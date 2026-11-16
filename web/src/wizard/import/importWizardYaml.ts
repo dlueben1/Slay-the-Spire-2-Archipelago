@@ -9,8 +9,9 @@
  *
  * Problems that leave nothing to load throw an `Error` with a player-readable message.
  * Everything else becomes a warning: random or weighted values, values Archipelago
- * would reject, options the builder does not cover, unknown keys, and answers that
- * still need a change before the builder can make a YAML from them.
+ * would reject, unknown keys, and answers that still need a change before the builder
+ * can make a YAML from them. Options the builder does not ask about, such as item links
+ * or plando, are kept as written and go back into the builder's YAML.
  */
 
 import type { OptionCatalog, OptionValue } from "../../generated/optionCatalog";
@@ -33,6 +34,7 @@ import {
   readChallengeAnswers,
   readChecksAnswers,
   readDeathLinkAnswers,
+  readItemAnswers,
   readItemPoolAnswers,
   readProgressionAnswers,
   readRunAnswers,
@@ -134,6 +136,8 @@ export function importWizardYaml(
     document.rootKeys.includes(key),
   );
   const unknownKeys: string[] = [];
+  const keptOptions: Record<string, unknown> = {};
+  const keptNames: string[] = [];
 
   for (const [key, raw] of Object.entries(document.section)) {
     const option = catalog.options[key];
@@ -147,8 +151,10 @@ export function importWizardYaml(
     }
 
     if (!guidedKeys.has(key)) {
+      // Kept as written, weights and all: Archipelago reads it, not the builder.
       if (!isDefaultOrEmpty(raw, option.default)) {
-        droppedOptions.push(option.display_name);
+        keptOptions[key] = structuredClone(raw);
+        keptNames.push(option.display_name);
       }
       continue;
     }
@@ -176,6 +182,11 @@ export function importWizardYaml(
   if (invalidOptions.length) {
     warn(
       `These values aren't valid, so the options use their defaults: ${invalidOptions.join(", ")}.`,
+    );
+  }
+  if (keptNames.length) {
+    warn(
+      `The builder doesn't ask about these settings, so it keeps them as your YAML had them: ${keptNames.join(", ")}.`,
     );
   }
   if (droppedOptions.length) {
@@ -210,6 +221,8 @@ export function importWizardYaml(
     challenges: readChallengeAnswers(options, defaults.challenges, catalog),
     deathLink: readDeathLinkAnswers(options, defaults.deathLink),
     progression: readProgressionAnswers(options),
+    items: readItemAnswers(options, catalog, warn),
+    keptOptions,
   };
 
   // Settings Archipelago would reject, such as a goal above the roster size, still
