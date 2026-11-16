@@ -916,6 +916,8 @@ class SlayTheSpire2World(World):
         self.options.hidden_piles.value = slot_data.get('hidden_piles', 0)
         self.options.hidden_map.value = slot_data.get('hidden_map', 0)
         self.options.hidden_cards.value = slot_data.get('hidden_cards', 0)
+        # Logic counts the Sight Bonuses a slot left on; slots from before the option have none.
+        self.options.sight_bonuses.value = set(slot_data.get('sight_bonuses', []))
         if self.options.include_floor_checks.value == 0:
             self.options.progressive_starter_card.value = 0
             self.options.progressive_starter_relic.value = 0

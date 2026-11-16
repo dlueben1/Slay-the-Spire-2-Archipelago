@@ -58,6 +58,24 @@ class TestHiddenOptionsNeedFloorChecks(Spire2TestBase):
         self.assertFalse(any(item.name.endswith(" Sight") for item in regenerated.itempool))
 
 
+class TestTrackerRestoresSightBonuses(Spire2TestBase):
+    options = {
+        "characters": ["ironclad"],
+        "hidden_cards": 2,
+        "sight_bonuses": ["PileSight"],
+    }
+
+    def test_tracker_uses_the_generated_sight_bonuses_not_the_yamls(self):
+        # Logic counts Sight Bonuses, so Universal Tracker must count the same ones as the server.
+        regenerated = setup_solo_multiworld(SlayTheSpire2World, steps=())
+        # noinspection PyUnresolvedReferences
+        regenerated.re_gen_passthrough = {self.game: self.world.fill_slot_data()}
+        regenerated.worlds[1].options.sight_bonuses.value = {"CardSight"}
+        for step in ("generate_early", "create_regions", "create_items", "set_rules"):
+            call_all(regenerated, step)
+        self.assertEqual({"PileSight"}, regenerated.worlds[1].options.sight_bonuses.value)
+
+
 class TestChallengeItemsOff(Spire2TestBase):
     def test_no_sight_items_by_default(self):
         self.assertFalse(any(item.name.endswith(" Sight") for item in self.multiworld.itempool))
