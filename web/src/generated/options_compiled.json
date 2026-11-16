@@ -12,11 +12,11 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "8a54ca5462db6546215748a8ce777e0feb5337a71ba153f1670bdc8b73c9d6c6"
+      "sha256": "958fcd25d92309f1985ec83572ef68cf2e4f3ef070257dc86e136fcccd7357e3"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "e68443d6c12ef24dbc03c4525f5f658c8c649d3a0bc1e599476094ffced2401c"
+      "sha256": "c0001a3cb0ac2959142472973dcc2611418cc184f250b0bf7091747d3a4ba924"
     }
   },
   "characters": {
@@ -225,6 +225,7 @@
     "hidden_piles",
     "hidden_map",
     "hidden_cards",
+    "sight_bonuses",
     "strict_card_rewards"
   ],
   "groups": [
@@ -411,6 +412,7 @@
         "hidden_piles",
         "hidden_map",
         "hidden_cards",
+        "sight_bonuses",
         "strict_card_rewards"
       ],
       "start_collapsed": false,
@@ -4316,7 +4318,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Hidden Intents",
-      "description": "Enemy intents are hidden, like Runic Dome in the first game, and so is the Intent Graph \nmod's overlay.\nThe value is how many Intent Sight items are added to the item pool, and 0 turns it off. Finding\nany one of them shows intents again for every character, with their numbers and the Intent Graph overlay, so\na second copy makes it easier to find. Does not change logic.",
+      "description": "Enemy intents are hidden, like Runic Dome in the first game, and so is the Intent Graph \nmod's overlay.\nThe value is how many Intent Sight items are added to the item pool, and 0 turns it off. Finding\nany one of them shows intents again for every character, with their numbers and the Intent Graph overlay, and\na second one adds its Sight Bonus. Does not change logic.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -4332,7 +4334,7 @@
       },
       "source": "game",
       "minimum": 0,
-      "maximum": 2,
+      "maximum": 4,
       "supports_weighting": true,
       "group": "Challenges"
     },
@@ -4342,7 +4344,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Hidden Health",
-      "description": "Health is hidden. Health bars stay full and show no numbers, the top bar shows no HP, and the\npoison and doom previews on health bars are hidden. Block is still shown. The value is how many Health Sight\nitems are added to the item pool, and 0 turns it off. Finding any one of them shows everyone's health again\nfor every character, so a second copy makes it easier to find. Does not change logic.",
+      "description": "Health is hidden. Health bars stay full and show no numbers, the top bar shows no HP, and the\npoison and doom previews on health bars are hidden. Block is still shown. The value is how many Health Sight\nitems are added to the item pool, and 0 turns it off. Finding any one of them shows everyone's health again\nfor every character, and a second one adds its Sight Bonus. Does not change logic.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -4358,7 +4360,7 @@
       },
       "source": "game",
       "minimum": 0,
-      "maximum": 2,
+      "maximum": 4,
       "supports_weighting": true,
       "group": "Challenges"
     },
@@ -4368,7 +4370,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Hidden Piles",
-      "description": "The draw, discard and exhaust piles show \"?\" instead of a card count\nand can't be opened. The value is how many Pile Sight items are added to the item pool, and 0 turns it off.\nFinding any one of them shows the piles again for every character, so a second copy makes it easier to find.\nDoes not change logic.",
+      "description": "The draw, discard and exhaust piles show \"?\" instead of a card count\nand can't be opened. The value is how many Pile Sight items are added to the item pool, and 0 turns it off.\nFinding any one of them shows the piles again for every character, and a second one adds its Sight Bonus.\nDoes not change logic.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -4384,7 +4386,7 @@
       },
       "source": "game",
       "minimum": 0,
-      "maximum": 2,
+      "maximum": 4,
       "supports_weighting": true,
       "group": "Challenges"
     },
@@ -4394,7 +4396,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Hidden Map",
-      "description": "The map only shows the rooms you can move to next. Rooms further ahead show a closed eye \nuntil you can reach them.\nThe value is how many Map Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows the whole map again for every character, so a second copy makes it easier to find. Does not change logic.",
+      "description": "The map only shows the rooms you can move to next. Rooms further ahead show a closed eye \nuntil you can reach them.\nThe value is how many Map Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows the whole map again for every character, and a second one adds its Sight Bonus. Does not change logic.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -4410,7 +4412,7 @@
       },
       "source": "game",
       "minimum": 0,
-      "maximum": 2,
+      "maximum": 4,
       "supports_weighting": true,
       "group": "Challenges"
     },
@@ -4420,7 +4422,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Hidden Cards",
-      "description": "Cards are unknown: their name, text and energy cost are hidden, their art is blurred and they\nshow no tooltips.\nThe value is how many Card Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows cards again for every character, so a second copy makes it easier to find. Does not change logic.",
+      "description": "Cards are unknown: their name, text and energy cost are hidden, their art is blurred and they\nshow no tooltips.\nThe value is how many Card Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows cards again for every character, and a second one adds its Sight Bonus. Does not change logic.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -4436,8 +4438,53 @@
       },
       "source": "game",
       "minimum": 0,
-      "maximum": 2,
+      "maximum": 4,
       "supports_weighting": true,
+      "group": "Challenges"
+    },
+    "sight_bonuses": {
+      "key": "sight_bonuses",
+      "class_name": "SightBonuses",
+      "module": "worlds.spire2.options",
+      "kind": "set",
+      "display_name": "Sight Bonuses",
+      "description": "Sight items whose second copy adds a bonus. A Sight left out stops at undoing its Hidden\noption. Names are case-sensitive.\n\n- 'IntentSight': Start each combat with Forewarned: when enemy attacks deal you no damage on their\n  turn, draw 1 more card next turn.\n- 'HealthSight': Gain Aged Cheese: after defeating an Elite, raise your Max HP by 2.\n- 'PileSight': The draw pile shows cards in the order you will draw them.\n- 'MapSight': The map shows your next 2 fights, your next elite and what your next 2 ? rooms will be.\n- 'CardSight': Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.\n\nThe Intent, Health and Card Sight bonuses are singleplayer only.",
+      "default": [
+        "CardSight",
+        "HealthSight",
+        "IntentSight",
+        "MapSight",
+        "PileSight"
+      ],
+      "raw_default": [
+        "CardSight",
+        "HealthSight",
+        "IntentSight",
+        "MapSight",
+        "PileSight"
+      ],
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "valid_keys": [
+        "CardSight",
+        "HealthSight",
+        "IntentSight",
+        "MapSight",
+        "PileSight"
+      ],
+      "valid_keys_casefold": false,
+      "allow_custom_values": false,
+      "supports_weighting": false,
       "group": "Challenges"
     },
     "strict_card_rewards": {

@@ -15,6 +15,16 @@ internal static class PileSight
             ArchipelagoClient.Settings?.HiddenPiles == true,
             ItemTable.APItem.PileSight);
 
+    /// <summary>
+    /// The Pile Sight bonus: the draw pile screen lists cards in the order they will be drawn,
+    /// like Frozen Eye in the first game.
+    /// </summary>
+    internal static bool ShowsDrawOrder =>
+        ChallengeSightItems.HasBonus(
+            ArchipelagoClient.Settings?.HiddenPiles == true,
+            ItemTable.APItem.PileSight,
+            "PileSight");
+
     /// <summary>Applies a newly received Pile Sight to the pile buttons already on screen.</summary>
     internal static void RefreshVisiblePiles()
     {

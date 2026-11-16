@@ -33,6 +33,7 @@ import type {
   StartingEquipmentAnswers,
   WizardAnswers,
 } from "./WizardAnswers";
+import { SIGHT_COPY_COUNTS } from "./WizardAnswers";
 import {
   getBonusItemDisplayRows,
   type BonusItemDisplayRow,
@@ -515,7 +516,41 @@ function describeSightItems(
   copies: Exclude<SightCopies, "off">,
   itemName: string,
 ): string {
-  return copies === "one" ? itemName : `either of two ${itemName}s`;
+  if (copies === "one") {
+    return itemName;
+  }
+  return copies === "two"
+    ? `either of two ${itemName}s`
+    : `any of ${copies} ${itemName}s`;
+}
+
+/**
+ * Names the Sights whose second copy adds a bonus.
+ *
+ * @param answers - Valid current Challenges answers.
+ * @returns A sentence, or an empty string when no Sight has a bonus to give.
+ */
+function describeSightBonuses(answers: ChallengeAnswers): string {
+  const sights = [
+    { field: "intent", copies: answers.hiddenIntents, name: "Intent Sight" },
+    { field: "health", copies: answers.hiddenHealth, name: "Health Sight" },
+    { field: "pile", copies: answers.hiddenPiles, name: "Pile Sight" },
+    { field: "map", copies: answers.hiddenMap, name: "Map Sight" },
+    { field: "card", copies: answers.hiddenCards, name: "Card Sight" },
+  ] as const;
+  const names = sights
+    .filter(
+      (sight) =>
+        answers.sightBonuses[sight.field] &&
+        SIGHT_COPY_COUNTS[sight.copies] >= 2,
+    )
+    .map((sight) => sight.name);
+  if (!names.length) {
+    return "";
+  }
+  return names.length === 1
+    ? `A second ${names[0]} adds its Sight Bonus.`
+    : `Second copies of ${joinNames(names)} add their Sight Bonuses.`;
 }
 
 /**
@@ -584,6 +619,11 @@ export function summarizeChallengeAnswers(answers: ChallengeAnswers): string {
     sentences.push(
       `Cards are unknown until ${describeSightItems(answers.hiddenCards, "Card Sight")} is found.`,
     );
+  }
+
+  const sightBonuses = describeSightBonuses(answers);
+  if (sightBonuses) {
+    sentences.push(sightBonuses);
   }
 
   if (answers.strictCardRewards) {

@@ -23,7 +23,11 @@ import type {
   WizardControlChoice,
   WizardControlDescriptor,
 } from "./QuestionControl";
-import type { SightCopies, WizardAnswers } from "./WizardAnswers";
+import {
+  SIGHT_COPY_COUNTS,
+  type SightCopies,
+  type WizardAnswers,
+} from "./WizardAnswers";
 import { CHALLENGE_OPTION_KEYS } from "./WizardOptionKey";
 
 export interface WizardQuestion {
@@ -433,7 +437,27 @@ function usesChallenges(answers: WizardAnswers): boolean {
 }
 
 /**
- * Builds the Off / one / two choices of a hidden-information challenge.
+ * Checks whether any hidden-information challenge has a second Sight item for its bonus.
+ *
+ * @param answers - Current player-facing wizard answers.
+ * @returns Whether the Sight Bonuses question applies.
+ */
+function hasSightBonusCopies(answers: WizardAnswers): boolean {
+  const challenges = answers.challenges;
+  return (
+    usesChallenges(answers) &&
+    [
+      challenges.hiddenIntents,
+      challenges.hiddenHealth,
+      challenges.hiddenPiles,
+      challenges.hiddenMap,
+      challenges.hiddenCards,
+    ].some((copies) => SIGHT_COPY_COUNTS[copies] >= 2)
+  );
+}
+
+/**
+ * Builds the Off / one to four choices of a hidden-information challenge.
  *
  * @param itemName - Display name of the challenge's Sight item.
  * @param offDescription - What the player sees with the challenge off.
@@ -457,8 +481,20 @@ function sightCopyChoices(
     {
       label: `Two ${itemName}s`,
       description:
-        "Adds two to the item pool, so one turns up sooner. Either one is enough.",
+        "Adds two to the item pool. The first one undoes the challenge, and the second adds its Sight Bonus.",
       value: "two" satisfies SightCopies,
+    },
+    {
+      label: `Three ${itemName}s`,
+      description:
+        "Adds three, so the first two turn up sooner. The first undoes the challenge, and the second adds its Sight Bonus.",
+      value: "three" satisfies SightCopies,
+    },
+    {
+      label: `Four ${itemName}s`,
+      description:
+        "Adds four, so the first two turn up sooner still. The first undoes the challenge, and the second adds its Sight Bonus.",
+      value: "four" satisfies SightCopies,
     },
   ];
 }
@@ -593,6 +629,48 @@ export const challengeSetupStep: WizardStep = {
         kind: "radio",
         field: "hiddenCards",
         choices: sightCopyChoices("Card Sight", "Cards are shown as normal."),
+      },
+    },
+    {
+      id: "sight-bonuses",
+      isVisible: hasSightBonusCopies,
+      title: "Which Sights should add a bonus with their second copy?",
+      description:
+        "A Sight left unticked stops at undoing its challenge, however many copies there are. The Intent, Health and Card Sight bonuses are singleplayer only.",
+      control: {
+        kind: "checkbox-grid",
+        items: [
+          {
+            field: "sightBonuses.intent",
+            label: "Intent Sight: Forewarned",
+            description:
+              "Start each combat with Forewarned: when enemy attacks deal you no damage on their turn, draw 1 more card next turn.",
+          },
+          {
+            field: "sightBonuses.health",
+            label: "Health Sight: Aged Cheese",
+            description:
+              "Gain Aged Cheese: after defeating an Elite, raise your Max HP by 2.",
+          },
+          {
+            field: "sightBonuses.pile",
+            label: "Pile Sight: Draw Order",
+            description:
+              "The draw pile shows cards in the order you will draw them.",
+          },
+          {
+            field: "sightBonuses.map",
+            label: "Map Sight: Scouting",
+            description:
+              "The map shows your next 2 fights, your next Elite and what your next 2 ? rooms will be.",
+          },
+          {
+            field: "sightBonuses.card",
+            label: "Card Sight: More Choice",
+            description:
+              "Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.",
+          },
+        ],
       },
     },
     {

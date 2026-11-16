@@ -55,6 +55,7 @@ export const CHALLENGE_OPTION_KEYS = {
   hiddenPiles: "hidden_piles",
   hiddenMap: "hidden_map",
   hiddenCards: "hidden_cards",
+  sightBonuses: "sight_bonuses",
   strictCardRewards: "strict_card_rewards",
 } as const;
 

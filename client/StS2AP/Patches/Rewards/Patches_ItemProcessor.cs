@@ -412,6 +412,7 @@ namespace StS2AP.Patches
                 case APItem.HealthSight:
                     ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);
                     HealthSight.RefreshVisibleHealth();
+                    AgedCheese.EnsureOwnedIfEarned(GameUtility.CurrentPlayer);
                     break;
                 case APItem.PileSight:
                     ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);

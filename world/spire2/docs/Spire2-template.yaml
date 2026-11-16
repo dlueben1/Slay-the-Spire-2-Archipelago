@@ -80,29 +80,43 @@ Slay the Spire II:
   # Discard it, so you cannot look through every card reward first. The mod's settings can override it.
   strict_card_rewards: false
 
-  # Hides enemy intents. The value (0-2) is how many Intent Sight items the slot gets;
-  # 0 is off, and any one of them shows intents again for the whole slot. Requires include_floor_checks.
+  # Hides enemy intents. The value (0-4) is how many Intent Sight items the slot gets;
+  # 0 is off, and any one of them shows intents again for the whole slot; a second adds its
+  # Sight Bonus. Requires include_floor_checks.
   hidden_intents: 0
 
   # Hides health. Bars stay full and show "?" instead of numbers; block still shows. The value
-  # (0-2) is how many Health Sight items the slot gets; 0 is off, and any one of them shows health again.
+  # (0-4) is how many Health Sight items the slot gets; 0 is off, and any one of them shows health again;
+  # a second adds its Sight Bonus.
   # Requires include_floor_checks.
   hidden_health: 0
 
   # Hides your combat piles. The draw, discard and exhaust piles show "?" and can't be opened.
-  # The value (0-2) is how many Pile Sight items the slot gets; 0 is off, and any one of them shows the piles again.
+  # The value (0-4) is how many Pile Sight items the slot gets; 0 is off, and any one of them shows the piles again;
+  # a second adds its Sight Bonus.
   # Requires include_floor_checks.
   hidden_piles: 0
 
   # The map only shows the rooms you can move to next; rooms further ahead show a closed eye.
-  # The value (0-2) is how many Map Sight items the slot gets; 0 is off, and any one of them shows the whole map again.
+  # The value (0-4) is how many Map Sight items the slot gets; 0 is off, and any one of them shows the whole map again;
+  # a second adds its Sight Bonus.
   # Requires include_floor_checks.
   hidden_map: 0
 
   # Cards are unknown: name, text, energy cost and tooltips are hidden and the art is blurred.
-  # The value (0-2) is how many Card Sight items the slot gets; 0 is off, and any one of them shows cards again.
+  # The value (0-4) is how many Card Sight items the slot gets; 0 is off, and any one of them shows cards again;
+  # a second adds its Sight Bonus.
   # Requires include_floor_checks.
   hidden_cards: 0
+
+  # Sights whose second copy adds a bonus; a Sight left out stops at undoing its Hidden option.
+  #   IntentSight: Forewarned each combat; take no attack damage on the enemy turn to draw 1 more card.
+  #   HealthSight: Aged Cheese; each Elite you defeat raises your Max HP by 2.
+  #   PileSight: the draw pile shows cards in draw order.
+  #   MapSight: the map shows your next 2 fights, next elite and next 2 ? rooms.
+  #   CardSight: card rewards offer 1 more card, and Act 1 card rewards can be upgraded.
+  # Intent, Health and Card Sight bonuses are singleplayer only.
+  sight_bonuses: [IntentSight, HealthSight, PileSight, MapSight, CardSight]
 
   # Extra difficulty modifiers for every run, on top of Ascension; logic ignores them. Most leave Act 1
   # as it is and grow harder in Acts 2 and 3. Names (case-sensitive):

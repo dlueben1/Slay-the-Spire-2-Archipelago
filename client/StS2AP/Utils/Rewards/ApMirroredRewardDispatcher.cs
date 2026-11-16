@@ -27,6 +27,7 @@ using StS2AP.DomainAdapters;
 using StS2AP.Extensions;
 using StS2AP.Patches;
 using StS2AP.UI;
+using StS2AP.Utils.Combat;
 using STS2RitsuLib.Combat.Rewards;
 using STS2RitsuLib.Networking.Sidecar;
 using StS2AP.Utils.RunGraph;
@@ -655,6 +656,8 @@ public static partial class ApMirroredRewardDispatcher
         bool modified;
         using (Patches_APCardRewardUpgradeOdds.EnterApRewardRng(rng))
         using (Patches_APCardRewardUpgradeOdds.EnterRewardAct(configuration.Recipe.ActIndex))
+        // The Card Sight bonus adds its extra card to the 3 asked for here.
+        using (CardSight.EnterRewardGeneration(addsExtraCard: true))
         {
             cards = Patches_APCardRewardUpgradeOdds.RunDeferringOptionHooks(
                 () => CardFactory.CreateForReward(player, 3, options).ToList()

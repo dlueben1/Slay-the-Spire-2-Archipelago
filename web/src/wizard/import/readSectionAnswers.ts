@@ -29,6 +29,7 @@ import {
 } from "../ShopStockKind";
 import { TRAP_ITEM_DEFINITIONS, type TrapWeight } from "../TrapItem";
 import {
+  readSightBonusNames,
   SIGHT_COPY_COUNTS,
   type BonusItemAnswer,
   type BonusItemKind,
@@ -516,7 +517,11 @@ export function readChallengeAnswers(
     (key) => !sameOptionValue(options[key], catalog.options[key]?.default),
   );
   if (!enabled) {
-    return { ...defaults, runModifiers: [...defaults.runModifiers] };
+    return {
+      ...defaults,
+      runModifiers: [...defaults.runModifiers],
+      sightBonuses: { ...defaults.sightBonuses },
+    };
   }
 
   return {
@@ -536,6 +541,9 @@ export function readChallengeAnswers(
     hiddenPiles: readSightCopies(options[CHALLENGE_OPTION_KEYS.hiddenPiles]),
     hiddenMap: readSightCopies(options[CHALLENGE_OPTION_KEYS.hiddenMap]),
     hiddenCards: readSightCopies(options[CHALLENGE_OPTION_KEYS.hiddenCards]),
+    sightBonuses: readSightBonusNames(
+      (options[CHALLENGE_OPTION_KEYS.sightBonuses] as string[] | undefined) ?? [],
+    ),
     strictCardRewards: options[
       CHALLENGE_OPTION_KEYS.strictCardRewards
     ] as boolean,

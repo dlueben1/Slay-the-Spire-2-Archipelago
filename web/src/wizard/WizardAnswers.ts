@@ -210,14 +210,63 @@ export interface BoonAnswers {
 }
 
 /** How many Sight items a hidden-information challenge adds; `off` leaves it off. */
-export type SightCopies = "off" | "one" | "two";
+export type SightCopies = "off" | "one" | "two" | "three" | "four";
 
 /** Sight item counts written to the `hidden_*` options. */
 export const SIGHT_COPY_COUNTS: Readonly<Record<SightCopies, number>> = {
   off: 0,
   one: 1,
   two: 2,
+  three: 3,
+  four: 4,
 };
+
+/** Which Sight items' second copy adds a bonus, one switch per Sight. */
+export interface SightBonusAnswers {
+  intent: boolean;
+  health: boolean;
+  pile: boolean;
+  map: boolean;
+  card: boolean;
+}
+
+/** Generated `sight_bonuses` names keyed by their answer field, in display order. */
+export const SIGHT_BONUS_NAMES: Readonly<Record<keyof SightBonusAnswers, string>> = {
+  intent: "IntentSight",
+  health: "HealthSight",
+  pile: "PileSight",
+  map: "MapSight",
+  card: "CardSight",
+};
+
+/**
+ * Turns `sight_bonuses` names into the bonus switches.
+ *
+ * @param names - Canonical Sight Bonus names.
+ * @returns One switch per Sight, on when its name is listed.
+ */
+export function readSightBonusNames(names: Iterable<string>): SightBonusAnswers {
+  const selected = new Set(names);
+  return {
+    intent: selected.has(SIGHT_BONUS_NAMES.intent),
+    health: selected.has(SIGHT_BONUS_NAMES.health),
+    pile: selected.has(SIGHT_BONUS_NAMES.pile),
+    map: selected.has(SIGHT_BONUS_NAMES.map),
+    card: selected.has(SIGHT_BONUS_NAMES.card),
+  };
+}
+
+/**
+ * Lists the switched-on Sight Bonuses in display order.
+ *
+ * @param answers - Sight Bonus switches.
+ * @returns Canonical `sight_bonuses` names.
+ */
+export function getSightBonusNames(answers: SightBonusAnswers): string[] {
+  return (Object.keys(SIGHT_BONUS_NAMES) as (keyof SightBonusAnswers)[])
+    .filter((field) => answers[field])
+    .map((field) => SIGHT_BONUS_NAMES[field]);
+}
 
 /** Optional difficulty settings that logic does not account for. */
 export interface ChallengeAnswers {
@@ -234,6 +283,8 @@ export interface ChallengeAnswers {
   hiddenPiles: SightCopies;
   hiddenMap: SightCopies;
   hiddenCards: SightCopies;
+  /** Which Sights' second copy adds a bonus. */
+  sightBonuses: SightBonusAnswers;
   strictCardRewards: boolean;
 }
 
@@ -601,6 +652,9 @@ export function createDefaultWizardAnswers(
       hiddenCards: getSightCopiesDefault(
         catalog,
         CHALLENGE_OPTION_KEYS.hiddenCards,
+      ),
+      sightBonuses: readSightBonusNames(
+        getStringSetDefault(catalog, CHALLENGE_OPTION_KEYS.sightBonuses),
       ),
       strictCardRewards: getBooleanDefault(
         catalog,

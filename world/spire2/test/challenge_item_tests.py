@@ -177,3 +177,31 @@ class TestTwoSightCopies(Spire2TestBase):
         self.assertEqual(2, slot_data["hidden_piles"])
         self.assertEqual(2, slot_data["hidden_map"])
         self.assertEqual(2, slot_data["hidden_cards"])
+
+
+class TestFourSightCopiesAndBonuses(Spire2TestBase):
+    options = {
+        "characters": ["ironclad", "silent"],
+        "hidden_intents": 4,
+        "hidden_map": 4,
+        "sight_bonuses": ["MapSight", "PileSight"],
+    }
+
+    def test_four_copies_of_each_sight_are_added(self):
+        for name in ("Intent Sight", "Map Sight"):
+            self.assertEqual(4, sum(item.name == name for item in self.multiworld.itempool))
+
+    def test_sight_bonuses_are_sent_in_slot_data(self):
+        self.assertEqual(["MapSight", "PileSight"], sorted(self.world.fill_slot_data()["sight_bonuses"]))
+
+
+class TestSightBonusesDefaultToAll(Spire2TestBase):
+    options = {
+        "characters": ["ironclad"],
+    }
+
+    def test_every_sight_bonus_is_on_by_default(self):
+        self.assertEqual(
+            ["CardSight", "HealthSight", "IntentSight", "MapSight", "PileSight"],
+            sorted(self.world.fill_slot_data()["sight_bonuses"]),
+        )

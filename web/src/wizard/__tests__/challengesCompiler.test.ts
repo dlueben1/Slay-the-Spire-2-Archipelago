@@ -89,8 +89,15 @@ function compilesConfiguredChallenges(): void {
     hiddenIntents: "one",
     hiddenHealth: "two",
     hiddenPiles: "one",
-    hiddenMap: "two",
+    hiddenMap: "four",
     hiddenCards: "one",
+    sightBonuses: {
+      intent: true,
+      health: false,
+      pile: true,
+      map: true,
+      card: false,
+    },
     strictCardRewards: true,
   };
 
@@ -106,8 +113,13 @@ function compilesConfiguredChallenges(): void {
   expect(options[CHALLENGE_OPTION_KEYS.hiddenIntents]).toBe(1);
   expect(options[CHALLENGE_OPTION_KEYS.hiddenHealth]).toBe(2);
   expect(options[CHALLENGE_OPTION_KEYS.hiddenPiles]).toBe(1);
-  expect(options[CHALLENGE_OPTION_KEYS.hiddenMap]).toBe(2);
+  expect(options[CHALLENGE_OPTION_KEYS.hiddenMap]).toBe(4);
   expect(options[CHALLENGE_OPTION_KEYS.hiddenCards]).toBe(1);
+  expect(options[CHALLENGE_OPTION_KEYS.sightBonuses]).toEqual([
+    "IntentSight",
+    "PileSight",
+    "MapSight",
+  ]);
   expect(options[CHALLENGE_OPTION_KEYS.strictCardRewards]).toBe(true);
 }
 
@@ -132,6 +144,13 @@ function ignoresChallengesUntilOptedIn(): void {
     hiddenPiles: "two",
     hiddenMap: "one",
     hiddenCards: "two",
+    sightBonuses: {
+      intent: false,
+      health: false,
+      pile: false,
+      map: false,
+      card: false,
+    },
     strictCardRewards: true,
   };
 

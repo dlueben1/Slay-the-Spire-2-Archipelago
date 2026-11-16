@@ -445,57 +445,80 @@ class HiddenIntents(Range):
     """Enemy intents are hidden, like Runic Dome in the first game, and so is the Intent Graph 
     mod's overlay.
     The value is how many Intent Sight items are added to the item pool, and 0 turns it off. Finding
-    any one of them shows intents again for every character, with their numbers and the Intent Graph overlay, so
-    a second copy makes it easier to find. Does not change logic.
+    any one of them shows intents again for every character, with their numbers and the Intent Graph overlay, and
+    a second one adds its Sight Bonus. Does not change logic.
     """
     display_name = "Hidden Intents"
     range_start = 0
-    range_end = 2
+    range_end = 4
     default = 0
 
 class HiddenHealth(Range):
     """Health is hidden. Health bars stay full and show no numbers, the top bar shows no HP, and the
     poison and doom previews on health bars are hidden. Block is still shown. The value is how many Health Sight
     items are added to the item pool, and 0 turns it off. Finding any one of them shows everyone's health again
-    for every character, so a second copy makes it easier to find. Does not change logic.
+    for every character, and a second one adds its Sight Bonus. Does not change logic.
     """
     display_name = "Hidden Health"
     range_start = 0
-    range_end = 2
+    range_end = 4
     default = 0
 
 class HiddenPiles(Range):
     """The draw, discard and exhaust piles show "?" instead of a card count
     and can't be opened. The value is how many Pile Sight items are added to the item pool, and 0 turns it off.
-    Finding any one of them shows the piles again for every character, so a second copy makes it easier to find.
+    Finding any one of them shows the piles again for every character, and a second one adds its Sight Bonus.
     Does not change logic.
     """
     display_name = "Hidden Piles"
     range_start = 0
-    range_end = 2
+    range_end = 4
     default = 0
 
 class HiddenMap(Range):
     """The map only shows the rooms you can move to next. Rooms further ahead show a closed eye 
     until you can reach them.
     The value is how many Map Sight items are added to the item pool, and 0 turns it off. Finding any one of them
-    shows the whole map again for every character, so a second copy makes it easier to find. Does not change logic.
+    shows the whole map again for every character, and a second one adds its Sight Bonus. Does not change logic.
     """
     display_name = "Hidden Map"
     range_start = 0
-    range_end = 2
+    range_end = 4
     default = 0
 
 class HiddenCards(Range):
     """Cards are unknown: their name, text and energy cost are hidden, their art is blurred and they
     show no tooltips.
     The value is how many Card Sight items are added to the item pool, and 0 turns it off. Finding any one of them
-    shows cards again for every character, so a second copy makes it easier to find. Does not change logic.
+    shows cards again for every character, and a second one adds its Sight Bonus. Does not change logic.
     """
     display_name = "Hidden Cards"
     range_start = 0
-    range_end = 2
+    range_end = 4
     default = 0
+
+class SightBonuses(OptionSet):
+    """Sight items whose second copy adds a bonus. A Sight left out stops at undoing its Hidden
+    option. Names are case-sensitive.
+
+    - 'IntentSight': Start each combat with Forewarned: when enemy attacks deal you no damage on their
+      turn, draw 1 more card next turn.
+    - 'HealthSight': Gain Aged Cheese: after defeating an Elite, raise your Max HP by 2.
+    - 'PileSight': The draw pile shows cards in the order you will draw them.
+    - 'MapSight': The map shows your next 2 fights, your next elite and what your next 2 ? rooms will be.
+    - 'CardSight': Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.
+
+    The Intent, Health and Card Sight bonuses are singleplayer only."""
+    display_name = "Sight Bonuses"
+    valid_keys_casefold = False
+    valid_keys = {
+        "IntentSight",
+        "HealthSight",
+        "PileSight",
+        "MapSight",
+        "CardSight",
+    }
+    default = frozenset(valid_keys)
 
 class SeededRun(Toggle):
     """Whether each character should have a fixed seed to climb the spire with or not."""
@@ -1154,4 +1177,5 @@ class Spire2Options(PerGameCommonOptions):
     hidden_piles: HiddenPiles
     hidden_map: HiddenMap
     hidden_cards: HiddenCards
+    sight_bonuses: SightBonuses
     strict_card_rewards: StrictCardRewards

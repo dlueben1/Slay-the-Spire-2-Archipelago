@@ -774,6 +774,7 @@ class SlayTheSpire2World(World):
             "hidden_piles",
             "hidden_map",
             "hidden_cards",
+            "sight_bonuses",
             "include_floor_checks",
             "neow_sanity",
             "ancient_relic_location",
