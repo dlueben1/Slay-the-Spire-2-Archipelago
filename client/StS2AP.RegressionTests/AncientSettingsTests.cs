@@ -34,7 +34,7 @@ public sealed class AncientSettingsTests
     }
 
     [Fact]
-    public void ProgressReplicationPreservesIndependentPlayerPolicies()
+    public void ProgressCheckpointsPreserveIndependentPlayerPolicies()
     {
         var host = new ApRunProgressState
         {
@@ -46,15 +46,10 @@ public sealed class AncientSettingsTests
             Initialized = true,
             AncientSettingsForRun = new(AncientRelicLocation.Anytime, AncientRelicPoolMode.Chaos),
         };
-        var initial = ApProgressDelta.Between(new(), guest).ApplyToCopy(new());
-        Assert.Equal(guest.AncientSettingsForRun, initial.AncientSettingsForRun);
-        var afterClaim = new ApProgressDelta().ApplyToCopy(guest);
-        afterClaim.UsedItems.Add(42);
-        var delta = ApProgressDelta.Between(guest, afterClaim);
-        Assert.Null(delta.AncientSettingsForRun);
-        var restoredDelta = JsonSerializer.Deserialize<ApProgressDelta>(JsonSerializer.Serialize(delta))!;
-        Assert.Equal(guest.AncientSettingsForRun, restoredDelta.ApplyToCopy(initial).AncientSettingsForRun);
-        Assert.NotEqual(host.AncientSettingsForRun, initial.AncientSettingsForRun);
-        Assert.False(ApProgressDelta.Between(guest, new ApProgressDelta().ApplyToCopy(guest)).HasChanges);
+        guest.UsedItems.Add(42);
+        var restored = JsonSerializer.Deserialize<ApRunProgressState>(JsonSerializer.Serialize(guest))!;
+        Assert.Equal(guest.AncientSettingsForRun, restored.AncientSettingsForRun);
+        Assert.NotEqual(host.AncientSettingsForRun, restored.AncientSettingsForRun);
+        Assert.Equal([42], restored.UsedItems);
     }
 }

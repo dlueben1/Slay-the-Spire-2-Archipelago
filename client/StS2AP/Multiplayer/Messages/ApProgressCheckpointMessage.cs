@@ -1,10 +1,9 @@
 namespace StS2AP.Multiplayer.Messages;
 
-/// <summary>Establishes a player's complete canonical progress baseline.</summary>
-public sealed class ApProgressSnapshotMessage
+/// <summary>A player's complete AP progress, sent to the host as that player's checkpoint.</summary>
+public sealed class ApProgressCheckpointMessage
 {
     public Guid RunId { get; set; }
     public ulong OwnerNetId { get; set; }
-    public long Revision { get; set; }
     public ApRunProgressState Progress { get; set; } = new();
 }

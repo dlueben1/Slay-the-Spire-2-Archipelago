@@ -64,8 +64,13 @@ public sealed class ApRestSiteOption : RestSiteOption
             if (!GameUtility.QueueCheck(_locationId).WasRecorded)
                 return Task.FromResult(false);
             ArchipelagoClient.Progress.CheckedCampfireLocationIds.Add(_locationId);
+            return Task.FromResult(true);
         }
-        else if (MultiplayerLocationChecks.IsCheckWriter(Owner))
+
+        // Every replica records the check, so later rest sites stop offering it everywhere.
+        if (Owner.RunState is RunState runState)
+            ApRunData.RecordCampfireChecks(runState, Owner.NetId, [_locationId]);
+        if (MultiplayerLocationChecks.IsCheckWriter(Owner))
         {
             if (MultiplayerLocationChecks.QueueCheck(Owner, _locationName, _locationId))
                 ArchipelagoClient.Progress.CheckedCampfireLocationIds.Add(_locationId);

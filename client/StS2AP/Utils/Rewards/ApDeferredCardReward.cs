@@ -28,15 +28,18 @@ internal abstract class ApDeferredCardReward : CardReward
             base.Populate();
     }
 
-    protected abstract Task PrepareCards();
+    /// <summary>
+    /// For a reward that is not a menu row, such as a queued card claim's offer, whose native
+    /// rerolls must regenerate from the start.
+    /// </summary>
+    internal void AllowPopulate() => _canPopulate = true;
 
-    // Multiplayer may bind an already-reserved first choice before entering the native picker.
-    protected virtual Task<bool> SelectCards() => base.OnSelect();
+    protected abstract Task PrepareCards();
 
     protected override async Task<bool> OnSelect()
     {
         await PrepareCards();
         _canPopulate = true;
-        return await SelectCards();
+        return await base.OnSelect();
     }
 }

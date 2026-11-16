@@ -110,6 +110,10 @@ namespace StS2AP.Patches
                 return;
             }
 
+            // Every peer records the receipt in queue order before any claim of it can follow.
+            if (liveDelivery)
+                ApReceiptLedger.ReceiveLiveReceipt(indexedInfo.Index);
+
             var Progress = ArchipelagoClient.Progress;
             var Settings = ArchipelagoClient.Settings;
             if (Settings == null)
@@ -165,11 +169,9 @@ namespace StS2AP.Patches
                 // Progressive threshold items
                 case APItem.ProgressiveSmith:
                     HandleThreshholdItem(item, Progress.ProgressiveSmiths, "Progressive Smiths");
-                    PublishRestSiteProgress(liveDelivery);
                     break;
                 case APItem.ProgressiveRest:
                     HandleThreshholdItem(item, Progress.ProgressiveRests, "Progressive Rests");
-                    PublishRestSiteProgress(liveDelivery);
                     break;
                 case APItem.ProgressiveAncient:
                 {
@@ -177,17 +179,6 @@ namespace StS2AP.Patches
 
                     // Keep receipts across future run-mode changes; menu policy controls visibility.
                     ArchipelagoClient.Progress.Items.RegisterReceived(indexedInfo);
-
-                    if (liveDelivery
-                        && MultiplayerSupport.IsRealMultiplayerRun
-                        && GameUtility.CurrentPlayer is Player currentPlayer
-                        && !ApRunData.PublishLocalProgress(currentPlayer))
-                    {
-                        MultiplayerSupport.InvalidateRunClaims(
-                            "Progressive Ancient progress could not be published to the host"
-                        );
-                    }
-
                     break;
                 }
                 case APItem.ProgressiveStarterCard:
@@ -248,10 +239,8 @@ namespace StS2AP.Patches
 
                     // A receipt arriving after its Elite/chest reward belongs in the AP menu.
                     // Reconcile all pairs so checkpoint loads do not depend on callback order.
+                    // Multiplayer pairs through the receipt ledger instead.
                     RelicRewardUtility.ReconcileBankedRewards(player);
-                    // Even when there is no bank to reconcile, every replica needs the compact
-                    // receipt index before it constructs the next natural relic reward.
-                    ApRunData.PublishLocalProgress(player);
                     return;
                 }
                 // Gold is condensed into a single reward pool
@@ -489,19 +478,6 @@ namespace StS2AP.Patches
             {
                 LogUtility.Error(
                     $"Failed to process {name} when this item was received: ({item.ItemDisplayName} from {item.Player.Name})"
-                );
-            }
-        }
-
-        private static void PublishRestSiteProgress(bool liveDelivery)
-        {
-            if (liveDelivery
-                && MultiplayerSupport.IsRealMultiplayerRun
-                && GameUtility.CurrentPlayer is Player currentPlayer
-                && !ApRunData.PublishLocalProgress(currentPlayer))
-            {
-                LogUtility.Error(
-                    "Progressive Rest/Smith state could not be published to the host"
                 );
             }
         }

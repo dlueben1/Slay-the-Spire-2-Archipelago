@@ -25,7 +25,6 @@ public sealed class ParticipantInteropTests
             SchemaVersion = 9,
             Participation = new ParticipationInput { Kind = 1, RoomSeed = "seed", ApTeamId = 0 },
             HasSettings = true, ReceiptSourceReady = true,
-            RelicReceipts = new Dictionary<long, IReadOnlyList<int>>(),
             ProgressiveAncients = new Dictionary<long, int>(),
         };
         Assert.Equal("incomplete-ap-identity", Blocker(ContributionReadiness.Evaluate(9, input)));
@@ -41,7 +40,6 @@ public sealed class ParticipantInteropTests
         {
             SchemaVersion = 9, Participation = identity,
             HasSettings = true, ReceiptSourceReady = true,
-            RelicReceipts = new Dictionary<long, IReadOnlyList<int>>(),
             ProgressiveAncients = new Dictionary<long, int>(),
         };
         var ready = ContributionReadiness.Evaluate(9, input).Match(

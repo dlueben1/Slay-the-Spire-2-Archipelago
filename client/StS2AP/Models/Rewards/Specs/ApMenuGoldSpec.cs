@@ -6,6 +6,9 @@ public sealed class ApMenuGoldSpec
     public int SourceAmount { get; set; }
     public int GrantedAmount { get; set; }
     public int RedeemedRawAfter { get; set; }
+    // Multiplayer: the row claims this gold as a queued action (ApQueuedClaims) instead of
+    // applying it itself.
+    public bool QueuedClaim { get; set; }
 
     public ApGoldClaim ToClaim() => new(SourceAmount, GrantedAmount, RedeemedRawAfter);
 }

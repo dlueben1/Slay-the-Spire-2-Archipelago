@@ -26,8 +26,6 @@ public sealed class ApRunProgressState
     public int BankedRelicRewards { get; set; }
     [JsonPropertyName("relic_rewards_available_anytime_for_run")]
     public int RelicRewardsAvailableAnytimeForRun { get; set; }
-    [JsonPropertyName("relic_receipt_indexes_by_character")]
-    public Dictionary<long, List<int>> RelicReceiptIndexesByCharacter { get; set; } = new();
     [JsonPropertyName("gold_rewards_attempted")]
     public int GoldRewardsAttempted { get; set; }
     [JsonPropertyName("potion_rewards_attempted")]

@@ -403,11 +403,7 @@ public static class AscensionMultiplayer
             message.ActionId,
             $"Ascension Down receipt {receipt.Index}",
             () => RitsuLibManagedNetActions.Request(
-                RunManager.Instance,
-                ActionDescriptor,
-                message,
-                owner.NetId
-            ),
+                RunManager.Instance, ActionDescriptor, message, owner.NetId),
             () => IsCurrentRequest(message),
             () => LogUtility.Info(
                 $"Requested managed Ascension Down receipt {receipt.Index} "
@@ -559,7 +555,8 @@ public static class AscensionMultiplayer
                         continue;
                     }
 
-                    int redeemed = playerState.Progress.GoldRedeemed;
+                    // Raw AP gold the player's queued gold claims redeemed, the same on every peer.
+                    int redeemed = playerState.QueuedGoldClaimCursor ?? 0;
                     int refund = redeemed - redeemed * 3 / 4;
                     if (refund > 0)
                         await PlayerCmd.GainGold(refund, player);

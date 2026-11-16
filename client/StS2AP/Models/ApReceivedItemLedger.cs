@@ -28,6 +28,8 @@ public sealed class ApReceivedItemLedger
 
     public bool IsUsed(int index) => _entries.TryGetValue(index, out var entry) && entry.Used;
 
+    public bool IsRegistered(int index) => _entries.ContainsKey(index);
+
     public void RegisterReceived(IndexedItemInfo receipt) => Register(receipt, used: false);
 
     /// <summary>Records an immediately applied item without exposing a separate list update.</summary>

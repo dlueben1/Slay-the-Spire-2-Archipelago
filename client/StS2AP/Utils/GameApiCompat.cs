@@ -1,8 +1,10 @@
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Merchant;
+using MegaCrit.Sts2.Core.Entities.Multiplayer;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Factories;
+using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
@@ -153,6 +155,19 @@ public static class GameApiCompat
 #else
         // Older versions clear the filter unless it is explicitly passed back in.
         return options.WithCardPools(pools, options.CardPoolFilter);
+#endif
+    }
+
+    /// <summary>
+    /// Pauses a queued action while its owner makes a choice, so the other players' queues keep
+    /// running. 0.111 and later also name the choosing player.
+    /// </summary>
+    public static Task SignalPlayerChoiceBegun(PlayerChoiceContext context, Player chooser)
+    {
+#if STS2_AT_LEAST_0_111_0
+        return context.SignalPlayerChoiceBegun(chooser, PlayerChoiceOptions.None);
+#else
+        return context.SignalPlayerChoiceBegun(PlayerChoiceOptions.None);
 #endif
     }
 }

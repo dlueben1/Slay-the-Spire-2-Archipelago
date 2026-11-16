@@ -3,7 +3,6 @@ using Godot;
 using MegaCrit.Sts2.Core.Saves;
 using StS2AP.Patches;
 using StS2AP.Utils;
-using STS2RitsuLib.Networking.Sidecar;
 
 namespace StS2AP.Persistence;
 
@@ -71,6 +70,16 @@ internal static class ApSingleplayerSaves
             $"local AP checkpoint {checkpoint}", key.Character);
     }
 
+    // Runs the action on Godot's main loop at the end of the current frame, from any thread
+    // (always deferred, even on the main thread). False before the scene tree exists.
+    private static bool TryPostToMainLoop(Action action)
+    {
+        if (Engine.GetMainLoop() is not SceneTree)
+            return false;
+        Callable.From(action).CallDeferred();
+        return true;
+    }
+
     internal static Task LoadRemote(SingleplayerCheckpointBank.BankKey key)
     {
         if (key.Owner != CurrentIdentity())
@@ -87,7 +96,7 @@ internal static class ApSingleplayerSaves
             try
             {
                 string payload = await ApRemoteSingleplayerSave.Download(key.Character);
-                bool posted = RitsuLibSidecarGodotMainLoopScheduling.TryPostToMainLoop(
+                bool posted = TryPostToMainLoop(
                     () => _ = RestoreOnMainLoop(payload)
                 );
                 if (!posted)
@@ -97,7 +106,7 @@ internal static class ApSingleplayerSaves
             }
             catch (Exception ex)
             {
-                bool posted = RitsuLibSidecarGodotMainLoopScheduling.TryPostToMainLoop(
+                bool posted = TryPostToMainLoop(
                     () => completion.TrySetException(ex)
                 );
                 if (!posted)

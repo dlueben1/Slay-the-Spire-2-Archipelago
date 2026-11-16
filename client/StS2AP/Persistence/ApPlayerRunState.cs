@@ -2,8 +2,9 @@ namespace StS2AP.Persistence;
 
 /// <summary>
 /// One player's run contribution, keyed by the MegaCrit Net ID retained across rejoin. Progress
-/// is the owner's canonical view; Construction is the current process's independently advancing
-/// reward-construction cursor and the fixed host's reconnect baseline.
+/// is the owner's own view, kept by the host as its checkpoint and read by no other peer;
+/// everything else past the lobby fields is action-owned: advanced identically on every replica,
+/// and what other peers read about this player.
 /// </summary>
 public sealed class ApPlayerRunState
 {
@@ -13,14 +14,12 @@ public sealed class ApPlayerRunState
     public int? ApTeamId { get; set; }
     public int? ApSlotId { get; set; }
     public ArchipelagoSettings? SlotSettings { get; set; }
-    public Dictionary<long, List<int>> InitialRelicReceiptIndexesByCharacter { get; set; } = new();
     public Dictionary<long, int> InitialProgressiveAncientsByCharacter { get; set; } = new();
     public bool ReceiptSourceReady { get; set; }
     public ApRunProgressState Progress { get; set; } = new();
     // Advanced independently by the native combat-end hook on every replica.
     public int CombatsSinceLastWaxMelt { get; set; }
     public ApReplicaConstructionState Construction { get; set; } = new();
-    public long ProgressRevision { get; set; }
     public ApProgressiveStarterPlayerState ProgressiveStarters { get; set; } = new();
     // Advanced by buff actions on every replica; retained in the host's save for rejoin.
     public int LastConsumedBuffIndex { get; set; } = -1;
@@ -28,4 +27,31 @@ public sealed class ApPlayerRunState
     // Trap receipts have their own cutoff: consuming one must never skip an earlier buff.
     public int LastConsumedTrapIndex { get; set; } = -1;
     public CombatEffectLimit CombatTrapLimit { get; set; } = new();
+    // Raw AP gold redeemed through queued gold claims; advanced only by that action, on every
+    // replica. Null until the first one. Progress.GoldRedeemed is the owner's published view.
+    public int? QueuedGoldClaimCursor { get; set; }
+    // AP receipts used up by queued claims, ascending. Written only by claim executors, on every
+    // replica, so they can refuse a repeated claim alike; Progress.UsedItems is the owner's
+    // published view and changes whenever a delta arrives.
+    public List<int> QueuedClaimedReceiptIndexes { get; set; } = new();
+    // Card offers revealed by queued card claims and not resolved yet, by receipt index. Written
+    // only by that action, on every replica, instead of the owner-published CardAssignments.
+    public Dictionary<int, ApQueuedCardOfferState> QueuedCardOffers { get; set; } = new();
+    // The three serialized relics each Progressive Ancient receipt offers, drawn by the queued
+    // relic assignment action on every replica. Kept after a claim: later draws exclude them.
+    public Dictionary<int, List<string>> QueuedAncientChoices { get; set; } = new();
+    // The player's AP receipts in index order, recorded by the queued "receipts arrived" action
+    // on every replica (ApReceiptLedger). Other players' AP items are read from here, never from
+    // the owner's published Progress, so every peer sees them at the same point in the run.
+    public List<ApLedgerReceipt> ReceiptLedger { get; set; } = new();
+    // How many of the player's first Relic receipts need no natural relic reward this run. The
+    // owner's value at run start, set once by the first receipts action; null until then.
+    public int? RelicRewardsAvailableAnytime { get; set; }
+    // Campfire checks this player's rest sites no longer offer: taken at a rest site (recorded on
+    // every replica as the option is chosen) or checked on the AP server, which the receipts
+    // action carries like a receipt.
+    public HashSet<long> CheckedCampfireLocationIds { get; set; } = new();
+    // Natural relic rewards (chests, Elites, Black Star) the player has had this run, counted on
+    // every replica where RelicReceiptMultiplayer decides them. Null in saves from before then.
+    public int? RelicRewardsAttempted { get; set; }
 }

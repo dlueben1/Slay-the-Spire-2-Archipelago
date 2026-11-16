@@ -56,6 +56,7 @@ namespace StS2AP.Utils
                 return new CmdResult(true, GetDeathLinkStatus(issuingPlayer));
             }
 
+
             if (args[0].StartsWith("!", StringComparison.Ordinal))
             {
                 string sendMe = string.Join(" ", args);

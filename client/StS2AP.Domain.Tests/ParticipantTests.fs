@@ -16,7 +16,6 @@ module ParticipantTests =
           Participation = identity 1 "seed" 0 1
           HasSettings = true
           ReceiptSourceReady = true
-          RelicReceipts = Dictionary<int64, IReadOnlyList<int>>()
           ProgressiveAncients = Dictionary<int64, int>() }
 
     let private outcome (result: ContributionReadiness) =
@@ -30,7 +29,7 @@ module ParticipantTests =
         Assert.Equal("missing-ap-contribution", evaluate Unchecked.defaultof<_> |> outcome)
         let vanilla =
             { input () with Participation = identity 0 null -1 -1; HasSettings = false
-                            ReceiptSourceReady = false; RelicReceipts = null; ProgressiveAncients = null }
+                            ReceiptSourceReady = false; ProgressiveAncients = null }
         Assert.Equal(ParticipantKind.VanillaGuest, (ready vanilla).Kind)
 
     [<Fact>]
@@ -74,26 +73,17 @@ module ParticipantTests =
 
     [<Fact>]
     let ``receipt validation leaves input unchanged and reevaluates later mutations`` () =
-        let indexes = ResizeArray<int>([1; 4])
-        let relics = Dictionary<int64, IReadOnlyList<int>>()
-        relics.Add(1L, indexes)
-        let candidate = { input () with RelicReceipts = relics }
+        let counts = Dictionary<int64, int>()
+        counts.Add(1L, 2)
+        let candidate = { input () with ProgressiveAncients = counts }
         Assert.Equal("ready", evaluate candidate |> outcome)
-        Assert.Same(indexes, relics[1L])
-        Assert.Equal<int>([1; 4], indexes)
-        indexes[1] <- 1
+        Assert.Equal(2, counts[1L])
+        counts[1L] <- -1
         Assert.Equal("invalid-ap-history", evaluate candidate |> outcome)
 
     [<Fact>]
-    let ``receipt indexes cannot be assigned to two characters`` () =
-        let receipts = Dictionary<int64, IReadOnlyList<int>>()
-        receipts.Add(1L, [| 7 |])
-        receipts.Add(2L, [| 7 |])
-        Assert.Equal("invalid-ap-history", evaluate { input () with RelicReceipts = receipts } |> outcome)
-
-    [<Fact>]
     let ``invalid receipt maps are rejected only once history is prepared`` () =
-        let candidate = { input () with RelicReceipts = null; ProgressiveAncients = null }
+        let candidate = { input () with ProgressiveAncients = null }
         Assert.Equal("ap-history-incomplete", evaluate { candidate with ReceiptSourceReady = false } |> outcome)
         Assert.Equal("invalid-ap-history", evaluate candidate |> outcome)
         let invalidCounts = Dictionary<int64, int>()

@@ -1,9 +1,9 @@
 namespace StS2AP.Models;
 
 /// <summary>
-/// Concrete owner-authored specification sent through RitsuLib Sidecar before a native
-/// reward flow starts. Model payloads are MegaCrit save-schema JSON strings so mutable
-/// card/relic/potion state can be reconstructed rather than reduced to a model ID.
+/// One AP menu row as the owner builds it. Model payloads are MegaCrit save-schema JSON strings
+/// so mutable card/relic/potion state can be reconstructed rather than reduced to a model ID;
+/// multiplayer claims carry them to every peer.
 /// </summary>
 public sealed class ApMirroredRewardSpec
 {
@@ -51,6 +51,12 @@ public sealed class ApMirroredRewardSpec
 
     // CONFIRM: the datatype of serialized models, why string?
     public List<string> SerializedModels { get; set; } = new();
+
+    /// <summary>
+    /// Multiplayer: the row claims this reward as a queued action (<c>ApQueuedClaims</c>) instead
+    /// of applying it itself.
+    /// </summary>
+    public bool QueuedClaim { get; set; }
 
     public ApGrantId GrantId => new(ApSlotId, ReceivedItemIndex);
 }

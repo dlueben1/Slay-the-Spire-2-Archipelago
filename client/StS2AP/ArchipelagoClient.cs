@@ -1413,6 +1413,7 @@ namespace StS2AP
             }
             MultiplayerSupport.RestoreFrozenHostSettingsForActiveRun();
             AscensionMultiplayer.QueueReconnectReconciliation();
+            ApReceiptLedger.QueueReconnectSync();
             return true;
         }
 
@@ -1746,25 +1747,11 @@ namespace StS2AP
                     int addedCampfires = Progress.CheckedCampfireLocationIds.Count - previousCampfireCount;
                     if (addedCampfires > 0
                         && MultiplayerSupport.IsRealMultiplayerRun
-                        && MultiplayerSupport.IsLocalOwnApSlot
-                        && GameUtility.CurrentPlayer is { } player)
+                        && MultiplayerSupport.IsLocalOwnApSlot)
                     {
-                        // !collect bypasses the local check writer. Publish its campfire
-                        // changes so every replica builds options from the updated owner state.
-                        if (!MultiplayerLocationChecks.PublishEffectiveCheckProgress(player))
-                        {
-                            LogUtility.Error(
-                                $"AP location update added {addedCampfires} campfire check(s), "
-                                    + $"but progress for player {player.NetId} could not be published"
-                            );
-                        }
-                        else
-                        {
-                            LogUtility.Info(
-                                $"Published {addedCampfires} campfire check(s) from an AP location "
-                                    + $"update for player {player.NetId}"
-                            );
-                        }
+                        // !collect bypasses the local check writer. Every peer's rest sites read
+                        // campfire checks from the receipts action, which carries these.
+                        ApReceiptLedger.ReceiveCheckedLocations();
                     }
                 });
             }

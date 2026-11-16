@@ -13,9 +13,9 @@ using StS2AP.Extensions;
 namespace StS2AP.Utils;
 
 /// <summary>
-/// Selects standard AP relic rewards without consuming MegaCrit's reward RNG. The owner persists
-/// and publishes the concrete model in the mirrored reward recipe; every replica then reserves
-/// that exact model from the native grab bags before the synchronized RewardsSet begins.
+/// Selects standard AP relic rewards without consuming MegaCrit's reward RNG. In multiplayer the
+/// queued relic assignment action draws and reserves them on every peer in queue order
+/// (ApQueuedRelicClaims).
 /// </summary>
 public static class StandardRelicPool
 {
@@ -80,38 +80,26 @@ public static class StandardRelicPool
     }
 
     /// <summary>
-    /// Reapplies persisted reservations when a multiplayer run is bound. Native bag removal is
-    /// idempotent, so this also heals saves created before every replica reserved AP assignments.
+    /// Reapplies the queued relic assignments' bag removals when a multiplayer run is bound.
+    /// Native bag removal is idempotent, so this also heals saves created before every replica
+    /// reserved AP assignments.
     /// </summary>
     public static void BindRun(RunState runState)
     {
+        if (!ApRunData.TryGetSharedState(runState, out ApRunSharedState shared))
+            return;
         foreach (Player player in runState.Players)
         {
-            if (ApRunData.TryGetPlayerState(
-                    runState,
-                    player.NetId,
-                    out ApPlayerRunState state
-                ) && state.Progress.Initialized)
+            if (!shared.RelicReceipts.Claims.TryGetValue(player.NetId, out var claims))
+                continue;
+            foreach ((int itemIndex, ApRelicReceiptState.Claim claim) in claims)
             {
-                ReserveAssignedChoices(player, state.Progress);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Reserves the exact standard relic models carried by host-confirmed AP progress. This uses
-    /// the existing progress transport rather than introducing a relic-specific network message.
-    /// </summary>
-    public static void ReserveAssignedChoices(Player player, ApRunProgressState progress)
-    {
-        foreach ((int itemIndex, List<string> assignments) in progress.RelicChoiceAssignments)
-        {
-            foreach (string assignment in assignments)
-            {
+                if (claim.MenuRelicAssignment == null)
+                    continue;
                 try
                 {
                     SerializableRelic serialized = JsonSerializer.Deserialize<SerializableRelic>(
-                        assignment,
+                        claim.MenuRelicAssignment,
                         SerializationUtility.CombinedOptions
                     ) ?? throw new InvalidOperationException("The serialized relic was empty.");
                     ReserveChoice(player, RelicModel.FromSerializable(serialized));

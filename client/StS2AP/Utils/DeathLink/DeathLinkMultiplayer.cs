@@ -246,11 +246,7 @@ public static class DeathLinkMultiplayer
         try
         {
             requested = RitsuLibManagedNetActions.Request(
-                RunManager.Instance,
-                CombatActionDescriptor,
-                message,
-                slotOwner.NetId
-            );
+                RunManager.Instance, CombatActionDescriptor, message, slotOwner.NetId);
         }
         catch (Exception ex)
         {

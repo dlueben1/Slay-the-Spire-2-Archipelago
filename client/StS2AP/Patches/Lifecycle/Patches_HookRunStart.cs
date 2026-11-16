@@ -208,8 +208,9 @@ namespace StS2AP.Patches
                     return;
                 }
 
-                AncientMultiplayer.BindRun(__result);
                 StandardRelicPool.BindRun(__result);
+                RelicReceiptMultiplayer.BindRun(__result);
+                ApRunData.BindConstruction(__result);
 
                 ArchipelagoCharTrackerUI.RemoveUI();
                 ArchipelagoGoalTrackerUI.RemoveUI();
@@ -265,6 +266,7 @@ namespace StS2AP.Patches
                 }
                 AscensionMultiplayer.SyncLocalProjection(__result);
                 RelicCoupons.EnsureOwnedBy(localPlayer);
+                RelicReceiptMultiplayer.MirrorOwner(__result, publish: false);
                 if (!ApRunData.PublishLocalProgress(localPlayer))
                 {
                     MultiplayerSupport.InvalidateRunClaims(
@@ -277,11 +279,8 @@ namespace StS2AP.Patches
                     MultiplayerSupport.InvalidateRunClaims(bindError);
                     return;
                 }
-                if (!ApMirroredRewardDispatcher.BeginRun(__result, out bindError))
-                {
-                    MultiplayerSupport.InvalidateRunClaims(bindError);
-                    return;
-                }
+                // Before any claim this player requests: claims are checked against the ledger.
+                ApReceiptLedger.BeginRun(localPlayer);
                 AscensionMultiplayer.BeginRun(__result, localPlayer);
                 ProgressiveStarterMultiplayer.BeginRun(__result, localPlayer);
                 if (MultiplayerSupport.IsLocalOwnApSlot)

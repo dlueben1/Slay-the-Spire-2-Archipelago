@@ -6,184 +6,144 @@ namespace StS2AP.RegressionTests;
 
 public sealed class RelicReceiptTests
 {
-    [Fact(DisplayName = "Host approves only known receipts with funding and caps fresh bank reservations")]
-    public void HostApprovesOnlyKnownReceiptsWithFundingAndCapsFreshBankReservations()
-    {
-        var state = new ApRelicReceiptState();
-        var progress = new ApRunProgressState { RelicRewardsAttempted = 1, RelicRewardsAvailableAnytimeForRun = 1 };
-        var result = state.ApproveMenu(11, new[] { 99, 100, 101, 102, 101 }, new[] { 100, 101, 102 }, progress);
-        Assert.True(result.SequenceEqual(new[] { 100, 101 }));
-        Assert.True(!state.Find(11, 100)!.RequiresBank && state.Find(11, 101)!.RequiresBank);
-        Assert.True(state.Find(11, 99) == null && state.Find(11, 102) == null);
-    }
+    private const string Chest = "chest:0:7";
+    private const string Elite = "elite:0:9";
 
-    [Fact(DisplayName = "An approval retry reuses its reservation without spending another bank")]
-    public void AnApprovalRetryReusesItsReservationWithoutSpendingAnotherBank()
-    {
-        var state = new ApRelicReceiptState();
-        var progress = new ApRunProgressState { RelicRewardsAttempted = 1 };
-        state.ApproveMenu(11, new[] { 100 }, new[] { 100, 101 }, progress);
-        var retry = state.ApproveMenu(11, new[] { 100, 101 }, new[] { 100, 101 }, progress);
-        Assert.True(retry.SequenceEqual(new[] { 100 }));
-        state.AssignMenu(11, 100, "stable choice");
-        state.Consume(11, 100, ApRelicReceiptState.MenuDestination);
-        var stale = new ApRunProgressState { RelicRewardsAttempted = 1, BankedRelicRewards = 1 };
-        Assert.True(state.ApproveMenu(11, new[] { 100, 101 }, new[] { 100, 101 }, stale).Count == 0);
-    }
-
-    [Fact(DisplayName = "A receipt missing from the host catalog can be approved after it arrives")]
-    public void AReceiptMissingFromTheHostCatalogCanBeApprovedAfterItArrives()
-    {
-        var state = new ApRelicReceiptState();
-        var progress = new ApRunProgressState { RelicRewardsAttempted = 1 };
-        Assert.True(state.ApproveMenu(11, new[] { 100 }, Array.Empty<int>(), progress).Count == 0);
-        Assert.True(progress.UsedItems.Count == 0 && progress.BankedRelicRewards == 1);
-        Assert.True(state.ApproveMenu(11, new[] { 100 }, new[] { 100 }, progress).SequenceEqual(new[] { 100 }));
-    }
-
-    [Fact(DisplayName = "Chest reservation wins over a later menu request")]
+    [Fact(DisplayName = "A chest reservation wins over a later menu request")]
     public void ChestReservationWinsOverALaterMenuRequest()
     {
-        var state = NewChest();
+        var state = new ApRelicReceiptState();
+        Assert.True(state.TryReserve(11, 100, Chest));
         Assert.False(state.TryReserve(11, 100, ApRelicReceiptState.MenuDestination));
         Assert.False(state.CanUseMenu(11, 100));
-        Assert.True(state.Find(11, 100) is { Consumed: false });
     }
 
-    [Fact(DisplayName = "Menu reservation wins before a chest is frozen")]
-    public void MenuReservationWinsBeforeAChestIsFrozen()
+    [Fact(DisplayName = "A menu reservation keeps its receipt from a natural relic reward")]
+    public void MenuReservationKeepsItsReceiptFromANaturalReward()
     {
         var state = new ApRelicReceiptState();
         Assert.True(state.TryReserve(11, 100, ApRelicReceiptState.MenuDestination));
-        Assert.Throws<InvalidOperationException>(() => state.AddChest(Decision()));
-        Assert.True(state.Chests.Count == 0 && state.CanUseMenu(11, 100));
+        Assert.False(state.TryReserve(11, 100, Elite));
+        Assert.True(state.CanUseMenu(11, 100));
     }
 
-    [Fact(DisplayName = "Direct AP players sharing a receipt index have independent spending")]
-    public void DirectAPPlayersSharingAReceiptIndexHaveIndependentSpending()
-    {
-        var state = NewChest();
-        Assert.True(state.TryReserve(22, 100, ApRelicReceiptState.MenuDestination));
-        state.Consume(22, 100, ApRelicReceiptState.MenuDestination);
-        Assert.True(!state.Find(11, 100)!.Consumed && state.Find(22, 100)!.Consumed);
-    }
-
-    [Fact(DisplayName = "Delayed duplicate decisions preserve already-consumed receipts")]
-    public void DelayedDuplicateDecisionsPreserveAlreadyConsumedReceipts()
-    {
-        var state = NewChest();
-        state.Consume(11, 100, "chest:0:7");
-        state.AddChest(Decision());
-        Assert.True(state.Find(11, 100)!.Consumed);
-        Assert.False(state.TryReserve(11, 100, "chest:1:7"));
-    }
-
-    [Fact(DisplayName = "Empty and vanilla candidate masks remain unchanged after new receipts")]
-    public void EmptyAndVanillaCandidateMasksRemainUnchangedAfterNewReceipts()
-    {
-        var state = NewChest();
-        var frozen = state.Chests["chest:0:7"];
-        Assert.True(frozen.Candidates.Select(c => c.Keep).SequenceEqual(new[] { true, false, true, false }));
-        state.TryReserve(22, 101, ApRelicReceiptState.MenuDestination, requiresBank: true);
-        Assert.True(frozen.Candidates[1].ReceiptIndex == null && !frozen.Candidates[1].Keep);
-    }
-
-    [Fact(DisplayName = "Save round trip preserves the frozen candidate mask, reservations and exact assignments")]
-    public void SaveRoundTripPreservesCandidateIdentityReservationsAndExactAssignments()
-    {
-        var state = NewChest();
-        state.TryReserve(22, 101, ApRelicReceiptState.MenuDestination, requiresBank: true);
-        state.AssignMenu(22, 101, "exact saved relic JSON");
-        state.Consume(11, 100, "chest:0:7");
-        var restored = JsonSerializer.Deserialize<ApRelicReceiptState>(JsonSerializer.Serialize(state))!;
-        Assert.True(restored.Find(11, 100)!.Consumed);
-        Assert.True(restored.Find(22, 101)!.MenuRelicAssignment == "exact saved relic JSON");
-        Assert.True(restored.Chests["chest:0:7"].Candidates.Select(c => c.Keep).SequenceEqual(new[] { true, false, true, false }));
-    }
-
-    [Fact(DisplayName = "A stale progress snapshot cannot unspend a chest receipt or create an extra bank")]
-    public void AStaleProgressSnapshotCannotUnspendAChestReceiptOrCreateAnExtraBank()
-    {
-        var state = NewChest();
-        state.Chests["chest:0:7"].SettledPlayers.Add(11);
-        state.Consume(11, 100, "chest:0:7");
-        var progress = new ApRunProgressState();
-        state.ReconcileProgress(11, progress, new[] { 100 });
-        state.ReconcileProgress(11, progress, new[] { 100 });
-        Assert.True(progress.RelicRewardsAttempted == 1 && progress.BankedRelicRewards == 0);
-        Assert.True(progress.UsedItems.SequenceEqual(new[] { 100 }));
-    }
-
-    [Fact(DisplayName = "An unfunded chest preserves its bank for a late receipt")]
-    public void AnUnfundedChestPreservesItsBankForALateReceipt()
-    {
-        var state = NewChest();
-        state.Chests["chest:0:7"].SettledPlayers.Add(22);
-        var progress = new ApRunProgressState();
-        state.ReconcileProgress(22, progress, Array.Empty<int>());
-        Assert.True(progress.BankedRelicRewards == 1 && progress.UsedItems.Count == 0);
-        state.TryReserve(22, 101, ApRelicReceiptState.MenuDestination, requiresBank: true);
-        state.AssignMenu(22, 101, "late relic");
-        state.ReconcileProgress(22, progress, new[] { 101 });
-        Assert.True(progress.BankedRelicRewards == 0 && progress.RelicChoiceAssignments[101].Single() == "late relic");
-    }
-
-    [Fact(DisplayName = "Consumed menu assignments survive older snapshots without regranting or banking twice")]
-    public void ConsumedMenuAssignmentsSurviveOlderSnapshotsWithoutRegrantingOrBankingTwice()
+    [Fact(DisplayName = "Players sharing a receipt index have independent reservations")]
+    public void PlayersSharingAReceiptIndexHaveIndependentReservations()
     {
         var state = new ApRelicReceiptState();
-        state.TryReserve(11, 100, ApRelicReceiptState.MenuDestination, requiresBank: true);
-        state.AssignMenu(11, 100, "stable choice");
-        var progress = new ApRunProgressState { RelicRewardsAttempted = 2, BankedRelicRewards = 2 };
-        state.ReconcileProgress(11, progress, new[] { 100 });
-        Assert.True(progress.BankedRelicRewards == 1 && progress.RelicChoiceAssignments.ContainsKey(100));
-        state.Consume(11, 100, ApRelicReceiptState.MenuDestination);
-        state.ReconcileProgress(11, progress, new[] { 100 });
-        Assert.True(progress.BankedRelicRewards == 1 && !progress.RelicChoiceAssignments.ContainsKey(100));
-        Assert.True(progress.UsedItems.Contains(100) && !state.CanUseMenu(11, 100));
+        state.TryReserve(11, 100, Chest);
+        state.Consume(11, 100, Chest);
+        Assert.True(state.TryReserve(22, 100, ApRelicReceiptState.MenuDestination));
+        Assert.True(state.Find(11, 100)!.Consumed && !state.Find(22, 100)!.Consumed);
     }
 
-    [Fact(DisplayName = "Anytime relic spending does not consume a natural reward bank")]
-    public void AnytimeRelicSpendingDoesNotConsumeANaturalRewardBank()
+    [Fact(DisplayName = "A chest keeps its native relic only when ungated or paired with a receipt")]
+    public void ChestCandidateMask()
+    {
+        var decision = new ApRelicReceiptState.ChestDecision
+        {
+            RoomKey = Chest,
+            Candidates =
+            {
+                new() { PlayerNetId = 11, GeneratesRelic = true, ApGated = true, ReceiptIndex = 100, RewardNumber = 1 },
+                new() { PlayerNetId = 22, GeneratesRelic = true, ApGated = true, RewardNumber = 1 },
+                new() { PlayerNetId = 33, GeneratesRelic = true, ApGated = false },
+                new() { PlayerNetId = 44, GeneratesRelic = false, ApGated = false },
+            },
+        };
+        Assert.Equal(new[] { true, false, true, false }, decision.Candidates.Select(c => c.Keep));
+    }
+
+    [Fact(DisplayName = "A paired natural relic reward spends its own bank; an unpaired one keeps it")]
+    public void NaturalRewardsAndBanks()
+    {
+        var state = new ApRelicReceiptState();
+        // Two chests: the first paired receipt 100, the second had no receipt waiting.
+        state.TryReserve(11, 100, Chest);
+        state.Consume(11, 100, Chest);
+        Assert.Equal(1, state.AvailableBanks(11, relicRewardsAttempted: 2, maxRelicRewards: 10));
+    }
+
+    [Fact(DisplayName = "Only a menu receipt past the anytime relics spends a bank")]
+    public void MenuReceiptsAndBanks()
     {
         var state = new ApRelicReceiptState();
         state.TryReserve(11, 100, ApRelicReceiptState.MenuDestination);
-        state.AssignMenu(11, 100, "anytime relic");
-        state.Consume(11, 100, ApRelicReceiptState.MenuDestination);
-        var progress = new ApRunProgressState { RelicRewardsAttempted = 1, BankedRelicRewards = 1 };
-        state.ReconcileProgress(11, progress, new[] { 101 });
-        Assert.True(progress.BankedRelicRewards == 1);
+        state.TryReserve(11, 101, ApRelicReceiptState.MenuDestination, requiresBank: true);
+        Assert.Equal(1, state.AvailableBanks(11, relicRewardsAttempted: 2, maxRelicRewards: 10));
+        // Claiming it changes nothing further.
+        state.Consume(11, 101, ApRelicReceiptState.MenuDestination);
+        Assert.Equal(1, state.AvailableBanks(11, relicRewardsAttempted: 2, maxRelicRewards: 10));
     }
 
-    [Fact(DisplayName = "Conflicting replays and assignment rerolls are rejected without replacing the original")]
-    public void ConflictingReplaysAndAssignmentRerollsAreRejectedWithoutReplacingTheOriginal()
+    [Fact(DisplayName = "Natural relic rewards past the tenth earn no bank")]
+    public void BanksStopAtTheTenthNaturalReward() =>
+        Assert.Equal(10, new ApRelicReceiptState().AvailableBanks(11, relicRewardsAttempted: 14, maxRelicRewards: 10));
+
+    [Fact(DisplayName = "An Elite reservation spends nothing until it settles, and an unused one is released")]
+    public void EliteReservationsSettle()
     {
-        var state = NewChest();
-        var conflict = Decision();
-        conflict.Candidates[0].ReceiptIndex = 101;
-        Assert.Throws<InvalidOperationException>(() => state.AddChest(conflict));
+        var state = new ApRelicReceiptState();
+        state.TryReserve(11, 100, Elite);
+        state.TryReserve(11, 101, Elite);
+        // The combat ended with two natural rewards so far and two reserved receipts.
+        Assert.Equal(2, state.AvailableBanks(11, relicRewardsAttempted: 2, maxRelicRewards: 10));
+        Assert.False(state.TryReserve(11, 101, ApRelicReceiptState.MenuDestination));
+
+        // The rewards screen built one relic reward, which kept receipt 100.
+        state.Consume(11, 100, Elite);
+        state.Release(11, 101);
+        Assert.Equal(2, state.AvailableBanks(11, relicRewardsAttempted: 3, maxRelicRewards: 10));
+        Assert.Null(state.Find(11, 101));
+        Assert.True(state.TryReserve(11, 101, ApRelicReceiptState.MenuDestination, requiresBank: true));
+    }
+
+    [Fact(DisplayName = "Release leaves menu reservations and settled receipts alone")]
+    public void ReleaseOnlyFreesUnsettledNaturalReservations()
+    {
+        var state = new ApRelicReceiptState();
+        state.TryReserve(11, 100, ApRelicReceiptState.MenuDestination);
+        state.TryReserve(11, 101, Chest);
+        state.Consume(11, 101, Chest);
+        state.Release(11, 100);
+        state.Release(11, 101);
+        Assert.NotNull(state.Find(11, 100));
+        Assert.True(state.Find(11, 101)!.Consumed);
+    }
+
+    [Fact(DisplayName = "A save round trip keeps reservations, assignments, chests and unsettled Elites")]
+    public void SaveRoundTrip()
+    {
+        var state = new ApRelicReceiptState();
+        state.TryReserve(22, 101, ApRelicReceiptState.MenuDestination, requiresBank: true);
+        state.AssignMenu(22, 101, "exact saved relic JSON");
+        state.TryReserve(11, 100, Chest);
+        state.Consume(11, 100, Chest);
+        state.Chests[Chest] = new()
+        {
+            RoomKey = Chest,
+            Candidates = { new() { PlayerNetId = 11, GeneratesRelic = true, ApGated = true, ReceiptIndex = 100, RewardNumber = 1 } },
+        };
+        state.Elites[Elite] = new()
+        {
+            RoomKey = Elite,
+            Players = { new() { PlayerNetId = 11, BaseAttempted = 1, Reserved = { 102 }, Sources = { 102, null } } },
+        };
+
+        var restored = JsonSerializer.Deserialize<ApRelicReceiptState>(JsonSerializer.Serialize(state))!;
+        Assert.True(restored.Find(11, 100)!.Consumed);
+        Assert.Equal("exact saved relic JSON", restored.Find(22, 101)!.MenuRelicAssignment);
+        Assert.True(restored.Chests[Chest].Candidates.Single().Keep);
+        Assert.Equal(new int?[] { 102, null }, restored.Elites[Elite].Players.Single().Sources);
+    }
+
+    [Fact(DisplayName = "An assignment cannot be rerolled")]
+    public void AssignmentRerollsAreRejected()
+    {
+        var state = new ApRelicReceiptState();
         state.TryReserve(22, 101, ApRelicReceiptState.MenuDestination);
         state.AssignMenu(22, 101, "first");
         Assert.Throws<InvalidOperationException>(() => state.AssignMenu(22, 101, "reroll"));
-        Assert.True(state.Find(22, 101)!.MenuRelicAssignment == "first");
+        Assert.Equal("first", state.Find(22, 101)!.MenuRelicAssignment);
     }
-
-    private static ApRelicReceiptState NewChest()
-    {
-        var state = new ApRelicReceiptState();
-        state.AddChest(Decision());
-        return state;
-    }
-
-    private static ApRelicReceiptState.ChestDecision Decision() => new()
-    {
-        RoomKey = "chest:0:7",
-        Candidates = new()
-        {
-            new() { PlayerNetId = 11, GeneratesRelic = true, ApGated = true, ReceiptIndex = 100, RewardNumber = 1 },
-            new() { PlayerNetId = 22, GeneratesRelic = true, ApGated = true, RewardNumber = 1 },
-            new() { PlayerNetId = 33, GeneratesRelic = true, ApGated = false },
-            new() { PlayerNetId = 44, GeneratesRelic = false, ApGated = false },
-        },
-    };
 }

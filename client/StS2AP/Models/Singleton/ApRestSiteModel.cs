@@ -6,6 +6,7 @@ using StS2AP.Entities.RestSite;
 using StS2AP.Utils;
 using STS2RitsuLib.Interop.AutoRegistration;
 using STS2RitsuLib.Models;
+using static StS2AP.Data.ItemTable;
 
 namespace StS2AP.Models.Singleton;
 
@@ -118,21 +119,21 @@ public sealed class ApRestSiteModel : HookedSingletonModel
             return true;
         }
 
+        // Rest sites are built at room entry, inside the move action, so the receipt ledger and
+        // the recorded campfire checks are the same on every peer here.
         restLevel = 0;
         smithLevel = 0;
         checkedLocations = new HashSet<long>();
-        if (!ApPlayerContextResolver.TryGetRewardProgress(
-                player,
-                out var progress,
-                out reason
-            ))
+        if (!ApReceiptLedger.TryGetState(player, out ApPlayerRunState state))
         {
+            reason = $"player {player.NetId} has no AP slot in this run";
             return false;
         }
 
-        progress.ProgressiveRests.TryGetValue(characterOffset, out restLevel);
-        progress.ProgressiveSmiths.TryGetValue(characterOffset, out smithLevel);
-        checkedLocations = progress.CheckedCampfireLocationIds;
+        restLevel = ApReceiptLedger.CountCharacterReceipts(state, APItem.ProgressiveRest, characterOffset);
+        smithLevel = ApReceiptLedger.CountCharacterReceipts(state, APItem.ProgressiveSmith, characterOffset);
+        checkedLocations = state.CheckedCampfireLocationIds;
+        reason = string.Empty;
         return true;
     }
 }

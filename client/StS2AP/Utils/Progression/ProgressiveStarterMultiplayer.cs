@@ -355,11 +355,7 @@ public static class ProgressiveStarterMultiplayer
             message.ActionId,
             $"Progressive Starter {description}",
             () => RitsuLibManagedNetActions.Request(
-                RunManager.Instance,
-                ActionDescriptor,
-                message,
-                owner.NetId
-            ),
+                RunManager.Instance, ActionDescriptor, message, owner.NetId),
             () => IsCurrentRequest(message),
             () => LogUtility.Info(
                 $"Requested managed Progressive Starter {description} {message.ActionId} "

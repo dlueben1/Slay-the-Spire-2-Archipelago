@@ -1,7 +1,9 @@
+using System.Text.Json;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Multiplayer.Game.Lobby;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Runs;
+using StS2AP.Data;
 using StS2AP.Utils;
 using StS2AP.Domain;
 using StS2AP.DomainAdapters;
@@ -13,44 +15,34 @@ namespace StS2AP.Multiplayer;
 
 /// <summary>
 /// Owns the AP data embedded in MegaCrit's canonical run snapshot. Lobby methods stage the
-/// launch contract; mid-run progress changes are published immediately after local AP mutations,
-/// confirmed and relayed by the host, and durable only when the fixed host writes the next native
-/// checkpoint. There are no
+/// launch contract. Mid-run, action-owned state (receipt ledger, queued claims, natural relic
+/// decisions, construction counters) changes identically on every replica; each owner's own AP
+/// progress goes to the host only, and is durable only when the fixed host writes the next
+/// native checkpoint. There are no
 /// Frozen/Validated booleans: launch readiness must be derived from the current contributions,
 /// and the committed run snapshot is the lifecycle boundary that makes the mapping immutable.
 /// </summary>
 public static class ApRunData
 {
     internal const int RunSchemaVersion = 9;
-    private const string ProgressSnapshotMessageKey = "player_ap_progress_snapshot";
-    private const string ProgressDeltaMessageKey = "player_ap_progress_delta";
     private static RunSavedData<ApRunSharedState> _sharedRun = null!;
     private static PlayerRunSavedData<ApPlayerRunState> _players = null!;
-    private static readonly RitsuLibSidecarJsonSerializer<ApProgressSnapshotMessage>
-        ProgressSnapshotSerializer = new();
-    private static readonly RitsuLibSidecarMessageDescriptor<ApProgressSnapshotMessage>
-        ProgressSnapshotDescriptor = new(
-            ModEntry.ModId,
-            ProgressSnapshotMessageKey,
-            ProgressSnapshotSerializer.Serialize,
-            ProgressSnapshotSerializer.Deserialize,
-            Required: true
+    // Each owner's AP progress, client -> host, kept in the run's save as that owner's checkpoint.
+    // A Sidecar sync message behaves like the game's own run messages: reliable and ordered with
+    // them, held while the host loads a run and released at launch, handled on the main thread.
+    private static readonly RitsuLibSidecarSyncMessageDescriptor<ApProgressCheckpointMessage>
+        ProgressCheckpoint = new(
+            ModuleId: ModEntry.ModId,
+            MessageKey: "progress_checkpoint",
+            Serialize: static message => JsonSerializer.SerializeToUtf8Bytes(message),
+            Deserialize: static payload => JsonSerializer.Deserialize<ApProgressCheckpointMessage>(payload)
+                ?? new ApProgressCheckpointMessage(),
+            Handle: OnProgressCheckpointReceived,
+            ShouldBuffer: true
         );
-    private static readonly RitsuLibSidecarJsonSerializer<ApProgressDeltaMessage>
-        ProgressDeltaSerializer = new();
-    private static readonly RitsuLibSidecarMessageDescriptor<ApProgressDeltaMessage>
-        ProgressDeltaDescriptor = new(
-            ModEntry.ModId,
-            ProgressDeltaMessageKey,
-            ProgressDeltaSerializer.Serialize,
-            ProgressDeltaSerializer.Deserialize,
-            Required: true
-        );
-    private static IDisposable? _progressSnapshotSubscription;
-    private static IDisposable? _progressDeltaSubscription;
     private static bool _initialized;
-    private static long _localProgressRevision;
-    private static ApRunProgressState? _lastPublishedLocalProgress;
+    // The progress this process last sent (or restored), so an unchanged view is not resent.
+    private static byte[]? _lastPublishedLocalProgress;
 
     public static void Initialize()
     {
@@ -78,14 +70,7 @@ public static class ApRunData
         );
 
         _initialized = true;
-        _progressSnapshotSubscription = RitsuLibSidecarTypedMessageRegistry.Subscribe(
-            ProgressSnapshotDescriptor,
-            OnProgressSnapshotReceived
-        );
-        _progressDeltaSubscription = RitsuLibSidecarTypedMessageRegistry.Subscribe(
-            ProgressDeltaDescriptor,
-            OnProgressDeltaReceived
-        );
+        RitsuLibSidecarSyncMessages.Register(ProgressCheckpoint);
         RitsuLibFramework.SubscribeLifecycle<RunSavedDataPreparingEvent>(OnRunDataPreparing);
         RitsuLibFramework.SubscribeLifecycle<RunSavedDataLobbyStagingEvent>(OnLobbyStagingChanged);
     }
@@ -116,10 +101,6 @@ public static class ApRunData
             SlotSettings = participation == ApParticipationKind.OwnApSlot
                 ? MultiplayerSupport.CreateEffectiveHostSettingsSnapshot()
                 : null,
-            InitialRelicReceiptIndexesByCharacter = participation ==
-                    ApParticipationKind.VanillaGuest
-                ? new Dictionary<long, List<int>>()
-                : progress.GetRelicReceiptIndexSnapshot(),
             InitialProgressiveAncientsByCharacter = participation ==
                     ApParticipationKind.VanillaGuest
                 ? new Dictionary<long, int>()
@@ -132,13 +113,20 @@ public static class ApRunData
             Progress = existing?.Progress ?? new ApRunProgressState(),
             CombatsSinceLastWaxMelt = existing?.CombatsSinceLastWaxMelt ?? 0,
             Construction = existing?.Construction ?? new ApReplicaConstructionState(),
-            ProgressRevision = existing?.ProgressRevision ?? 0,
             ProgressiveStarters = existing?.ProgressiveStarters
                 ?? new ApProgressiveStarterPlayerState(),
             LastConsumedBuffIndex = existing?.LastConsumedBuffIndex ?? -1,
             CombatBuffLimit = existing?.CombatBuffLimit ?? new CombatEffectLimit(),
             LastConsumedTrapIndex = existing?.LastConsumedTrapIndex ?? -1,
             CombatTrapLimit = existing?.CombatTrapLimit ?? new CombatEffectLimit(),
+            QueuedGoldClaimCursor = existing?.QueuedGoldClaimCursor,
+            QueuedClaimedReceiptIndexes = existing?.QueuedClaimedReceiptIndexes ?? new List<int>(),
+            QueuedCardOffers = existing?.QueuedCardOffers ?? new Dictionary<int, ApQueuedCardOfferState>(),
+            QueuedAncientChoices = existing?.QueuedAncientChoices ?? new Dictionary<int, List<string>>(),
+            ReceiptLedger = existing?.ReceiptLedger ?? new List<ApLedgerReceipt>(),
+            RelicRewardsAvailableAnytime = existing?.RelicRewardsAvailableAnytime,
+            CheckedCampfireLocationIds = existing?.CheckedCampfireLocationIds ?? new HashSet<long>(),
+            RelicRewardsAttempted = existing?.RelicRewardsAttempted,
         };
         // SyncLobbyOnChange makes this a contribution to the authoritative host staging
         // session. On a client RitsuLib pushes the local PlayerRunSavedData payload with a
@@ -227,6 +215,136 @@ public static class ApRunData
         _players.Set(runState, netId, state);
         return true;
     }
+
+    /// <summary>
+    /// Advances a player's queued gold claim cursor. The queued gold action calls this
+    /// identically on every replica; owner progress deltas never touch it.
+    /// </summary>
+    internal static bool RecordQueuedGoldClaim(RunState runState, ulong netId, int cursorAfter)
+    {
+        if (!_initialized || !_players.TryGet(runState, netId, out ApPlayerRunState state))
+            return false;
+        state.QueuedGoldClaimCursor = Math.Max(state.QueuedGoldClaimCursor ?? 0, cursorAfter);
+        _players.Set(runState, netId, state);
+        return true;
+    }
+
+    /// <summary>
+    /// Marks an AP receipt used up by a queued claim. Claim actions call this identically on every
+    /// replica; owner progress deltas never touch it.
+    /// </summary>
+    internal static bool RecordQueuedReceiptClaim(RunState runState, ulong netId, int receivedItemIndex)
+    {
+        if (!_initialized || !_players.TryGet(runState, netId, out ApPlayerRunState state))
+            return false;
+        int position = state.QueuedClaimedReceiptIndexes.BinarySearch(receivedItemIndex);
+        if (position < 0)
+            state.QueuedClaimedReceiptIndexes.Insert(~position, receivedItemIndex);
+        _players.Set(runState, netId, state);
+        return true;
+    }
+
+    /// <summary>
+    /// Records or clears a card offer revealed by a queued card claim. The claim action calls
+    /// this identically on every replica; owner progress deltas never touch it.
+    /// </summary>
+    internal static bool RecordQueuedCardOffer(
+        RunState runState,
+        ulong netId,
+        int receivedItemIndex,
+        ApQueuedCardOfferState? offer)
+    {
+        if (!_initialized || !_players.TryGet(runState, netId, out ApPlayerRunState state))
+            return false;
+        if (offer == null)
+            state.QueuedCardOffers.Remove(receivedItemIndex);
+        else
+            state.QueuedCardOffers[receivedItemIndex] = offer;
+        _players.Set(runState, netId, state);
+        return true;
+    }
+
+    /// <summary>
+    /// Records the Ancient choices the queued relic assignment action drew, identically on every
+    /// replica; owner progress deltas never touch them.
+    /// </summary>
+    internal static bool RecordQueuedAncientChoices(
+        RunState runState,
+        ulong netId,
+        int receivedItemIndex,
+        List<string> serializedChoices)
+    {
+        if (!_initialized || !_players.TryGet(runState, netId, out ApPlayerRunState state))
+            return false;
+        state.QueuedAncientChoices[receivedItemIndex] = serializedChoices;
+        _players.Set(runState, netId, state);
+        return true;
+    }
+
+    /// <summary>
+    /// Appends the receipts this replica's ledger lacks, keeping it in index order, and records
+    /// the anytime relic count once. The receipts action calls this identically on every replica.
+    /// A receipt whose index is already recorded keeps its first item id.
+    /// </summary>
+    internal static int RecordLedgerReceipts(
+        RunState runState,
+        ulong netId,
+        IEnumerable<ApLedgerReceipt> receipts,
+        int? relicRewardsAvailableAnytime)
+    {
+        if (!_initialized || !_players.TryGet(runState, netId, out ApPlayerRunState state))
+            return 0;
+        int appended = 0;
+        foreach (ApLedgerReceipt receipt in receipts)
+        {
+            if (receipt.Index <= 0 || ArchipelagoIdCodec.IsArchipelagoReservedId(receipt.ItemId))
+                continue;
+            List<ApLedgerReceipt> ledger = state.ReceiptLedger;
+            if (ledger.Count == 0 || ledger[^1].Index < receipt.Index)
+            {
+                ledger.Add(new ApLedgerReceipt { Index = receipt.Index, ItemId = receipt.ItemId });
+                appended++;
+                continue;
+            }
+            int position = ledger.BinarySearch(receipt, LedgerOrder);
+            if (position >= 0)
+                continue;
+            ledger.Insert(~position, new ApLedgerReceipt { Index = receipt.Index, ItemId = receipt.ItemId });
+            appended++;
+        }
+        state.RelicRewardsAvailableAnytime ??= relicRewardsAvailableAnytime;
+        _players.Set(runState, netId, state);
+        return appended;
+    }
+
+    /// <summary>
+    /// Records campfire checks a player's rest sites no longer offer. Rest-site options and the
+    /// receipts action call this identically on every replica.
+    /// </summary>
+    internal static int RecordCampfireChecks(RunState runState, ulong netId, IEnumerable<long> locationIds)
+    {
+        if (!_initialized || !_players.TryGet(runState, netId, out ApPlayerRunState state))
+            return 0;
+        int added = locationIds.Count(state.CheckedCampfireLocationIds.Add);
+        if (added > 0)
+            _players.Set(runState, netId, state);
+        return added;
+    }
+
+    /// <summary>
+    /// Raises a player's natural relic reward count. Natural relic decisions call this
+    /// identically on every replica (RelicReceiptMultiplayer).
+    /// </summary>
+    internal static void RecordRelicRewardsAttempted(RunState runState, ulong netId, int attempted)
+    {
+        if (!_initialized || !_players.TryGet(runState, netId, out ApPlayerRunState state))
+            return;
+        state.RelicRewardsAttempted = Math.Max(state.RelicRewardsAttempted ?? 0, attempted);
+        _players.Set(runState, netId, state);
+    }
+
+    private static readonly IComparer<ApLedgerReceipt> LedgerOrder =
+        Comparer<ApLedgerReceipt>.Create((left, right) => left.Index.CompareTo(right.Index));
 
     /// <summary>
     /// Commits a managed action's per-player starter recipe to canonical run data. Managed
@@ -362,36 +480,33 @@ public static class ApRunData
     }
 
     /// <summary>
-    /// Replaces the process-local AP view with the fixed host's checkpoint for this player. The
-    /// restored snapshot is also the baseline for later deltas; when no initialized progress
-    /// exists, the caller initializes a fresh view and its first publication is a full snapshot.
+    /// Replaces the process-local AP view with the fixed host's checkpoint for this player. When
+    /// no initialized progress exists, the caller initializes a fresh view.
     /// </summary>
     public static bool RestoreLocalProgress(Player player)
     {
-        _localProgressRevision = 0;
         _lastPublishedLocalProgress = null;
         if (!_initialized)
             return false;
         if (player.RunState is not RunState runState
-            || !_players.TryGet(runState, player.NetId, out ApPlayerRunState state))
+            || !_players.TryGet(runState, player.NetId, out ApPlayerRunState state)
+            || !state.Progress.Initialized)
+        {
             return false;
+        }
 
-        _localProgressRevision = state.ProgressRevision;
-        if (!state.Progress.Initialized)
-            return false;
-
-        EnsureConstructionInitialized(state, state.Progress);
-        RelicReceiptMultiplayer.ReconcileProgress(runState, player, state.Progress);
         ArchipelagoClient.Progress = ArchipelagoProgress.FromRunProgressState(state.Progress, player);
-        _lastPublishedLocalProgress = ArchipelagoClient.Progress.ToRunProgressState();
+        _lastPublishedLocalProgress = SerializeProgress(ArchipelagoClient.Progress.ToRunProgressState());
         return true;
     }
 
     /// <summary>
-    /// Publishes the local owner's complete progress once, then only the fields changed since the
-    /// preceding revision. The host relays accepted revisions so every replica can deterministically
-    /// construct owner-specific native state; concrete gameplay effects still travel through
-    /// MegaCrit's synchronizers.
+    /// Sends the local owner's complete AP progress to the host whenever it changed, as one Sidecar
+    /// sync message; the host keeps it in the run's save, the checkpoint that restores this owner's AP
+    /// view on continue or rejoin (the rejoin response carries it back). No other peer reads it:
+    /// they build this player's AP state from action-owned run state (the receipt ledger, queued
+    /// claims, natural relic decisions). A late-run snapshot is a few kilobytes, so there is no
+    /// delta chain; messages arrive in order and the newest wins.
     /// </summary>
     public static bool PublishLocalProgress(Player player)
     {
@@ -399,97 +514,42 @@ public static class ApRunData
             return true;
         if (player.RunState is not RunState runState
             || !_players.TryGet(runState, player.NetId, out ApPlayerRunState state)
-            || state.Participation == ApParticipationKind.VanillaGuest)
+            || state.Participation == ApParticipationKind.VanillaGuest
+            || !_sharedRun.TryGet(runState, out ApRunSharedState shared))
         {
             return false;
         }
 
         ApRunProgressState snapshot = ArchipelagoClient.Progress.ToRunProgressState();
-        EnsureConstructionInitialized(state, snapshot);
-        ApProgressDelta? delta = _lastPublishedLocalProgress == null
-            ? null
-            : ApProgressDelta.Between(_lastPublishedLocalProgress, snapshot);
-        if (delta is { HasChanges: false })
+        byte[] serialized = SerializeProgress(snapshot);
+        if (_lastPublishedLocalProgress != null && serialized.AsSpan().SequenceEqual(_lastPublishedLocalProgress))
             return true;
 
-        if (_lastPublishedLocalProgress != null
-            && state.ProgressRevision != _localProgressRevision)
+        if (RunManager.Instance.NetService.Type != NetGameType.Host
+            && !RitsuLibSidecarSyncMessages.SendToHost(
+                RunManager.Instance,
+                ProgressCheckpoint,
+                new ApProgressCheckpointMessage
+                {
+                    RunId = shared.RunId,
+                    OwnerNetId = player.NetId,
+                    Progress = snapshot,
+                }))
         {
-            LogUtility.Error(
-                $"Cannot publish AP progress for {player.NetId}: local revision "
-                    + $"{_localProgressRevision} does not match run data {state.ProgressRevision}"
-            );
             return false;
         }
-
-        long baseRevision = state.ProgressRevision;
-        long revision = baseRevision + 1;
-        if (!_sharedRun.TryGet(runState, out ApRunSharedState shared))
-            return false;
-
-        var snapshotMessage = new ApProgressSnapshotMessage
-        {
-            RunId = shared.RunId,
-            OwnerNetId = player.NetId,
-            Revision = revision,
-            Progress = snapshot,
-        };
-        var deltaMessage = delta == null
-            ? null
-            : new ApProgressDeltaMessage
-            {
-                RunId = shared.RunId,
-                OwnerNetId = player.NetId,
-                BaseRevision = baseRevision,
-                Revision = revision,
-                Delta = delta,
-            };
-        bool sent = true;
-        if (RunManager.Instance.NetService.Type != NetGameType.Host)
-        {
-            // The first publication establishes a complete baseline. Every later message is a
-            // small ordered patch, so saved reward assignments are not resent after each check.
-            sent = delta == null
-                ? RitsuLibSidecarTypedMessageRegistry.SendToHost(
-                    RunManager.Instance,
-                    ProgressSnapshotDescriptor,
-                    snapshotMessage
-                )
-                : RitsuLibSidecarTypedMessageRegistry.SendToHost(
-                    RunManager.Instance,
-                    ProgressDeltaDescriptor,
-                    deltaMessage!
-                );
-        }
-
-        if (!sent)
-            return false;
 
         state.Progress = snapshot;
-        state.ProgressRevision = revision;
         _players.Set(runState, player.NetId, state);
-        _localProgressRevision = revision;
-        _lastPublishedLocalProgress = snapshot;
-        StandardRelicPool.ReserveAssignedChoices(player, snapshot);
-        if (RunManager.Instance.NetService.Type == NetGameType.Host)
-        {
-            if (!BroadcastHostConfirmedProgress(snapshotMessage, deltaMessage))
-                return false;
-            AncientMultiplayer.ConfirmProgress(runState, player.NetId, revision, snapshot);
-        }
+        _lastPublishedLocalProgress = serialized;
         return true;
     }
 
-    public static bool IsReceiptUsed(RunState runState, ulong netId, int receivedItemIndex) =>
-        _players.TryGet(runState, netId, out ApPlayerRunState state)
-        && state.Progress.UsedItems.Contains(receivedItemIndex);
+    private static byte[] SerializeProgress(ApRunProgressState progress) =>
+        JsonSerializer.SerializeToUtf8Bytes(progress);
 
     /// <summary>Forgets the local publication baseline; host-carried run data is untouched.</summary>
-    public static void EndRun()
-    {
-        _localProgressRevision = 0;
-        _lastPublishedLocalProgress = null;
-    }
+    public static void EndRun() => _lastPublishedLocalProgress = null;
 
     public static void CaptureLocalHostProgressBeforeSave()
     {
@@ -499,176 +559,58 @@ public static class ApRunData
         Player? localPlayer = runState?.GetPlayer(RunManager.Instance.NetService.NetId);
         if (localPlayer != null)
             PublishLocalProgress(localPlayer);
-        if (runState != null)
-            foreach (Player player in runState.Players)
-                if (_players.TryGet(runState, player.NetId, out ApPlayerRunState state) && state.Progress.Initialized)
-                {
-                    RelicReceiptMultiplayer.ReconcileProgress(runState, player, state.Progress);
-                    _players.Set(runState, player.NetId, state);
-                }
     }
 
     /// <summary>
-    /// Accepts a client's initial full view. Full snapshots are uncommon recovery/binding
-    /// boundaries; normal mutations arrive through <see cref="OnProgressDeltaReceived"/>.
+    /// Host: stores a client's AP progress as that client's checkpoint. Only the owner may send
+    /// its own: on the host, the sender is the peer the packet came from. Messages keep their
+    /// order, so the newest snapshot wins.
     /// </summary>
-    private static void OnProgressSnapshotReceived(
-        RitsuLibSidecarTypedDispatchContext<ApProgressSnapshotMessage> context)
+    private static Task OnProgressCheckpointReceived(
+        RitsuLibSidecarSyncMessageContext<ApProgressCheckpointMessage> context)
     {
-        bool isHost = RunManager.Instance.NetService.Type == NetGameType.Host;
-        if (isHost && context.SenderNetId != context.Message.OwnerNetId)
+        if (!context.IsHostIngest || RunManager.Instance.NetService.Type != NetGameType.Host)
+            return Task.CompletedTask;
+        ApProgressCheckpointMessage message = context.Message;
+        if (context.SenderNetId != message.OwnerNetId)
         {
-            LogUtility.Error("Rejected incorrectly owned AP progress snapshot.");
-            return;
+            LogUtility.Error($"Rejected AP progress for {message.OwnerNetId} sent by {context.SenderNetId}.");
+            return Task.CompletedTask;
         }
-        if (!isHost && !IsMessageFromHost(context.SenderNetId))
+        if (!message.Progress.Initialized
+            || !TryGetProgressOwner(message.RunId, message.OwnerNetId, out RunState runState, out ApPlayerRunState state))
         {
-            LogUtility.Error("Rejected AP progress snapshot from a non-host peer.");
-            return;
+            return Task.CompletedTask;
         }
 
-        bool posted = RitsuLibSidecarGodotMainLoopScheduling.TryPostToMainLoop(() =>
-        {
-            if (!TryGetProgressOwner(
-                    context.Message.RunId,
-                    context.Message.OwnerNetId,
-                    out RunState runState,
-                    out ApPlayerRunState state)
-                || !context.Message.Progress.Initialized)
-            {
-                return;
-            }
-
-            if (context.Message.Revision <= state.ProgressRevision)
-            {
-                if (!isHost && context.Message.Revision == state.ProgressRevision)
-                {
-                    if (runState.GetPlayer(context.Message.OwnerNetId) is Player existingOwner)
-                        StandardRelicPool.ReserveAssignedChoices(existingOwner, state.Progress);
-                    AncientMultiplayer.ConfirmProgress(
-                        runState,
-                        context.Message.OwnerNetId,
-                        context.Message.Revision,
-                        context.Message.Progress
-                    );
-                }
-                return;
-            }
-
-            EnsureConstructionInitialized(state, context.Message.Progress);
-            state.Progress = context.Message.Progress;
-            if (runState.GetPlayer(context.Message.OwnerNetId) is Player snapshotOwner)
-                RelicReceiptMultiplayer.ReconcileProgress(runState, snapshotOwner, state.Progress);
-            state.ProgressRevision = context.Message.Revision;
-            _players.Set(runState, context.Message.OwnerNetId, state);
-            if (runState.GetPlayer(context.Message.OwnerNetId) is Player confirmedOwner)
-                StandardRelicPool.ReserveAssignedChoices(confirmedOwner, state.Progress);
-            if (isHost)
-            {
-                if (!BroadcastHostConfirmedProgress(context.Message, deltaMessage: null))
-                    return;
-            }
-            AncientMultiplayer.ConfirmProgress(
-                runState,
-                context.Message.OwnerNetId,
-                context.Message.Revision,
-                state.Progress
-            );
-        });
-        if (!posted)
-            LogUtility.Error("Could not schedule the AP progress snapshot on the game main loop.");
+        state.Progress = message.Progress;
+        _players.Set(runState, message.OwnerNetId, state);
+        return Task.CompletedTask;
     }
 
     /// <summary>
-    /// Applies one client mutation only to the exact baseline it was created from. Sidecar's
-    /// stable ordered delivery should make revisions contiguous; a gap is rejected because
-    /// applying a delta to a different snapshot could resurrect or duplicate a reward.
+    /// Every peer, at a run's launch: starts each AP player's reward-construction counters from
+    /// the run's saved state, the same on every peer: the saved counters, else the progress the
+    /// host saved for the player, else zero for a new run. From then on only construction on
+    /// this replica advances them, so no peer needs the owner's published progress.
     /// </summary>
-    private static void OnProgressDeltaReceived(
-        RitsuLibSidecarTypedDispatchContext<ApProgressDeltaMessage> context)
+    public static void BindConstruction(RunState runState)
     {
-        bool isHost = RunManager.Instance.NetService.Type == NetGameType.Host;
-        if (isHost && context.SenderNetId != context.Message.OwnerNetId)
-        {
-            LogUtility.Error("Rejected incorrectly owned AP progress delta.");
+        if (!_initialized)
             return;
-        }
-        if (!isHost && !IsMessageFromHost(context.SenderNetId))
+        foreach (Player player in runState.Players)
         {
-            LogUtility.Error("Rejected AP progress delta from a non-host peer.");
-            return;
-        }
-
-        bool posted = RitsuLibSidecarGodotMainLoopScheduling.TryPostToMainLoop(() =>
-        {
-            if (!TryGetProgressOwner(
-                    context.Message.RunId,
-                    context.Message.OwnerNetId,
-                    out RunState runState,
-                    out ApPlayerRunState state))
+            if (!_players.TryGet(runState, player.NetId, out ApPlayerRunState state)
+                || state.Participation == ApParticipationKind.VanillaGuest)
             {
-                return;
+                continue;
             }
-            if (context.Message.Revision <= state.ProgressRevision)
-            {
-                if (!isHost && context.Message.Revision == state.ProgressRevision)
-                {
-                    if (runState.GetPlayer(context.Message.OwnerNetId) is Player existingOwner)
-                        StandardRelicPool.ReserveAssignedChoices(existingOwner, state.Progress);
-                    AncientMultiplayer.ConfirmProgress(
-                        runState,
-                        context.Message.OwnerNetId,
-                        context.Message.Revision,
-                        state.Progress
-                    );
-                }
-                return;
-            }
-            
-            // only can do 1 base revision difference, maybe we could repair a missing baseline 
-            // i.e. support differences of more than 1 revision in the future?
-            if (!state.Progress.Initialized
-                || !context.Message.Delta.HasChanges
-                || context.Message.BaseRevision != state.ProgressRevision
-                || context.Message.Revision != context.Message.BaseRevision + 1)
-            {
-                LogUtility.Error(
-                    $"Rejected AP progress delta for {context.Message.OwnerNetId}: "
-                        + $"hostRevision={state.ProgressRevision}, "
-                        + $"baseRevision={context.Message.BaseRevision}, "
-                        + $"revision={context.Message.Revision}"
-                );
-                return;
-            }
-
-            EnsureConstructionInitialized(state, state.Progress);
-            ApRunProgressState updatedProgress = context.Message.Delta.ApplyToCopy(state.Progress);
-            state.Progress = updatedProgress;
-            if (runState.GetPlayer(context.Message.OwnerNetId) is Player deltaOwner)
-                RelicReceiptMultiplayer.ReconcileProgress(runState, deltaOwner, state.Progress);
-            state.ProgressRevision = context.Message.Revision;
-            _players.Set(runState, context.Message.OwnerNetId, state);
-            if (runState.GetPlayer(context.Message.OwnerNetId) is Player confirmedOwner)
-                StandardRelicPool.ReserveAssignedChoices(confirmedOwner, state.Progress);
-            if (isHost)
-            {
-                if (!BroadcastHostConfirmedProgress(
-                        snapshotMessage: null,
-                        deltaMessage: context.Message
-                    ))
-                {
-                    return;
-                }
-            }
-            AncientMultiplayer.ConfirmProgress(
-                runState,
-                context.Message.OwnerNetId,
-                context.Message.Revision,
-                state.Progress
+            EnsureConstructionInitialized(
+                state,
+                state.Progress.Initialized ? state.Progress : new ApRunProgressState()
             );
-        });
-        if (!posted)
-            LogUtility.Error("Could not schedule the AP progress delta on the game main loop.");
+            _players.Set(runState, player.NetId, state);
+        }
     }
 
     internal static ApReplicaConstructionState EnsureConstructionInitialized(
@@ -705,38 +647,6 @@ public static class ApRunData
 
         runState = currentRun;
         return true;
-    }
-
-    private static bool IsMessageFromHost(ulong senderNetId) =>
-        MultiplayerSupport.TryGetHostNetId(
-            RunManager.Instance.NetService,
-            out ulong hostNetId
-        ) && senderNetId == hostNetId;
-
-    // maybe these can be in a shared union (if only unions existed in C#)
-    private static bool BroadcastHostConfirmedProgress(
-        ApProgressSnapshotMessage? snapshotMessage,
-        ApProgressDeltaMessage? deltaMessage)
-    {
-        bool sent = snapshotMessage != null
-            ? RitsuLibSidecarTypedMessageRegistry.Broadcast(
-                RunManager.Instance.NetService,
-                ProgressSnapshotDescriptor,
-                snapshotMessage
-            )
-            : deltaMessage != null
-                && RitsuLibSidecarTypedMessageRegistry.Broadcast(
-                    RunManager.Instance.NetService,
-                    ProgressDeltaDescriptor,
-                    deltaMessage
-                );
-        if (!sent)
-        {
-            LogUtility.Error(
-                "Could not broadcast host-confirmed AP progress to multiplayer peers."
-            );
-        }
-        return sent;
     }
 
     private static void EnsureLobbyRunId(StartRunLobby lobby)
@@ -843,21 +753,10 @@ public static class ApRunData
         && (left.SlotSettings == null) == (right.SlotSettings == null)
         && left.SlotSettings?.AncientRelicLocation == right.SlotSettings?.AncientRelicLocation
         && left.SlotSettings?.AncientRelicPool == right.SlotSettings?.AncientRelicPool
-        && RelicReceiptMapsEqual(
-            left.InitialRelicReceiptIndexesByCharacter,
-            right.InitialRelicReceiptIndexesByCharacter)
         && CountMapsEqual(
             left.InitialProgressiveAncientsByCharacter,
             right.InitialProgressiveAncientsByCharacter)
         && left.ReceiptSourceReady == right.ReceiptSourceReady;
-
-    private static bool RelicReceiptMapsEqual(
-        IReadOnlyDictionary<long, List<int>> left,
-        IReadOnlyDictionary<long, List<int>> right) =>
-        left.Count == right.Count
-        && left.All(pair =>
-            right.TryGetValue(pair.Key, out List<int>? values)
-            && pair.Value.SequenceEqual(values));
 
     private static bool CountMapsEqual(
         IReadOnlyDictionary<long, int> left,

@@ -29,10 +29,10 @@ public static class ArchipelagoRewardUI
         "Multiplayer AP rewards can only be claimed outside combat.";
     private const string NativeChoiceBlockedMessage =
         "Finish the current card or relic selection before opening AP rewards.";
-    private const string TreasureRoomBlockedMessage =
-        "Wait until every player is ready to proceed before opening AP rewards.";
     private const string TravelBlockedMessage =
         "AP rewards are unavailable while traveling to another room.";
+    internal const string PendingClaimMessage =
+        "Wait for your AP reward to finish first.";
 
     private enum ReturnDestination
     {
@@ -50,13 +50,16 @@ public static class ArchipelagoRewardUI
     private static readonly Color LockedCardRewardModulate = new(1f, 1f, 1f, 0.4f);
 
     private static readonly Dictionary<RewardsSet, NativeMenuSession> Sessions = new();
-    private static readonly ApRewardTravelGuard Travel = new();
 
     private static NRewardsScreen? _screen;
     private static RewardsSet? _set;
     private static bool _opening;
     private static bool _closing;
     private static bool _hotkeysRegistered;
+    // Multiplayer map travel, from its start until its room is entered. The menu closes as travel
+    // starts and stays closed until then; claims themselves are queued actions, ordered against
+    // the move either way.
+    private static bool _traveling;
     private static ReturnDestination _returnDestination;
 
     public static Action? OnScreenClosed;
@@ -67,17 +70,17 @@ public static class ArchipelagoRewardUI
     internal static bool IsActive =>
         _screen != null && IsOpen && ActiveScreenContext.Instance.IsCurrent(_screen);
 
-    internal static int ApLifecycleVersion => Travel.ApLifecycleVersion;
-
     private static bool IsTravelBlocked => MultiplayerSupport.IsRealMultiplayerRun
-        && !Travel.CanOpen(Travel.ApLifecycleVersion, RunManager.Instance.NetService.IsGameLoading);
+        && (_traveling || RunManager.Instance.NetService.IsGameLoading);
 
-    internal static int? BeginTravel()
+    /// <summary>Closes the menu as multiplayer map travel starts. False in singleplayer.</summary>
+    internal static bool BeginTravel()
     {
         if (!MultiplayerSupport.IsRealMultiplayerRun)
-            return null;
+            return false;
 
-        int apLifecycleVersion = Travel.BeginTravel();
+        _traveling = true;
+        // An opening still in progress is abandoned (see CanBuildMenuAfterAwait).
         _opening = false;
         _returnDestination = ReturnDestination.Room;
         try
@@ -109,10 +112,10 @@ public static class ArchipelagoRewardUI
             // Keep the input gate closed, but let the base game's travel/cleanup continue.
             LogUtility.Error($"Could not close AP rewards at travel start: {ex}");
         }
-        return apLifecycleVersion;
+        return true;
     }
 
-    internal static void EndTravel(int apLifecycleVersion) => Travel.EndTravel(apLifecycleVersion);
+    internal static void EndTravel() => _traveling = false;
 
     public static void Toggle()
     {
@@ -140,25 +143,27 @@ public static class ArchipelagoRewardUI
     {
         if (IsOpen || _opening)
             return;
-        if (TryBlockTravel() || TryBlockMultiplayerCombatOpen()
-            || TryBlockTreasureRoomOpen() || TryBlockNativeChoiceOpen())
+        if (TryBlockTravel() || TryBlockMultiplayerCombatOpen() || TryBlockNativeChoiceOpen())
             return;
 
         _opening = true;
-        int apLifecycleVersion = Travel.ApLifecycleVersion;
         Callable.From(() =>
         {
-            TaskHelper.RunSafely(OpenOnMainThread(apLifecycleVersion));
+            TaskHelper.RunSafely(OpenOnMainThread());
         }).CallDeferred();
     }
 
-    internal static bool CanBuildMenuAfterAwait(int apLifecycleVersion) =>
-        Travel.CanOpen(apLifecycleVersion, RunManager.Instance.NetService.IsGameLoading)
+    /// <summary>
+    /// Whether a multiplayer menu may still open after awaiting its relic assignments: travel or
+    /// leaving the run since it started abandons the opening.
+    /// </summary>
+    internal static bool CanBuildMenuAfterAwait() =>
+        _opening
+        && !IsTravelBlocked
         && !TryBlockMultiplayerCombatOpen()
-        && !TryBlockTreasureRoomOpen()
         && !TryBlockNativeChoiceOpen();
 
-    private static async Task OpenOnMainThread(int apLifecycleVersion)
+    private static async Task OpenOnMainThread()
     {
         bool opened = false;
         bool destinationPrepared = false;
@@ -166,11 +171,10 @@ public static class ArchipelagoRewardUI
         {
             if (IsOpen)
                 return;
-            // ShowRewards is deferred, so combat or a native choice can begin after the click-time
-            // guard. Repeat both checks before OpenMenu creates a synchronized RewardsSet.
-            if (apLifecycleVersion != Travel.ApLifecycleVersion || TryBlockTravel()
+            // ShowRewards is deferred, so travel, combat or a native choice can begin after the
+            // click-time guard; travel and leaving the run also clear _opening. Check again.
+            if (!_opening || TryBlockTravel()
                 || TryBlockMultiplayerCombatOpen()
-                || TryBlockTreasureRoomOpen()
                 || TryBlockNativeChoiceOpen())
                 return;
             PrepareForOpen();
@@ -183,10 +187,9 @@ public static class ArchipelagoRewardUI
         }
         finally
         {
-            if (apLifecycleVersion == Travel.ApLifecycleVersion && destinationPrepared && !opened && !IsOpen)
+            if (_opening && destinationPrepared && !opened && !IsOpen)
                 RestoreDestination(_returnDestination);
-            if (apLifecycleVersion == Travel.ApLifecycleVersion)
-                _opening = false;
+            _opening = false;
         }
     }
 
@@ -269,7 +272,7 @@ public static class ArchipelagoRewardUI
 
     public static void RemoveUI()
     {
-        Travel.Reset();
+        _traveling = false;
         UnregisterHotkeys();
         NRewardsScreen? screen = _screen;
         // Clear AP's return destination before native close callbacks run. Teardown must
@@ -300,6 +303,22 @@ public static class ArchipelagoRewardUI
 
     internal static bool IsApRewardSet(RewardsSet set) => Sessions.ContainsKey(set);
 
+    /// <summary>
+    /// Whether a set is a multiplayer AP menu: this player's alone, never begun on the reward-set
+    /// synchronizer, its rows claiming through queued actions.
+    /// </summary>
+    internal static bool IsOwnerLocalSet(RewardsSet set) =>
+        MultiplayerSupport.IsRealMultiplayerRun
+        && Sessions.TryGetValue(set, out NativeMenuSession? session)
+        && !session.Synchronized;
+
+    /// <summary>Whether a reward row belongs to the open owner-local multiplayer AP menu.</summary>
+    internal static bool IsOwnerLocalReward(Reward reward) =>
+        reward is ApMirroredRewardDispatcher.IApNativeReward
+        && IsOpen
+        && _set != null
+        && IsOwnerLocalSet(_set);
+
     internal static bool ShouldKeepEmptyScreenOpen(RewardsSet set) =>
         Sessions.TryGetValue(set, out NativeMenuSession? session) && session.InitiallyEmpty;
 
@@ -310,7 +329,7 @@ public static class ArchipelagoRewardUI
     internal static bool CanSelectNativeReward(NRewardButton button)
     {
         if (button.Reward is not ApMirroredRewardDispatcher.IApNativeReward reward)
-            return true;
+            return !TryBlockNativeChoiceWhileClaimPending();
         if (TryBlockTravel())
             return false;
         if (reward.CanClaim(out string reason))
@@ -347,6 +366,21 @@ public static class ArchipelagoRewardUI
     {
         if (button.Reward is ApMirroredRewardDispatcher.ApNativeCardReward card)
             button.Modulate = card.IsLockedByAnotherReveal() ? LockedCardRewardModulate : Colors.White;
+    }
+
+    /// <summary>
+    /// Refuses a native choice while this player has a queued AP claim requested but not yet
+    /// executed here. A card claim, or a relic that asks for a card when obtained, reserves choice
+    /// ids inside its action, while a native reward pick, rest-site option, event option or shop
+    /// purchase reserves them when its message arrives. Until the claim has executed, other peers
+    /// could reserve the two in a different order and match a pick to the wrong choice.
+    /// </summary>
+    internal static bool TryBlockNativeChoiceWhileClaimPending()
+    {
+        if (!MultiplayerSupport.IsRealMultiplayerRun || !ApQueuedClaims.HasPendingOwnerClaims)
+            return false;
+        ShowBlockedMessage(PendingClaimMessage, blockedByCombat: false, includeInDevConsole: false);
+        return true;
     }
 
     private static bool TryBlockMultiplayerCombatOpen()
@@ -388,28 +422,6 @@ public static class ArchipelagoRewardUI
         ShowBlockedMessage(
             NativeChoiceBlockedMessage,
             blockedByCombat: false,
-            includeInDevConsole: false
-        );
-        return true;
-    }
-
-    private static bool TryBlockTreasureRoomOpen()
-    {
-        if (!MultiplayerSupport.IsRealMultiplayerRun || NRun.Instance?.TreasureRoom == null)
-            return false;
-        if (RunManager.Instance.DebugOnlyGetState() is RunState run
-            && RelicReceiptMultiplayer.IsTreasureProceedReadyForApMenu(run))
-        {
-            return false;
-        }
-
-        // TreasureRoom.DoExtraRewardsIfNeeded constructs one native RewardsSet per player.
-        // Different replicas can reach that construction several seconds apart, so inserting
-        // an AP RewardsSet anywhere in this room can give the same set ID different meanings.
-        ShowBlockedMessage(
-            TreasureRoomBlockedMessage,
-            blockedByCombat: false,
-            emphasized: true,
             includeInDevConsole: false
         );
         return true;
@@ -494,11 +506,13 @@ public static class ArchipelagoRewardUI
             return false;
         }
 
-        // Match the exact screen held by an AP card reward, not just an arbitrary top overlay.
+        // Match the exact screen held by an AP card reward, not just an arbitrary top overlay. A
+        // queued card claim's picker belongs to its action's reward, not to a menu row.
         foreach (CardReward reward in _set.Rewards.OfType<CardReward>())
             if (TrySkipCardRewardSelection(reward, picker))
                 return true;
-        return false;
+        return ApQueuedCardClaims.OwnerPickerReward is { } queued
+            && TrySkipCardRewardSelection(queued, picker);
     }
 
     private static bool TrySkipCardRewardSelection(CardReward reward, NCardRewardSelectionScreen picker)

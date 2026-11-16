@@ -27,6 +27,7 @@ namespace StS2AP.Patches
         /// <summary>
         /// Adds the numbered AP check for one native Elite or Black Star relic. A waiting receipt
         /// keeps that exact reward; otherwise the reward is removed and its earned bank remains.
+        /// Multiplayer takes the receipt its peers reserved when the combat ended.
         /// </summary>
         private static void ProcessNativeRelicReward(
             List<Reward> rewards,
@@ -34,6 +35,20 @@ namespace StS2AP.Patches
             Player player
         )
         {
+            if (MultiplayerSupport.IsRealMultiplayerRun)
+            {
+                if (!RelicReceiptMultiplayer.TryTakeEliteReward(player, out int number, out int? receiptIndex))
+                    return;
+                rewards.Add(new ArchipelagoReward(
+                    player,
+                    LocationData.GetRelicLocation(player, number),
+                    $"{player.APName()} Relic {number}"
+                ));
+                if (receiptIndex == null)
+                    rewards.Remove(relicReward);
+                return;
+            }
+
             if (!RelicRewardUtility.RecordEligibleReward(player, out var rewardNumber))
                 return;
 
@@ -221,29 +236,16 @@ namespace StS2AP.Patches
 
                 if (MultiplayerSupport.IsRealMultiplayerRun)
                 {
+                    // Room entry decided the chest and took its receipt; opening it sends the check.
                     var run = (RunState)player.RunState;
                     var candidate = RelicReceiptMultiplayer.GetChest(run).Candidates
                         .Single(c => c.PlayerNetId == player.NetId);
-                    if (!candidate.GeneratesRelic
-                        || !RelicReceiptMultiplayer.MarkChestOpened(run, player.NetId))
+                    if (!candidate.ApGated)
                         return;
-                    RelicRewardUtility.RecordFrozenChestReward(player, candidate.RewardNumber);
-                    if (!candidate.ApGated) return;
                     MultiplayerLocationChecks.QueueCheck(
                         player,
                         $"{player.APName()} Relic {candidate.RewardNumber}",
                         LocationData.GetRelicLocation(player, candidate.RewardNumber));
-                    if (candidate.ReceiptIndex is int receiptIndex)
-                    {
-                        if (!RelicRewardUtility.TryConsumeWaitingReceiptForNaturalReward(player, receiptIndex))
-                        {
-                            MultiplayerSupport.InvalidateRunClaims("Frozen chest receipt could not be consumed.");
-                            throw new InvalidOperationException($"Chest receipt {player.NetId}:{receiptIndex} could not be consumed.");
-                        }
-                        RelicReceiptMultiplayer.ConsumeChest(player, receiptIndex);
-                    }
-                    LogUtility.Info($"Treasure AP receipt settled: room={RelicReceiptMultiplayer.RoomKey(run)}, "
-                        + $"player={player.NetId}, reward={candidate.RewardNumber}, receipt={candidate.ReceiptIndex}.");
                     return;
                 }
 
@@ -309,7 +311,7 @@ namespace StS2AP.Patches
 
         /// <summary>
         /// Singleplayer gates its native picker directly. Multiplayer rolls the native candidates
-        /// on every peer, then applies the host's frozen receipt mask before the chest can open.
+        /// on every peer, then applies the room-entry chest decision before the chest can open.
         /// </summary>
         [HarmonyPatch(
             typeof(TreasureRoomRelicSynchronizer),
@@ -330,7 +332,7 @@ namespace StS2AP.Patches
 
                 // Multiplayer's picker is shared. Let the base game build its deterministic
                 // player-ordered candidates, then remove only the candidates whose AP source
-                // was excluded by the host's entry-time decision in the postfix below.
+                // was excluded by the entry-time decision in the postfix below.
                 if (MultiplayerSupport.IsRealMultiplayerRun)
                 {
                     RelicReceiptMultiplayer.GetChest(RunManager.Instance.DebugOnlyGetState()
@@ -382,11 +384,11 @@ namespace StS2AP.Patches
                     || decision.Candidates.Where((c, i) =>
                         c.GeneratesRelic != Hook.ShouldGenerateTreasure(runState, runState.Players[i])).Any())
                 {
-                    MultiplayerSupport.InvalidateRunClaims("Native treasure candidates differ from the host decision.");
-                    throw new InvalidOperationException("Native treasure candidates differ from the host decision.");
+                    MultiplayerSupport.InvalidateRunClaims("Native treasure candidates differ from the AP chest decision.");
+                    throw new InvalidOperationException("Native treasure candidates differ from the AP chest decision.");
                 }
                 // Every replica rolls every native candidate with MegaCrit's synchronized RNG and
-                // shared bag state. Filter only by the immutable host receipt mask, never by this
+                // shared bag state. Filter only by the entry-time receipt mask, never by this
                 // peer's live AP history. Native multiplayer remains responsible for RNG agreement.
                 if (____currentRelics != null)
                     for (int i = generated.Count - 1; i >= 0; i--)
@@ -408,7 +410,6 @@ namespace StS2AP.Patches
                 // Do not complete an empty picker here. The native empty-chest animation calls
                 // CompleteWithNoRelics after the chest opens; completing it during room entry
                 // emits RelicsAwarded twice and completes the UI's TaskCompletionSource twice.
-                RelicReceiptMultiplayer.MarkPickerReady(runState);
             }
         }
 

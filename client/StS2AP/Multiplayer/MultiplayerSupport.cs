@@ -984,7 +984,7 @@ public static class MultiplayerSupport
         ApRunData.EndRun();
         ManagedActionRequestScheduler.EndRun();
         ApMirroredRewardDispatcher.EndRun();
-        RelicReceiptMultiplayer.EndRun();
+        ApQueuedClaims.EndRun();
         ProgressiveStarterMultiplayer.EndRun();
         AscensionMultiplayer.EndRun();
         AncientMultiplayer.EndRun();

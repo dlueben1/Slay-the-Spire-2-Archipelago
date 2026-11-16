@@ -181,9 +181,9 @@ namespace StS2AP.Models
         public AscensionManager Ascensions = new AscensionManager();
 
         /// <summary>
-        /// Returns the relic choices assigned to the given AP item. Singleplayer preserves the
-        /// native RelicFactory behavior. Multiplayer uses AP's stable selector so building a
-        /// mirrored reward recipe cannot advance only one replica's reward RNG or grab bags.
+        /// Returns the relic choices assigned to the given AP item, pulling them from the native
+        /// RelicFactory on first use (singleplayer). Multiplayer draws AP relics in a queued action
+        /// on every peer instead (ApQueuedRelicClaims).
         /// </summary>
         /// <param name="index">The index of the specific item sent from the Multiworld.</param>
         /// <param name="player">The current player, needed by RelicFactory.</param>
@@ -202,26 +202,9 @@ namespace StS2AP.Models
 
             try
             {
-                List<RelicModel> choices;
-                if (MultiplayerSupport.IsRealMultiplayerRun)
-                {
-                    var reservedRelicIds = RelicChoiceAssignments.Values
-                        .SelectMany(assignment => assignment)
-                        .Select(relic => relic.Id)
-                        .ToHashSet();
-                    choices = StandardRelicPool.CreateChoices(
-                        player,
-                        $"{player.NetId}:{index}",
-                        choiceCount,
-                        reservedRelicIds
-                    ).ToList();
-                }
-                else
-                {
-                    choices = Enumerable.Range(0, choiceCount)
-                        .Select(_ => GameApiCompat.PullNextRewardRelic(player))
-                        .ToList();
-                }
+                List<RelicModel> choices = Enumerable.Range(0, choiceCount)
+                    .Select(_ => GameApiCompat.PullNextRewardRelic(player))
+                    .ToList();
                 RelicChoiceAssignments[index] = choices;
                 LogUtility.Info(
                     $"Pre-assigned relic choices for item w/ index {index}: " +
@@ -240,10 +223,7 @@ namespace StS2AP.Models
         /// Returns the three Ancient relics assigned to a Progressive Ancient, creating the deterministic
         /// assignment on first use. An empty list indicates that a valid three-relic pool could not be built.
         /// </summary>
-        public IReadOnlyList<RelicModel> GetOrAssignAncientRelicChoices(
-            int index,
-            Player player,
-            string? stableChoiceKey = null)
+        public IReadOnlyList<RelicModel> GetOrAssignAncientRelicChoices(int index, Player player)
         {
             if (AncientRelicChoiceAssignments.TryGetValue(index, out var existing))
                 return existing;
@@ -252,11 +232,30 @@ namespace StS2AP.Models
                 .SelectMany(assignment => assignment)
                 .Select(relic => relic.Id)
                 .ToHashSet();
-            
+            if (!TryGetAncientDrawRequest(index, player, stableChoiceKey: null, out var request))
+                return Array.Empty<RelicModel>();
+
+            var choices = DrawAncientChoices(player, request, reservedRelicIds);
+            if (choices.Count != AncientRelicPool.ChoiceCount)
+                return Array.Empty<RelicModel>();
+
+            AncientRelicChoiceAssignments[index] = choices.ToList();
+            return choices;
+        }
+
+        /// <summary>
+        /// Works out from this player's AP receipts and settings which Ancient pool a Progressive
+        /// Ancient draws its three choices from. False for a receipt with no claimable Ancient.
+        /// </summary>
+        public bool TryGetAncientDrawRequest(
+            int index,
+            Player player,
+            string? stableChoiceKey,
+            out ApAncientAssignmentRequest request)
+        {
             // AllReceivedItems contains multiple reward types, so restrict it to this
             // character's Progressive Ancients. ArchipelagoClient adds these entries only for
-            // Anytime mode. Sorting them by AP item index maps their ordinals to Neow/Act 2/Act 3
-            // when Neow Sanity is enabled, or Act 2/Act 3 otherwise.
+            // Anytime mode.
             var characterOffset = player.GetAPCharacterNumber();
             var orderedAncientItemIndices = AllReceivedItems
                 .Where(item => item.Item.GetAPCharacterNumber() == characterOffset &&
@@ -264,16 +263,39 @@ namespace StS2AP.Models
                 .OrderBy(item => item.Index)
                 .Select(item => item.Index)
                 .ToList();
+            return TryCreateAncientDrawRequest(
+                index,
+                orderedAncientItemIndices,
+                ArchipelagoClient.Settings?.NeowSanity ?? false,
+                AncientSettingsUtility.Current.Pool,
+                stableChoiceKey ?? index.ToString(),
+                out request
+            );
+        }
 
-            // This is the item's zero-based position in the ordered list above, not its AP item index.
-            var rewardOrdinal = orderedAncientItemIndices.IndexOf(index);
-            var includesNeowReward = ArchipelagoClient.Settings?.NeowSanity ?? false;
+        /// <summary>
+        /// The recipe for one Progressive Ancient: its position among the character's Progressive
+        /// Ancient receipts in AP order maps to Neow/Act 2/Act 3 with Neow Sanity, or Act 2/Act 3
+        /// otherwise. False for a receipt past those, which has no claimable Ancient.
+        /// </summary>
+        public static bool TryCreateAncientDrawRequest(
+            int index,
+            IReadOnlyList<int> orderedAncientItemIndices,
+            bool includesNeowReward,
+            AncientRelicPoolMode poolMode,
+            string choiceKey,
+            out ApAncientAssignmentRequest request)
+        {
+            request = null!;
+
+            // This is the item's zero-based position in the ordered list, not its AP item index.
+            var rewardOrdinal = orderedAncientItemIndices.ToList().IndexOf(index);
             var maxRewardOrdinal = includesNeowReward ? 2 : 1;
             var expectedProgression = includesNeowReward ? "Neow/Act 2/Act 3" : "Act 2/Act 3";
             if (rewardOrdinal < 0)
             {
                 LogUtility.Error($"Could not map Ancient reward item index {index} to its {expectedProgression} progression");
-                return Array.Empty<RelicModel>();
+                return false;
             }
             if (rewardOrdinal > maxRewardOrdinal)
             {
@@ -283,29 +305,46 @@ namespace StS2AP.Models
                     $"Progressive Ancient item index {index} has no {expectedProgression} reward; "
                         + $"claimableOrdinal={rewardOrdinal}"
                 );
-                return Array.Empty<RelicModel>();
+                return false;
             }
 
             // With Neow Sanity, ordinals 0/1/2 map to Act indices 0/1/2.
             // Otherwise ordinals 0/1 map to Act indices 1/2.
             var ancientActIndex = rewardOrdinal + (includesNeowReward ? 0 : 1);
-            var poolMode = AncientSettingsUtility.Current.Pool;
-            // True Chaos combines only Act 2/3; Neow's reward remains Neow-only.
-            int? poolActIndex = ancientActIndex == 0
-                ? 0
-                : (poolMode == AncientRelicPoolMode.TrueChaos ? null : ancientActIndex);
-            // AP slot + received index is supplied by the multiplayer grant ledger. The
-            // singleplayer fallback retains the historical item-index key.
-            var choiceKey = stableChoiceKey ?? index.ToString();
+            request = new ApAncientAssignmentRequest
+            {
+                ReceivedItemIndex = index,
+                ChoiceKey = choiceKey,
+                AncientActIndex = ancientActIndex,
+                // True Chaos combines only Act 2/3; Neow's reward remains Neow-only.
+                PoolActIndex = ancientActIndex == 0
+                    ? 0
+                    : (poolMode == AncientRelicPoolMode.TrueChaos ? null : ancientActIndex),
+                Balanced = poolMode == AncientRelicPoolMode.Balanced,
+            };
+            return true;
+        }
+
+        /// <summary>
+        /// Draws a Progressive Ancient's three choices from its recipe, or none when no valid set
+        /// exists. Preparing a choice can roll the player's reward RNG (Dusty Tome), so in
+        /// multiplayer every player must draw at the same point; see ApQueuedRelicClaims.
+        /// </summary>
+        public static IReadOnlyList<RelicModel> DrawAncientChoices(
+            Player player,
+            ApAncientAssignmentRequest request,
+            IReadOnlyCollection<ModelId> reservedRelicIds,
+            ArchipelagoSettings? settings = null)
+        {
             AncientEventModel? naturalAncient = null;
-            if (poolMode == AncientRelicPoolMode.Balanced)
+            if (request.Balanced)
             {
                 // Balanced must choose from one Ancient, so prefer the Ancient already rolled
                 // into this run's ActModel and use a stable same-act fallback only if necessary.
                 naturalAncient = AncientRelicPool.ResolveSpecificAncient(
                     player,
-                    ancientActIndex,
-                    choiceKey,
+                    request.AncientActIndex,
+                    request.ChoiceKey,
                     reservedRelicIds
                 );
                 if (naturalAncient == null)
@@ -314,16 +353,13 @@ namespace StS2AP.Models
 
             var choices = AncientRelicPool.CreateChoices(
                 player,
-                choiceKey,
+                request.ChoiceKey,
                 reservedRelicIds,
-                poolActIndex,
-                naturalAncient
-            ).ToList();
-            if (choices.Count != AncientRelicPool.ChoiceCount)
-                return Array.Empty<RelicModel>();
-
-            AncientRelicChoiceAssignments[index] = choices;
-            return choices;
+                request.PoolActIndex,
+                naturalAncient,
+                settings
+            );
+            return choices.Count == AncientRelicPool.ChoiceCount ? choices : Array.Empty<RelicModel>();
         }
 
         /// <summary>
@@ -686,7 +722,6 @@ namespace StS2AP.Models
                 BonusRelicAssignments = new(BonusRelicAssignments),
                 BankedRelicRewards = BankedRelicRewards,
                 RelicRewardsAvailableAnytimeForRun = RelicRewardsAvailableAnytimeForRun,
-                RelicReceiptIndexesByCharacter = GetRelicReceiptIndexSnapshot(),
                 GoldRewardsAttempted = GoldRewardsAttempted,
                 PotionRewardsAttempted = PotionRewardsAttempted,
                 BossRewardsDistributed = BossRewardsDistributed,
@@ -757,17 +792,6 @@ namespace StS2AP.Models
                     .ToList(),
             };
         }
-
-        public Dictionary<long, List<int>> GetRelicReceiptIndexSnapshot() =>
-            AllReceivedItems
-                .Where(receipt =>
-                    ArchipelagoIdCodec.IsCharacterItemId(receipt.Item.ItemId)
-                    && receipt.Item.GetCharacterItemType() == APItem.Relic)
-                .GroupBy(receipt => receipt.Item.GetAPCharacterNumber())
-                .ToDictionary(
-                    group => group.Key,
-                    group => group.Select(receipt => receipt.Index).Distinct().Order().ToList()
-                );
 
         public SerializableAP ToSerializable(SerializableRun run)
         {

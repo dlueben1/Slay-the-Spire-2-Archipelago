@@ -79,31 +79,6 @@ public static class ApPlayerContextResolver
         return true;
     }
 
-    public static bool TryGetRewardProgress(
-        Player player,
-        out ApRunProgressState progress,
-        out string reason)
-    {
-        if (!MultiplayerSupport.IsRealMultiplayerRun)
-        {
-            progress = ArchipelagoClient.Progress.ToRunProgressState();
-            reason = string.Empty;
-            return true;
-        }
-
-        progress = null!;
-        if (!TryGetRewardProgressSource(player, out ApPlayerRunState source, out reason))
-            return false;
-        if (!source.Progress.Initialized)
-        {
-            reason = $"AP reward progress for player {player.NetId} is not initialized";
-            return false;
-        }
-
-        progress = source.Progress;
-        return true;
-    }
-
     /// <summary>
     /// Returns whether this player's character-specific checks belong to an AP slot. This says
     /// nothing about which process may write them; <see cref="MultiplayerLocationChecks.IsCheckWriter"/>
@@ -116,32 +91,6 @@ public static class ApPlayerContextResolver
         if (!TryGetPlayerState(player, out ApPlayerRunState state))
             return false;
         return state.Participation == ApParticipationKind.OwnApSlot;
-    }
-
-    /// <summary>
-    /// Resolves the player's canonical run-data record, even when another player uses the same slot.
-    /// </summary>
-    internal static bool TryGetRewardProgressSource(
-        Player player,
-        out ApPlayerRunState source,
-        out string reason)
-    {
-        source = null!;
-        reason = string.Empty;
-        if (!TryGetPlayerState(player, out ApPlayerRunState state))
-        {
-            reason = $"no canonical AP run state exists for player {player.NetId}";
-            return false;
-        }
-
-        if (state.Participation == ApParticipationKind.OwnApSlot)
-        {
-            source = state;
-            return true;
-        }
-
-        reason = $"player {player.NetId} has no direct AP connection";
-        return false;
     }
 
     private static bool TryGetPlayerState(
