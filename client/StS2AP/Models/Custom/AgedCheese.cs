@@ -4,6 +4,8 @@ using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.RelicPools;
+using MegaCrit.Sts2.Core.Nodes;
+using MegaCrit.Sts2.Core.Nodes.Relics;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Utils;
@@ -22,16 +24,18 @@ namespace StS2AP.Models;
 public sealed class AgedCheese : ModRelicTemplate
 {
     private const decimal MaxHpPerElite = 2m;
-    // Chosen Cheese's own art, at the paths RelicModel builds from its icon name.
-    private const string ChosenCheeseIconName = "chosen_cheese";
+    // Chosen Cheese's own art. Its small icons live in an atlas whose .tres paths fail RitsuLib's
+    // "does this file exist" check, which then falls back to an empty icon, so all three use the
+    // large picture, as Relic Coupons does with its own art.
+    private static readonly string ChosenCheeseIconPath = ImageHelper.GetImagePath("relics/chosen_cheese.png");
 
     // Granted by AP, never a reward, so it has no rarity Touch of Orobas could pick up.
     public override RelicRarity Rarity => RelicRarity.None;
 
     public override RelicAssetProfile AssetProfile { get; } = new(
-        IconPath: ImageHelper.GetImagePath($"atlases/relic_atlas.sprites/{ChosenCheeseIconName}.tres"),
-        IconOutlinePath: ImageHelper.GetImagePath($"atlases/relic_outline_atlas.sprites/{ChosenCheeseIconName}.tres"),
-        BigIconPath: ImageHelper.GetImagePath($"relics/{ChosenCheeseIconName}.png")
+        IconPath: ChosenCheeseIconPath,
+        IconOutlinePath: ChosenCheeseIconPath,
+        BigIconPath: ChosenCheeseIconPath
     );
 
     // AP grants this relic explicitly; it must never enter a natural reward pool.
@@ -63,11 +67,25 @@ public sealed class AgedCheese : ModRelicTemplate
             var relic = ModelDb.Relic<AgedCheese>().ToMutable();
             relic.FloorAddedToDeck = Math.Max(1, player.RunState.TotalFloor);
             player.AddRelicInternal(relic, silent: silent);
+            if (!silent)
+                RevealInRelicBar(relic);
             LogUtility.Info("Added Aged Cheese for the Health Sight bonus");
         }
         catch (Exception ex)
         {
             LogUtility.Warn($"Could not add Aged Cheese for the Health Sight bonus: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// The relic bar adds a newly obtained relic hidden, and RelicCmd.Obtain then plays the pickup
+    /// animation that shows it. A mid-run grant has to do that step itself, or the relic stays
+    /// hidden until the bar is rebuilt. Before the bar exists, as at run start, there is nothing to do.
+    /// </summary>
+    private static void RevealInRelicBar(RelicModel relic)
+    {
+        NRelicInventory? inventory = NRun.Instance?.GlobalUi.RelicInventory;
+        if (inventory != null && inventory._relicNodes.Any(node => node.Relic.Model == relic))
+            inventory.AnimateRelic(relic);
     }
 }

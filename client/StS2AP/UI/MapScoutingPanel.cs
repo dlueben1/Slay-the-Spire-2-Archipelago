@@ -9,14 +9,15 @@ namespace StS2AP.UI;
 
 /// <summary>
 /// The Map Sight bonus's Scouting list under the map legend: the next fights, the next elite and
-/// what the next ? rooms turn into, in the order the player will meet them. It is a child of the
-/// legend, so it slides in, fades and hides with the legend's own hotkey. Its text copies the
-/// legend's font and ink, and each row uses the legend's icon for that kind of room.
+/// what the next ? rooms turn into, each kind in the order the player will meet them. It is a
+/// child of the legend, so it slides in, fades and hides with the legend's own hotkey. Its text
+/// copies the legend's font and ink, and each row uses the legend's icon for that kind of room.
 /// </summary>
 internal static class MapScoutingPanel
 {
     private const string PanelName = "ApScoutingPanel";
-    private const float GapBelowLegend = 18f;
+    // From the bottom of the legend's paper, which is the legend node itself.
+    private const float GapBelowLegend = 4f;
     private const float RowSeparation = 2f;
     // Rows are a little smaller than the legend's own entries, so the list reads as a footnote.
     private const float RowFontScale = 0.85f;
@@ -44,7 +45,7 @@ internal static class MapScoutingPanel
             child.QueueFree();
         }
         Fill(panel, screen, runState);
-        // The legend lays out its own children first; the panel then goes under the lowest one.
+        // The legend lays out its own children first; the panel then goes under the paper.
         Callable.From(() => PlaceBelowLegend(legend, panel)).CallDeferred();
     }
 
@@ -69,12 +70,9 @@ internal static class MapScoutingPanel
         Control? legendItem = screen._legendItems.GetNodeOrNull<Control>(legendItemName);
         TextureRect? legendIcon = legendItem?.GetNodeOrNull<TextureRect>("Icon");
         Label? legendLabel = legendItem?.GetNodeOrNull<Label>("MegaLabel");
-        bool first = true;
         foreach (string entry in entries)
         {
-            string text = first ? entry : $"{MapScouting.Text("then")} {entry}";
-            first = false;
-            Label label = TextLike(legendLabel, text, RowFontScale);
+            Label label = TextLike(legendLabel, entry, RowFontScale);
             var row = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
             row.AddThemeConstantOverride("separation", 8);
             row.AddChild(IconLike(legendIcon, label.GetThemeFontSize("font_size")));
@@ -121,19 +119,13 @@ internal static class MapScoutingPanel
         return icon;
     }
 
+    // The legend node is the paper texture, so its own height is where the paper ends. Its
+    // LegendItems box reaches past that, so the panel can't go under its lowest child.
     private static void PlaceBelowLegend(Control legend, Control panel)
     {
         if (!GodotObject.IsInstanceValid(panel) || !GodotObject.IsInstanceValid(legend))
             return;
-        float bottom = 0f;
-        float left = float.MaxValue;
-        foreach (Control child in legend.GetChildren().OfType<Control>())
-        {
-            if (child == panel || !child.Visible)
-                continue;
-            bottom = Math.Max(bottom, child.Position.Y + child.Size.Y);
-            left = Math.Min(left, child.Position.X);
-        }
-        panel.Position = new Vector2(left == float.MaxValue ? 0f : left, bottom + GapBelowLegend);
+        Control? items = legend.GetNodeOrNull<Control>("LegendItems");
+        panel.Position = new Vector2(items?.Position.X ?? 0f, legend.Size.Y + GapBelowLegend);
     }
 }
