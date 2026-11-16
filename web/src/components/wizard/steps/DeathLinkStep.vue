@@ -47,25 +47,35 @@ function forwardUpdate(value: object): void {
 </script>
 
 <template>
-  <div class="space-y-8">
-    <WizardMarkdownDocument
-      source="docs/faq-deathlink.md"
-      fallback-title="Death Link Help"
-    />
+  <section class="wizard-subsection pt-0! border-t-0!">
+    <div class="wizard-subsection__header">
+      <h3>Death Link</h3>
+      <p>
+        Choose whether deaths are shared and what happens when another player
+        dies.
+      </p>
+    </div>
 
-    <WizardQuestion
-      v-for="question in visibleQuestions"
-      :key="question.id"
-      :question="question"
-      :help-text="resolveQuestionHelp(question, answers)"
-    >
-      <WizardControl
-        :question="question"
-        :model-value="modelValue"
-        @update:model-value="forwardUpdate"
+    <div class="space-y-8">
+      <WizardMarkdownDocument
+        source="docs/faq-deathlink.md"
+        fallback-title="Death Link Help"
       />
-    </WizardQuestion>
-  </div>
+
+      <WizardQuestion
+        v-for="question in visibleQuestions"
+        :key="question.id"
+        :question="question"
+        :help-text="resolveQuestionHelp(question, answers)"
+      >
+        <WizardControl
+          :question="question"
+          :model-value="modelValue"
+          @update:model-value="forwardUpdate"
+        />
+      </WizardQuestion>
+    </div>
+  </section>
 </template>
 
 <style scoped src="../core/wizard.css"></style>

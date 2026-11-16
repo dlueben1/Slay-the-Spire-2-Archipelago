@@ -398,6 +398,11 @@ namespace StS2AP.Patches
             switch (universalId)
             {
                 case APItem.BonusWaxRelic:
+                case APItem.BonusRelic:
+                case APItem.BonusEnchantment:
+                case APItem.BonusEnchantedCards:
+                case APItem.BonusMaxHp:
+                case APItem.BonusCards:
                     ArchipelagoClient.Progress.Items.RegisterReceived(receipt);
                     break;
                 case APItem.IntentSight:
@@ -408,6 +413,7 @@ namespace StS2AP.Patches
                 case APItem.HealthSight:
                     ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);
                     HealthSight.RefreshVisibleHealth();
+                    AgedCheese.EnsureOwnedIfEarned(GameUtility.CurrentPlayer);
                     break;
                 case APItem.PileSight:
                     ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);

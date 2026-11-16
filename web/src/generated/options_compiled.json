@@ -12,11 +12,15 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "29794a2eae81ba4529473dca39ceefb38791b2e1ae908965b6520452be4f4d03"
+      "sha256": "66e99cbe6ad4b0a876990632517794f92b0ecbb075528c0b57691a982d56e2e3"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "bdd0493f789b2de6543a49ced36e9e9759e892c4f5ab57728a3e218c95d4bca4"
+      "sha256": "c0001a3cb0ac2959142472973dcc2611418cc184f250b0bf7091747d3a4ba924"
+    },
+    "items": {
+      "path": "world/spire2/items.py",
+      "sha256": "e96ec2d5e3e66fb15673980917efd5ad8dbca082c2d550d6a1b4577bede0bda3"
     }
   },
   "characters": {
@@ -119,6 +123,411 @@
       "Fool"
     ]
   },
+  "items": {
+    "character_items": [
+      {
+        "name": "Card Reward",
+        "groups": [
+          "Card Rewards"
+        ]
+      },
+      {
+        "name": "Rare Card Reward",
+        "groups": [
+          "Card Rewards",
+          "Rare Card Rewards"
+        ]
+      },
+      {
+        "name": "Relic",
+        "groups": [
+          "Relics"
+        ]
+      },
+      {
+        "name": "Progressive Ancient",
+        "groups": [
+          "Ancients"
+        ]
+      },
+      {
+        "name": "One Gold",
+        "groups": []
+      },
+      {
+        "name": "Five Gold",
+        "groups": []
+      },
+      {
+        "name": "Combat Gold",
+        "groups": [
+          "Gold"
+        ]
+      },
+      {
+        "name": "Elite Gold",
+        "groups": [
+          "Gold"
+        ]
+      },
+      {
+        "name": "Boss Gold",
+        "groups": [
+          "Gold"
+        ]
+      },
+      {
+        "name": "Progressive Rest",
+        "groups": [
+          "Campfire Upgrades"
+        ]
+      },
+      {
+        "name": "Progressive Smith",
+        "groups": [
+          "Campfire Upgrades"
+        ]
+      },
+      {
+        "name": "Shop Card Slot",
+        "groups": [
+          "Shop Slots"
+        ]
+      },
+      {
+        "name": "Shop Colorless Card Slot",
+        "groups": [
+          "Shop Slots"
+        ]
+      },
+      {
+        "name": "Shop Relic Slot",
+        "groups": [
+          "Shop Slots"
+        ]
+      },
+      {
+        "name": "Shop Potion Slot",
+        "groups": [
+          "Shop Slots"
+        ]
+      },
+      {
+        "name": "Progressive Shop Remove",
+        "groups": [
+          "Shop Slots"
+        ]
+      },
+      {
+        "name": "Unlock",
+        "groups": [
+          "Character Unlocks"
+        ]
+      },
+      {
+        "name": "Potion",
+        "groups": [
+          "Potions"
+        ]
+      },
+      {
+        "name": "Progressive Starter Card",
+        "groups": [
+          "Starter Upgrades"
+        ]
+      },
+      {
+        "name": "Progressive Starter Relic",
+        "groups": [
+          "Starter Upgrades"
+        ]
+      },
+      {
+        "name": "Disable Swarming Elites",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Weary Traveler",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Poverty",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Tight Belt",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Ascender's Bane",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Inflation",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Scarcity",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Tough Enemies",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Deadly Enemies",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Double Boss",
+        "groups": [
+          "Ascension Downs"
+        ]
+      }
+    ],
+    "universal_items": [
+      {
+        "name": "Free Attack",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Free Power",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Free Skill",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Dexterity",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Strength",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Plating",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Friendship",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Post-Combat Card Upgrade",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Post-Combat Card Removal",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Additional Card Reward",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Buffer",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Vigor",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Thorns",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Artifact",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Intent Sight",
+        "groups": [
+          "Sights"
+        ]
+      },
+      {
+        "name": "Health Sight",
+        "groups": [
+          "Sights"
+        ]
+      },
+      {
+        "name": "Pile Sight",
+        "groups": [
+          "Sights"
+        ]
+      },
+      {
+        "name": "Map Sight",
+        "groups": [
+          "Sights"
+        ]
+      },
+      {
+        "name": "Card Sight",
+        "groups": [
+          "Sights"
+        ]
+      },
+      {
+        "name": "Weak Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Frail Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Vulnerable Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "No Draw Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Tangled Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Vakuu Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Confused Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Sloth Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Dazed Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Bonus Wax Relic",
+        "groups": [
+          "Bonus Items"
+        ]
+      },
+      {
+        "name": "Bonus Relic",
+        "groups": [
+          "Bonus Items"
+        ]
+      },
+      {
+        "name": "Bonus Enchantment",
+        "groups": [
+          "Bonus Items"
+        ]
+      },
+      {
+        "name": "Bonus Enchanted Cards",
+        "groups": [
+          "Bonus Items"
+        ]
+      },
+      {
+        "name": "Bonus Max HP",
+        "groups": [
+          "Bonus Items"
+        ]
+      },
+      {
+        "name": "Bonus Cards",
+        "groups": [
+          "Bonus Items"
+        ]
+      }
+    ],
+    "groups": [
+      "Ancients",
+      "Ascension Downs",
+      "Bonus Items",
+      "Buffs",
+      "Campfire Upgrades",
+      "Card Rewards",
+      "Character Unlocks",
+      "Gold",
+      "Potions",
+      "Rare Card Rewards",
+      "Relics",
+      "Shop Slots",
+      "Sights",
+      "Starter Upgrades",
+      "Traps",
+      "Everything"
+    ]
+  },
   "option_order": [
     "progression_balancing",
     "accessibility",
@@ -139,7 +548,6 @@
     "unlocked_character",
     "ascension",
     "ascension_down",
-    "use_new_logic",
     "ancient_relic_location",
     "ancient_relic_pool",
     "relic_rewards_available_anytime",
@@ -215,6 +623,7 @@
     "confused_trap_weight",
     "sloth_trap_weight",
     "dazed_trap_weight",
+    "boons",
     "run_modifiers",
     "enemy_hp_scaling",
     "enemy_damage_scaling",
@@ -225,6 +634,7 @@
     "hidden_piles",
     "hidden_map",
     "hidden_cards",
+    "sight_bonuses",
     "strict_card_rewards"
   ],
   "groups": [
@@ -246,7 +656,6 @@
     {
       "name": "Game Options",
       "option_keys": [
-        "use_new_logic",
         "progression_balancing",
         "accessibility",
         "ancient_relic_location",
@@ -393,6 +802,14 @@
       "source": "web_world"
     },
     {
+      "name": "Boons",
+      "option_keys": [
+        "boons"
+      ],
+      "start_collapsed": false,
+      "source": "web_world"
+    },
+    {
       "name": "Challenges",
       "option_keys": [
         "run_modifiers",
@@ -404,6 +821,7 @@
         "hidden_piles",
         "hidden_map",
         "hidden_cards",
+        "sight_bonuses",
         "strict_card_rewards"
       ],
       "start_collapsed": false,
@@ -1053,42 +1471,6 @@
       "supports_weighting": false,
       "group": "Character Options"
     },
-    "use_new_logic": {
-      "key": "use_new_logic",
-      "class_name": "UseNewLogic",
-      "module": "worlds.spire2.options",
-      "kind": "toggle",
-      "display_name": "Use New Logic",
-      "description": "Use the new logic. Disable to use the previous 1.1.X and below logic.\nNew logic allows more random item order—for example, Extra relics and cards can help supplement missing ancients or rests.\nOne example is that old logic required your progressive starter card+relic to beat your 1st elite but new logic\nno longer requires this as 'Power' can be made up with extra cards/relics. Similar cases for ancients/smiths/rests.\n\nOld logic is used automatically (regardless of this option) when floor, gold, and potion checks\nare all disabled and this is the only world in the generation, to reduce failed generations.",
-      "default": true,
-      "raw_default": 1,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "false",
-          "display_name": "False",
-          "value": 0
-        },
-        {
-          "name": "true",
-          "display_name": "True",
-          "value": 1
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Game Options"
-    },
     "ancient_relic_location": {
       "key": "ancient_relic_location",
       "class_name": "AncientRelicLocation",
@@ -1336,7 +1718,7 @@
       "module": "worlds.spire2.options",
       "kind": "list",
       "display_name": "Bonus Items",
-      "description": "Add a number of Bonus Items to the item pool.\nThese items make the game easier to complete, and are not accounted for in logic.\n\nEach ordered entry creates one character-agnostic bonus item and must provide either\na non-empty list of value Pools or one specific Value. For example:\n\n    bonus_items:\n        - WAX_RELIC:\n            Pools: [Common, Uncommon]\n        - WAX_RELIC:\n            Value: Orichalcum\n\n\nGeneration fails if more bonus items are configured than there are filler slots.\n\nIt's HIGHLY recommended to use the YAML Builder on our website to easily generate this option, which you can find at https://sts2ap.terairk.dev/#/builder (or https://sts2ap.net)",
+      "description": "Add a number of Bonus Items to the item pool.\nThese items make the game easier to complete, and are not accounted for in logic.\nOnce found, each one can be claimed once in every run, from the Archipelago reward menu.\n\nEach ordered entry creates one bonus item and gives either a list of Pools to roll from or\none specific Value:\n\n- WAX_RELIC: a relic that melts after a few combats. Pools are relic pools such as Common.\n- RELIC: a relic that stays for the whole run, from the same Pools or Value.\n- ENCHANTMENT: choose a card to enchant. Pools: Common, Uncommon, Rare; or name an\n  enchantment as the Value.\n- ENCHANTED_CARDS: a card reward whose cards are all enchanted, from the same Pools or Value.\n- MAX_HP: gain this much max HP. Value only.\n- CARDS: choose 1 of 3 cards. Each Pool can name a source (a character, Other, Colorless, Event\n  or Ancient; your own character if left out), a type (Attack, Skill, Power) and a rarity\n  (Common, Uncommon, Rare), such as 'Regent Attack' or 'Colorless Rare'. Add 'Upgraded' for\n  upgraded cards; 'Random' mixes sources card by card. Fool pools need game version 0.113 and\n  are skipped on older ones. Or name one card as the Value.\n\nFor example:\n\n    bonus_items:\n        - WAX_RELIC:\n            Pools: [Common, Uncommon]\n        - RELIC:\n            Value: Orichalcum\n        - ENCHANTMENT:\n            Pools: [Common]\n        - ENCHANTED_CARDS:\n            Value: Swift\n        - MAX_HP:\n            Value: 6\n        - CARDS:\n            Pools: [Regent Attack, Colorless Rare]\n\n\nGeneration fails if more bonus items are configured than there are filler slots.\n\nIt's HIGHLY recommended to use the YAML Builder on our website to easily generate this option, which you can find at https://sts2ap.terairk.dev/#/builder (or https://sts2ap.net)",
       "default": [],
       "raw_default": [],
       "visibility": {
@@ -4149,6 +4531,42 @@
       "supports_weighting": true,
       "group": "Traps"
     },
+    "boons": {
+      "key": "boons",
+      "class_name": "Boons",
+      "module": "worlds.spire2.options",
+      "kind": "set",
+      "display_name": "Boons",
+      "description": "Helpful modifiers for every run. Logic does not account for them. Names are case-sensitive.\nOnly Compound Interest, Gilded and Loyal Customer work in multiplayer, where the host's choice\napplies to the whole run; multiplayer runs leave out the others.\n\n- 'Wayfinder': Three times per act, travel to any room in the next row, ignoring the paths.\n- 'SecondWind': Once per act, survive a killing blow and heal 25% of your max HP.\n- 'EmberEnchanting': Campfires let you enchant a card with a random enchantment. This uses up\n  the campfire and needs the same Progressive Smith as upgrading.\n- 'CompoundInterest': At the start of Act 2 and of Act 3, gain 20% of the gold you hold, up to\n  100.\n- 'Gilded': Gain 30% more gold, including gold from Archipelago items.\n- 'SpringCleaning': After the Act 1 and Act 2 bosses, choose one: remove a card, transform a\n  card, or upgrade 2 random cards.\n- 'LoyalCustomer': Each purchase makes the rest of that shop 15% cheaper, up to 45%.\n  Archipelago checks in the shop count and get the discount too.\n- 'CampfireBrewing': Once per campfire, brew a random potion. You can still rest or upgrade\n  afterwards.",
+      "default": [],
+      "raw_default": [],
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "valid_keys": [
+        "CampfireBrewing",
+        "CompoundInterest",
+        "EmberEnchanting",
+        "Gilded",
+        "LoyalCustomer",
+        "SecondWind",
+        "SpringCleaning",
+        "Wayfinder"
+      ],
+      "valid_keys_casefold": false,
+      "allow_custom_values": false,
+      "supports_weighting": false,
+      "group": "Boons"
+    },
     "run_modifiers": {
       "key": "run_modifiers",
       "class_name": "RunModifiers",
@@ -4309,7 +4727,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Hidden Intents",
-      "description": "Enemy intents are hidden, like Runic Dome in the first game, and so is the Intent Graph \nmod's overlay.\nThe value is how many Intent Sight items are added to the item pool, and 0 turns it off. Finding\nany one of them shows intents again for every character, with their numbers and the Intent Graph overlay, so\na second copy makes it easier to find. Does not change logic.",
+      "description": "Enemy intents are hidden, like Runic Dome in the first game, and so is the Intent Graph \nmod's overlay.\nThe value is how many Intent Sight items are added to the item pool, and 0 turns it off. Finding\nany one of them shows intents again for every character, with their numbers and the Intent Graph overlay, and\na second one adds its Sight Bonus, which logic counts.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -4325,7 +4743,7 @@
       },
       "source": "game",
       "minimum": 0,
-      "maximum": 2,
+      "maximum": 4,
       "supports_weighting": true,
       "group": "Challenges"
     },
@@ -4335,7 +4753,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Hidden Health",
-      "description": "Health is hidden. Health bars stay full and show no numbers, the top bar shows no HP, and the\npoison and doom previews on health bars are hidden. Block is still shown. The value is how many Health Sight\nitems are added to the item pool, and 0 turns it off. Finding any one of them shows everyone's health again\nfor every character, so a second copy makes it easier to find. Does not change logic.",
+      "description": "Health is hidden. Health bars stay full and show no numbers, the top bar shows no HP, and the\npoison and doom previews on health bars are hidden. Block is still shown. The value is how many Health Sight\nitems are added to the item pool, and 0 turns it off. Finding any one of them shows everyone's health again\nfor every character, and a second one adds its Sight Bonus, which logic counts.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -4351,7 +4769,7 @@
       },
       "source": "game",
       "minimum": 0,
-      "maximum": 2,
+      "maximum": 4,
       "supports_weighting": true,
       "group": "Challenges"
     },
@@ -4361,7 +4779,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Hidden Piles",
-      "description": "The draw, discard and exhaust piles show \"?\" instead of a card count\nand can't be opened. The value is how many Pile Sight items are added to the item pool, and 0 turns it off.\nFinding any one of them shows the piles again for every character, so a second copy makes it easier to find.\nDoes not change logic.",
+      "description": "The draw, discard and exhaust piles show \"?\" instead of a card count\nand can't be opened. The value is how many Pile Sight items are added to the item pool, and 0 turns it off.\nFinding any one of them shows the piles again for every character, and a second one adds its Sight Bonus,\nwhich logic counts.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -4377,7 +4795,7 @@
       },
       "source": "game",
       "minimum": 0,
-      "maximum": 2,
+      "maximum": 4,
       "supports_weighting": true,
       "group": "Challenges"
     },
@@ -4387,7 +4805,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Hidden Map",
-      "description": "The map only shows the rooms you can move to next. Rooms further ahead show a closed eye \nuntil you can reach them.\nThe value is how many Map Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows the whole map again for every character, so a second copy makes it easier to find. Does not change logic.",
+      "description": "The map only shows the rooms you can move to next. Rooms further ahead show a closed eye \nuntil you can reach them.\nThe value is how many Map Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows the whole map again for every character, and a second one adds its Sight Bonus, which logic counts.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -4403,7 +4821,7 @@
       },
       "source": "game",
       "minimum": 0,
-      "maximum": 2,
+      "maximum": 4,
       "supports_weighting": true,
       "group": "Challenges"
     },
@@ -4413,7 +4831,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Hidden Cards",
-      "description": "Cards are unknown: their name, text and energy cost are hidden, their art is blurred and they\nshow no tooltips.\nThe value is how many Card Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows cards again for every character, so a second copy makes it easier to find. Does not change logic.",
+      "description": "Cards are unknown: their name, text and energy cost are hidden, their art is blurred and they\nshow no tooltips.\nThe value is how many Card Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows cards again for every character, and a second one adds its Sight Bonus, which logic counts.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -4429,8 +4847,53 @@
       },
       "source": "game",
       "minimum": 0,
-      "maximum": 2,
+      "maximum": 4,
       "supports_weighting": true,
+      "group": "Challenges"
+    },
+    "sight_bonuses": {
+      "key": "sight_bonuses",
+      "class_name": "SightBonuses",
+      "module": "worlds.spire2.options",
+      "kind": "set",
+      "display_name": "Sight Bonuses",
+      "description": "Sight items whose second copy adds a bonus. A Sight left out stops at undoing its Hidden\noption. Names are case-sensitive.\n\n- 'IntentSight': Start each combat with Forewarned: for each enemy whose attacks your Block stops\n  completely on its turn, draw 1 more card next turn.\n- 'HealthSight': Gain Aged Cheese: after defeating an Elite or a boss, raise your Max HP by 3.\n- 'PileSight': The draw pile shows cards in the order you will draw them.\n- 'MapSight': The map shows your next 2 fights, your next elite and what your next 2 ? rooms will be.\n- 'CardSight': Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.\n\nLogic counts each bonus as extra power in Act 3. The Intent, Health and Card Sight bonuses are\nsingleplayer only, but logic still counts them.",
+      "default": [
+        "CardSight",
+        "HealthSight",
+        "IntentSight",
+        "MapSight",
+        "PileSight"
+      ],
+      "raw_default": [
+        "CardSight",
+        "HealthSight",
+        "IntentSight",
+        "MapSight",
+        "PileSight"
+      ],
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "valid_keys": [
+        "CardSight",
+        "HealthSight",
+        "IntentSight",
+        "MapSight",
+        "PileSight"
+      ],
+      "valid_keys_casefold": false,
+      "allow_custom_values": false,
+      "supports_weighting": false,
       "group": "Challenges"
     },
     "strict_card_rewards": {

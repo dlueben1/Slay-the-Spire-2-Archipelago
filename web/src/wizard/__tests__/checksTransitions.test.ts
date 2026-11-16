@@ -1,5 +1,5 @@
 /**
- * @file Protects the pure Checks & Rewards cross-field rules.
+ * @file Protects the pure Checks cross-field rules.
  *
  * The single dependency in this section — disabling Floor Checks must also clear
  * both progressive Starting Equipment selections — used to live inside the step
@@ -12,7 +12,7 @@ import { setCheckToggle } from "../checksTransitions";
 import { createDefaultFillerAnswers } from "../FillerItem";
 import { createDefaultWizardAnswers } from "../WizardAnswers";
 
-/** Creates a valid combined Checks & Rewards section from schema defaults. */
+/** Creates a valid Checks section from schema defaults. */
 function createSection() {
   const fillerAnswers = createDefaultFillerAnswers(optionCatalog);
   const answers = createDefaultWizardAnswers(
@@ -21,23 +21,18 @@ function createSection() {
     optionCatalog,
   );
 
-  return answers.checksAndRewards;
+  return answers.checks;
 }
 
 /** Verifies an ordinary toggle changes only its own nested field. */
 function togglesIndependentChecks(): void {
   const section = createSection();
-  const next = setCheckToggle(
-    section,
-    "neowSanity",
-    !section.checks.neowSanity,
-  );
+  const next = setCheckToggle(section, "neowSanity", !section.types.neowSanity);
 
-  expect(next.checks.neowSanity).toBe(!section.checks.neowSanity);
+  expect(next.types.neowSanity).toBe(!section.types.neowSanity);
 
   // The original must stay untouched and unrelated sections keep their identity.
-  expect(section.checks.neowSanity).not.toBe(next.checks.neowSanity);
-  expect(next.shop).toBe(section.shop);
+  expect(section.types.neowSanity).not.toBe(next.types.neowSanity);
   expect(next.startingEquipment).toBe(section.startingEquipment);
 }
 
@@ -45,7 +40,7 @@ function togglesIndependentChecks(): void {
 function disablingFloorChecksClearsStartingEquipment(): void {
   const configured = {
     ...createSection(),
-    checks: { ...createSection().checks, includeFloorChecks: true },
+    types: { ...createSection().types, includeFloorChecks: true },
     startingEquipment: {
       progressiveStarterCard: true,
       progressiveStarterRelic: true,
@@ -54,7 +49,7 @@ function disablingFloorChecksClearsStartingEquipment(): void {
 
   const next = setCheckToggle(configured, "includeFloorChecks", false);
 
-  expect(next.checks.includeFloorChecks).toBe(false);
+  expect(next.types.includeFloorChecks).toBe(false);
   expect(next.startingEquipment.progressiveStarterCard).toBe(false);
   expect(next.startingEquipment.progressiveStarterRelic).toBe(false);
 }
@@ -63,7 +58,7 @@ function disablingFloorChecksClearsStartingEquipment(): void {
 function enablingFloorChecksLeavesStartingEquipmentAlone(): void {
   const section = setCheckToggle(createSection(), "includeFloorChecks", true);
 
-  expect(section.checks.includeFloorChecks).toBe(true);
+  expect(section.types.includeFloorChecks).toBe(true);
   expect(section.startingEquipment.progressiveStarterCard).toBe(false);
   expect(section.startingEquipment.progressiveStarterRelic).toBe(false);
 }

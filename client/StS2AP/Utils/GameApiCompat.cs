@@ -10,6 +10,7 @@ using MegaCrit.Sts2.Core.Multiplayer.Game.Lobby;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Nodes.Screens.GameOverScreen;
 using MegaCrit.Sts2.Core.Nodes.Screens.MainMenu;
+using MegaCrit.Sts2.Core.Random;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves;
 using MegaCrit.Sts2.Core.Saves.Managers;
@@ -153,6 +154,19 @@ public static class GameApiCompat
 #else
         // Older versions clear the filter unless it is explicitly passed back in.
         return options.WithCardPools(pools, options.CardPoolFilter);
+#endif
+    }
+
+    /// <summary>
+    /// A copy of a random number generator at its current position, for looking ahead at its rolls
+    /// without moving the original. 0.111 replaced the seed-and-counter state with a saved form.
+    /// </summary>
+    public static Rng CopyRng(Rng rng)
+    {
+#if STS2_AT_LEAST_0_111_0
+        return new Rng(rng.ToSerializable());
+#else
+        return new Rng(rng.Seed, rng.Counter);
 #endif
     }
 }

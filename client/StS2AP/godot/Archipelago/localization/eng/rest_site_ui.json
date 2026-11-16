@@ -7,5 +7,10 @@
   "OPTION_NOTHING.name": "Do Nothing",
   "OPTION_NOTHING.descriptionDisabled": "Leave without resting or upgrading a card.",
   "OPTION_HEAL.descriptionDisabled": "[red]You have not received enough Progressive Rests[/red]",
-  "OPTION_CHECK.description": "{description}"
+  "OPTION_CHECK.description": "{description}",
+  "OPTION_AP_EMBER_ENCHANT.name": "Enchant",
+  "OPTION_AP_EMBER_ENCHANT.description": "[gold]Enchant[/gold] a card with [gold]{Enchantment}[/gold].",
+  "OPTION_AP_BREW.name": "Brew",
+  "OPTION_AP_BREW.description": "Brew a random potion. You can still use the campfire afterwards.",
+  "OPTION_AP_BREW.descriptionDisabled": "[red]Your potion slots are full.[/red]"
 }

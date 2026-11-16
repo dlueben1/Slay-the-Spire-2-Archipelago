@@ -55,7 +55,9 @@ public sealed class ApRestSiteModel : HookedSingletonModel
         bool needsFallback = policy.ApplyLocks(
             options,
             option => option.OptionId,
-            option => option.IsEnabled,
+            // A free action such as Campfire Brewing does not end the campfire, so it cannot be
+            // the player's only way out.
+            option => option.IsEnabled && option is not ApBoonRestSiteOption { IsFreeAction: true },
             () => new FakeRestSiteOption(player));
 
         if (ApPlayerContextResolver.HasCharacterChecks(player))
@@ -79,6 +81,23 @@ public sealed class ApRestSiteModel : HookedSingletonModel
                 + $"restLevel={restLevel}, smithLevel={smithLevel}, fallback={needsFallback}"
         );
         return true;
+    }
+
+    /// <summary>
+    /// Whether this player's current campfire allows Smith: always without Campfire Sanity,
+    /// otherwise once this act's Progressive Smith is received. Options that share Smith's lock,
+    /// such as Ember Enchanting, ask this instead of relying on hook order.
+    /// </summary>
+    public static bool IsSmithUnlocked(Player player)
+    {
+        if (!ApPlayerContextResolver.TryGetRewardSettings(player, out ArchipelagoSettings settings)
+            || !settings.CampfireSanity
+            || !ApPlayerContextResolver.TryGetCharacterConfig(player, out CharacterConfig config)
+            || !TryGetProgress(player, config.CharOffset, out _, out int smithLevel, out _, out _))
+        {
+            return true;
+        }
+        return new RestSitePolicy(player.RunState.CurrentActIndex + 1, 0, smithLevel).CanSmith;
     }
 
     private static void HintAvailableChecks(Player player, long[] locationIds)

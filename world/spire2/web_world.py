@@ -3,8 +3,8 @@ from worlds.AutoWorld import WebWorld
 from Options import Accessibility, OptionGroup, ProgressionBalancing
 from .options import (
     TrapChance, WeakTrapWeight, FrailTrapWeight, VulnerableTrapWeight, NoDrawTrapWeight, TangledTrapWeight, VakuuTrapWeight, ConfusedTrapWeight, SlothTrapWeight, DazedTrapWeight,
-    UseNewLogic, Characters, ModdedCharacters, DeathLink, DeathLinkDamagePercent, EnableDeathFragments, PickNumberCharacters, GoalNumChar,
-    LockCharacters, UnlockedCharacter, Ascension, AscensionDown, RunModifiers, EnemyHpScaling, EnemyDamageScaling, AdvancedChar, CharacterOptions,
+    Characters, ModdedCharacters, DeathLink, DeathLinkDamagePercent, EnableDeathFragments, PickNumberCharacters, GoalNumChar,
+    LockCharacters, UnlockedCharacter, Ascension, AscensionDown, RunModifiers, Boons, EnemyHpScaling, EnemyDamageScaling, AdvancedChar, CharacterOptions,
     IncludeFloorChecks, NeowSanity, CampfireSanity, GoldSanity, PotionSanity,
     ShopSanity, ShopCardSlots, ShopNeutralSlots, ShopRelicSlots, ShopPotionSlots, ShopRemoveSlots, ShopSanityCosts,
     RandomShopCards, ShopAttackWeight, ShopSkillWeight, ShopPowerWeight, ShopCommonWeight, ShopUncommonWeight,
@@ -14,7 +14,7 @@ from .options import (
     RandomShopPotions, ShopPotionCommonWeight, ShopPotionUncommonWeight, ShopPotionRareWeight,
     ShopPotionOtherClassWeight, ShopPotionEventWeight,
     AncientRelicLocation, AncientRelicPool, RelicRewardsAvailableAnytime, RemoveOPRelics, ReleaseOnVictory,
-    CardReward, StrictCardRewards, HiddenIntents, HiddenHealth, HiddenPiles, HiddenMap, HiddenCards, ProgressiveStarterCard, ProgressiveStarterRelic, BonusItems, SeededRun,
+    CardReward, StrictCardRewards, HiddenIntents, HiddenHealth, HiddenPiles, HiddenMap, HiddenCards, SightBonuses, ProgressiveStarterCard, ProgressiveStarterRelic, BonusItems, SeededRun,
     OneGoldFillerWeight, FiveGoldFillerWeight,
     FreeAttackFillerWeight, FreePowerFillerWeight, FreeSkillFillerWeight,
     DexterityFillerWeight, StrengthFillerWeight, PlatingFillerWeight,
@@ -48,7 +48,6 @@ class SlayTheSpire2Web(WebWorld):
             AscensionDown,
         ]),
         OptionGroup("Game Options", [
-            UseNewLogic,
             ProgressionBalancing,
             Accessibility,
             AncientRelicLocation,
@@ -147,6 +146,9 @@ class SlayTheSpire2Web(WebWorld):
             ArtifactFillerWeight,
             #SingleColorlessCardFillerWeight,
         ]),
+        OptionGroup("Boons", [
+            Boons,
+        ]),
         OptionGroup("Challenges", [
             RunModifiers,
             EnemyHpScaling,
@@ -157,6 +159,7 @@ class SlayTheSpire2Web(WebWorld):
             HiddenPiles,
             HiddenMap,
             HiddenCards,
+            SightBonuses,
             StrictCardRewards,
         ]),
     ]

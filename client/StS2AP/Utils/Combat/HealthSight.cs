@@ -34,6 +34,16 @@ internal static class HealthSight
     internal static bool IsHidden(Creature creature) =>
         Detail < (creature.IsEnemy ? HealthDetail.Full : HealthDetail.OwnSide);
 
+    /// <summary>
+    /// The Health Sight bonus: the player owns Aged Cheese, which raises max HP after each Elite.
+    /// Singleplayer only.
+    /// </summary>
+    internal static bool HasBonus =>
+        ChallengeSightItems.HasGameplayBonus(
+            ArchipelagoClient.Settings?.HiddenHealth == true,
+            ItemTable.APItem.HealthSight,
+            "HealthSight");
+
     /// <summary>Applies a newly received Health Sight to the bars already on screen.</summary>
     internal static void RefreshVisibleHealth()
     {

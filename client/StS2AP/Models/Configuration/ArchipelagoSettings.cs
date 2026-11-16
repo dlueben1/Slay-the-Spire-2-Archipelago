@@ -106,6 +106,13 @@ namespace StS2AP.Models
         /// </summary>
         public bool HiddenCards { get; set; }
 
+        /// <summary>
+        /// Sight Bonuses names from the YAML (for example "PileSight"): the Sight items whose second
+        /// copy adds a bonus; see <see cref="StS2AP.Utils.ChallengeSightItems"/>. Older APWorlds
+        /// send none, so their spare copies add nothing.
+        /// </summary>
+        public HashSet<string> SightBonuses { get; set; } = new();
+
         /// <summary>Whether a victory releases the winning character's remaining checks.</summary>
         public bool ReleaseOnVictory { get; set; } = true;
 
@@ -142,6 +149,12 @@ namespace StS2AP.Models
         /// matching AP modifiers; see <see cref="ApRunModifiers"/>.
         /// </summary>
         public List<string> RunModifiers { get; set; } = new();
+
+        /// <summary>
+        /// Boons names from the YAML (for example "Wayfinder"): helpful modifiers that a new run
+        /// adds; see <see cref="ApRunModifiers"/>.
+        /// </summary>
+        public List<string> Boons { get; set; } = new();
 
         /// <summary>Extra enemy max HP in Acts 2 and 3, in percent (0-15).</summary>
         public int EnemyHpScaling { get; set; }

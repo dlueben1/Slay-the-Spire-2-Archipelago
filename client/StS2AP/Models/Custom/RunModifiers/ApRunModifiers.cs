@@ -6,7 +6,7 @@ using StS2AP.Utils;
 namespace StS2AP.Models;
 
 /// <summary>
-/// Turns the slot's Run Modifiers option into run modifiers on each new AP run.
+/// Turns the slot's Run Modifiers and Boons options into run modifiers on each new AP run.
 /// </summary>
 public static class ApRunModifiers
 {
@@ -26,7 +26,32 @@ public static class ApRunModifiers
             ["DangerousUnknowns"] = ModelDb.Modifier<ApDangerousUnknowns>,
         };
 
-    /// <summary>Whether this modifier came from the Run Modifiers option.</summary>
+    // Keys are the APWorld's Boons option names.
+    private static readonly IReadOnlyDictionary<string, Func<ModifierModel>> BoonsByOptionName =
+        new Dictionary<string, Func<ModifierModel>>(StringComparer.Ordinal)
+        {
+            ["Wayfinder"] = ModelDb.Modifier<ApWayfinder>,
+            ["SecondWind"] = ModelDb.Modifier<ApSecondWind>,
+            ["EmberEnchanting"] = ModelDb.Modifier<ApEmberEnchanting>,
+            ["CompoundInterest"] = ModelDb.Modifier<ApCompoundInterest>,
+            ["Gilded"] = ModelDb.Modifier<ApGilded>,
+            ["SpringCleaning"] = ModelDb.Modifier<ApSpringCleaning>,
+            ["LoyalCustomer"] = ModelDb.Modifier<ApLoyalCustomer>,
+            ["CampfireBrewing"] = ModelDb.Modifier<ApCampfireBrewing>,
+        };
+
+    // Boons whose state or choices belong to one player, or that change the shared map. Multiplayer
+    // runs leave them out.
+    private static readonly IReadOnlySet<string> SingleplayerOnlyBoons = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "Wayfinder",
+        "SecondWind",
+        "EmberEnchanting",
+        "SpringCleaning",
+        "CampfireBrewing",
+    };
+
+    /// <summary>Whether this modifier came from the Run Modifiers or Boons option.</summary>
     public static bool IsArchipelagoModifier(ModifierModel modifier) =>
         modifier.GetType().Assembly == typeof(ApRunModifiers).Assembly;
 
@@ -62,6 +87,15 @@ public static class ApRunModifiers
                 added.Add(canonical().ToMutable());
             else
                 LogUtility.Warn($"Ignoring unknown run modifier '{optionName}' from slot data.");
+        }
+        foreach (string boonName in settings.Boons)
+        {
+            if (!BoonsByOptionName.TryGetValue(boonName, out Func<ModifierModel>? canonical))
+                LogUtility.Warn($"Ignoring unknown boon '{boonName}' from slot data.");
+            else if (runState.Players.Count > 1 && SingleplayerOnlyBoons.Contains(boonName))
+                LogUtility.Info($"Skipped boon '{boonName}': it is singleplayer only.");
+            else
+                added.Add(canonical().ToMutable());
         }
         if (settings.EnemyHpScaling > 0)
         {

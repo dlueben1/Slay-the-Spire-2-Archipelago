@@ -14,7 +14,19 @@ import {
   BONUS_RELIC_POOLS,
   getEligibleSpecificRelics,
 } from "../BonusRelicData";
+import {
+  BONUS_ENCHANTMENT_TIERS,
+  findBonusEnchantment,
+} from "../BonusEnchantmentData";
+import { formatBonusCardPool, parseBonusCardPool } from "../BonusCardData";
 import { FILLER_ITEM_DEFINITIONS, FILLER_WEIGHT_NAMES } from "../FillerItem";
+import { getOrderedBoons } from "../Boon";
+import {
+  findItemGroup,
+  getStartingItemChoices,
+  parseItemName,
+} from "../ItemNames";
+import { STARTING_ITEM_MAX_COUNT } from "../compiler/applyItemOptions";
 import { getOrderedRunModifiers } from "../RunModifier";
 import { SHOP_CARD_KIND_DEFINITIONS } from "../ShopCardKind";
 import {
@@ -24,25 +36,34 @@ import {
 } from "../ShopStockKind";
 import { TRAP_ITEM_DEFINITIONS, type TrapWeight } from "../TrapItem";
 import {
+  readSightBonusNames,
   SIGHT_COPY_COUNTS,
   type BonusItemAnswer,
+  type BonusItemKind,
+  type BoonAnswers,
   type ChallengeAnswers,
-  type ChecksAndRewardsAnswers,
+  type ChecksAnswers,
   type DeathLinkAnswers,
+  type ItemAnswers,
+  type StartingItemAnswer,
   type FillerAnswers,
+  type ItemPoolAnswers,
   type FillerWeightLevel,
   type ProgressionAnswers,
   type RunAnswers,
   type ShopCardAnswers,
+  type ShopsAnswers,
   type ShopStockAnswers,
   type SightCopies,
 } from "../WizardAnswers";
 import {
   ANCIENT_OPTION_KEYS,
   BONUS_ITEM_OPTION_KEY,
+  BOON_OPTION_KEYS,
   CHALLENGE_OPTION_KEYS,
   CHECK_OPTION_KEYS,
   DEATH_LINK_OPTION_KEYS,
+  ITEM_OPTION_KEYS,
   OP_RELIC_CATEGORY_KEYS,
   PROGRESSION_OPTION_KEYS,
   RUN_OPTION_KEYS,
@@ -59,8 +80,15 @@ import { describeValue, isMapping } from "./readOptionValue";
 /** Adds one player-readable warning. */
 type Warn = (message: string) => void;
 
-/** The Bonus Item type the builder supports, as the YAML names it. */
-const WAX_RELIC = "WAX_RELIC";
+/** The Bonus Item types the builder supports, as the YAML names them. */
+const BONUS_ITEM_KINDS: readonly BonusItemKind[] = [
+  "WAX_RELIC",
+  "RELIC",
+  "ENCHANTMENT",
+  "ENCHANTED_CARDS",
+  "MAX_HP",
+  "CARDS",
+];
 
 /**
  * Checks whether two resolved option values are equal, ignoring set order.
@@ -83,7 +111,7 @@ function sameOptionValue(left: unknown, right: unknown): boolean {
  * Reads Run Settings answers.
  *
  * @param options - Resolved option values.
- * @returns Relic availability and removal, victory release, and seeding answers.
+ * @returns Relic availability and removal, victory release, seeding, and Ancient answers.
  */
 export function readRunAnswers(options: CompiledOptions): RunAnswers {
   const removed = options[RUN_OPTION_KEYS.removeOpRelics] as string[];
@@ -97,7 +125,14 @@ export function readRunAnswers(options: CompiledOptions): RunAnswers {
     },
     releaseOnVictory: options[RUN_OPTION_KEYS.releaseOnVictory] as boolean,
     seeded: options[RUN_OPTION_KEYS.seeded] as boolean,
-    blitzMerchantChance: options[RUN_OPTION_KEYS.blitzMerchantChance] as number,
+    ancients: {
+      relicLocation: options[
+        ANCIENT_OPTION_KEYS.relicLocation
+      ] as RunAnswers["ancients"]["relicLocation"],
+      relicPool: options[
+        ANCIENT_OPTION_KEYS.relicPool
+      ] as RunAnswers["ancients"]["relicPool"],
+    },
   };
 }
 
@@ -116,48 +151,11 @@ function findSpecificRelicId(value: string): string | undefined {
 }
 
 /**
- * Reads one `bonus_items` entry as a Bonus Item row.
+ * Reads the Pools of a relic bonus row.
  *
- * @param entry - Raw list entry, such as `{WAX_RELIC: {Pools: [Common]}}`.
- * @param context - Row named in warnings.
- * @param warn - Receives warnings for anything that cannot be loaded.
- * @returns The row, or `null` when it was left out.
+ * @returns The known pools in YAML order, without duplicates.
  */
-function readBonusItem(
-  entry: unknown,
-  context: string,
-  warn: Warn,
-): BonusItemAnswer | null {
-  const [type, ...extraTypes] = isMapping(entry) ? Object.keys(entry) : [];
-  if (!type || extraTypes.length || type.toUpperCase() !== WAX_RELIC) {
-    warn(
-      `${context}: left out ${describeValue(entry)}; the builder supports Wax Relics only.`,
-    );
-    return null;
-  }
-
-  const selector = (entry as Record<string, unknown>)[type];
-  if (!isMapping(selector) || "Value" in selector === "Pools" in selector) {
-    warn(
-      `${context}: left out a Wax Relic that needs exactly one of Value or Pools.`,
-    );
-    return null;
-  }
-
-  if ("Value" in selector) {
-    const relicId = findSpecificRelicId(String(selector.Value));
-    if (!relicId) {
-      warn(
-        `${context}: left out ${describeValue(selector.Value)}, which is not an eligible Wax Relic.`,
-      );
-      return null;
-    }
-    return { kind: WAX_RELIC, mode: "specific", relicId };
-  }
-
-  const rawPools = Array.isArray(selector.Pools)
-    ? selector.Pools
-    : [selector.Pools];
+function readRelicPools(rawPools: unknown[], context: string, warn: Warn): string[] {
   const pools: string[] = [];
   for (const rawPool of rawPools) {
     const pool = BONUS_RELIC_POOLS.find(
@@ -171,11 +169,152 @@ function readBonusItem(
       pools.push(pool);
     }
   }
-  if (!pools.length) {
-    warn(`${context}: left out a Wax Relic without any known relic pool.`);
+  return pools;
+}
+
+/**
+ * Reads the Pools of an enchantment bonus row.
+ *
+ * @returns The known tiers in YAML order, without duplicates.
+ */
+function readEnchantmentTiers(
+  rawPools: unknown[],
+  context: string,
+  warn: Warn,
+): string[] {
+  const tiers: string[] = [];
+  for (const rawPool of rawPools) {
+    const tier = BONUS_ENCHANTMENT_TIERS.find(
+      (name) => name.toLowerCase() === String(rawPool).trim().toLowerCase(),
+    );
+    if (!tier) {
+      warn(
+        `${context}: ignored ${describeValue(rawPool)}, which is not an enchantment tier.`,
+      );
+    } else if (!tiers.includes(tier)) {
+      tiers.push(tier);
+    }
+  }
+  return tiers;
+}
+
+/**
+ * Reads the Pools of a Bonus Cards row, rewriting each in its canonical spelling.
+ *
+ * @returns The valid pools in YAML order, without duplicates.
+ */
+function readCardPools(rawPools: unknown[], context: string, warn: Warn): string[] {
+  const pools: string[] = [];
+  for (const rawPool of rawPools) {
+    const parts = parseBonusCardPool(String(rawPool));
+    if ("error" in parts) {
+      warn(`${context}: left out card pool ${describeValue(rawPool)}: ${parts.error}.`);
+      continue;
+    }
+    const pool = formatBonusCardPool(parts);
+    if (!pools.includes(pool)) {
+      pools.push(pool);
+    }
+  }
+  return pools;
+}
+
+/**
+ * Reads one `bonus_items` entry as a Bonus Item row.
+ *
+ * @param entry - Raw list entry, such as `{WAX_RELIC: {Pools: [Common]}}`.
+ * @param context - Row named in warnings.
+ * @param warn - Receives warnings for anything that cannot be loaded.
+ * @returns The row, or `null` when it was left out.
+ */
+function readBonusItem(
+  entry: unknown,
+  context: string,
+  warn: Warn,
+): BonusItemAnswer | null {
+  const [type, ...extraTypes] = isMapping(entry) ? Object.keys(entry) : [];
+  const kind = BONUS_ITEM_KINDS.find((name) => name === type?.toUpperCase());
+  if (!type || extraTypes.length || !kind) {
+    warn(
+      `${context}: left out ${describeValue(entry)}, which is not a Bonus Item type the builder knows.`,
+    );
     return null;
   }
-  return { kind: WAX_RELIC, mode: "random", pools };
+
+  const selector = (entry as Record<string, unknown>)[type];
+  if (!isMapping(selector) || "Value" in selector === "Pools" in selector) {
+    warn(
+      `${context}: left out a ${kind} Bonus Item that needs exactly one of Value or Pools.`,
+    );
+    return null;
+  }
+
+  if (kind === "MAX_HP") {
+    const amount = Number(selector.Value);
+    if (!("Value" in selector) || !Number.isInteger(amount) || amount < 1) {
+      warn(`${context}: left out a Max HP Bonus Item without a whole-number Value.`);
+      return null;
+    }
+    return { kind, amount };
+  }
+
+  const rawPools = Array.isArray(selector.Pools)
+    ? selector.Pools
+    : [selector.Pools];
+
+  if (kind === "CARDS") {
+    if ("Value" in selector) {
+      const card = String(selector.Value).trim();
+      if (!card) {
+        warn(`${context}: left out a Bonus Cards item with an empty Value.`);
+        return null;
+      }
+      return { kind, mode: "specific", card };
+    }
+    const pools = readCardPools(rawPools, context, warn);
+    if (!pools.length) {
+      warn(`${context}: left out a Bonus Cards item without any valid pool.`);
+      return null;
+    }
+    return { kind, mode: "random", pools };
+  }
+
+  if (kind === "ENCHANTMENT" || kind === "ENCHANTED_CARDS") {
+    if ("Value" in selector) {
+      const enchantment = findBonusEnchantment(String(selector.Value));
+      if (!enchantment) {
+        warn(
+          `${context}: left out ${describeValue(selector.Value)}, which is not an enchantment Bonus Items can give.`,
+        );
+        return null;
+      }
+      return { kind, mode: "specific", enchantment: enchantment.name };
+    }
+    const tiers = readEnchantmentTiers(rawPools, context, warn);
+    if (!tiers.length) {
+      warn(`${context}: left out an enchantment Bonus Item without any known tier.`);
+      return null;
+    }
+    return { kind, mode: "random", tiers };
+  }
+
+  if ("Value" in selector) {
+    const relicId = findSpecificRelicId(String(selector.Value));
+    if (!relicId) {
+      warn(
+        `${context}: left out ${describeValue(selector.Value)}, which is not an eligible bonus relic.`,
+      );
+      return null;
+    }
+    return { kind, mode: "specific", relicId };
+  }
+
+  const pools = readRelicPools(rawPools, context, warn);
+  if (!pools.length) {
+    warn(`${context}: left out a relic Bonus Item without any known relic pool.`);
+    return null;
+  }
+  return { kind, mode: "random", pools };
 }
 
 /**
@@ -233,16 +372,45 @@ function readShopStockAnswers<KindId extends string>(
 }
 
 /**
- * Reads Checks & Rewards answers.
+ * Reads Checks answers.
  *
  * @param options - Resolved option values.
- * @param warn - Receives warnings for Bonus Items and Shop settings.
- * @returns Starting Equipment, Ancient, check, Shop, Bonus Item, filler and trap answers.
+ * @returns Starting Equipment and check-type answers.
  */
-export function readChecksAndRewardsAnswers(
+export function readChecksAnswers(options: CompiledOptions): ChecksAnswers {
+  return {
+    startingEquipment: {
+      progressiveStarterCard: options[
+        STARTING_EQUIPMENT_OPTION_KEYS.progressiveStarterCard
+      ] as boolean,
+      progressiveStarterRelic: options[
+        STARTING_EQUIPMENT_OPTION_KEYS.progressiveStarterRelic
+      ] as boolean,
+    },
+    types: {
+      neowSanity: options[CHECK_OPTION_KEYS.neowSanity] as boolean,
+      includeFloorChecks: options[
+        CHECK_OPTION_KEYS.includeFloorChecks
+      ] as boolean,
+      campfireSanity: options[CHECK_OPTION_KEYS.campfireSanity] as boolean,
+      goldSanity: options[CHECK_OPTION_KEYS.goldSanity] as boolean,
+      potionSanity: options[CHECK_OPTION_KEYS.potionSanity] as boolean,
+      shuffleAllCards: options[CHECK_OPTION_KEYS.shuffleAllCards] as boolean,
+    },
+  };
+}
+
+/**
+ * Reads Shops answers.
+ *
+ * @param options - Resolved option values.
+ * @param warn - Receives a warning when Shop Sanity has no slots to shuffle.
+ * @returns Shop Sanity and shop stock answers.
+ */
+export function readShopsAnswers(
   options: CompiledOptions,
   warn: Warn,
-): ChecksAndRewardsAnswers {
+): ShopsAnswers {
   const shop = {
     enabled: options[SHOP_OPTION_KEYS.enabled] as boolean,
     cardSlots: options[SHOP_OPTION_KEYS.cardSlots] as number,
@@ -250,9 +418,7 @@ export function readChecksAndRewardsAnswers(
     relicSlots: options[SHOP_OPTION_KEYS.relicSlots] as number,
     potionSlots: options[SHOP_OPTION_KEYS.potionSlots] as number,
     removeSlots: options[SHOP_OPTION_KEYS.removeSlots] as boolean,
-    costs: options[
-      SHOP_OPTION_KEYS.costs
-    ] as ChecksAndRewardsAnswers["shop"]["costs"],
+    costs: options[SHOP_OPTION_KEYS.costs] as ShopsAnswers["shop"]["costs"],
   };
 
   // The Python world turns Shop Sanity off when it has no locations to add.
@@ -269,47 +435,7 @@ export function readChecksAndRewardsAnswers(
     shop.enabled = false;
   }
 
-  const rawBonusItems = options[BONUS_ITEM_OPTION_KEY] as unknown[];
-  const bonusItems: BonusItemAnswer[] = [];
-  rawBonusItems.forEach((entry, index) => {
-    const item = readBonusItem(entry, `Bonus Item ${index + 1}`, warn);
-    if (item) {
-      bonusItems.push(item);
-    }
-  });
-
-  const trapWeights = {} as ChecksAndRewardsAnswers["traps"]["weights"];
-  for (const item of TRAP_ITEM_DEFINITIONS) {
-    trapWeights[item.id] = options[item.optionKey] as TrapWeight;
-  }
-
   return {
-    startingEquipment: {
-      progressiveStarterCard: options[
-        STARTING_EQUIPMENT_OPTION_KEYS.progressiveStarterCard
-      ] as boolean,
-      progressiveStarterRelic: options[
-        STARTING_EQUIPMENT_OPTION_KEYS.progressiveStarterRelic
-      ] as boolean,
-    },
-    ancients: {
-      relicLocation: options[
-        ANCIENT_OPTION_KEYS.relicLocation
-      ] as ChecksAndRewardsAnswers["ancients"]["relicLocation"],
-      relicPool: options[
-        ANCIENT_OPTION_KEYS.relicPool
-      ] as ChecksAndRewardsAnswers["ancients"]["relicPool"],
-    },
-    checks: {
-      neowSanity: options[CHECK_OPTION_KEYS.neowSanity] as boolean,
-      includeFloorChecks: options[
-        CHECK_OPTION_KEYS.includeFloorChecks
-      ] as boolean,
-      campfireSanity: options[CHECK_OPTION_KEYS.campfireSanity] as boolean,
-      goldSanity: options[CHECK_OPTION_KEYS.goldSanity] as boolean,
-      potionSanity: options[CHECK_OPTION_KEYS.potionSanity] as boolean,
-      shuffleAllCards: options[CHECK_OPTION_KEYS.shuffleAllCards] as boolean,
-    },
     shop,
     shopCards: readShopCardAnswers(options),
     shopRelics: readShopStockAnswers(
@@ -322,12 +448,65 @@ export function readChecksAndRewardsAnswers(
       SHOP_POTION_OPTION_KEY,
       SHOP_POTION_KIND_DEFINITIONS,
     ),
+  };
+}
+
+/**
+ * Reads Item Pool answers.
+ *
+ * @param options - Resolved option values.
+ * @param warn - Receives warnings for Bonus Items that cannot be loaded.
+ * @returns Bonus Item, filler and trap answers.
+ */
+export function readItemPoolAnswers(
+  options: CompiledOptions,
+  warn: Warn,
+): ItemPoolAnswers {
+  const rawBonusItems = options[BONUS_ITEM_OPTION_KEY] as unknown[];
+  const bonusItems: BonusItemAnswer[] = [];
+  rawBonusItems.forEach((entry, index) => {
+    const item = readBonusItem(entry, `Bonus Item ${index + 1}`, warn);
+    if (item) {
+      bonusItems.push(item);
+    }
+  });
+
+  const trapWeights = {} as ItemPoolAnswers["traps"]["weights"];
+  for (const item of TRAP_ITEM_DEFINITIONS) {
+    trapWeights[item.id] = options[item.optionKey] as TrapWeight;
+  }
+
+  return {
     bonusItems,
     filler: readFillerAnswers(options),
     traps: {
       chance: options[TRAP_CHANCE_OPTION_KEY] as number,
       weights: trapWeights,
     },
+  };
+}
+
+/**
+ * Reads Boons answers.
+ *
+ * @param options - Resolved option values.
+ * @param warn - Receives a warning for Boon names the builder does not know.
+ * @returns Selected Boons and the Blitz merchant percentage.
+ */
+export function readBoonAnswers(
+  options: CompiledOptions,
+  warn: Warn,
+): BoonAnswers {
+  const raw = options[BOON_OPTION_KEYS.boons] as string[];
+  const selected = getOrderedBoons(raw);
+  for (const name of raw) {
+    if (!selected.includes(name)) {
+      warn(`Boons: left out '${name}', which is not a Boon the builder knows.`);
+    }
+  }
+  return {
+    selected,
+    blitzMerchantChance: options[BOON_OPTION_KEYS.blitzMerchantChance] as number,
   };
 }
 
@@ -387,7 +566,11 @@ export function readChallengeAnswers(
     (key) => !sameOptionValue(options[key], catalog.options[key]?.default),
   );
   if (!enabled) {
-    return { ...defaults, runModifiers: [...defaults.runModifiers] };
+    return {
+      ...defaults,
+      runModifiers: [...defaults.runModifiers],
+      sightBonuses: { ...defaults.sightBonuses },
+    };
   }
 
   return {
@@ -407,6 +590,9 @@ export function readChallengeAnswers(
     hiddenPiles: readSightCopies(options[CHALLENGE_OPTION_KEYS.hiddenPiles]),
     hiddenMap: readSightCopies(options[CHALLENGE_OPTION_KEYS.hiddenMap]),
     hiddenCards: readSightCopies(options[CHALLENGE_OPTION_KEYS.hiddenCards]),
+    sightBonuses: readSightBonusNames(
+      (options[CHALLENGE_OPTION_KEYS.sightBonuses] as string[] | undefined) ?? [],
+    ),
     strictCardRewards: options[
       CHALLENGE_OPTION_KEYS.strictCardRewards
     ] as boolean,
@@ -417,18 +603,146 @@ export function readChallengeAnswers(
  * Reads Progression answers.
  *
  * @param options - Resolved option values.
- * @returns Logic version, progression balancing and accessibility answers.
+ * @returns Progression balancing and accessibility answers.
  */
 export function readProgressionAnswers(
   options: CompiledOptions,
 ): ProgressionAnswers {
   return {
-    useNewLogic: options[PROGRESSION_OPTION_KEYS.useNewLogic] as boolean,
     progressionBalancing: options[
       PROGRESSION_OPTION_KEYS.progressionBalancing
     ] as number,
     accessibility: options[
       PROGRESSION_OPTION_KEYS.accessibility
     ] as ProgressionAnswers["accessibility"],
+  };
+}
+
+/**
+ * Reads a hint or placement list, keeping the group and item names the builder knows.
+ *
+ * @param value - The resolved option value.
+ * @param label - The question's name, for warnings.
+ * @param catalog - Generated item catalog.
+ * @param warn - Receives a warning for names that are neither an item nor a group.
+ * @returns Canonical names in the order written.
+ */
+function readItemNameList(
+  value: unknown,
+  label: string,
+  catalog: OptionCatalog,
+  warn: (message: string) => void,
+): string[] {
+  const names: string[] = [];
+  const ignored: string[] = [];
+
+  for (const entry of Array.isArray(value) ? value : []) {
+    const text = String(entry);
+    const parsed = parseItemName(text, catalog);
+    const name =
+      findItemGroup(text, catalog) ??
+      (parsed &&
+        (parsed.character === null
+          ? parsed.item
+          : `${parsed.character} ${parsed.item}`));
+    if (name === null) {
+      ignored.push(`'${text}'`);
+    } else if (!names.includes(name)) {
+      names.push(name);
+    }
+  }
+
+  if (ignored.length) {
+    warn(
+      `${label}: ignored ${ignored.join(", ")}, which ${ignored.length === 1 ? "isn't an item or item group" : "aren't items or item groups"}.`,
+    );
+  }
+  return names;
+}
+
+/**
+ * Reads the starting inventory, keeping the stacks the builder can show.
+ *
+ * @param value - The resolved `start_inventory` mapping of item names to counts.
+ * @param catalog - Generated item catalog.
+ * @param warn - Receives a warning for items the builder can't show.
+ * @returns One stack per item.
+ */
+function readStartingInventory(
+  value: unknown,
+  catalog: OptionCatalog,
+  warn: (message: string) => void,
+): StartingItemAnswer[] {
+  const stacks: StartingItemAnswer[] = [];
+  const ignored: string[] = [];
+
+  for (const [name, count] of Object.entries(
+    (value ?? {}) as Record<string, unknown>,
+  )) {
+    const parsed = parseItemName(name, catalog);
+    const startable =
+      parsed !== null &&
+      !parsed.character?.startsWith("Custom Character ") &&
+      getStartingItemChoices(parsed.character, catalog).some(
+        (choice) => choice.name === parsed.item,
+      );
+    if (
+      !startable ||
+      typeof count !== "number" ||
+      !Number.isInteger(count) ||
+      count < 1 ||
+      count > STARTING_ITEM_MAX_COUNT
+    ) {
+      ignored.push(`'${name}'`);
+      continue;
+    }
+    stacks.push({ character: parsed.character, item: parsed.item, count });
+  }
+
+  if (ignored.length) {
+    warn(
+      `Starting Inventory: left out ${ignored.join(", ")}. The builder only shows items of built-in and predefined characters and universal items other than traps and Bonus Items, with counts from 1 to ${STARTING_ITEM_MAX_COUNT}.`,
+    );
+  }
+  return stacks;
+}
+
+/**
+ * Reads Items & Hints answers.
+ *
+ * @param options - Resolved option values.
+ * @param catalog - Generated item catalog.
+ * @param warn - Receives warnings for names the builder can't keep.
+ * @returns Starting items, starting hints, and placement lists.
+ */
+export function readItemAnswers(
+  options: CompiledOptions,
+  catalog: OptionCatalog,
+  warn: (message: string) => void,
+): ItemAnswers {
+  return {
+    startingInventory: readStartingInventory(
+      options[ITEM_OPTION_KEYS.startInventory],
+      catalog,
+      warn,
+    ),
+    startHints: readItemNameList(
+      options[ITEM_OPTION_KEYS.startHints],
+      "Starting Hints",
+      catalog,
+      warn,
+    ),
+    localItems: readItemNameList(
+      options[ITEM_OPTION_KEYS.localItems],
+      "Local Items",
+      catalog,
+      warn,
+    ),
+    nonLocalItems: readItemNameList(
+      options[ITEM_OPTION_KEYS.nonLocalItems],
+      "Non-local Items",
+      catalog,
+      warn,
+    ),
   };
 }

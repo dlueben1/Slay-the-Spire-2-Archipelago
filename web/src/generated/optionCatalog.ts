@@ -60,10 +60,27 @@ export interface CharacterRegistry {
   beta_only: string[];
 }
 
+/** One Archipelago item, with the item groups it belongs to besides "Everything". */
+export interface CatalogItem {
+  name: string;
+  groups: string[];
+}
+
+/** Item names and groups for the starting inventory, hint and locality questions. */
+export interface ItemCatalog {
+  /** Items every character has its own copy of, named "<character> <item>". */
+  character_items: CatalogItem[];
+  /** Items no character owns. */
+  universal_items: CatalogItem[];
+  /** Item group names, including Archipelago's automatic "Everything". */
+  groups: string[];
+}
+
 export interface OptionCatalog {
   schema_version: number;
   game: string;
   characters: CharacterRegistry;
+  items: ItemCatalog;
   option_order: string[];
   options: Record<string, GeneratedOption>;
 }
