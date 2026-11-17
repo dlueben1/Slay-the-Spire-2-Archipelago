@@ -32,7 +32,7 @@ Place them in ignored `.local-tools/sts2-references/` with this layout:
 
 ```text
 .local-tools/sts2-references/
-├── 0.107.1/             # main game version
+├── 0.111.1/             # main game version
 │   ├── sts2.dll
 │   ├── 0Harmony.dll
 │   └── GodotSharp.dll
@@ -46,7 +46,7 @@ After switching Steam to the version you want, copy the files from that installa
 
 ```bash
 game_data_dir="/path/to/Slay the Spire 2/data_sts2_windows_x86_64"
-api_version="0.113.1"  # use 0.107.1 for the main version
+api_version="0.113.1"  # use 0.111.1 for the main version
 mkdir -p ".local-tools/sts2-references/$api_version"
 cp "$game_data_dir/sts2.dll" "$game_data_dir/0Harmony.dll" "$game_data_dir/GodotSharp.dll" \
   ".local-tools/sts2-references/$api_version/"
@@ -87,7 +87,7 @@ If you are using the NuGet reference assemblies, set `UseSts2RefLib` to `true` a
 Check both APIs and build the package in WSL:
 
 ```bash
-dotnet build client/StS2AP/StS2AP.csproj -c Release -p:Sts2ApiCompat=0.107.1 -p:BuildMode=CompileOnly
+dotnet build client/StS2AP/StS2AP.csproj -c Release -p:Sts2ApiCompat=0.111.1 -p:BuildMode=CompileOnly
 dotnet build client/StS2AP/StS2AP.csproj -c Release -p:Sts2ApiCompat=0.113.1 -p:BuildMode=CompileOnly
 dotnet build client/StS2AP/StS2AP.csproj -c Release -p:Sts2ApiCompat=0.113.1 -p:BuildMode=Package
 ```
