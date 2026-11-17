@@ -268,18 +268,13 @@ namespace StS2AP.Patches
                     // Add the Gold to the amount we've received
                     try
                     {
-                        var haveKey = Progress.GoldReceived.TryGetValue(charOffset, out int gold);
-                        if (!haveKey)
-                            gold = 0;
-                        Progress.GoldReceived[charOffset] =
-                            gold + ItemTable.GoldItemAmounts[itemId];
-                    }
-                    catch (KeyNotFoundException e)
-                    {
-                        LogUtility.Error(
-                            $"GoldItemAmounts does not have a value for this item! "
-                                + $"({item.ItemDisplayName} from {item.Player.Name}): {e}"
-                        );
+                        if (!ApGrantDispatcher.AddGoldItem(charOffset, itemId))
+                        {
+                            LogUtility.Error(
+                                $"GoldItemAmounts does not have a value for this item! "
+                                    + $"({item.ItemDisplayName} from {item.Player.Name})"
+                            );
+                        }
                     }
                     catch
                     {

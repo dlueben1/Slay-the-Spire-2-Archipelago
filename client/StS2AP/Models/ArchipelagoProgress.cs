@@ -485,6 +485,13 @@ namespace StS2AP.Models
         internal int UniversalBuffsConvertedToGold { get; set; }
 
         /// <summary>
+        /// Per character, the raw GoldReceived totals at which each Combat, Elite and Boss Gold
+        /// item ends, in receipt order. A claim counts each one as a separate gold gain. Built
+        /// alongside GoldReceived; not saved.
+        /// </summary>
+        internal Dictionary<long, List<int>> GoldGainItemEnds { get; set; } = new();
+
+        /// <summary>
         /// The Gold you've redeemed so far this run
         /// </summary>
         public int GoldRedeemed { get; set; } = 0;

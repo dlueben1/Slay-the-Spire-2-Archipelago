@@ -285,6 +285,7 @@ public static partial class ApMirroredRewardDispatcher
                 SourceAmount = gold.SourceAmount,
                 GrantedAmount = gold.GrantedAmount,
                 RedeemedRawAfter = gold.RedeemedRawAfter,
+                GainCount = gold.GainCount,
             };
         }
 
@@ -975,9 +976,20 @@ public static partial class ApMirroredRewardDispatcher
         protected override async Task<bool> OnSelect()
         {
             // Known edge case: removing Poverty while this menu stays open leaves this offer underpaying.
+            int goldBefore = Player.Gold;
             bool applied = await base.OnSelect();
             if (applied && LocalContext.IsMe(Player))
                 ApGrantDispatcher.CommitGoldClaim(claim);
+
+            // The single gain above already fired "after gaining gold" once. Fire it again for each
+            // further Combat, Elite or Boss Gold item, so Dragon Fruit counts them separately.
+            // Every replica selects this reward from the same published menu, so all of them do
+            // this. Nothing more fires when no gold arrived, for example with Ectoplasm.
+            if (applied && Player.Gold > goldBefore)
+            {
+                for (int gain = 1; gain < claim.GainCount; gain++)
+                    await Hook.AfterGoldGained(Player.RunState, Player);
+            }
             return applied;
         }
     }
