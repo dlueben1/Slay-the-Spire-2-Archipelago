@@ -137,6 +137,7 @@
     <Publicize Include="sts2:MegaCrit.Sts2.Core.Models.AncientEventModel.GenerateInitialOptionsWrapper" />
     <Publicize Include="sts2:MegaCrit.Sts2.Core.Models.Events.ColorfulPhilosophers.GenerateInitialOptions" />
     <Publicize Include="sts2:MegaCrit.Sts2.Core.Nodes.CommonUi.NBackButton.Hotkeys" />
+    <Publicize Include="sts2:MegaCrit.Sts2.Core.Nodes.CommonUi.NBackButton.ControllerIconHotkey" />
     <Publicize Include="sts2:MegaCrit.Sts2.Core.Nodes.Combat.NCombatCardPile.AddCard" />
     <Publicize Include="sts2:MegaCrit.Sts2.Core.Nodes.Combat.NCombatCardPile.OnRelease" />
     <Publicize Include="sts2:MegaCrit.Sts2.Core.Models.Events.Neow.GenerateInitialOptions" />
