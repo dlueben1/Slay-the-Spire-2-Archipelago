@@ -32,6 +32,10 @@ public sealed class AgedCheese : ModRelicTemplate
     // Granted by AP, never a reward, so it has no rarity Touch of Orobas could pick up.
     public override RelicRarity Rarity => RelicRarity.None;
 
+    // Keeps relic-trading events from taking it, as Relic Coupons does. A traded-away Aged Cheese
+    // would come back on the next load, so the trade would be free.
+    public override bool HasUponPickupEffect => true;
+
     public override RelicAssetProfile AssetProfile { get; } = new(
         IconPath: ChosenCheeseIconPath,
         IconOutlinePath: ChosenCheeseIconPath,
