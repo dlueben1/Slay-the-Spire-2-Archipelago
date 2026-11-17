@@ -70,6 +70,7 @@ function getDisplayRow(item: BonusItemAnswer): BonusItemDisplayRow {
       imageUrl: "",
       name: "Unknown Bonus Item",
       details: "This entry is no longer valid and should be removed.",
+      isWax: false,
     };
   }
 }
@@ -216,7 +217,8 @@ function submitBonusItem(item: BonusItemAnswer): void {
               v-if="getDisplayRow(item).imageUrl"
               :src="getDisplayRow(item).imageUrl"
               :alt="`${getDisplayRow(item).name} image`"
-              class="bonus-item-table__image sepia"
+              class="bonus-item-table__image"
+              :class="{ sepia: getDisplayRow(item).isWax }"
               loading="lazy"
             />
           </span>

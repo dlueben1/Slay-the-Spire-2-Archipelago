@@ -53,14 +53,16 @@ function projectsConfiguredRowsInOrder(): void {
   const rows = buildBonusItemReviewRows([
     { kind: "WAX_RELIC", mode: "random", pools: ["Common", "Rare"] },
     { kind: "WAX_RELIC", mode: "specific", relicId: "FAKE_STRIKE_DUMMY" },
+    { kind: "RELIC", mode: "specific", relicId: "FAKE_STRIKE_DUMMY" },
   ]);
 
   // The randomized row uses the placeholder image and lists its pools.
-  expect(rows).toHaveLength(2);
+  expect(rows).toHaveLength(3);
   expect(rows[0]).toEqual({
     imageUrl: getRandomWaxRelicImageUrl(),
     name: RANDOM_WAX_RELIC_NAME,
     details: "From Pools: Common, Rare",
+    isWax: true,
   });
 
   // The specific row uses the chosen relic's own image, name, and description.
@@ -68,6 +70,15 @@ function projectsConfiguredRowsInOrder(): void {
     imageUrl: specificRelic.imageUrl,
     name: `Wax ${specificRelic.name}`,
     details: specificRelic.description,
+    isWax: true,
+  });
+
+  // Only wax relics are drawn in sepia; a lasting relic keeps its own colours.
+  expect(rows[2]).toEqual({
+    imageUrl: specificRelic.imageUrl,
+    name: specificRelic.name,
+    details: specificRelic.description,
+    isWax: false,
   });
 }
 

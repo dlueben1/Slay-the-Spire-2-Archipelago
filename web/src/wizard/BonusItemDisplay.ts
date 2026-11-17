@@ -27,6 +27,8 @@ export interface BonusItemDisplayRow {
   imageUrl: string;
   name: string;
   details: string;
+  /** Only wax relics show their art in sepia. */
+  isWax: boolean;
 }
 
 /** Relic whose art stands for a Max HP row, as in the game's reward menu. */
@@ -47,6 +49,7 @@ export function getBonusItemDisplayRow(
       imageUrl: getRelicById(MAX_HP_IMAGE_RELIC_ID).imageUrl,
       name: `+${item.amount} Max HP`,
       details: "Raises max HP and current HP when claimed.",
+      isWax: false,
     };
   }
 
@@ -62,12 +65,14 @@ export function getBonusItemDisplayRow(
         imageUrl: enchantment.imageUrl,
         name: `${what}: ${enchantment.displayName}`,
         details: enchantment.description,
+        isWax: false,
       };
     }
     return {
       imageUrl: getRandomEnchantmentImageUrl(),
       name: `${what}: random`,
       details: `From tiers: ${item.tiers.join(", ")}`,
+      isWax: false,
     };
   }
 
@@ -78,6 +83,7 @@ export function getBonusItemDisplayRow(
         imageUrl,
         name: `Card: ${item.card}`,
         details: "A card reward offering this one card.",
+        isWax: false,
       };
     }
     const pools = item.pools.map((pool) => {
@@ -91,10 +97,12 @@ export function getBonusItemDisplayRow(
       imageUrl,
       name: "Card reward",
       details: `Choose 1 of 3 from: ${pools.join(", ")}`,
+      isWax: false,
     };
   }
 
-  const prefix = item.kind === "WAX_RELIC" ? "Wax " : "";
+  const isWax = item.kind === "WAX_RELIC";
+  const prefix = isWax ? "Wax " : "";
   if (item.mode === "specific") {
     const relic = getRelicById(item.relicId);
 
@@ -102,14 +110,16 @@ export function getBonusItemDisplayRow(
       imageUrl: relic.imageUrl,
       name: `${prefix}${relic.name}`,
       details: relic.description,
+      isWax,
     };
   }
 
   if (item.mode === "random") {
     return {
       imageUrl: getRandomWaxRelicImageUrl(),
-      name: item.kind === "WAX_RELIC" ? RANDOM_WAX_RELIC_NAME : "Random Relic",
+      name: isWax ? RANDOM_WAX_RELIC_NAME : "Random Relic",
       details: `From Pools: ${item.pools.join(", ")}`,
+      isWax,
     };
   }
 
