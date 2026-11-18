@@ -1834,6 +1834,13 @@ namespace StS2AP
                 settings.SightBonuses = sightBonuses.Select(token => token.ToString()).ToHashSet();
                 LogUtility.Info($"SLOT - Sight Bonuses: [{string.Join(",", settings.SightBonuses)}]");
             }
+            else
+            {
+                // APWorlds from before Sight Bonuses omit the key (newer ones always send it, empty
+                // when every bonus is turned off). Their slots get every bonus, so a second copy
+                // already in their pool is no longer a dead item.
+                settings.SightBonuses = ChallengeSightItems.AllBonusNames.ToHashSet();
+            }
             if (slotData.ContainsKey("lock_characters"))
                 settings.NoCharactersLocked = Convert.ToInt32(slotData["lock_characters"]) == 0;
             if (slotData.ContainsKey("enable_death_fragments"))

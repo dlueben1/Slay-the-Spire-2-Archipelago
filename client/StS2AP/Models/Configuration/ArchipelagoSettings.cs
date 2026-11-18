@@ -109,7 +109,7 @@ namespace StS2AP.Models
         /// <summary>
         /// Sight Bonuses names from the YAML (for example "PileSight"): the Sight items whose second
         /// copy adds a bonus; see <see cref="StS2AP.Utils.ChallengeSightItems"/>. Older APWorlds
-        /// send none, so their spare copies add nothing.
+        /// send no list, and their slots get every bonus.
         /// </summary>
         public HashSet<string> SightBonuses { get; set; } = new();
 
