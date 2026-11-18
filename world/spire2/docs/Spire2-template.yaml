@@ -176,6 +176,9 @@ Slay the Spire II:
   #   Rare     - Prayer Wheel and White Star, from every relic source
   remove_op_relics: []
 
+  # Events can appear in any act, not just their usual ones. Singleplayer only
+  events_in_any_act: false
+
   # Start without your special starter card (Bash, Neutralize, ...); two items restore and then
   # upgrade it. Requires include_floor_checks. Can make the early game much harder but late game easier
   progressive_starter_card: false

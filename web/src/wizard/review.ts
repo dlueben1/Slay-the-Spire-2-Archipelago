@@ -425,13 +425,16 @@ export function summarizeRunAnswers(answers: RunAnswers): string {
   const victoryRelease = answers.releaseOnVictory
     ? "A winning character's remaining checks are released when their goal is recorded."
     : "A winning character's remaining checks are not released automatically.";
+  const eventActs = answers.eventsInAnyAct
+    ? "In singleplayer, events can appear in any act."
+    : "Events appear only in their usual acts.";
   const seeded = answers.seeded
     ? "Each character uses a fixed seed."
     : "Runs are not assigned fixed seeds.";
 
   const ancients = summarizeAncientAnswers(answers.ancients);
 
-  return `${immediateRelics} ${opRelics} ${victoryRelease} ${seeded} ${ancients}`;
+  return `${immediateRelics} ${opRelics} ${victoryRelease} ${eventActs} ${seeded} ${ancients}`;
 }
 
 /**

@@ -362,6 +362,20 @@ export const runSetupStep: WizardStep = {
       },
     },
     {
+      id: "events-in-any-act",
+      title: "Should events appear in any act?",
+      description:
+        "Normally each event appears only in certain acts. Event fights and rewards are not adjusted for the act you meet them in.",
+      help: "Singleplayer only: multiplayer runs keep the usual events.",
+      control: {
+        kind: "checkbox",
+        field: "eventsInAnyAct",
+        label: "Events in any act",
+        description:
+          "Any event can appear in any act, as long as its other conditions are met.",
+      },
+    },
+    {
       id: "ancient-location",
       title: "When should Progressive Ancient rewards be available?",
       control: {

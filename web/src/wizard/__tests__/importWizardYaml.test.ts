@@ -222,6 +222,7 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
         relicRewardsAvailableAnytime: 7,
         removeOpRelics: { ancient: true, rare: true },
         releaseOnVictory: !answers.run.releaseOnVictory,
+        eventsInAnyAct: !answers.run.eventsInAnyAct,
         seeded: !answers.run.seeded,
         ancients: {
           relicLocation: "start_of_act",

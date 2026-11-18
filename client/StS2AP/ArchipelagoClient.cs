@@ -1894,6 +1894,10 @@ namespace StS2AP
                 LogUtility.Info($"SLOT - Removed overpowered relic categories: {settings.RemovedOpRelics}");
             }
 
+            // Older APWorlds omit this key; their slots keep events in their usual acts.
+            if (slotData.ContainsKey("events_in_any_act"))
+                settings.EventsInAnyAct = Convert.ToBoolean(slotData["events_in_any_act"]);
+
             if (slotData.TryGetValue("bonus_items", out object? bonusItemsValue))
             {
                 settings.BonusItems = BonusItemDefinition.ParseAll(bonusItemsValue);
