@@ -119,6 +119,12 @@ namespace StS2AP.Models
         /// <summary>Overpowered-relic categories this slot removes from its runs.</summary>
         public OpRelicCategories RemovedOpRelics { get; set; }
 
+        /// <summary>
+        /// Whether singleplayer runs draw every act's events from one pool that ignores the
+        /// game's act restrictions. See <see cref="StS2AP.Patches.Patches_EventsInAnyAct"/>.
+        /// </summary>
+        public bool EventsInAnyAct { get; set; }
+
         private Dictionary<string, List<BonusItemDefinition>> _bonusItemsByCategory =
             new(StringComparer.OrdinalIgnoreCase);
 

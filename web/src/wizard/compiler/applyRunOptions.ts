@@ -76,6 +76,7 @@ export function applyRunOptions(
     catalog,
   );
   target[RUN_OPTION_KEYS.releaseOnVictory] = answers.releaseOnVictory;
+  target[RUN_OPTION_KEYS.eventsInAnyAct] = answers.eventsInAnyAct;
   target[RUN_OPTION_KEYS.seeded] = answers.seeded;
   applyAncientOptions(target, answers.ancients, catalog);
 }

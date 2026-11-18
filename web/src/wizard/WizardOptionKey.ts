@@ -29,6 +29,7 @@ export const RUN_OPTION_KEYS = {
   relicRewardsAvailableAnytime: "relic_rewards_available_anytime",
   removeOpRelics: "remove_op_relics",
   releaseOnVictory: "release_on_victory",
+  eventsInAnyAct: "events_in_any_act",
   seeded: "seeded",
 } as const;
 

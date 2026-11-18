@@ -12,11 +12,11 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "66e99cbe6ad4b0a876990632517794f92b0ecbb075528c0b57691a982d56e2e3"
+      "sha256": "e0b26333d13480dc0a7268a995a3cba1d88cfacc3202d91337bddce4f2df5563"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "c0001a3cb0ac2959142472973dcc2611418cc184f250b0bf7091747d3a4ba924"
+      "sha256": "1aaf9100caa87c8ccd0a013d2cd017a4f041fbe13e3a7662b20475b9a1db6a1d"
     }
   },
   "characters": {
@@ -143,6 +143,7 @@
     "ancient_relic_pool",
     "relic_rewards_available_anytime",
     "remove_op_relics",
+    "events_in_any_act",
     "progressive_starter_card",
     "progressive_starter_relic",
     "shuffle_all_cards",
@@ -253,6 +254,7 @@
         "ancient_relic_pool",
         "relic_rewards_available_anytime",
         "remove_op_relics",
+        "events_in_any_act",
         "progressive_starter_card",
         "progressive_starter_relic",
         "shuffle_all_cards",
@@ -1193,6 +1195,42 @@
       "valid_keys_casefold": false,
       "allow_custom_values": false,
       "supports_weighting": false,
+      "group": "Game Options"
+    },
+    "events_in_any_act": {
+      "key": "events_in_any_act",
+      "class_name": "EventsInAnyAct",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Events in Any Act",
+      "description": "Events can appear in any act instead of only their usual acts. Event fights and rewards\nare not adjusted for the act you meet them in. Singleplayer only: multiplayer runs keep the\nusual events.",
+      "default": false,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "supports_weighting": true,
       "group": "Game Options"
     },
     "progressive_starter_card": {

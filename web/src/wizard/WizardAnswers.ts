@@ -213,6 +213,8 @@ export interface RunAnswers {
   relicRewardsAvailableAnytime: number;
   removeOpRelics: OpRelicRemovalAnswers;
   releaseOnVictory: boolean;
+  /** Whether singleplayer runs can meet any event in any act. */
+  eventsInAnyAct: boolean;
   seeded: boolean;
   /** When and from which pool Progressive Ancient rewards are offered. */
   ancients: AncientAnswers;
@@ -620,6 +622,10 @@ export function createDefaultWizardAnswers(
       releaseOnVictory: getBooleanDefault(
         catalog,
         RUN_OPTION_KEYS.releaseOnVictory,
+      ),
+      eventsInAnyAct: getBooleanDefault(
+        catalog,
+        RUN_OPTION_KEYS.eventsInAnyAct,
       ),
       seeded: getBooleanDefault(catalog, RUN_OPTION_KEYS.seeded),
       ancients: {

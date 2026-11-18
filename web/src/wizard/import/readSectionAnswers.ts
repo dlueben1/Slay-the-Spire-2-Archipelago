@@ -102,7 +102,8 @@ function sameOptionValue(left: unknown, right: unknown): boolean {
  * Reads Run Settings answers.
  *
  * @param options - Resolved option values.
- * @returns Relic availability and removal, victory release, seeding, and Ancient answers.
+ * @returns Relic availability and removal, victory release, event acts, seeding, and Ancient
+ *   answers.
  */
 export function readRunAnswers(options: CompiledOptions): RunAnswers {
   const removed = options[RUN_OPTION_KEYS.removeOpRelics] as string[];
@@ -115,6 +116,7 @@ export function readRunAnswers(options: CompiledOptions): RunAnswers {
       rare: removed.includes(OP_RELIC_CATEGORY_KEYS.rare),
     },
     releaseOnVictory: options[RUN_OPTION_KEYS.releaseOnVictory] as boolean,
+    eventsInAnyAct: options[RUN_OPTION_KEYS.eventsInAnyAct] as boolean,
     seeded: options[RUN_OPTION_KEYS.seeded] as boolean,
     ancients: {
       relicLocation: options[

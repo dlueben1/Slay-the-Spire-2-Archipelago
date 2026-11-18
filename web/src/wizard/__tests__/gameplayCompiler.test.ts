@@ -87,6 +87,7 @@ function compilesConfiguredGameplaySections(): void {
     relicRewardsAvailableAnytime: 7,
     removeOpRelics: { ancient: true, rare: true },
     releaseOnVictory: false,
+    eventsInAnyAct: true,
     seeded: true,
     ancients: answers.run.ancients,
   };
@@ -150,6 +151,7 @@ function compilesConfiguredGameplaySections(): void {
   expect(options.relic_rewards_available_anytime).toBe(7);
   expect(options.remove_op_relics).toEqual(["Ancient", "Rare"]);
   expect(options.release_on_victory).toBe(false);
+  expect(options.events_in_any_act).toBe(true);
   expect(options.neow_sanity).toBe(true);
   expect(options.seeded).toBe(true);
   expect(options.random_shop_cards).toBe(true);
@@ -441,6 +443,7 @@ function revealsDependentGameplayQuestions(): void {
     "release-on-victory",
     "relic-rewards-available-anytime",
     "remove-op-relics",
+    "events-in-any-act",
     "ancient-location",
     "ancient-pool",
   ]);

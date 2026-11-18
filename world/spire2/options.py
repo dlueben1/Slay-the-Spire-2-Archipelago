@@ -181,6 +181,13 @@ class RelicRewardsAvailableAnytime(Range):
     default = 2
 
 
+class EventsInAnyAct(Toggle):
+    """Events can appear in any act instead of only their usual acts. Event fights and rewards
+    are not adjusted for the act you meet them in. Singleplayer only: multiplayer runs keep the
+    usual events."""
+    display_name = "Events in Any Act"
+    default = 0
+
 class RemoveOPRelics(OptionSet):
     """Removes relics that are much stronger in Archipelago than in a normal run.
     Each category removes only the relics that the Archipelago mod lists for it, so the exact
@@ -1082,6 +1089,7 @@ class Spire2Options(PerGameCommonOptions):
     ancient_relic_pool: AncientRelicPool
     relic_rewards_available_anytime: RelicRewardsAvailableAnytime
     remove_op_relics: RemoveOPRelics
+    events_in_any_act: EventsInAnyAct
     progressive_starter_card: ProgressiveStarterCard
     progressive_starter_relic: ProgressiveStarterRelic
     shuffle_all_cards: CardReward
