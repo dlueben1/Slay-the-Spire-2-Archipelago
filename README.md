@@ -20,18 +20,20 @@ This mod is currently in 2.0 stage and is practically feature-parity with the AP
 > [!WARNING]
 > The mod only supports English at the moment, but as we understand localization better, we can work with the community to support more languages
 
-# Installing the Mod
+# [Setup Guide](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/world/spire2/docs/setup_en.md)
 
-See the [setup guide](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/multiplayer_setup.md) for installation, YAML configuration, generation and connection instructions.
+The [setup guide](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/world/spire2/docs/setup_en.md) covers installing the mod, making your YAML, generating and hosting a game, connecting, and playing in multiplayer.
+
+## Installing the Mod
 
 There are two ways to install the mod, detailed below.
 
-## Steam Workshop
+### Steam Workshop
 
 Subscribe to the mod on the [steam workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3748826296).
 Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) installed. The easiest way to obtain it is from Steam Workshop.
 
-## Manual installation
+### Manual installation
 
 1. Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) installed. The easiest way to obtain it is from Steam Workshop.
 2. Download `Archipelago.zip` from the [Releases](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases/latest) section of the repo
@@ -84,6 +86,3 @@ Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetai
 # Roadmap
 
 You can view the current roadmap in detail [here](https://github.com/users/dlueben1/projects/1)
-
-> [!IMPORTANT]
-> Multiplayer is going to be **complex**, and will only be started on when **everything else is very stable**. Thanks for understanding!
