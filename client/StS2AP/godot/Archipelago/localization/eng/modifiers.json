@@ -32,5 +32,7 @@
   "AP_LOYAL_CUSTOMER.title": "Loyal Customer",
   "AP_LOYAL_CUSTOMER.description": "Each purchase makes the rest of that shop 15% cheaper, up to 45%.",
   "AP_CAMPFIRE_BREWING.title": "Campfire Brewing",
-  "AP_CAMPFIRE_BREWING.description": "Once per campfire, brew a random potion. You can still rest or upgrade afterwards."
+  "AP_CAMPFIRE_BREWING.description": "Once per campfire, brew a random potion. You can still rest or upgrade afterwards.",
+  "AP_ENDLESS_UPGRADES.title": "Endless Upgrades",
+  "AP_ENDLESS_UPGRADES.description": "Cards can be [gold]Upgraded[/gold] any number of times. Each upgrade adds the card's upgrade bonus again."
 }

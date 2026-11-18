@@ -38,6 +38,7 @@ public static class ApRunModifiers
             ["SpringCleaning"] = ModelDb.Modifier<ApSpringCleaning>,
             ["LoyalCustomer"] = ModelDb.Modifier<ApLoyalCustomer>,
             ["CampfireBrewing"] = ModelDb.Modifier<ApCampfireBrewing>,
+            ["EndlessUpgrades"] = ModelDb.Modifier<ApEndlessUpgrades>,
         };
 
     // Boons given to each player as a relic. Keys are the APWorld's Boons option names.
