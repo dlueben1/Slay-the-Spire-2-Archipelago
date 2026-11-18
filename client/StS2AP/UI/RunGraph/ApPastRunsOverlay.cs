@@ -213,7 +213,7 @@ internal sealed partial class ApPastRunsOverlay : Control
     private Control SeedButton(SeedGroup seed)
     {
         bool selected = seed.Seed == _selectedSeed;
-        var button = new Button { FocusMode = FocusModeEnum.All, CustomMinimumSize = new Vector2(0f, 136f) };
+        var button = ApButtonInput.PressOnGameInput(new Button { FocusMode = FocusModeEnum.All, CustomMinimumSize = new Vector2(0f, 136f) });
         var normal = Box(selected ? Card : PanelColor, selected ? Gold : PanelBorder, 14, 0f, borderWidth: 2);
         button.AddThemeStyleboxOverride("normal", normal);
         button.AddThemeStyleboxOverride("hover", Box(Card, selected ? Gold : Progression, 14, 0f, borderWidth: 2));

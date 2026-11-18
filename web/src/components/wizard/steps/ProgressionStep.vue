@@ -15,7 +15,8 @@ import { useWizardAnswers } from "../core/wizardAnswersContext";
  *
  * The balancing slider (including its named presets) and the accessibility radio
  * group are described by `progressionSetupStep`; this component only supplies the
- * shared Archipelago Settings subsection shell around the generic renderer.
+ * Generation Settings subsection shell around the generic renderer. It follows Death
+ * Link on the combined Multiworld step.
  */
 defineProps<{
   modelValue: ProgressionAnswers;
@@ -45,7 +46,7 @@ function forwardUpdate(value: object): void {
 </script>
 
 <template>
-  <section class="wizard-subsection pt-0! border-t-0!">
+  <section class="wizard-subsection">
     <div class="wizard-subsection__header">
       <h3>Generation Settings</h3>
       <p>

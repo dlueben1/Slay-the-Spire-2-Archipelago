@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Runs;
@@ -6,7 +7,8 @@ using StS2AP.Utils;
 namespace StS2AP.Models;
 
 /// <summary>
-/// Turns the slot's Run Modifiers option into run modifiers on each new AP run.
+/// Turns the slot's Run Modifiers and Boons options into run modifiers on each new AP run. Boons
+/// with uses to track are relics instead, so the relic bar shows their counter and used-up state.
 /// </summary>
 public static class ApRunModifiers
 {
@@ -26,7 +28,39 @@ public static class ApRunModifiers
             ["DangerousUnknowns"] = ModelDb.Modifier<ApDangerousUnknowns>,
         };
 
-    /// <summary>Whether this modifier came from the Run Modifiers option.</summary>
+    // Keys are the APWorld's Boons option names.
+    private static readonly IReadOnlyDictionary<string, Func<ModifierModel>> BoonsByOptionName =
+        new Dictionary<string, Func<ModifierModel>>(StringComparer.Ordinal)
+        {
+            ["EmberEnchanting"] = ModelDb.Modifier<ApEmberEnchanting>,
+            ["CompoundInterest"] = ModelDb.Modifier<ApCompoundInterest>,
+            ["Gilded"] = ModelDb.Modifier<ApGilded>,
+            ["SpringCleaning"] = ModelDb.Modifier<ApSpringCleaning>,
+            ["LoyalCustomer"] = ModelDb.Modifier<ApLoyalCustomer>,
+            ["CampfireBrewing"] = ModelDb.Modifier<ApCampfireBrewing>,
+            ["EndlessUpgrades"] = ModelDb.Modifier<ApEndlessUpgrades>,
+        };
+
+    // Boons given to each player as a relic. Keys are the APWorld's Boons option names.
+    private static readonly IReadOnlyDictionary<string, Func<RelicModel>> RelicBoonsByOptionName =
+        new Dictionary<string, Func<RelicModel>>(StringComparer.Ordinal)
+        {
+            ["Wayfinder"] = ModelDb.Relic<ApWayfinder>,
+            ["SecondWind"] = ModelDb.Relic<ApSecondWind>,
+        };
+
+    // Boons whose state or choices belong to one player, or that change the shared map. Multiplayer
+    // runs leave them out.
+    private static readonly IReadOnlySet<string> SingleplayerOnlyBoons = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "Wayfinder",
+        "SecondWind",
+        "EmberEnchanting",
+        "SpringCleaning",
+        "CampfireBrewing",
+    };
+
+    /// <summary>Whether this modifier came from the Run Modifiers or Boons option.</summary>
     public static bool IsArchipelagoModifier(ModifierModel modifier) =>
         modifier.GetType().Assembly == typeof(ApRunModifiers).Assembly;
 
@@ -56,12 +90,26 @@ public static class ApRunModifiers
         }
 
         var added = new List<ModifierModel>();
+        var relicBoons = new List<Func<RelicModel>>();
         foreach (string optionName in settings.RunModifiers)
         {
             if (CanonicalByOptionName.TryGetValue(optionName, out Func<ModifierModel>? canonical))
                 added.Add(canonical().ToMutable());
             else
                 LogUtility.Warn($"Ignoring unknown run modifier '{optionName}' from slot data.");
+        }
+        foreach (string boonName in settings.Boons)
+        {
+            bool isModifier = BoonsByOptionName.TryGetValue(boonName, out Func<ModifierModel>? canonical);
+            bool isRelic = RelicBoonsByOptionName.TryGetValue(boonName, out Func<RelicModel>? relic);
+            if (!isModifier && !isRelic)
+                LogUtility.Warn($"Ignoring unknown boon '{boonName}' from slot data.");
+            else if (runState.Players.Count > 1 && SingleplayerOnlyBoons.Contains(boonName))
+                LogUtility.Info($"Skipped boon '{boonName}': it is singleplayer only.");
+            else if (isRelic)
+                relicBoons.Add(relic!);
+            else
+                added.Add(canonical!().ToMutable());
         }
         if (settings.EnemyHpScaling > 0)
         {
@@ -76,6 +124,9 @@ public static class ApRunModifiers
             added.Add(damageScaling);
         }
 
+        foreach (Func<RelicModel> relic in relicBoons.Distinct())
+            GiveToEveryPlayer(runState, relic);
+
         // Keep one of each type, including any the run already has.
         added = added
             .Where(modifier => runState.Modifiers.All(existing => existing.GetType() != modifier.GetType()))
@@ -88,5 +139,24 @@ public static class ApRunModifiers
         LogUtility.Info(
             $"Added run modifiers: {string.Join(", ", added.Select(modifier => modifier.Id.Entry))}"
         );
+    }
+
+    /// <summary>
+    /// Adds a boon relic after each player's starting relics. The players exist with their
+    /// starting relics at this point, before the run begins, so direct insertion is enough: there
+    /// is no relic bar to update yet and no pickup to record in the run history.
+    /// </summary>
+    private static void GiveToEveryPlayer(RunState runState, Func<RelicModel> canonical)
+    {
+        foreach (Player player in runState.Players)
+        {
+            RelicModel relic = canonical();
+            if (player.Relics.Any(owned => owned.Id == relic.Id))
+                continue;
+            RelicModel mutable = relic.ToMutable();
+            mutable.FloorAddedToDeck = 1;
+            player.AddRelicInternal(mutable, silent: true);
+            LogUtility.Info($"Added boon relic {relic.Id.Entry}");
+        }
     }
 }

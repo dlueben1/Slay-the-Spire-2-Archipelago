@@ -16,6 +16,7 @@ import {
   SHOP_RELIC_KIND_DEFINITIONS,
 } from "./ShopStockKind";
 import {
+  BOON_OPTION_KEYS,
   CHALLENGE_OPTION_KEYS,
   CHARACTER_OPTION_KEYS,
   ANCIENT_OPTION_KEYS,
@@ -55,8 +56,8 @@ export function getGuidedOptionKeys(): string[] {
   const optionKeys: string[] = [
     ...Object.values(CHARACTER_OPTION_KEYS),
     ...Object.values(RUN_OPTION_KEYS),
-    ...Object.values(STARTING_EQUIPMENT_OPTION_KEYS),
     ...Object.values(ANCIENT_OPTION_KEYS),
+    ...Object.values(STARTING_EQUIPMENT_OPTION_KEYS),
     ...Object.values(CHECK_OPTION_KEYS),
     ...Object.values(SHOP_OPTION_KEYS),
     SHOP_CARD_OPTION_KEY,
@@ -78,13 +79,12 @@ export function getGuidedOptionKeys(): string[] {
     ...TRAP_ITEM_DEFINITIONS.map((item) => item.optionKey),
   );
 
-  // Death Link follows the combined Checks & Rewards ownership group.
-  optionKeys.push(...Object.values(DEATH_LINK_OPTION_KEYS));
-
-  // Challenges come last in the YAML, matching the APWorld's option groups.
+  // Boons and Challenges follow the Item Pool, as their steps do.
+  optionKeys.push(...Object.values(BOON_OPTION_KEYS));
   optionKeys.push(...Object.values(CHALLENGE_OPTION_KEYS));
 
-  // Common Archipelago settings close the dedicated Progression step.
+  // The Multiworld step closes with Death Link and the common Archipelago settings.
+  optionKeys.push(...Object.values(DEATH_LINK_OPTION_KEYS));
   optionKeys.push(...Object.values(PROGRESSION_OPTION_KEYS));
 
   // Return the complete ordered ownership snapshot.

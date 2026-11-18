@@ -23,7 +23,11 @@ import type {
   WizardControlChoice,
   WizardControlDescriptor,
 } from "./QuestionControl";
-import type { SightCopies, WizardAnswers } from "./WizardAnswers";
+import {
+  SIGHT_COPY_COUNTS,
+  type SightCopies,
+  type WizardAnswers,
+} from "./WizardAnswers";
 import { CHALLENGE_OPTION_KEYS } from "./WizardOptionKey";
 
 export interface WizardQuestion {
@@ -53,9 +57,14 @@ export interface WizardStep {
   title: string;
   description?: string;
   warning?: WizardStepWarning;
-  /** Answer section owned by this step's questions; absent for Review. */
+  /** Answer section owned by this step's questions; absent for Review and combined steps. */
   sectionKey?: WizardSectionKey;
   questions: WizardQuestion[];
+  /**
+   * Smaller steps shown together on this one, each with its own section and component.
+   * The combined step's own `questions` stay empty.
+   */
+  parts?: WizardStep[];
 }
 
 /**
@@ -110,7 +119,7 @@ function usesSharedAscensions(answers: WizardAnswers): boolean {
  */
 function usesShopSanity(answers: WizardAnswers): boolean {
   // Slot counts and pricing have no effect while Shop Sanity is disabled.
-  return answers.checksAndRewards.shop.enabled;
+  return answers.shops.shop.enabled;
 }
 
 /**
@@ -121,7 +130,7 @@ function usesShopSanity(answers: WizardAnswers): boolean {
  */
 function usesFloorChecks(answers: WizardAnswers): boolean {
   // Progressive starter items occupy filler slots that only Floor Checks create.
-  return answers.checksAndRewards.checks.includeFloorChecks;
+  return answers.checks.types.includeFloorChecks;
 }
 
 /**
@@ -135,7 +144,7 @@ function startingEquipmentHelp(answers: WizardAnswers): string | null {
     return null;
   }
 
-  return "Enable Floor Checks in the additional checks section below to use progressive Starting Equipment.";
+  return "Enable Floor Checks above to use progressive Starting Equipment.";
 }
 
 /**
@@ -214,7 +223,7 @@ export const characterSetupStep: WizardStep = {
       id: "individual-ascensions",
       title: "Per-character settings",
       description:
-        "Configure progressive starter overrides for each character here, alongside individual Ascensions when selected. Global starter settings are under Checks & Rewards.",
+        "Configure progressive starter overrides for each character here, alongside individual Ascensions when selected. Global starter settings are on the Checks step.",
     },
     {
       id: "selection",
@@ -353,17 +362,67 @@ export const runSetupStep: WizardStep = {
       },
     },
     {
-      id: "blitz-merchant-chance",
-      title: "How many shops should be Blitz merchants?",
+      id: "events-in-any-act",
+      title: "Should events appear in any act?",
       description:
-        "A Blitz merchant comes from the base game's Blitz mode. It replaces a shop's cards, relics and potions with six offers, such as a rare card reward, a relic, a card removal or a full heal with extra max HP (some come with a curse), and you take three of them for free. Shop Sanity checks are still sold on the shop's AP page.",
-      help: "This is very strong, and logic doesn't account for it at all. Three free picks are worth far more than a normal shop visit, and at high percentages there is little left to spend gold on, so gold becomes much less useful. Pair it with harder settings from the Challenges step, such as Run Modifiers, Enemy HP and Damage Scaling, or Dread Mode. 0% leaves every shop normal. In multiplayer, the host's chance applies to everyone. Beta branch only: on the game's main branch every shop stays normal.",
+        "Normally each event appears only in certain acts. Event fights and rewards are not adjusted for the act you meet them in.",
+      help: "Singleplayer only: multiplayer runs keep the usual events.",
       control: {
-        kind: "slider",
-        field: "blitzMerchantChance",
-        range: generatedRange("blitzMerchantChance"),
-        unit: "%",
-        ariaLabel: "Blitz merchant chance percent",
+        kind: "checkbox",
+        field: "eventsInAnyAct",
+        label: "Events in any act",
+        description:
+          "Any event can appear in any act, as long as its other conditions are met.",
+      },
+    },
+    {
+      id: "ancient-location",
+      title: "When should Progressive Ancient rewards be available?",
+      control: {
+        kind: "radio",
+        field: "ancients.relicLocation",
+        choices: [
+          {
+            label: "At the start of each act",
+            description:
+              "Claim the reward through that act's normal Ancient encounter.",
+            value: "start_of_act",
+          },
+          {
+            label: "As soon as it arrives",
+            description:
+              "Claim linked choices from the Archipelago reward menu at any time.",
+            value: "anytime",
+          },
+        ],
+      },
+    },
+    {
+      id: "ancient-pool",
+      title: "Which Ancient relics may appear in each reward?",
+      control: {
+        kind: "radio",
+        field: "ancients.relicPool",
+        choices: [
+          {
+            label: "Vanilla",
+            description:
+              "Use the base game behavior: Visiting an Ancient provides relics from their own relic pool.",
+            value: "balanced",
+          },
+          {
+            label: "Chaos",
+            description:
+              "Ancient Relic Rewards are comprised of any relic an Ancient from that Act can give you.",
+            value: "chaos",
+          },
+          {
+            label: "True Chaos",
+            description:
+              "Ancient Relic Rewards are comprised of any relic from any Ancient in the game, regardless of Act (except Neow)",
+            value: "true_chaos",
+          },
+        ],
       },
     },
   ],
@@ -392,7 +451,27 @@ function usesChallenges(answers: WizardAnswers): boolean {
 }
 
 /**
- * Builds the Off / one / two choices of a hidden-information challenge.
+ * Checks whether any hidden-information challenge has a second Sight item for its bonus.
+ *
+ * @param answers - Current player-facing wizard answers.
+ * @returns Whether the Sight Bonuses question applies.
+ */
+function hasSightBonusCopies(answers: WizardAnswers): boolean {
+  const challenges = answers.challenges;
+  return (
+    usesChallenges(answers) &&
+    [
+      challenges.hiddenIntents,
+      challenges.hiddenHealth,
+      challenges.hiddenPiles,
+      challenges.hiddenMap,
+      challenges.hiddenCards,
+    ].some((copies) => SIGHT_COPY_COUNTS[copies] >= 2)
+  );
+}
+
+/**
+ * Builds the Off / one to four choices of a hidden-information challenge.
  *
  * @param itemName - Display name of the challenge's Sight item.
  * @param offDescription - What the player sees with the challenge off.
@@ -416,8 +495,20 @@ function sightCopyChoices(
     {
       label: `Two ${itemName}s`,
       description:
-        "Adds two to the item pool, so one turns up sooner. Either one is enough.",
+        "Adds two to the item pool. The first one undoes the challenge, and the second adds its Sight Bonus.",
       value: "two" satisfies SightCopies,
+    },
+    {
+      label: `Three ${itemName}s`,
+      description:
+        "Adds three, so the first two turn up sooner. The first undoes the challenge, and the second adds its Sight Bonus.",
+      value: "three" satisfies SightCopies,
+    },
+    {
+      label: `Four ${itemName}s`,
+      description:
+        "Adds four, so the first two turn up sooner still. The first undoes the challenge, and the second adds its Sight Bonus.",
+      value: "four" satisfies SightCopies,
     },
   ];
 }
@@ -555,6 +646,48 @@ export const challengeSetupStep: WizardStep = {
       },
     },
     {
+      id: "sight-bonuses",
+      isVisible: hasSightBonusCopies,
+      title: "Which Sights should add a bonus with their second copy?",
+      description:
+        "A Sight left unticked stops at undoing its challenge, however many copies there are. The Intent, Health and Card Sight bonuses are singleplayer only.",
+      control: {
+        kind: "checkbox-grid",
+        items: [
+          {
+            field: "sightBonuses.intent",
+            label: "Intent Sight: Forewarned",
+            description:
+              "Start each combat with Forewarned: for each enemy whose attacks your Block stops completely on its turn, draw 1 more card next turn.",
+          },
+          {
+            field: "sightBonuses.health",
+            label: "Health Sight: Aged Cheese",
+            description:
+              "Gain Aged Cheese: after defeating an Elite or a boss, raise your Max HP by 3.",
+          },
+          {
+            field: "sightBonuses.pile",
+            label: "Pile Sight: Draw Order",
+            description:
+              "The draw pile shows cards in the order you will draw them.",
+          },
+          {
+            field: "sightBonuses.map",
+            label: "Map Sight: Scouting",
+            description:
+              "The map shows your next 2 fights, your next Elite and what your next 2 ? rooms will be.",
+          },
+          {
+            field: "sightBonuses.card",
+            label: "Card Sight: More Choice",
+            description:
+              "Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.",
+          },
+        ],
+      },
+    },
+    {
       id: "strict-card-rewards",
       isVisible: usesChallenges,
       title: "Should Card Rewards in the AP Menu be picked one at a time?",
@@ -572,14 +705,63 @@ export const challengeSetupStep: WizardStep = {
   ],
 };
 
-/** Checks & Rewards definition consumed by its component and navigation. */
+/** Checks definition consumed by its component and navigation. */
 export const checkSetupStep: WizardStep = {
   id: "checks",
-  title: "Checks & Rewards",
+  title: "Checks",
   description:
-    "Select what locations (checks) and items are enabled and available in your world.",
-  sectionKey: "checksAndRewards",
+    "Select which locations (checks) are in your world and which rewards are shuffled into the Multiworld.",
+  sectionKey: "checks",
   questions: [
+    {
+      id: "check-types",
+      title: "Which additional checks and rewards should be shuffled?",
+      help: "Each enabled option adds or changes locations and items for every generated character.",
+      control: {
+        kind: "checkbox-grid",
+        // Add a new card here only after its semantic answer, generated-key registry,
+        // compiler assignment, and generated schema entry have also been added.
+        items: [
+          {
+            field: "types.neowSanity",
+            label: "Neow's Blessing",
+            description:
+              "Include Neow's Blessing as a third Progressive Ancient reward.",
+          },
+          {
+            field: "types.includeFloorChecks",
+            label: "Floor Checks",
+            description:
+              "Make reaching new floors into locations and add helpful filler items to fill them.",
+            // Disabling Floor Checks also clears dependent Starting Equipment.
+            applyChange: includeFloorChecksTransition,
+          },
+          {
+            field: "types.campfireSanity",
+            label: "Campfire Actions",
+            description:
+              "Shuffle Progressive Rest and Smith items into the Multiworld, per character, per Act.",
+          },
+          {
+            field: "types.goldSanity",
+            label: "Gold Rewards",
+            description:
+              "Move combat, elite, and boss gold rewards into the Multiworld.",
+          },
+          {
+            field: "types.potionSanity",
+            label: "Potion Drops",
+            description: "Move potion rewards into the Multiworld.",
+          },
+          {
+            field: "types.shuffleAllCards",
+            label: "All Card Rewards",
+            description:
+              "Shuffle every card reward instead of the default behavior of shuffling every other reward.",
+          },
+        ],
+      },
+    },
     {
       id: "starting-equipment",
       title: "Which starting equipment should be progressive?",
@@ -605,109 +787,26 @@ export const checkSetupStep: WizardStep = {
         ],
       },
     },
+  ],
+};
+
+/** Shops definition consumed by its component and navigation. */
+export const shopSetupStep: WizardStep = {
+  id: "shops",
+  title: "Shops",
+  description:
+    "Choose whether shop slots become checks, and change what shops sell.",
+  sectionKey: "shops",
+  questions: [
     {
-      id: "ancient-location",
-      title: "When should Progressive Ancient rewards be available?",
+      id: "shop-sanity",
+      title: "Should parts of the shop be shuffled into the Multiworld?",
       control: {
-        kind: "radio",
-        field: "ancients.relicLocation",
-        choices: [
-          {
-            label: "At the start of each act",
-            description:
-              "Claim the reward through that act's normal Ancient encounter.",
-            value: "start_of_act",
-          },
-          {
-            label: "As soon as it arrives",
-            description:
-              "Claim linked choices from the Archipelago reward menu at any time.",
-            value: "anytime",
-          },
-        ],
-      },
-    },
-    {
-      id: "ancient-pool",
-      title: "Which Ancient relics may appear in each reward?",
-      control: {
-        kind: "radio",
-        field: "ancients.relicPool",
-        choices: [
-          {
-            label: "Vanilla",
-            description:
-              "Use the base game behavior: Visiting an Ancient provides relics from their own relic pool.",
-            value: "balanced",
-          },
-          {
-            label: "Chaos",
-            description:
-              "Ancient Relic Rewards are comprised of any relic an Ancient from that Act can give you.",
-            value: "chaos",
-          },
-          {
-            label: "True Chaos",
-            description:
-              "Ancient Relic Rewards are comprised of any relic from any Ancient in the game, regardless of Act (except Neow)",
-            value: "true_chaos",
-          },
-        ],
-      },
-    },
-    {
-      id: "check-types",
-      title: "Which additional checks and rewards should be shuffled?",
-      help: "Each enabled option adds or changes locations and items for every generated character.",
-      control: {
-        kind: "checkbox-grid",
-        // Add a new card here only after its semantic answer, generated-key registry,
-        // compiler assignment, and generated schema entry have also been added.
-        items: [
-          {
-            field: "checks.neowSanity",
-            label: "Neow's Blessing",
-            description:
-              "Include Neow's Blessing as a third Progressive Ancient reward.",
-          },
-          {
-            field: "checks.includeFloorChecks",
-            label: "Floor Checks",
-            description:
-              "Make reaching new floors into locations and add helpful filler items to fill them.",
-            // Disabling Floor Checks also clears dependent Starting Equipment.
-            applyChange: includeFloorChecksTransition,
-          },
-          {
-            field: "checks.campfireSanity",
-            label: "Campfire Actions",
-            description:
-              "Shuffle Progressive Rest and Smith items into the Multiworld, per character, per Act.",
-          },
-          {
-            field: "checks.goldSanity",
-            label: "Gold Rewards",
-            description:
-              "Move combat, elite, and boss gold rewards into the Multiworld.",
-          },
-          {
-            field: "checks.potionSanity",
-            label: "Potion Drops",
-            description: "Move potion rewards into the Multiworld.",
-          },
-          {
-            field: "checks.shuffleAllCards",
-            label: "All Card Rewards",
-            description:
-              "Shuffle every card reward instead of the default behavior of shuffling every other reward.",
-          },
-          {
-            field: "shop.enabled",
-            label: "Shop Slots",
-            description:
-              "Parts of the Shop can be shuffled into the Multiworld.",
-          },
-        ],
+        kind: "checkbox",
+        field: "shop.enabled",
+        label: "Shop Slots",
+        description:
+          "Shuffled slots move to a separate Archipelago shop page as checks you buy. Items in the Multiworld unlock them again on the normal shop page.",
       },
     },
     {
@@ -803,7 +902,7 @@ export const checkSetupStep: WizardStep = {
     {
       id: "shop-card-weights",
       title: "How often should a shop card slot hold each kind of card?",
-      isVisible: (answers) => answers.checksAndRewards.shopCards.enabled,
+      isVisible: (answers) => answers.shops.shopCards.enabled,
     },
     {
       id: "random-shop-relics",
@@ -821,7 +920,7 @@ export const checkSetupStep: WizardStep = {
     {
       id: "shop-relic-weights",
       title: "How often should a shop relic slot hold each kind of relic?",
-      isVisible: (answers) => answers.checksAndRewards.shopRelics.enabled,
+      isVisible: (answers) => answers.shops.shopRelics.enabled,
     },
     {
       id: "random-shop-potions",
@@ -840,8 +939,19 @@ export const checkSetupStep: WizardStep = {
     {
       id: "shop-potion-weights",
       title: "How often should a shop potion slot hold each kind of potion?",
-      isVisible: (answers) => answers.checksAndRewards.shopPotions.enabled,
+      isVisible: (answers) => answers.shops.shopPotions.enabled,
     },
+  ],
+};
+
+/** Item Pool definition consumed by its component and navigation. */
+export const itemPoolSetupStep: WizardStep = {
+  id: "item-pool",
+  title: "Item Pool",
+  description:
+    "Choose what fills the item pool besides the items your world needs: Bonus Items, filler and traps.",
+  sectionKey: "itemPool",
+  questions: [
     {
       id: "bonus-items",
       title: "Which Bonus Items should be added to the item pool?",
@@ -866,7 +976,38 @@ export const checkSetupStep: WizardStep = {
     {
       id: "trap-weights",
       title: "Which traps should appear?",
-      isVisible: (answers) => answers.checksAndRewards.traps.chance > 0,
+      isVisible: (answers) => answers.itemPool.traps.chance > 0,
+    },
+  ],
+};
+
+/** Boons definition consumed by its component and navigation. */
+export const boonSetupStep: WizardStep = {
+  id: "boons",
+  title: "Boons",
+  description:
+    "Optional ways to make every run easier. Logic doesn't account for any of them. Everything here is off by default.",
+  sectionKey: "boons",
+  questions: [
+    {
+      id: "boons",
+      title: "Which Boons should apply?",
+      description:
+        "Boons marked Solo only are left out of multiplayer runs. In multiplayer, the host's Boons apply to the whole run.",
+    },
+    {
+      id: "blitz-merchant-chance",
+      title: "How many shops should be Blitz merchants?",
+      description:
+        "A Blitz merchant comes from the base game's Blitz mode. It replaces a shop's cards, relics and potions with six offers, such as a rare card reward, a relic, a card removal or a full heal with extra max HP (some come with a curse), and you take three of them for free. Shop Sanity checks are still sold on the shop's AP page.",
+      help: "This is very strong, and logic doesn't account for it at all. Three free picks are worth far more than a normal shop visit, and at high percentages there is little left to spend gold on, so gold becomes much less useful. Pair it with harder settings from the Challenges step, such as Run Modifiers, Enemy HP and Damage Scaling, or Dread Mode. 0% leaves every shop normal. In multiplayer, the host's chance applies to everyone. Beta branch only: on the game's main branch every shop stays normal.",
+      control: {
+        kind: "slider",
+        field: "blitzMerchantChance",
+        range: generatedRange("blitzMerchantChance"),
+        unit: "%",
+        ariaLabel: "Blitz merchant chance percent",
+      },
     },
   ],
 };
@@ -950,26 +1091,9 @@ export const progressionSetupStep: WizardStep = {
   id: "progression",
   title: "Progression",
   description:
-    "Choose generation logic, progression balancing, and accessibility.",
+    "Choose progression balancing and accessibility.",
   sectionKey: "progression",
   questions: [
-    {
-      id: "use-new-logic",
-      control: {
-        kind: "checkbox",
-        field: "useNewLogic",
-        label: "Use New Logic",
-        description:
-          "Allow extra cards and relics to make up for missing progression items. Disable to use the previous logic.",
-      },
-      help: (answers) =>
-        answers.progression.useNewLogic &&
-        !answers.checksAndRewards.checks.includeFloorChecks &&
-        !answers.checksAndRewards.checks.goldSanity &&
-        !answers.checksAndRewards.checks.potionSanity
-          ? "Previous logic will still be used because Floor Checks, Gold Rewards, and Potion Drops are all disabled."
-          : "Previous logic is used automatically when Floor Checks, Gold Rewards, and Potion Drops are all disabled.",
-    },
     {
       id: "progression-balancing",
       title: "How strongly should Archipelago balance progression items?",
@@ -1017,14 +1141,26 @@ export const progressionSetupStep: WizardStep = {
   ],
 };
 
+/** Death Link and Progression, shown together because each is short. */
+export const multiworldSetupStep: WizardStep = {
+  id: "multiworld",
+  title: "Multiworld",
+  description:
+    "Choose whether deaths are shared with other players, and how Archipelago places your items.",
+  questions: [],
+  parts: [deathLinkSetupStep, progressionSetupStep],
+};
+
 /** Declarative step and question ordering for the guided wizard. */
 export const wizardSteps: WizardStep[] = [
   characterSetupStep,
   runSetupStep,
   checkSetupStep,
-  deathLinkSetupStep,
+  shopSetupStep,
+  itemPoolSetupStep,
+  boonSetupStep,
   challengeSetupStep,
-  progressionSetupStep,
+  multiworldSetupStep,
   {
     id: "review",
     title: "Review",

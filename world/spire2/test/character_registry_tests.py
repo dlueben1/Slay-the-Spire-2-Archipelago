@@ -188,16 +188,13 @@ class TestCharacterRosters(unittest.TestCase):
         predefined = [definition.internal_id for definition in PREDEFINED_CHARACTERS]
         roster = predefined + [f"Mod-{i}" for i in range(NUM_CUSTOM)]
         self.assertGreater(len(roster), NUM_CUSTOM)
-        for new_logic in (False, True):
-            with self.subTest(new_logic=new_logic):
-                world = self.generate(characters=character_list, modded_characters=roster,
-                                      use_new_logic=new_logic)
-                self.assertEqual(len(character_list) + len(roster), len(world.characters))
-                self.assertEqual(len(roster), world.modded_num)
-                self.assertEqual(f"Custom Character {NUM_CUSTOM}", world.characters[-1].name)
-                distribute_items_restrictive(world.multiworld, panic_method="raise")
-                self.assertFalse(world.multiworld.get_unfilled_locations())
-                self.assertTrue(world.multiworld.can_beat_game())
+        world = self.generate(characters=character_list, modded_characters=roster)
+        self.assertEqual(len(character_list) + len(roster), len(world.characters))
+        self.assertEqual(len(roster), world.modded_num)
+        self.assertEqual(f"Custom Character {NUM_CUSTOM}", world.characters[-1].name)
+        distribute_items_restrictive(world.multiworld, panic_method="raise")
+        self.assertFalse(world.multiworld.get_unfilled_locations())
+        self.assertTrue(world.multiworld.can_beat_game())
 
     def test_all_generic_slots_and_overflow(self):
         roster = [f"Unknown-{i}" for i in range(NUM_CUSTOM + 1)]

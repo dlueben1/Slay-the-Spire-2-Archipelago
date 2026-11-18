@@ -5,5 +5,14 @@
   "AP_ITEM_RELIC_MODEL.description": "It is a check whatcha expecting",
   "ARCHIPELAGO_RELIC_RELIC_COUPONS.title": "Relic Coupons",
   "ARCHIPELAGO_RELIC_RELIC_COUPONS.description": "Earn Relic Coupons from Elites and Chests. Coupons pair with Archipelago Relic items, granting relics through natural rewards or the Archipelago Rewards menu. A negative counter means you need to defeat more Elites or find more eligible relic rewards; a positive counter means you need to receive more AP Relic items.",
-  "ARCHIPELAGO_RELIC_RELIC_COUPONS.flavor": "A promise that somewhere in the multiworld, a relic is waiting for you."
+  "ARCHIPELAGO_RELIC_RELIC_COUPONS.flavor": "A promise that somewhere in the multiworld, a relic is waiting for you.",
+  "ARCHIPELAGO_RELIC_AGED_CHEESE.title": "Aged Cheese",
+  "ARCHIPELAGO_RELIC_AGED_CHEESE.description": "After defeating an Elite or a boss, raise your Max HP by 3.",
+  "ARCHIPELAGO_RELIC_AGED_CHEESE.flavor": "Now that you can see your health, you can see it growing.",
+  "ARCHIPELAGO_RELIC_AP_WAYFINDER.title": "Wayfinder",
+  "ARCHIPELAGO_RELIC_AP_WAYFINDER.description": "Three times per act, you may travel to any room in the next row, ignoring the paths. The counter shows the moves left this act.",
+  "ARCHIPELAGO_RELIC_AP_WAYFINDER.flavor": "A Boon from your Archipelago settings. Its uses return at the start of each act.",
+  "ARCHIPELAGO_RELIC_AP_SECOND_WIND.title": "Second Wind",
+  "ARCHIPELAGO_RELIC_AP_SECOND_WIND.description": "Once per act, when you would die, survive and heal 25% of your Max HP.",
+  "ARCHIPELAGO_RELIC_AP_SECOND_WIND.flavor": "A Boon from your Archipelago settings. It returns at the start of each act."
 }

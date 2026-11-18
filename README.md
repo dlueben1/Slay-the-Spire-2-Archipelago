@@ -10,8 +10,8 @@ Archipelago Client & APWorld for STS2
 > compatibility is assessed primarily through compile-time checks and player bug reports.
 > Beta branch updates can temporarily break compatibility until the mod is updated.
 >
-> The client contains exact builds for the main branch **v0.107.1** and beta branch
-> **v0.113.0** game versions.
+> The client contains exact builds for the main branch **v0.111.1** and beta branch
+> **v0.113.1** game versions.
 
 ## 1.0 Development onwards
 
@@ -40,7 +40,7 @@ Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetai
 5. Put `Archipelago.zip` in `mods`, then extract it into the archive program's default `Archipelago` directory
 
 - If you've done this step correctly, `mods/Archipelago/` contains the loader DLL,
-  common dependencies, the PCK, and `lib/0.107.1/` plus `lib/0.113.0/`. Keep that
+  common dependencies, the PCK, and `lib/0.111.1/` and `lib/0.113.1/`. Keep that
   directory structure intact.
 - The bundled `spire2.apworld` matches this mod version. Hosts can install it through the Archipelago Launcher's **Install APWorld**; see Archipelago's guide to [playing with custom worlds](https://archipelago.gg/tutorial/Archipelago/setup/en#playing-with-custom-worlds).
 
@@ -74,6 +74,7 @@ Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetai
 - [lamali292](https://github.com/lamali292) for their initial guide on creating mods for Slay the Spire 2!
 - [alwaysintreble](https://github.com/alwaysintreble/ArchipelagoBepInExPluginTemplate/tree/master) for their example Archipelago C# Plugin Template
 - [Spire Codex](https://spire-codex.com) for providing an awesome public API that helps us stay up-to-date with Slay the Spire 2 data for our item pools
+- The Eager and Exposing enchantment icons are [Power lightning](https://game-icons.net/1x1/lorc/power-lightning.html) and [Broken shield](https://game-icons.net/1x1/lorc/broken-shield.html) by Lorc from [game-icons.net](https://game-icons.net), under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), recoloured
 - All of the wonderful contributors to the project!
 
   <a href="https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/graphs/contributors">

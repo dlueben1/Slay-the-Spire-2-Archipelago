@@ -540,7 +540,7 @@ describe("per-character progressive starters", () => {
     answers.characters.individualStarterOverrides = {
       Ironclad: { progressiveStarterCard: "disabled" },
     };
-    answers.checksAndRewards.startingEquipment = {
+    answers.checks.startingEquipment = {
       progressiveStarterCard: true,
       progressiveStarterRelic: true,
     };
@@ -599,7 +599,7 @@ describe("per-character progressive starters", () => {
     answers.characters.individualStarterOverrides = {
       Ironclad: { progressiveStarterCard: "enabled" },
     };
-    answers.checksAndRewards.checks.includeFloorChecks = false;
+    answers.checks.types.includeFloorChecks = false;
     expect(
       compileWizardAnswers(answers, optionCatalog).use_advanced_characters,
     ).toBe(false);
@@ -612,7 +612,7 @@ describe("per-character progressive starters", () => {
     expect(summarizeCharacterAnswers(answers.characters, false)).toContain(
       "inactive because Floor Checks are off",
     );
-    answers.checksAndRewards.checks.includeFloorChecks = true;
+    answers.checks.types.includeFloorChecks = true;
     expect(
       compileWizardAnswers(answers, optionCatalog).advanced_characters,
     ).toMatchObject({

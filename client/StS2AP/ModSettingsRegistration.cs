@@ -79,25 +79,27 @@ public static class ModSettingsRegistration
         ApLootHotkeyHandle?.Dispose();
         ApLootHotkeyHandle = RuntimeHotkeyService.Register(
             GetApLootBindings(normalizedBinding),
-            () =>
-            {
-                // Ignore if we're not in a run
-                if (!GameUtility.IsInRun)
-                    return;
-
-                ArchipelagoRewardUI.Toggle();
-            },
+            ToggleApLootMenu,
             new RuntimeHotkeyOptions
             {
                 Id = $"{ModEntry.ModId}.{KeyBinds_APMenuId}",
                 DisplayName = RuntimeHotkeyText.Literal("Open AP Loot Menu"),
                 Description = RuntimeHotkeyText.Literal(
-                    "Opens the Archipelago Loot menu with the configured keyboard shortcut or L3."
+                    "Opens the Archipelago Loot menu with the configured keyboard shortcut, or with L3 (press the left stick down) on a controller."
                 ),
                 Category = RuntimeHotkeyText.Literal("Archipelago"),
                 MarkInputHandled = true,
             }
         );
+    }
+
+    /// <summary>Opens or closes the AP Loot menu; does nothing outside a run.</summary>
+    internal static void ToggleApLootMenu()
+    {
+        if (!GameUtility.IsInRun)
+            return;
+
+        ArchipelagoRewardUI.Toggle();
     }
 
     private static string[] GetApLootBindings(string keyboardBinding)
@@ -181,7 +183,7 @@ public static class ModSettingsRegistration
             .WithTitle(ModSettingsText.Literal("Controls"))
             .WithDescription(
                 ModSettingsText.Literal(
-                    "Configure Archipelago controls. The AP Loot Menu also opens with L3."
+                    "Configure Archipelago controls. On a controller, the AP Loot Menu opens with L3 (press the left stick down)."
                 )
             )
             .AddKeyBinding(

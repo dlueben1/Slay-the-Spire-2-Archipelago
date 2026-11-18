@@ -54,6 +54,34 @@ internal static class ChallengeSightItems
     }
 
     /// <summary>
+    /// Every Sight Bonuses name the APWorld's <c>sight_bonuses</c> option accepts, which is also
+    /// what slots from older APWorlds without that option get.
+    /// </summary>
+    internal static readonly string[] AllBonusNames =
+        ["IntentSight", "HealthSight", "PileSight", "MapSight", "CardSight"];
+
+    /// <summary>Copies of a Sight item it takes to add its Sight Bonus.</summary>
+    private const int BonusCopies = 2;
+
+    /// <summary>
+    /// Whether a Sight item's bonus is unlocked: its challenge applies, the slot's Sight Bonuses
+    /// list names it, and a second copy has arrived. Use this for bonuses that only change what the
+    /// local player sees.
+    /// </summary>
+    internal static bool HasBonus(bool optionEnabled, ItemTable.APItem sightItem, string bonusName) =>
+        Applies(optionEnabled)
+        && ArchipelagoClient.Settings?.SightBonuses.Contains(bonusName) == true
+        && Received(sightItem) >= BonusCopies;
+
+    /// <summary>
+    /// <see cref="HasBonus"/> for bonuses that change the fight or its rewards. Those stay out of
+    /// multiplayer: every peer simulates the run, and they have no way to agree on one slot's
+    /// Sight receipts.
+    /// </summary>
+    internal static bool HasGameplayBonus(bool optionEnabled, ItemTable.APItem sightItem, string bonusName) =>
+        !MultiplayerSupport.IsMultiplayerScope && HasBonus(optionEnabled, sightItem, bonusName);
+
+    /// <summary>
     /// Sight steps the slot has unlocked, from 0 (everything hidden) to <paramref name="fullSteps"/>
     /// (everything shown). Any copy shows everything, so a second copy in the pool is a spare. The
     /// partial steps stay in the Sight levels for a return to one progressive step per copy.

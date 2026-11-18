@@ -13,8 +13,8 @@ import {
   type ShopStockKindDefinition,
 } from "../ShopStockKind";
 import type {
-  ChecksAndRewardsAnswers,
   FillerWeightLevel,
+  ShopsAnswers,
   ShopStockAnswers,
 } from "../WizardAnswers";
 import {
@@ -73,7 +73,7 @@ function applyShopStockFamily<KindId extends string>(
  */
 export function applyShopStockOptions(
   target: CompiledOptions,
-  answers: Pick<ChecksAndRewardsAnswers, "shopRelics" | "shopPotions">,
+  answers: Pick<ShopsAnswers, "shopRelics" | "shopPotions">,
   catalog: OptionCatalog,
 ): void {
   applyShopStockFamily(

@@ -62,6 +62,11 @@
             /// unlocks the Nth entry configured in the YAML's bonus_items list.
             /// IDs match universal_bonus_items in items.py.
             BonusWaxRelic = 600,
+            BonusRelic = 601,
+            BonusEnchantment = 602,
+            BonusEnchantedCards = 603,
+            BonusMaxHp = 604,
+            BonusCards = 605,
 
             // Universal traps; IDs match trap_item_table in the APWorld.
             WeakTrap = 700,
@@ -132,6 +137,11 @@
             { 512, "Thorns" },
             { 513, "Artifact" },
             { 600, "Bonus Wax Relic" },
+            { 601, "Bonus Relic" },
+            { 602, "Bonus Enchantment" },
+            { 603, "Bonus Enchanted Cards" },
+            { 604, "Bonus Max HP" },
+            { 605, "Bonus Cards" },
             { 700, "Weak Trap" },
             { 701, "Frail Trap" },
             { 702, "Vulnerable Trap" },
@@ -228,6 +238,11 @@
                     return false;
               case APItem.Potion:
               case APItem.BonusWaxRelic:
+              case APItem.BonusRelic:
+              case APItem.BonusEnchantment:
+              case APItem.BonusEnchantedCards:
+              case APItem.BonusMaxHp:
+              case APItem.BonusCards:
                     return true;
               case APItem.SwarmingElites:
               case APItem.WearyTraveler:

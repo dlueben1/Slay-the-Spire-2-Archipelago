@@ -215,6 +215,18 @@ CARD_REWARD_STRENGTH_ALL_SHUFFLED = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
                                      11, 11.95, 12.85, 13.65, 14.4, 15.1, 15.75, 16.3, 16.8, 17.3)
 RARE_CARD_POWER = 1.5
 RELIC_POWER = 1.5
+# Power from a Sight item's second copy (its Sight Bonus). The values are the user's (2026-11-16).
+# They count only from SIGHT_BONUS_FIRST_ACT: Sights should stay a surprise that logic barely
+# leans on, and Aged Cheese's Max HP has built up by then. Intent, Health and Card bonuses only
+# work in singleplayer; logic counts them anyway, as it ignores ascension.
+SIGHT_BONUS_FIRST_ACT = 3
+SIGHT_BONUS_POWER = {
+    "Intent Sight": 1.5,
+    "Health Sight": 2.0,
+    "Pile Sight": 1.5,
+    "Map Sight": 1.0,
+    "Card Sight": 2.0,
+}
 # Half shuffle leaves every other combat card reward vanilla.
 VANILLA_CARD_REWARD_SHARE = 0.5
 # Card strength of each vanilla card reward. Vanilla rewards arrive one at a time, so early ones

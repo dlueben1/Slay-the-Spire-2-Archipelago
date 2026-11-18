@@ -111,8 +111,9 @@ namespace StS2AP.Patches
 
     /// <summary>
     /// NLinkedRewardSet connects the one-argument NRewardButton.RewardClaimed signal to a
-    /// zero-argument callback. Replace that callback only for AP-owned linked rewards with an
-    /// argument-compatible equivalent.
+    /// zero-argument callback, so a claimed child never unlinks the others. Replace that callback
+    /// only for AP-owned linked rewards (see ApLinkedRewardSets) with an argument-compatible
+    /// equivalent.
     /// </summary>
     [HarmonyPatch(typeof(NLinkedRewardSet), nameof(NLinkedRewardSet._Ready))]
     public static class FixApLinkedRewardClaimCallback
@@ -336,9 +337,12 @@ namespace StS2AP.Patches
             if (container == null)
                 return new List<NRewardButton>();
 
+            // Sets the mod builds from mixed rewards (Spring Cleaning's card removal, for one) are
+            // AP-owned as a whole; other sets only through their AP mirrored children.
+            bool wholeSetIsOwned = ApLinkedRewardSets.IsOwned(linkedSet.LinkedRewardSet);
             return container.GetChildren()
                 .OfType<NRewardButton>()
-                .Where(button => button.Reward is ApMirroredRewardDispatcher.IApNativeReward)
+                .Where(button => wholeSetIsOwned || button.Reward is ApMirroredRewardDispatcher.IApNativeReward)
                 .ToList();
         }
 

@@ -26,12 +26,12 @@ function createAnswers(characters: string[]): WizardAnswers {
     ascensionDownsEnabled: false,
     downs: [],
   };
-  answers.checksAndRewards.checks.includeFloorChecks = true;
-  answers.checksAndRewards.startingEquipment = {
+  answers.checks.types.includeFloorChecks = true;
+  answers.checks.startingEquipment = {
     progressiveStarterCard: false,
     progressiveStarterRelic: false,
   };
-  answers.checksAndRewards.bonusItems = [];
+  answers.itemPool.bonusItems = [];
   return answers;
 }
 
@@ -55,7 +55,7 @@ describe("filler budget", () => {
       ascensionDownsEnabled: true,
       downs: [2, 3],
     };
-    answers.checksAndRewards.startingEquipment.progressiveStarterCard = true;
+    answers.checks.startingEquipment.progressiveStarterCard = true;
     // 48 - 2 Downs + 1 Double Boss - 2 starter cards
     expect(getFillerBudget(answers).available).toBe(45);
 
@@ -76,7 +76,7 @@ describe("filler budget", () => {
 
   it("counts Bonus Items and Sight items only while challenges are on", () => {
     const answers = createAnswers(["Ironclad"]);
-    answers.checksAndRewards.bonusItems = [waxRelic, waxRelic];
+    answers.itemPool.bonusItems = [waxRelic, waxRelic];
     answers.challenges.hiddenIntents = "two";
     answers.challenges.enabled = false;
     expect(getFillerBudget(answers).used).toBe(2);
@@ -120,17 +120,16 @@ describe("filler budget", () => {
 
   it("has no slots without Floor Checks and refuses to compile when over", () => {
     const answers = createAnswers(["Ironclad"]);
-    answers.checksAndRewards.checks.includeFloorChecks = false;
+    answers.checks.types.includeFloorChecks = false;
     expect(getFillerBudget(answers).available).toBe(0);
 
-    answers.checksAndRewards.bonusItems = [waxRelic];
+    answers.itemPool.bonusItems = [waxRelic];
     expect(() => compileWizardAnswers(answers, optionCatalog)).toThrow(
       /Floor Checks/,
     );
 
-    answers.checksAndRewards.checks.includeFloorChecks = true;
-    answers.checksAndRewards.bonusItems =
-      Array<BonusItemAnswer>(49).fill(waxRelic);
+    answers.checks.types.includeFloorChecks = true;
+    answers.itemPool.bonusItems = Array<BonusItemAnswer>(49).fill(waxRelic);
     expect(() => compileWizardAnswers(answers, optionCatalog)).toThrow(
       /need 49 filler slots, but only 48/,
     );

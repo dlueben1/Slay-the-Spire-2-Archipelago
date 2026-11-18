@@ -1828,6 +1828,19 @@ namespace StS2AP
                 settings.HiddenMap = Convert.ToInt32(slotData["hidden_map"]) > 0;
             if (slotData.ContainsKey("hidden_cards"))
                 settings.HiddenCards = Convert.ToInt32(slotData["hidden_cards"]) > 0;
+            if (slotData.TryGetValue("sight_bonuses", out object? sightBonusesValue)
+                && sightBonusesValue is Newtonsoft.Json.Linq.JArray sightBonuses)
+            {
+                settings.SightBonuses = sightBonuses.Select(token => token.ToString()).ToHashSet();
+                LogUtility.Info($"SLOT - Sight Bonuses: [{string.Join(",", settings.SightBonuses)}]");
+            }
+            else
+            {
+                // APWorlds from before Sight Bonuses omit the key (newer ones always send it, empty
+                // when every bonus is turned off). Their slots get every bonus, so a second copy
+                // already in their pool is no longer a dead item.
+                settings.SightBonuses = ChallengeSightItems.AllBonusNames.ToHashSet();
+            }
             if (slotData.ContainsKey("lock_characters"))
                 settings.NoCharactersLocked = Convert.ToInt32(slotData["lock_characters"]) == 0;
             if (slotData.ContainsKey("enable_death_fragments"))
@@ -1888,6 +1901,10 @@ namespace StS2AP
                 LogUtility.Info($"SLOT - Removed overpowered relic categories: {settings.RemovedOpRelics}");
             }
 
+            // Older APWorlds omit this key; their slots keep events in their usual acts.
+            if (slotData.ContainsKey("events_in_any_act"))
+                settings.EventsInAnyAct = Convert.ToBoolean(slotData["events_in_any_act"]);
+
             if (slotData.TryGetValue("bonus_items", out object? bonusItemsValue))
             {
                 settings.BonusItems = BonusItemDefinition.ParseAll(bonusItemsValue);
@@ -1899,6 +1916,12 @@ namespace StS2AP
             {
                 settings.RunModifiers = runModifiers.Select(token => token.ToString()).ToList();
                 LogUtility.Info($"SLOT - Run Modifiers: [{string.Join(",", settings.RunModifiers)}]");
+            }
+            if (slotData.TryGetValue("boons", out object? boonsValue)
+                && boonsValue is Newtonsoft.Json.Linq.JArray boons)
+            {
+                settings.Boons = boons.Select(token => token.ToString()).ToList();
+                LogUtility.Info($"SLOT - Boons: [{string.Join(",", settings.Boons)}]");
             }
             if (slotData.ContainsKey("enemy_hp_scaling"))
                 settings.EnemyHpScaling = Convert.ToInt32(slotData["enemy_hp_scaling"]);

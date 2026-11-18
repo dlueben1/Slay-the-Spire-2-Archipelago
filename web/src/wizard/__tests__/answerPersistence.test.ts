@@ -49,7 +49,7 @@ describe("answer persistence", () => {
     answers.characters.individualStarterOverrides = {
       Ironclad: { progressiveStarterCard: "enabled" },
     };
-    answers.checksAndRewards.shop.cardSlots = 4;
+    answers.shops.shop.cardSlots = 4;
 
     saveWizardState(storage, { answers, stepId: "checks" });
     const restored = loadSavedWizardState(storage, createDefaults());
@@ -87,10 +87,60 @@ describe("answer persistence", () => {
 
     expect(restored?.answers.playerName).toBe("Old");
     expect(restored?.answers.run.seeded).toBe(defaults.run.seeded);
-    expect(restored?.answers.checksAndRewards.shop).toEqual(
-      defaults.checksAndRewards.shop,
-    );
+    expect(restored?.answers.shops.shop).toEqual(defaults.shops.shop);
     expect(restored?.answers.deathLink).toEqual(defaults.deathLink);
+  });
+
+  it("moves answers saved before Checks & Rewards was split", () => {
+    const storage = createMemoryStorage();
+    const defaults = createDefaults();
+    const oldTypes = {
+      ...defaults.checks.types,
+      goldSanity: !defaults.checks.types.goldSanity,
+    };
+    const oldShop = { ...defaults.shops.shop, cardSlots: 4 };
+    const oldTraps = { ...defaults.itemPool.traps, chance: 12 };
+    storage.values.set(
+      "sts2ap.builder.answers.v1",
+      JSON.stringify({
+        stepId: "progression",
+        answers: {
+          run: {
+            ...defaults.run,
+            ancients: undefined,
+            blitzMerchantChance: 30,
+          },
+          checksAndRewards: {
+            startingEquipment: defaults.checks.startingEquipment,
+            ancients: { relicLocation: "anytime", relicPool: "chaos" },
+            checks: oldTypes,
+            shop: oldShop,
+            shopCards: defaults.shops.shopCards,
+            shopRelics: defaults.shops.shopRelics,
+            shopPotions: defaults.shops.shopPotions,
+            bonusItems: [{ kind: "MAX_HP", amount: 5 }],
+            filler: defaults.itemPool.filler,
+            traps: oldTraps,
+          },
+        },
+      }),
+    );
+
+    const restored = loadSavedWizardState(storage, createDefaults())!.answers;
+
+    expect(restored.checks.types).toEqual(oldTypes);
+    expect(restored.shops.shop).toEqual(oldShop);
+    expect(restored.itemPool.traps).toEqual(oldTraps);
+    expect(restored.itemPool.bonusItems).toEqual([
+      { kind: "MAX_HP", amount: 5 },
+    ]);
+    expect(restored.run.ancients).toEqual({
+      relicLocation: "anytime",
+      relicPool: "chaos",
+    });
+    expect(restored.boons.blitzMerchantChance).toBe(30);
+    expect(restored).not.toHaveProperty("checksAndRewards");
+    expect(restored.run).not.toHaveProperty("blitzMerchantChance");
   });
 
   it("forgets the save on clear and ignores storage that throws", () => {
