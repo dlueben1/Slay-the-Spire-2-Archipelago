@@ -93,6 +93,14 @@ export const BOONS: readonly Boon[] = [
     worksInMultiplayer: false,
     group: "deck",
   },
+  {
+    optionName: "EndlessUpgrades",
+    name: "Endless Upgrades",
+    effect:
+      "Cards can be upgraded any number of times. Each upgrade adds the card's upgrade bonus again.",
+    worksInMultiplayer: true,
+    group: "deck",
+  },
 ];
 
 /** Boon rows for `ModifierTable.vue`, badged with where they work. */

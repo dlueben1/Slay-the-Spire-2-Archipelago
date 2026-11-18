@@ -742,8 +742,8 @@ class RunModifiers(OptionSet):
 
 class Boons(OptionSet):
     """Helpful modifiers for every run. Logic does not account for them. Names are case-sensitive.
-    Only Compound Interest, Gilded and Loyal Customer work in multiplayer, where the host's choice
-    applies to the whole run; multiplayer runs leave out the others.
+    Only Compound Interest, Gilded, Loyal Customer and Endless Upgrades work in multiplayer, where
+    the host's choice applies to the whole run; multiplayer runs leave out the others.
 
     - 'Wayfinder': Three times per act, travel to any room in the next row, ignoring the paths.
     - 'SecondWind': Once per act, survive a killing blow and heal 25% of your max HP.
@@ -757,7 +757,9 @@ class Boons(OptionSet):
     - 'LoyalCustomer': Each purchase makes the rest of that shop 15% cheaper, up to 45%.
       Archipelago checks in the shop count and get the discount too.
     - 'CampfireBrewing': Once per campfire, brew a random potion. You can still rest or upgrade
-      afterwards."""
+      afterwards.
+    - 'EndlessUpgrades': Cards can be upgraded any number of times. Each upgrade adds the card's
+      upgrade bonus again; upgrades that only add or remove a keyword do nothing after the first."""
     display_name = "Boons"
     valid_keys_casefold = False
     valid_keys = {
@@ -769,6 +771,7 @@ class Boons(OptionSet):
         "SpringCleaning",
         "LoyalCustomer",
         "CampfireBrewing",
+        "EndlessUpgrades",
     }
     default = frozenset()
 
