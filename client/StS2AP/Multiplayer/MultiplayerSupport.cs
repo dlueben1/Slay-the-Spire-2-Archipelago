@@ -921,6 +921,8 @@ public static class MultiplayerSupport
             HiddenPiles = source.HiddenPiles,
             HiddenMap = source.HiddenMap,
             HiddenCards = source.HiddenCards,
+            SightBonuses = new HashSet<string>(source.SightBonuses),
+            EventsInAnyAct = source.EventsInAnyAct,
             ReleaseOnVictory = source.ReleaseOnVictory,
             RemovedOpRelics = source.RemovedOpRelics,
             CampfireSanity = source.CampfireSanity,
