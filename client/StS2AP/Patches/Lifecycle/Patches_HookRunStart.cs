@@ -61,7 +61,9 @@ namespace StS2AP.Patches
                     ascensionLevel = 10;
                 }
                 var configuredSeed = GameUtility.CurrentConfig.Seed;
-                if(configuredSeed != null && configuredSeed.Length > 0)
+                // A seed set with the ap_seed console command wins over the slot's Seeded Run seed.
+                bool seedSetFromConsole = RunSeedOverride.TakeApplied(seed);
+                if(configuredSeed != null && configuredSeed.Length > 0 && !seedSetFromConsole)
                 {
                     seed = configuredSeed;
                 }
