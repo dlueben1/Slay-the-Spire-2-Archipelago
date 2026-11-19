@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import {
+  RUN_MODIFIER_GROUPS,
+  RUN_MODIFIER_TABLE_ROWS,
+} from "../../../wizard/RunModifier";
 import type { ChallengeAnswers } from "../../../wizard/WizardAnswers";
 import {
   challengeSetupStep,
@@ -7,7 +11,7 @@ import {
   resolveQuestionHelp,
 } from "../../../wizard/WizardStep";
 import ChallengeOptIn from "../bespoke/ChallengeOptIn.vue";
-import RunModifierTable from "../bespoke/RunModifierTable.vue";
+import ModifierTable from "../bespoke/ModifierTable.vue";
 import FillerBudgetNote from "../core/FillerBudgetNote.vue";
 import WizardControl from "../core/WizardControl.vue";
 import WizardQuestion from "../core/WizardQuestion.vue";
@@ -79,9 +83,13 @@ function setRunModifiers(runModifiers: string[]): void {
         :model-value="modelValue.enabled"
         @update:model-value="setEnabled"
       />
-      <RunModifierTable
+      <ModifierTable
         v-else-if="question.id === 'run-modifiers'"
         :model-value="modelValue.runModifiers"
+        :rows="RUN_MODIFIER_TABLE_ROWS"
+        :groups="RUN_MODIFIER_GROUPS"
+        label="Run Modifiers"
+        column-label="Modifier"
         @update:model-value="setRunModifiers"
       />
       <WizardControl

@@ -11,6 +11,7 @@
 import { optionCatalog } from "../generated/optionCatalog";
 import type { WizardControlRange } from "./QuestionControl";
 import {
+  BOON_OPTION_KEYS,
   CHALLENGE_OPTION_KEYS,
   TRAP_CHANCE_OPTION_KEY,
   DEATH_LINK_OPTION_KEYS,
@@ -24,7 +25,7 @@ import {
 const WIZARD_RANGE_SOURCES = {
   trapChance: TRAP_CHANCE_OPTION_KEY,
   relicRewardsAvailableAnytime: RUN_OPTION_KEYS.relicRewardsAvailableAnytime,
-  blitzMerchantChance: RUN_OPTION_KEYS.blitzMerchantChance,
+  blitzMerchantChance: BOON_OPTION_KEYS.blitzMerchantChance,
   enemyHpScaling: CHALLENGE_OPTION_KEYS.enemyHpScaling,
   enemyDamageScaling: CHALLENGE_OPTION_KEYS.enemyDamageScaling,
   progressionBalancing: PROGRESSION_OPTION_KEYS.progressionBalancing,

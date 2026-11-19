@@ -1,28 +1,16 @@
 import typing
 from dataclasses import dataclass
 
-from Options import OptionSet, OptionList, Range, Toggle, DefaultOnToggle, Visibility, Choice, TextChoice, OptionDict, \
+from Options import OptionSet, OptionList, Range, Toggle, Visibility, Choice, TextChoice, OptionDict, \
     PerGameCommonOptions, OptionGroup, DeathLink as ArchipelagoDeathLink
 
-from schema import Schema, Optional, And
+from schema import Schema, Optional, And, Or
 
 from .characters import PREDEFINED_CHARACTERS, character_list, unique_character_ids
 from .constants import NUM_CUSTOM, ASCENSIONS
 
 # Vanilla and predefined characters, plus every registered generic Custom Character block.
 MAX_ROSTER_SIZE = len(character_list) + len(PREDEFINED_CHARACTERS) + NUM_CUSTOM
-
-
-class UseNewLogic(DefaultOnToggle):
-    """Use the new logic. Disable to use the previous 1.1.X and below logic.
-    New logic allows more random item order—for example, Extra relics and cards can help supplement missing ancients or rests.
-    One example is that old logic required your progressive starter card+relic to beat your 1st elite but new logic
-    no longer requires this as 'Power' can be made up with extra cards/relics. Similar cases for ancients/smiths/rests.
-
-    Old logic is used automatically (regardless of this option) when floor, gold, and potion checks
-    are all disabled and this is the only world in the generation, to reduce failed generations.
-    """
-    display_name = "Use New Logic"
 
 
 class Characters(OptionSet):
@@ -192,6 +180,13 @@ class RelicRewardsAvailableAnytime(Range):
     range_end = 10
     default = 2
 
+
+class EventsInAnyAct(Toggle):
+    """Events can appear in any act instead of only their usual acts. Event fights and rewards
+    are not adjusted for the act you meet them in. Singleplayer only: multiplayer runs keep the
+    usual events."""
+    display_name = "Events in Any Act"
+    default = 0
 
 class RemoveOPRelics(OptionSet):
     """Removes relics that are much stronger in Archipelago than in a normal run.
@@ -457,57 +452,81 @@ class HiddenIntents(Range):
     """Enemy intents are hidden, like Runic Dome in the first game, and so is the Intent Graph 
     mod's overlay.
     The value is how many Intent Sight items are added to the item pool, and 0 turns it off. Finding
-    any one of them shows intents again for every character, with their numbers and the Intent Graph overlay, so
-    a second copy makes it easier to find. Does not change logic.
+    any one of them shows intents again for every character, with their numbers and the Intent Graph overlay, and
+    a second one adds its Sight Bonus, which logic counts.
     """
     display_name = "Hidden Intents"
     range_start = 0
-    range_end = 2
+    range_end = 4
     default = 0
 
 class HiddenHealth(Range):
     """Health is hidden. Health bars stay full and show no numbers, the top bar shows no HP, and the
     poison and doom previews on health bars are hidden. Block is still shown. The value is how many Health Sight
     items are added to the item pool, and 0 turns it off. Finding any one of them shows everyone's health again
-    for every character, so a second copy makes it easier to find. Does not change logic.
+    for every character, and a second one adds its Sight Bonus, which logic counts.
     """
     display_name = "Hidden Health"
     range_start = 0
-    range_end = 2
+    range_end = 4
     default = 0
 
 class HiddenPiles(Range):
     """The draw, discard and exhaust piles show "?" instead of a card count
     and can't be opened. The value is how many Pile Sight items are added to the item pool, and 0 turns it off.
-    Finding any one of them shows the piles again for every character, so a second copy makes it easier to find.
-    Does not change logic.
+    Finding any one of them shows the piles again for every character, and a second one adds its Sight Bonus,
+    which logic counts.
     """
     display_name = "Hidden Piles"
     range_start = 0
-    range_end = 2
+    range_end = 4
     default = 0
 
 class HiddenMap(Range):
     """The map only shows the rooms you can move to next. Rooms further ahead show a closed eye 
     until you can reach them.
     The value is how many Map Sight items are added to the item pool, and 0 turns it off. Finding any one of them
-    shows the whole map again for every character, so a second copy makes it easier to find. Does not change logic.
+    shows the whole map again for every character, and a second one adds its Sight Bonus, which logic counts.
     """
     display_name = "Hidden Map"
     range_start = 0
-    range_end = 2
+    range_end = 4
     default = 0
 
 class HiddenCards(Range):
     """Cards are unknown: their name, text and energy cost are hidden, their art is blurred and they
     show no tooltips.
     The value is how many Card Sight items are added to the item pool, and 0 turns it off. Finding any one of them
-    shows cards again for every character, so a second copy makes it easier to find. Does not change logic.
+    shows cards again for every character, and a second one adds its Sight Bonus, which logic counts.
     """
     display_name = "Hidden Cards"
     range_start = 0
-    range_end = 2
+    range_end = 4
     default = 0
+
+class SightBonuses(OptionSet):
+    """Sight items whose second copy adds a bonus. A Sight left out stops at undoing its Hidden
+    option. Names are case-sensitive.
+
+    - 'IntentSight': Start each combat with Forewarned: for each enemy whose attacks your Block stops
+      completely on its turn, draw 1 more card next turn.
+    - 'HealthSight': Gain Aged Cheese: after defeating an Elite or a boss, raise your Max HP by 3.
+    - 'PileSight': The draw pile shows cards in the order you will draw them.
+    - 'MapSight': The map shows your next 2 fights, your next elite and what your next 2 ? rooms will be.
+    - 'CardSight': Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.
+
+    Logic counts each bonus as extra power in Act 3. The Intent, Health and Card Sight bonuses are
+    singleplayer only, but logic still counts them."""
+    display_name = "Sight Bonuses"
+    valid_keys_casefold = False
+    valid_keys = {
+        "IntentSight",
+        "HealthSight",
+        "PileSight",
+        "MapSight",
+        "CardSight",
+    }
+    default = frozenset(valid_keys)
 
 class SeededRun(Toggle):
     """Whether each character should have a fixed seed to climb the spire with or not."""
@@ -581,15 +600,38 @@ class CharacterOptions(OptionDict):
 class BonusItems(OptionList):
     """Add a number of Bonus Items to the item pool.
     These items make the game easier to complete, and are not accounted for in logic.
+    Once found, each one can be claimed once in every run, from the Archipelago reward menu.
 
-    Each ordered entry creates one character-agnostic bonus item and must provide either
-    a non-empty list of value Pools or one specific Value. For example:
+    Each ordered entry creates one bonus item and gives either a list of Pools to roll from or
+    one specific Value:
+
+    - WAX_RELIC: a relic that melts after a few combats. Pools are relic pools such as Common.
+    - RELIC: a relic that stays for the whole run, from the same Pools or Value.
+    - ENCHANTMENT: choose a card to enchant. Pools: Common, Uncommon, Rare; or name an
+      enchantment as the Value.
+    - ENCHANTED_CARDS: a card reward whose cards are all enchanted, from the same Pools or Value.
+    - MAX_HP: gain this much max HP. Value only.
+    - CARDS: choose 1 of 3 cards. Each Pool can name a source (a character, Other, Colorless, Event
+      or Ancient; your own character if left out), a type (Attack, Skill, Power) and a rarity
+      (Common, Uncommon, Rare), such as 'Regent Attack' or 'Colorless Rare'. Add 'Upgraded' for
+      upgraded cards; 'Random' mixes sources card by card. Fool pools need game version 0.113 and
+      are skipped on older ones. Or name one card as the Value.
+
+    For example:
 
         bonus_items:
             - WAX_RELIC:
                 Pools: [Common, Uncommon]
-            - WAX_RELIC:
+            - RELIC:
                 Value: Orichalcum
+            - ENCHANTMENT:
+                Pools: [Common]
+            - ENCHANTED_CARDS:
+                Value: Swift
+            - MAX_HP:
+                Value: 6
+            - CARDS:
+                Pools: [Regent Attack, Colorless Rare]
 
 
     Generation fails if more bonus items are configured than there are filler slots.
@@ -617,7 +659,8 @@ class BonusItems(OptionList):
             Schema({
                 str: {
                     Optional("Pools"): [And(str, len)],
-                    Optional("Value"): And(str, len),
+                    # MAX_HP takes a number; the other types take a name.
+                    Optional("Value"): Or(And(str, len), And(int, lambda value: value > 0)),
                 }
             }),
             _has_exactly_one_selector,
@@ -693,6 +736,42 @@ class RunModifiers(OptionSet):
         "SlowStart",
         "FrailStart",
         "DangerousUnknowns",
+    }
+    default = frozenset()
+
+
+class Boons(OptionSet):
+    """Helpful modifiers for every run. Logic does not account for them. Names are case-sensitive.
+    Only Compound Interest, Gilded, Loyal Customer and Endless Upgrades work in multiplayer, where
+    the host's choice applies to the whole run; multiplayer runs leave out the others.
+
+    - 'Wayfinder': Three times per act, travel to any room in the next row, ignoring the paths.
+    - 'SecondWind': Once per act, survive a killing blow and heal 25% of your max HP.
+    - 'EmberEnchanting': Campfires let you enchant a card with a random enchantment. This uses up
+      the campfire and needs the same Progressive Smith as upgrading.
+    - 'CompoundInterest': At the start of Act 2 and of Act 3, gain 20% of the gold you hold, up to
+      100.
+    - 'Gilded': Gain 30% more gold, including gold from Archipelago items.
+    - 'SpringCleaning': After the Act 1 and Act 2 bosses, choose one: remove a card, transform a
+      card, or upgrade 2 random cards.
+    - 'LoyalCustomer': Each purchase makes the rest of that shop 15% cheaper, up to 45%.
+      Archipelago checks in the shop count and get the discount too.
+    - 'CampfireBrewing': Once per campfire, brew a random potion. You can still rest or upgrade
+      afterwards.
+    - 'EndlessUpgrades': Cards can be upgraded any number of times. Each upgrade adds the card's
+      upgrade bonus again; upgrades that only add or remove a keyword do nothing after the first."""
+    display_name = "Boons"
+    valid_keys_casefold = False
+    valid_keys = {
+        "Wayfinder",
+        "SecondWind",
+        "EmberEnchanting",
+        "CompoundInterest",
+        "Gilded",
+        "SpringCleaning",
+        "LoyalCustomer",
+        "CampfireBrewing",
+        "EndlessUpgrades",
     }
     default = frozenset()
 
@@ -1009,11 +1088,11 @@ class Spire2Options(PerGameCommonOptions):
     ascension_down: AscensionDown
 
     # Main game flow
-    use_new_logic: UseNewLogic
     ancient_relic_location: AncientRelicLocation
     ancient_relic_pool: AncientRelicPool
     relic_rewards_available_anytime: RelicRewardsAvailableAnytime
     remove_op_relics: RemoveOPRelics
+    events_in_any_act: EventsInAnyAct
     progressive_starter_card: ProgressiveStarterCard
     progressive_starter_relic: ProgressiveStarterRelic
     shuffle_all_cards: CardReward
@@ -1104,6 +1183,8 @@ class Spire2Options(PerGameCommonOptions):
     sloth_trap_weight: SlothTrapWeight
     dazed_trap_weight: DazedTrapWeight
 
+    boons: Boons
+
     # Challenges
     run_modifiers: RunModifiers
     enemy_hp_scaling: EnemyHpScaling
@@ -1115,4 +1196,5 @@ class Spire2Options(PerGameCommonOptions):
     hidden_piles: HiddenPiles
     hidden_map: HiddenMap
     hidden_cards: HiddenCards
+    sight_bonuses: SightBonuses
     strict_card_rewards: StrictCardRewards

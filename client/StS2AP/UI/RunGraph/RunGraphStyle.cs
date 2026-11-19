@@ -98,7 +98,7 @@ internal static class RunGraphStyle
         button.AddThemeColorOverride("font_hover_color", Text);
         button.AddThemeColorOverride("font_focus_color", Text);
         button.AddThemeColorOverride("font_disabled_color", TextMuted);
-        return button;
+        return ApButtonInput.PressOnGameInput(button);
     }
 
     private static readonly Dictionary<int, Font> SpacedBold = new();

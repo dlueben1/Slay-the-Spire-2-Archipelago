@@ -89,8 +89,15 @@ function compilesConfiguredChallenges(): void {
     hiddenIntents: "one",
     hiddenHealth: "two",
     hiddenPiles: "one",
-    hiddenMap: "two",
+    hiddenMap: "four",
     hiddenCards: "one",
+    sightBonuses: {
+      intent: true,
+      health: false,
+      pile: true,
+      map: true,
+      card: false,
+    },
     strictCardRewards: true,
   };
 
@@ -106,8 +113,13 @@ function compilesConfiguredChallenges(): void {
   expect(options[CHALLENGE_OPTION_KEYS.hiddenIntents]).toBe(1);
   expect(options[CHALLENGE_OPTION_KEYS.hiddenHealth]).toBe(2);
   expect(options[CHALLENGE_OPTION_KEYS.hiddenPiles]).toBe(1);
-  expect(options[CHALLENGE_OPTION_KEYS.hiddenMap]).toBe(2);
+  expect(options[CHALLENGE_OPTION_KEYS.hiddenMap]).toBe(4);
   expect(options[CHALLENGE_OPTION_KEYS.hiddenCards]).toBe(1);
+  expect(options[CHALLENGE_OPTION_KEYS.sightBonuses]).toEqual([
+    "IntentSight",
+    "PileSight",
+    "MapSight",
+  ]);
   expect(options[CHALLENGE_OPTION_KEYS.strictCardRewards]).toBe(true);
 }
 
@@ -132,6 +144,13 @@ function ignoresChallengesUntilOptedIn(): void {
     hiddenPiles: "two",
     hiddenMap: "one",
     hiddenCards: "two",
+    sightBonuses: {
+      intent: false,
+      health: false,
+      pile: false,
+      map: false,
+      card: false,
+    },
     strictCardRewards: true,
   };
 
@@ -192,27 +211,27 @@ function coversEveryGeneratedRunModifier(): void {
  *
  * @returns Nothing; Vitest records assertion failures.
  */
-function placesChallengeKeysAfterDeathLink(): void {
+function placesChallengeKeysBeforeDeathLink(): void {
   const keys = getGuidedOptionKeys();
-  const lastDeathLinkKey = keys.indexOf(DEATH_LINK_OPTION_KEYS.damagePercent);
+  const firstDeathLinkKey = keys.indexOf(DEATH_LINK_OPTION_KEYS.enabled);
 
   const challengeKeys = Object.values(CHALLENGE_OPTION_KEYS);
 
   expect(
-    keys.slice(lastDeathLinkKey + 1, lastDeathLinkKey + 1 + challengeKeys.length),
+    keys.slice(firstDeathLinkKey - challengeKeys.length, firstDeathLinkKey),
   ).toEqual(challengeKeys);
 }
 
 /**
- * Verifies the step carries its warning and sits between Death Link and Progression.
+ * Verifies the step carries its warning and sits between Boons and Multiworld.
  *
  * @returns Nothing; Vitest records assertion failures.
  */
 function warnsBeforeAnyChallenge(): void {
   const stepIds = wizardSteps.map((step) => step.id);
 
-  expect(stepIds.indexOf("challenges")).toBe(stepIds.indexOf("death-link") + 1);
-  expect(stepIds.indexOf("progression")).toBe(
+  expect(stepIds.indexOf("challenges")).toBe(stepIds.indexOf("boons") + 1);
+  expect(stepIds.indexOf("multiworld")).toBe(
     stepIds.indexOf("challenges") + 1,
   );
   expect(challengeSetupStep.warning?.title).toBeTruthy();
@@ -310,8 +329,8 @@ function registerChallengesTests(): void {
   );
   it("lists every generated Run Modifier", coversEveryGeneratedRunModifier);
   it(
-    "places challenge keys after Death Link",
-    placesChallengeKeysAfterDeathLink,
+    "places challenge keys just before Death Link",
+    placesChallengeKeysBeforeDeathLink,
   );
   it("warns on the Challenges step", warnsBeforeAnyChallenge);
   it("asks three times before opting in", asksThreeTimesBeforeOptingIn);

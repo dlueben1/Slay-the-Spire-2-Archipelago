@@ -12,6 +12,7 @@ using MegaCrit.Sts2.Core.Random;
 using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Utils;
+using StS2AP.Utils.Combat;
 
 namespace StS2AP.Patches;
 
@@ -277,30 +278,43 @@ public static class Patches_APCardRewardUpgradeOdds
     /// <summary>
     /// CardFactory calculates the current act's base odds before calling this public hook.
     /// Replace those incoming odds with the AP reward's assigned act, then let the original
-    /// hook apply every normal relic and model modifier.
+    /// hook apply every normal relic and model modifier. The Card Sight bonus gives Act 1 reward
+    /// cards, which normally never upgrade, half of the per-act chance.
     /// </summary>
     [HarmonyPatch(typeof(Hook), nameof(Hook.ModifyCardRewardUpgradeOdds))]
     private static class OverrideAssignedActUpgradeOdds
     {
         [HarmonyPrefix]
         private static bool Prefix(
+            Player player,
             CardModel card,
             ref decimal originalOdds)
         {
-            if (!s_rewardActIndex.HasValue || card.Rarity == CardRarity.Rare)
+            if (card.Rarity == CardRarity.Rare)
+                return true;
+            bool cardSightBonus = CardSight.IsGeneratingReward && CardSight.HasBonus;
+            if (!s_rewardActIndex.HasValue && !cardSightBonus)
                 return true;
 
+            decimal scaling = UpgradeOddsPerAct();
+            int actIndex = s_rewardActIndex ?? player.RunState.CurrentActIndex;
+            if (s_rewardActIndex.HasValue)
+                originalOdds = actIndex * scaling;
+            if (cardSightBonus && actIndex == 0)
+                originalOdds += scaling / 2;
+            return true;
+        }
+
+        /// <summary>The game's upgrade chance per act for non-Rare reward cards.</summary>
+        private static decimal UpgradeOddsPerAct()
+        {
             bool scarcity = AscensionMultiplayer.TryHasLevel(
                 AscensionLevel.Scarcity,
                 out bool multiplayerScarcity
             )
                 ? multiplayerScarcity
                 : ArchipelagoClient.Progress.Ascensions.HasLevel(AscensionLevel.Scarcity);
-            var scaling = scarcity
-                ? 0.125m
-                : 0.25m;
-            originalOdds = s_rewardActIndex.Value * scaling;
-            return true;
+            return scarcity ? 0.125m : 0.25m;
         }
     }
 

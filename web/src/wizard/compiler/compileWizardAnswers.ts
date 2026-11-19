@@ -16,11 +16,14 @@ import {
   applyCharacterOptions,
   type CompiledOptions,
 } from "./applyCharacterOptions";
+import { applyBoonOptions } from "./applyBoonOptions";
 import { applyChallengeOptions } from "./applyChallengeOptions";
-import { applyChecksAndRewardsOptions } from "./applyChecksAndRewardsOptions";
+import { applyChecksOptions } from "./applyChecksOptions";
 import { applyDeathLinkOptions } from "./applyDeathLinkOptions";
+import { applyItemPoolOptions } from "./applyItemPoolOptions";
 import { applyProgressionOptions } from "./applyProgressionOptions";
 import { applyRunOptions } from "./applyRunOptions";
+import { applyShopsOptions } from "./applyShopsOptions";
 
 /**
  * Compiles all guided answers into a complete Archipelago option configuration.
@@ -57,12 +60,15 @@ export function compileWizardAnswers(
     options,
     answers.characters,
     catalog,
-    answers.checksAndRewards.checks.includeFloorChecks,
+    answers.checks.types.includeFloorChecks,
   );
   applyRunOptions(options, answers.run, catalog);
-  applyChecksAndRewardsOptions(options, answers.checksAndRewards, catalog);
-  applyDeathLinkOptions(options, answers.deathLink, catalog);
+  applyChecksOptions(options, answers.checks, catalog);
+  applyShopsOptions(options, answers.shops, catalog);
+  applyItemPoolOptions(options, answers.itemPool, catalog);
+  applyBoonOptions(options, answers.boons, catalog);
   applyChallengeOptions(options, answers.challenges, catalog);
+  applyDeathLinkOptions(options, answers.deathLink, catalog);
   applyProgressionOptions(options, answers.progression, catalog);
 
   // Validation is deliberately last: it checks the final product, not player intent.

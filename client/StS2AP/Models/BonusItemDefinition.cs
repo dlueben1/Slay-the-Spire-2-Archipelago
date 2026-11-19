@@ -15,6 +15,11 @@ namespace StS2AP.Models
     {
         /// <summary>The option key used in YAML, such as `WAX_RELIC`.</summary>
         public const string WaxRelicCategory = "WAX_RELIC";
+        public const string RelicCategory = "RELIC";
+        public const string EnchantmentCategory = "ENCHANTMENT";
+        public const string EnchantedCardsCategory = "ENCHANTED_CARDS";
+        public const string MaxHpCategory = "MAX_HP";
+        public const string CardsCategory = "CARDS";
 
         public string Category { get; }
 

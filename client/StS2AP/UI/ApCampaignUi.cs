@@ -126,7 +126,7 @@ internal static class ApCampaignUi
         card.AddChild(margin);
         // The card itself takes the clicks and the hover.
         IgnoreMouse(margin);
-        return card;
+        return ApButtonInput.PressOnGameInput(card);
     }
 
     /// <summary>A plain card that holds its own buttons.</summary>

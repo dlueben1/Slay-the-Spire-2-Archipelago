@@ -14,7 +14,7 @@ import {
   FILLER_WEIGHT_NAMES,
 } from "../FillerItem";
 import { createDefaultWizardAnswers } from "../WizardAnswers";
-import { checkSetupStep, wizardSteps } from "../WizardStep";
+import { itemPoolSetupStep, wizardSteps } from "../WizardStep";
 import { compileWizardAnswers } from "../compiler/compileWizardAnswers";
 
 /**
@@ -59,8 +59,7 @@ function compilesEveryFillerWeightLevel(): void {
 
   for (let level = 0; level <= 3; level += 1) {
     const definition = FILLER_ITEM_DEFINITIONS[level]!;
-    answers.checksAndRewards.filler.weights[definition.id] = level as
-      0 | 1 | 2 | 3;
+    answers.itemPool.filler.weights[definition.id] = level as 0 | 1 | 2 | 3;
   }
 
   // Compile the semantic levels to canonical YAML choice names.
@@ -81,7 +80,7 @@ function rejectsInvalidFillerWeightLevels(): void {
   // Force a value outside the UI slider's supported bounds.
   const answers = createTestAnswers();
   const firstDefinition = FILLER_ITEM_DEFINITIONS[0]!;
-  answers.checksAndRewards.filler.weights[firstDefinition.id] = 4 as 0;
+  answers.itemPool.filler.weights[firstDefinition.id] = 4 as 0;
 
   /** Compiles the deliberately invalid filler answer. */
   function compileInvalidFillerAnswers(): void {
@@ -121,11 +120,11 @@ function coversEveryGeneratedFillerOption(): void {
 }
 
 /**
- * Verifies Filler Items remain the final Checks & Rewards subsection.
+ * Verifies the step order and that Filler Items sit on the Item Pool step.
  *
  * @returns Nothing; Vitest records assertion failures.
  */
-function preservesCombinedFillerPlacement(): void {
+function preservesStepOrderAndFillerPlacement(): void {
   // Extract stable IDs because labels and descriptions may change independently.
   const stepIds: string[] = [];
 
@@ -133,19 +132,21 @@ function preservesCombinedFillerPlacement(): void {
     stepIds.push(step.id);
   }
 
-  // Protect the condensed navigation order with no standalone Shop or Filler tabs.
+  // Protect the navigation order; Death Link and Progression share Multiworld.
   expect(stepIds).toEqual([
     "characters",
     "run",
     "checks",
-    "death-link",
+    "shops",
+    "item-pool",
+    "boons",
     "challenges",
-    "progression",
+    "multiworld",
     "review",
   ]);
 
   expect(
-    checkSetupStep.questions.some(
+    itemPoolSetupStep.questions.some(
       (question) => question.id === "filler-weights",
     ),
   ).toBe(true);
@@ -163,8 +164,8 @@ function registerFillerCompilerTests(): void {
   it("rejects invalid filler weight levels", rejectsInvalidFillerWeightLevels);
   it("covers every generated filler option", coversEveryGeneratedFillerOption);
   it(
-    "appears at the bottom of condensed Checks & Rewards",
-    preservesCombinedFillerPlacement,
+    "keeps the step order with Filler Items on Item Pool",
+    preservesStepOrderAndFillerPlacement,
   );
 }
 

@@ -20,5 +20,19 @@
   "AP_DANGEROUS_UNKNOWNS.title": "Dangerous Unknowns",
   "AP_DANGEROUS_UNKNOWNS.description": "? rooms lean towards fights. Combat starts at 20% and rises 15% each time a ? room is not a fight. [gold]Elites[/gold] start at 0% and rise 4%. Chests start and rise at 1%. Juzu Bracelet never appears.",
   "AP_EXTRA_ASCENDERS_BANE.title": "Extra Ascender's Bane",
-  "AP_EXTRA_ASCENDERS_BANE.description": "Start the run with an extra [gold]Ascender's Bane[/gold]."
+  "AP_EXTRA_ASCENDERS_BANE.description": "Start the run with an extra [gold]Ascender's Bane[/gold].",
+  "AP_EMBER_ENCHANTING.title": "Ember Enchanting",
+  "AP_EMBER_ENCHANTING.description": "Campfires let you [gold]Enchant[/gold] a card with a random enchantment. This uses up the campfire, like upgrading.",
+  "AP_COMPOUND_INTEREST.title": "Compound Interest",
+  "AP_COMPOUND_INTEREST.description": "At the start of Act 2 and of Act 3, gain 20% of the [gold]Gold[/gold] you hold, up to 100.",
+  "AP_GILDED.title": "Gilded",
+  "AP_GILDED.description": "Gain 30% more [gold]Gold[/gold].",
+  "AP_SPRING_CLEANING.title": "Spring Cleaning",
+  "AP_SPRING_CLEANING.description": "After the Act 1 and Act 2 bosses, choose one: remove a card, transform a card, or upgrade 2 random cards.",
+  "AP_LOYAL_CUSTOMER.title": "Loyal Customer",
+  "AP_LOYAL_CUSTOMER.description": "Each purchase makes the rest of that shop 15% cheaper, up to 45%.",
+  "AP_CAMPFIRE_BREWING.title": "Campfire Brewing",
+  "AP_CAMPFIRE_BREWING.description": "Once per campfire, brew a random potion. You can still rest or upgrade afterwards.",
+  "AP_ENDLESS_UPGRADES.title": "Endless Upgrades",
+  "AP_ENDLESS_UPGRADES.description": "Cards can be [gold]Upgraded[/gold] any number of times. Each upgrade adds the card's upgrade bonus again."
 }

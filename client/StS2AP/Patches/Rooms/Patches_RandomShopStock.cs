@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.PotionPools;
 using MegaCrit.Sts2.Core.Models.Relics;
+using MegaCrit.Sts2.Core.Random;
 using StS2AP.Models;
 using StS2AP.Multiplayer;
 using StS2AP.Utils;
@@ -26,7 +27,7 @@ namespace StS2AP.Patches;
 /// </remarks>
 public static class Patches_RandomShopStock
 {
-    private const int RelicSlotCount = 3;
+    internal const int RelicSlotCount = 3;
     private const int PotionSlotCount = 3;
 
     /// <summary>
@@ -39,7 +40,7 @@ public static class Patches_RandomShopStock
     private const int EventRelicPrice = 250;
     private const int EventPotionPrice = 100;
 
-    private enum ShopRelicKind
+    internal enum ShopRelicKind
     {
         Common,
         Uncommon,
@@ -171,7 +172,7 @@ public static class Patches_RandomShopStock
         }
     }
 
-    private static bool TryGetRelicWeights(
+    internal static bool TryGetRelicWeights(
         Player player,
         out Dictionary<ShopRelicKind, int> weights,
         out ArchipelagoSettings settings)
@@ -212,9 +213,14 @@ public static class Patches_RandomShopStock
     }
 
     private static TKind RollKind<TKind>(Player player, Dictionary<TKind, int> weights)
+        where TKind : struct, Enum =>
+        RollKind(player.PlayerRng.Shops, weights);
+
+    /// <summary>Rolls a slot's kind on a shop RNG, which the seed forecast also does on a copy.</summary>
+    internal static TKind RollKind<TKind>(Rng shopRng, Dictionary<TKind, int> weights)
         where TKind : struct, Enum
     {
-        int roll = player.PlayerRng.Shops.NextInt(weights.Values.Sum());
+        int roll = shopRng.NextInt(weights.Values.Sum());
         // Walk the kinds in a fixed order so every replica maps the roll to the same kind.
         foreach (TKind kind in Enum.GetValues<TKind>())
         {
@@ -272,23 +278,29 @@ public static class Patches_RandomShopStock
         if (relic != null)
             return new MerchantRelicEntry(relic, player);
 
-        // The grab bag moves on to the next rarity by itself when one runs dry.
-        RelicRarity rarity = kind switch
-        {
-            ShopRelicKind.Common => RelicRarity.Common,
-            ShopRelicKind.Uncommon => RelicRarity.Uncommon,
-            ShopRelicKind.Shop => RelicRarity.Shop,
-            // An empty Event or Ancient pool, which owning most of them can reach, sells a Rare.
-            _ => RelicRarity.Rare,
-        };
-        return new MerchantRelicEntry(rarity, player);
+        return new MerchantRelicEntry(GrabBagRarity(kind), player);
     }
 
-    private static RelicModel? CreateEventRelic(Player player, IReadOnlySet<ModelId> onSale)
+    /// <summary>The grab bag rarity a slot of this kind is filled from.</summary>
+    internal static RelicRarity GrabBagRarity(ShopRelicKind kind) => kind switch
+    {
+        // The grab bag moves on to the next rarity by itself when one runs dry.
+        ShopRelicKind.Common => RelicRarity.Common,
+        ShopRelicKind.Uncommon => RelicRarity.Uncommon,
+        ShopRelicKind.Shop => RelicRarity.Shop,
+        // An empty Event or Ancient pool, which owning most of them can reach, sells a Rare.
+        _ => RelicRarity.Rare,
+    };
+
+    private static RelicModel? CreateEventRelic(Player player, IReadOnlySet<ModelId> onSale) =>
+        player.PlayerRng.Shops.NextItem(EventRelicCandidates(player, onSale))?.ToMutable();
+
+    /// <summary>The Event relics an Event slot can sell, in the order the slot's roll picks from.</summary>
+    internal static List<RelicModel> EventRelicCandidates(Player player, IReadOnlySet<ModelId> onSale)
     {
         HashSet<ModelId> owned = player.Relics.Select(relic => relic.Id).ToHashSet();
         // AllRelics is sorted, so the same RNG roll means the same relic on every replica.
-        List<RelicModel> candidates = ModelDb.AllRelics
+        return ModelDb.AllRelics
             .Where(relic => relic.Rarity == RelicRarity.Event
                 // Unlike the other Fake relics, the rug has no hooks and no shop price of its own.
                 && relic is not FakeMerchantsRug
@@ -297,8 +309,6 @@ public static class Patches_RandomShopStock
                 && !owned.Contains(relic.Id)
                 && !onSale.Contains(relic.Id))
             .ToList();
-
-        return player.PlayerRng.Shops.NextItem(candidates)?.ToMutable();
     }
 
     /// <summary>Fills an inventory's empty potion entry list.</summary>

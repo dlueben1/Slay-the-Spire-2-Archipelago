@@ -1,0 +1,178 @@
+[
+  {
+    "id": "ADROIT",
+    "name": "Adroit",
+    "description": "Gain [blue]X[/blue] [gold]Block[/gold].",
+    "card_type": null,
+    "applicable_to": null,
+    "image_url": "/static/images/enchantments/adroit.png"
+  },
+  {
+    "id": "CLONE",
+    "name": "Clone",
+    "description": "This card can be duplicated at [gold]Rest Sites[/gold].",
+    "card_type": null,
+    "applicable_to": null,
+    "image_url": "/static/images/enchantments/clone.png"
+  },
+  {
+    "id": "CORRUPTED",
+    "name": "Corrupted",
+    "description": "Deal [blue]50%[/blue] more damage, but lose [blue]2[/blue] HP.",
+    "card_type": "Attack",
+    "applicable_to": null,
+    "image_url": "/static/images/enchantments/corrupted.png"
+  },
+  {
+    "id": "GLAM",
+    "name": "Glam",
+    "description": "This card has [gold]Replay[/gold] once per combat.",
+    "card_type": null,
+    "applicable_to": null,
+    "image_url": "/static/images/enchantments/glam.png"
+  },
+  {
+    "id": "GOOPY",
+    "name": "Goopy",
+    "description": "This card gains [gold]Exhaust[/gold]. When played, permanently increase this card's [gold]Block[/gold] by [blue]1[/blue].",
+    "card_type": null,
+    "applicable_to": "Defend cards",
+    "image_url": "/static/images/enchantments/goopy.png"
+  },
+  {
+    "id": "IMBUED",
+    "name": "Imbued",
+    "description": "This card is played automatically at the start of each combat.",
+    "card_type": "Skill",
+    "applicable_to": null,
+    "image_url": "/static/images/enchantments/imbued.png"
+  },
+  {
+    "id": "INKY",
+    "name": "Inky",
+    "description": "This card deals [blue]1[/blue] additional damage and applies [blue]1[/blue] [gold]Weak[/gold].",
+    "card_type": null,
+    "applicable_to": null,
+    "image_url": "/static/images/enchantments/inky.png"
+  },
+  {
+    "id": "INSTINCT",
+    "name": "Instinct",
+    "description": "This card's attack damage is doubled.",
+    "card_type": "Attack",
+    "applicable_to": null,
+    "image_url": "/static/images/enchantments/instinct.png"
+  },
+  {
+    "id": "MOMENTUM",
+    "name": "Momentum",
+    "description": "Increase this card's attack damage by [blue]X[/blue] this combat when played.",
+    "card_type": "Attack",
+    "applicable_to": null,
+    "image_url": "/static/images/enchantments/momentum.png"
+  },
+  {
+    "id": "NIMBLE",
+    "name": "Nimble",
+    "description": "Increases [gold]Block[/gold] gained from this card by [blue]X[/blue].",
+    "card_type": null,
+    "applicable_to": "cards that gain Block",
+    "image_url": "/static/images/enchantments/nimble.png"
+  },
+  {
+    "id": "PERFECT_FIT",
+    "name": "Perfect Fit",
+    "description": "Whenever this would be shuffled into your [gold]Draw Pile[/gold], place it on the top instead.",
+    "card_type": null,
+    "applicable_to": null,
+    "image_url": "/static/images/enchantments/perfect_fit.png"
+  },
+  {
+    "id": "ROYALLY_APPROVED",
+    "name": "Royally Approved",
+    "description": "This card has [gold]Innate[/gold] and [gold]Retain[/gold].",
+    "card_type": "Attack, Skill",
+    "applicable_to": null,
+    "image_url": "/static/images/enchantments/royally_approved.png"
+  },
+  {
+    "id": "SHARP",
+    "name": "Sharp",
+    "description": "Increases damage on this card by [blue]X[/blue].",
+    "card_type": "Attack",
+    "applicable_to": null,
+    "image_url": "/static/images/enchantments/sharp.png"
+  },
+  {
+    "id": "SLITHER",
+    "name": "Slither",
+    "description": "When you draw this card, randomize its cost from [blue]0[/blue] to [blue]3[/blue].",
+    "card_type": null,
+    "applicable_to": null,
+    "image_url": "/static/images/enchantments/slither.png"
+  },
+  {
+    "id": "SLUMBERING_ESSENCE",
+    "name": "Slumbering Essence",
+    "description": "If this card is in your hand at the end of turn, reduce its cost by [blue]1[/blue] until it is played.",
+    "card_type": null,
+    "applicable_to": null,
+    "image_url": "/static/images/enchantments/slumbering_essence.png"
+  },
+  {
+    "id": "SOULS_POWER",
+    "name": "Soul's Power",
+    "description": "This card loses [gold]Exhaust[/gold].",
+    "card_type": null,
+    "applicable_to": null,
+    "image_url": "/static/images/enchantments/souls_power.png"
+  },
+  {
+    "id": "SOWN",
+    "name": "Sown",
+    "description": "The first time you play this card each combat, gain [energy:X].",
+    "card_type": null,
+    "applicable_to": null,
+    "image_url": "/static/images/enchantments/sown.png"
+  },
+  {
+    "id": "SPIRAL",
+    "name": "Spiral",
+    "description": "This card gains [gold]Replay[/gold] [blue]1[/blue].",
+    "card_type": null,
+    "applicable_to": "Basic Strike or Defend cards",
+    "image_url": "/static/images/enchantments/spiral.png"
+  },
+  {
+    "id": "STEADY",
+    "name": "Steady",
+    "description": "This card gains [gold]Retain[/gold].",
+    "card_type": null,
+    "applicable_to": null,
+    "image_url": "/static/images/enchantments/steady.png"
+  },
+  {
+    "id": "SWIFT",
+    "name": "Swift",
+    "description": "The first time you play this card, draw [blue]X[/blue] cards.",
+    "card_type": null,
+    "applicable_to": null,
+    "image_url": "/static/images/enchantments/swift.png"
+  },
+  {
+    "id": "TEZCATARAS_EMBER",
+    "name": "Tezcatara's Ember",
+    "description": "Costs [blue]0[/blue], deals [blue]3[/blue] additional damage, and gains [gold]Eternal[/gold].",
+    "card_type": null,
+    "applicable_to": null,
+    "image_url": "/static/images/enchantments/tezcataras_ember.png"
+  },
+  {
+    "id": "VIGOROUS",
+    "name": "Vigorous",
+    "description": "The first time this card is played, it deals [blue]X[/blue] additional damage.",
+    "card_type": "Attack",
+    "applicable_to": null,
+    "image_url": "/static/images/enchantments/vigorous.png"
+  }
+]

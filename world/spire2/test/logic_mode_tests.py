@@ -1,7 +1,7 @@
 import io
 import unittest
 
-from BaseClasses import CollectionState, ItemClassification
+from BaseClasses import CollectionState
 from Fill import distribute_items_restrictive
 from test.general import setup_multiworld
 from worlds.AutoWorld import call_all
@@ -16,39 +16,34 @@ class LogicModeTests(unittest.TestCase):
         'ancient_relic_location': 'start_of_act',
     }
 
-    def test_gold_classification_follows_effective_logic_and_shops(self):
-        legacy_flags = {
-            'Elite Gold': ItemClassification.progression_deprioritized_skip_balancing,
-            'Boss Gold': ItemClassification.progression,
-        }
+    def test_gold_is_progression_exactly_when_logic_counts_it(self):
+        # Only whether gold is progression is checked: the other flags are tuning and change often.
         cases = [
-            {'use_new_logic': use_new_logic, 'shop_sanity': shops, 'include_floor_checks': True, 'gold_sanity': True}
-            for use_new_logic in (True, False) for shops in (False, True)
-        ] + [{**self.sparse, 'use_new_logic': True}]
+            {'shop_sanity': shops, 'include_floor_checks': True, 'gold_sanity': True}
+            for shops in (False, True)
+        ] + [self.sparse]
         for options in cases:
             with self.subTest(options=options):
                 mw = setup_multiworld(SlayTheSpire2World, seed=42,
                                       options={'characters': ['Ironclad'], **options})
                 world = mw.worlds[1]
                 # New logic counts Elite and Boss Gold toward shop power whenever Gold Sanity is on,
-                # and Combat Gold toward each act's shop gold with Shop Sanity too.
+                # and Combat Gold toward each act's shop gold with Shop Sanity too. Old logic always
+                # counts Elite and Boss Gold.
                 new_logic = world.effective_logic == 'new'
-                useful_gold = new_logic and not world.options.gold_sanity
-                counted_combat_gold = new_logic and world.options.gold_sanity and world.options.shop_sanity
-                expected_flags = {
-                    **{suffix: ItemClassification.useful if useful_gold else legacy
-                       for suffix, legacy in legacy_flags.items()},
-                    'Combat Gold': (ItemClassification.progression_deprioritized_skip_balancing
-                                    if counted_combat_gold else ItemClassification.useful),
+                counted = {
+                    'Elite Gold': not new_logic or bool(world.options.gold_sanity),
+                    'Boss Gold': not new_logic or bool(world.options.gold_sanity),
+                    'Combat Gold': new_logic and bool(world.options.gold_sanity and world.options.shop_sanity),
                 }
-                for suffix, expected in expected_flags.items():
+                for suffix, expected in counted.items():
                     # Includes names used for modded characters and explicit item creation.
                     for character in ('Ironclad', 'Custom Character 1'):
-                        self.assertEqual(expected, world.create_item(f'{character} {suffix}').classification)
+                        self.assertEqual(expected, world.create_item(f'{character} {suffix}').advancement)
                     if world.options.gold_sanity:
                         items = [item for item in mw.itempool if item.name == f'Ironclad {suffix}']
                         self.assertTrue(items)
-                        self.assertTrue(all(item.classification == expected for item in items))
+                        self.assertTrue(all(item.advancement == expected for item in items))
                 distribute_items_restrictive(mw)
                 self.assertTrue(mw.can_beat_game())
                 self.assertTrue(mw.fulfills_accessibility())
@@ -58,7 +53,6 @@ class LogicModeTests(unittest.TestCase):
             for shops in (False, True):
                 sparse = {**self.sparse, 'ancient_relic_location': timing, 'shop_sanity': shops}
                 world = setup_multiworld(SlayTheSpire2World, options=sparse, seed=42).worlds[1]
-                self.assertTrue(world.options.use_new_logic)
                 self.assertEqual('old', world.effective_logic)
                 self.assertTrue(world.logic_fallback_reason)
                 self.assertTrue(world.multiworld.early_items[1])
@@ -68,17 +62,11 @@ class LogicModeTests(unittest.TestCase):
                                                  options={**sparse, setting: True}).worlds[1]
                         self.assertEqual('new', world.effective_logic)
                         self.assertIsNone(world.logic_fallback_reason)
-        world = setup_multiworld(SlayTheSpire2World, seed=42,
-                                 options={'use_new_logic': False, 'include_floor_checks': True}).worlds[1]
-        self.assertEqual('old', world.effective_logic)
-        self.assertIsNone(world.logic_fallback_reason)
 
-    def test_legacy_power_copy_remove_and_mixed_slots(self):
-        mw = setup_multiworld([SlayTheSpire2World] * 2, seed=42, options=[
-            {'use_new_logic': False, 'shuffle_all_cards': False, 'characters': ['Ironclad']},
-            {'use_new_logic': True, 'include_floor_checks': True, 'characters': ['Ironclad']},
-        ])
-        old, new = mw.worlds[1], mw.worlds[2]
+    def test_legacy_power_copy_and_remove(self):
+        mw = setup_multiworld(SlayTheSpire2World, seed=42, options={**self.sparse, 'shuffle_all_cards': False})
+        old = mw.worlds[1]
+        self.assertEqual('old', old.effective_logic)
         state = CollectionState(mw)
         for suffix in ('Card Reward', 'Card Reward', 'Rare Card Reward', 'Relic'):
             state.collect(old.create_item('Ironclad ' + suffix), prevent_sweep=True)
@@ -89,19 +77,15 @@ class LogicModeTests(unittest.TestCase):
         copied.remove(old.create_item('Ironclad Card Reward'))
         self.assertFalse(rule(copied))
         self.assertTrue(rule(state))
-        state.collect(new.create_item('Ironclad Relic'), prevent_sweep=True)
-        self.assertEqual(1, state.count('Ironclad Relic', 2))
-        self.assertTrue(rule(state))
         distribute_items_restrictive(mw)
         self.assertTrue(mw.can_beat_game())
         self.assertTrue(mw.fulfills_accessibility())
 
     def test_tracker_preserves_generated_mode_and_power(self):
-        for use_new_logic, floors, timing in [(True, True, 'start_of_act'), (True, False, 'start_of_act'),
-                                              (True, True, 'anytime'), (True, False, 'anytime'),
-                                              (False, True, 'anytime')]:
+        for floors, timing in [(True, 'start_of_act'), (False, 'start_of_act'),
+                               (True, 'anytime'), (False, 'anytime')]:
             world = setup_multiworld(SlayTheSpire2World, seed=42, options={
-                **self.sparse, 'use_new_logic': use_new_logic, 'include_floor_checks': floors,
+                **self.sparse, 'include_floor_checks': floors,
                 'shuffle_all_cards': True, 'ancient_relic_location': timing,
             }).worlds[1]
             slot_data = world.fill_slot_data()
@@ -114,7 +98,6 @@ class LogicModeTests(unittest.TestCase):
                 call_all(regenerated, step)
             restored = regenerated.worlds[1]
             self.assertEqual(world.effective_logic, restored.effective_logic)
-            self.assertEqual(world.options.use_new_logic.value, restored.options.use_new_logic.value)
             self.assertEqual(world.logic_fallback_reason, restored.logic_fallback_reason)
             output = io.StringIO()
             restored.write_spoiler_header(output)

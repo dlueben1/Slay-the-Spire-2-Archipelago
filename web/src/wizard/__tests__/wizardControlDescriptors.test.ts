@@ -26,11 +26,11 @@ function createTestAnswers() {
   return createDefaultWizardAnswers(["Ironclad"], fillerAnswers, optionCatalog);
 }
 
-/** Steps that declare at least one generically rendered control. */
+/** Steps that declare at least one generically rendered control, parts included. */
 function getStepsWithControls(): WizardStep[] {
-  return wizardSteps.filter((step) =>
-    step.questions.some((question) => question.control),
-  );
+  return wizardSteps
+    .flatMap((step) => step.parts ?? [step])
+    .filter((step) => step.questions.some((question) => question.control));
 }
 
 /** Verifies every field path and value type binds to the step's section. */
