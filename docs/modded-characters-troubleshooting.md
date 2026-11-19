@@ -11,9 +11,10 @@ A game update on the main branch or the beta branch can break a character mod un
 
 ## Using CVC
 
-1. Subscribe to [CVC](https://steamcommunity.com/sharedfiles/filedetails/?id=3783150604) on Steam Workshop and enable it. It has to load before the mods it fixes.
-2. In the game, open **Settings** > **General** > **Choose which mods get compatibility fixes** and select the character mod that broke.
-3. Fully restart the game. Do this again whenever you change that selection, change the load order or update CVC.
+1. Subscribe to [CVC](https://steamcommunity.com/sharedfiles/filedetails/?id=3783150604) on Steam Workshop and enable it.
+2. Make sure CVC loads before the mods it fixes. [Mod Launch Manager](https://steamcommunity.com/sharedfiles/filedetails/?id=3788556097), also by Snowline, makes load orders easier: enable every mod in Steam's Workshop tab and let Mod Launch Manager take over from there.
+3. In the game, open **Settings** > **General** > **Choose which mods get compatibility fixes** and select the character mod that broke.
+4. Fully restart the game. Do this again whenever you change that selection, change the load order or update CVC.
 
 CVC shows a compatibility score for each mod and can export a report from the bottom of the same settings page.
 
@@ -27,6 +28,9 @@ If a slot's character mod is missing or broken, you can still connect after a wa
 **Defect** is always playable in that case: it uses its own items if your YAML includes Defect, and otherwise the first missing character's items.
 
 If the mod is installed but broken, disable it on the mods screen in the game's Settings and restart the game, so that the character counts as missing.
+
+> [!NOTE]
+> If your other characters have already sent all their campfire and shop checks, those checks no longer appear in their runs, so they may not be able to send the missing character's campfire and shop checks. Release the missing character instead, as described below.
 
 ## Releasing a single character
 
