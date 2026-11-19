@@ -13,7 +13,8 @@ namespace StS2AP.Utils;
 /// the act starts, and ? rooms roll their type on a generator of their own, so the next fights,
 /// elites and ? room results are the same whichever path the player takes. The one exception is a
 /// ? room's shop rule, which depends on the rooms beside it, so only a room the player can move to
-/// next is described exactly.
+/// next is described exactly. Which shops are Blitz merchants depends only on the run's seed and
+/// each shop's place, so every shop on the map can be named.
 /// </summary>
 internal static class MapScouting
 {
@@ -80,17 +81,60 @@ internal static class MapScouting
     {
         MapPointType.Monster => FirstTitle(UpcomingFights(runState, 1)),
         MapPointType.Elite => FirstTitle(UpcomingElites(runState, 1)),
-        MapPointType.Unknown => DescribeUnknownResult(runState, UpcomingUnknownRooms(runState, 1, point)[0]),
-        _ => null,
+        MapPointType.Unknown => DescribeUnknownResult(runState, point, UpcomingUnknownRooms(runState, 1, point)[0]),
+        _ => DescribeMerchant(runState, point),
     };
 
-    private static string? DescribeUnknownResult(RunState runState, RoomType roomType) => roomType switch
+    /// <summary>
+    /// Which merchant a shop anywhere on the map holds, or null for other rooms and for runs
+    /// where every shop is a normal merchant, which need no telling apart.
+    /// </summary>
+    internal static string? DescribeMerchant(RunState runState, MapPoint point) =>
+        point.PointType == MapPointType.Shop && BlitzMerchantVisits.CanAppear(runState)
+            ? MerchantName(runState, point)
+            : null;
+
+    /// <summary>
+    /// The merchants of the shops the player can reach soonest from where they stand: one name
+    /// when those shops all hold the same merchant, both when they differ. Empty when no shop is
+    /// left on the way, or when the run has no Blitz merchants to tell apart.
+    /// </summary>
+    internal static IReadOnlyList<string> NextMerchants(RunState runState)
+    {
+        if (!BlitzMerchantVisits.CanAppear(runState) || runState.Map is NullActMap)
+            return [];
+
+        // Every step goes up one row, so the first set of rooms holding a shop is the nearest row.
+        MapPoint origin = runState.CurrentMapPoint ?? runState.Map.StartingMapPoint;
+        HashSet<MapPoint> reachable = origin.Children;
+        while (reachable.Count > 0)
+        {
+            List<MapPoint> shops = reachable.Where(point => point.PointType == MapPointType.Shop).ToList();
+            if (shops.Count > 0)
+            {
+                return shops
+                    .OrderBy(shop => shop.coord.col)
+                    .Select(shop => MerchantName(runState, shop))
+                    .Distinct()
+                    .ToList();
+            }
+            reachable = reachable.SelectMany(point => point.Children).ToHashSet();
+        }
+        return [];
+    }
+
+    private static string? DescribeUnknownResult(RunState runState, MapPoint point, RoomType roomType) => roomType switch
     {
         // A ? room fight takes the next fight or elite from the same queues as other rooms.
         RoomType.Monster => $"{Text("fight")}: {FirstTitle(UpcomingFights(runState, 1))}",
         RoomType.Elite => $"{Text("elite")}: {FirstTitle(UpcomingElites(runState, 1))}",
+        // A ? room that turns into a shop rolls for a Blitz merchant at its own place.
+        RoomType.Shop => MerchantName(runState, point),
         _ => RoomName(roomType),
     };
+
+    private static string MerchantName(RunState runState, MapPoint shop) =>
+        Text(BlitzMerchantVisits.IsBlitzMerchantAt(runState, shop.coord) ? "blitzMerchant" : "merchant");
 
     /// <summary>The short name the Scouting panel and tips use for what a ? room turns into.</summary>
     internal static string RoomName(RoomType roomType) => roomType switch
