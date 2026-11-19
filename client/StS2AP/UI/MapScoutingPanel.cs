@@ -8,8 +8,9 @@ using StS2AP.Utils;
 namespace StS2AP.UI;
 
 /// <summary>
-/// The Map Sight bonus's Scouting list under the map legend: the next fights, the next elite and
-/// what the next ? rooms turn into, each kind in the order the player will meet them. It is a
+/// The Map Sight bonus's Scouting list under the map legend: the next fights, the next elite,
+/// what the next ? rooms turn into, each kind in the order the player will meet them, and, in a
+/// run with Blitz merchants, which merchant the nearest shops hold. It is a
 /// child of the legend, so it slides in, fades and hides with the legend's own hotkey. Its text
 /// copies the legend's font and ink, and each row uses the legend's icon for that kind of room.
 /// </summary>
@@ -60,6 +61,10 @@ internal static class MapScoutingPanel
             MapScouting.UpcomingElites(runState, MapScouting.ElitesShown).Select(Title));
         AddRows(panel, screen, "UnknownLegendItem",
             MapScouting.UpcomingUnknownRooms(runState, MapScouting.UnknownRoomsShown).Select(MapScouting.RoomName));
+        // Nearest shops that differ share one row; the tip on each shop says which is which.
+        IReadOnlyList<string> merchants = MapScouting.NextMerchants(runState);
+        if (merchants.Count > 0)
+            AddRows(panel, screen, "MerchantLegendItem", [string.Join($" {MapScouting.Text("or")} ", merchants)]);
     }
 
     private static string Title(EncounterModel encounter) => encounter.Title.GetFormattedText();

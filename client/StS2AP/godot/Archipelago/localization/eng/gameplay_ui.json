@@ -11,5 +11,7 @@
   "AP_SCOUTING.elite": "Elite",
   "AP_SCOUTING.event": "Event",
   "AP_SCOUTING.merchant": "Merchant",
+  "AP_SCOUTING.blitzMerchant": "Blitz Merchant",
+  "AP_SCOUTING.or": "or",
   "AP_SCOUTING.treasure": "Treasure"
 }
