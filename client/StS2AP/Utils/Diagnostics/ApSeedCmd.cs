@@ -24,6 +24,8 @@ public sealed class ApSeedCmd : AbstractConsoleCmd
     private const string MenuOption = "menu=";
     private const string SecondsOption = "seconds=";
     private const string ShopsOption = "shops=";
+    private const string NormalOption = "normal=";
+    private const string ChanceOption = "chance=";
 
     private const int DefaultMenuCount = 5;
     private const int MaxMenuCount = 20;
@@ -31,6 +33,8 @@ public sealed class ApSeedCmd : AbstractConsoleCmd
     private const int MaxSearchSeconds = 60;
     private const int MaxHitsShown = 5;
     private const int MaxShopCount = 6;
+    private const int MaxRewardCount = 20;
+    private const int DefaultChancePercent = 50;
 
     private const string Usage =
         "ap_seed: shows the run's seed and the seed set for the next run\n"
@@ -38,13 +42,15 @@ public sealed class ApSeedCmd : AbstractConsoleCmd
         + "ap_seed clear: forgets that seed\n"
         + "ap_seed relics [seed] [menu=N]: the AP menu's first N relics, the first shop's relics and the order "
         + "later shops sell relics in, for a seed\n"
-        + "ap_seed find <relic>... [shop:<relic>...] [menu=N] [shops=N] [seconds=S]: searches for a seed whose "
-        + "first N AP menu relics hold every <relic> and whose first shop sells every shop:<relic>. With shops=N "
-        + "a shop relic may also be one of the next N-1 of its rarity that shops sell";
+        + "ap_seed find <relic>... [shop:<relic>...] [menu=N] [normal=N] [chance=P] [shops=N] [seconds=S]: "
+        + "searches for a seed whose first N AP menu relics hold every <relic> and whose first shop sells every "
+        + "shop:<relic>. With normal=N a <relic> may instead come from the next N relic rewards (Elites, or Relic "
+        + "items claimed later), kept when the chance of that is at least P percent (default 50). With shops=N a "
+        + "shop relic may also be one of the next N-1 of its rarity that shops sell";
 
     public override string CmdName => "ap_seed";
 
-    public override string Args => "[set <seed> | clear | relics [seed] [menu=N] | find <relic>... [shop:<relic>...] [menu=N] [shops=N] [seconds=S]]";
+    public override string Args => "[set <seed> | clear | relics [seed] [menu=N] | find <relic>... [shop:<relic>...] [menu=N] [normal=N] [chance=P] [shops=N] [seconds=S]]";
 
     public override string Description =>
         "Sets the next run's seed, shows the relics a seed gives, and finds seeds that give chosen relics. Disabled in race rooms.";
@@ -164,11 +170,15 @@ public sealed class ApSeedCmd : AbstractConsoleCmd
         int menuCount = 0;
         int seconds = DefaultSearchSeconds;
         int shopCount = 1;
+        int rewardCount = 0;
+        int chancePercent = DefaultChancePercent;
         foreach (string arg in args)
         {
             if (TryReadOption(arg, MenuOption, 1, MaxMenuCount, ref menuCount, out string? optionError)
                 || TryReadOption(arg, SecondsOption, 1, MaxSearchSeconds, ref seconds, out optionError)
-                || TryReadOption(arg, ShopsOption, 1, MaxShopCount, ref shopCount, out optionError))
+                || TryReadOption(arg, ShopsOption, 1, MaxShopCount, ref shopCount, out optionError)
+                || TryReadOption(arg, NormalOption, 1, MaxRewardCount, ref rewardCount, out optionError)
+                || TryReadOption(arg, ChanceOption, 1, 100, ref chancePercent, out optionError))
             {
                 if (optionError != null)
                     return new CmdResult(false, optionError);
@@ -189,15 +199,18 @@ public sealed class ApSeedCmd : AbstractConsoleCmd
         }
 
         if (wantedInMenu.Count + wantedInShop.Count == 0)
-            return new CmdResult(false, "Usage: ap_seed find <relic>... [shop:<relic>...] [menu=N] [shops=N] [seconds=S]");
+            return new CmdResult(false, "Usage: ap_seed find <relic>... [shop:<relic>...] [menu=N] [normal=N] [chance=P] [shops=N] [seconds=S]");
         if (wantedInShop.Count > 0 && !RelicSeedForecast.ForecastsShops)
             return new CmdResult(false, "Shop relics can only be forecast on game version 0.113 or newer.");
         if (shopCount == 1 && wantedInShop.Count > Patches.Patches_RandomShopStock.RelicSlotCount)
             return new CmdResult(false, "A shop sells three relics. Use shops=N to look past the first shop.");
         if (menuCount == 0)
             menuCount = Math.Max(wantedInMenu.Count, 1);
-        if (menuCount < wantedInMenu.Count)
-            return new CmdResult(false, $"menu={menuCount} is fewer than the {wantedInMenu.Count} relics asked for.");
+        if (menuCount + rewardCount < wantedInMenu.Count)
+        {
+            return new CmdResult(false,
+                $"{menuCount + rewardCount} relics cannot hold the {wantedInMenu.Count} asked for. Raise menu= or normal=.");
+        }
 
         if (!forecast.FastSearchMatchesGame(out string mismatch))
         {
@@ -207,7 +220,8 @@ public sealed class ApSeedCmd : AbstractConsoleCmd
                 + $"'ap_seed relics <seed>' still works. ({mismatch})");
         }
 
-        var query = new RelicSeedQuery(wantedInMenu, wantedInShop, menuCount, shopCount);
+        var query = new RelicSeedQuery(
+            wantedInMenu, wantedInShop, menuCount, shopCount, rewardCount, chancePercent / 100.0);
         RelicSeedSearchResult result = forecast.Search(query, TimeSpan.FromSeconds(seconds), MaxHitsShown);
         string message = DescribeSearch(result, query) + "\n" + DescribeLimits(forecast, runState);
         LogUtility.Info($"ap_seed find:\n{message}");
@@ -247,23 +261,37 @@ public sealed class ApSeedCmd : AbstractConsoleCmd
             ? "not forecast before game version 0.113"
             : string.Join(", ", forecast.Shop.Select(slot => slot.IsAncient ? "an Ancient relic" : RelicName(slot.Relic!)));
         string doubt = forecast.Confirmed ? "" : " (the game's relic bag disagrees with the search; do not trust this seed)";
-        string text = $"{forecast.Seed}{doubt}\n  AP menu: {menu}\n  First shop: {shop}";
+        string chance = forecast.RewardChance is { } rewardChance
+            ? $" ({rewardChance.ToString("P0", CultureInfo.InvariantCulture)} chance of the relics left to later rewards)"
+            : "";
+        string text = $"{forecast.Seed}{doubt}{chance}\n  AP menu: {menu}";
+        string rewards = DescribeQueues(forecast.RewardQueues);
+        if (rewards.Length > 0)
+            text += $"\n  Relic rewards then give, in order: {rewards}";
+        if (forecast.ChestRelics.Length > 0)
+            text += $"\n  Chests that hand over a relic give: {string.Join(", ", forecast.ChestRelics.Select(RelicName))}";
+        text += $"\n  First shop: {shop}";
         // Without a first shop forecast, the queues start at the first shop itself.
         string which = forecast.Shop.Length == 0 ? "Shops sell" : "Shops then sell";
-        string queues = string.Join("; ", forecast.ShopQueues
-            .Where(queue => queue.Relics.Length > 0)
-            .Select(queue => $"{queue.Rarity}: {string.Join(", ", queue.Relics.Select(RelicName))}"));
+        string queues = DescribeQueues(forecast.ShopQueues);
         if (queues.Length > 0)
             text += $"\n  {which}, in order: {queues}";
         return text;
     }
+
+    private static string DescribeQueues(IReadOnlyList<RelicQueue> queues) => string.Join("; ", queues
+        .Where(queue => queue.Relics.Length > 0)
+        .Select(queue => $"{queue.Rarity}: {string.Join(", ", queue.Relics.Select(RelicName))}"));
 
     /// <summary>What a forecast assumes, so a relic that differs in the run is no surprise.</summary>
     private static string DescribeLimits(RelicSeedForecast forecast, RunState runState)
     {
         string limits =
             "For a new singleplayer run of this character. The AP menu's relics hold when its Relic items are "
-            + "opened before any other relic reward; the shop's hold for the first normal shop.";
+            + "opened before any other relic reward; the shop's hold for the first normal shop. Later relic "
+            + "rewards (Elites, Relic items claimed later) take the next relic of the rarity they roll, Common "
+            + "50%, Uncommon 33%, Rare 17%, in the order listed. A chest that hands over its own relic follows "
+            + "the chest list and skips a relic you already hold.";
         limits += forecast.HasRandomShopRelics
             ? " Later shops are not rolled ahead: each slot takes the next relic of the kind it rolls, in the "
                 + "order listed. An Ancient shop slot is picked by the shop's floor."

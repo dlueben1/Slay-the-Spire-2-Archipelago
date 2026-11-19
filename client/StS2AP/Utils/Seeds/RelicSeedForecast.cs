@@ -37,11 +37,31 @@ internal sealed record RelicForecast(string Seed, RelicModel[] Menu, ForecastSho
     /// Later shops cannot be rolled ahead of time, because what the player buys moves the shop
     /// RNG, but whichever rarity a slot or a restock rolls, it takes that rarity's next relic.
     /// </summary>
-    public IReadOnlyList<ShopQueue> ShopQueues { get; init; } = [];
+    public IReadOnlyList<RelicQueue> ShopQueues { get; init; } = [];
+
+    /// <summary>
+    /// For each rarity, the relics that relic rewards give after the ones in <see cref="Menu"/>,
+    /// in order: Elite relics and Relic items claimed later in the run. Which rarity each of
+    /// those rolls depends on every other reward rolled before it, so only the order is known.
+    /// </summary>
+    public IReadOnlyList<RelicQueue> RewardQueues { get; init; } = [];
+
+    /// <summary>
+    /// The relics of the first chests that hand theirs over. Chests roll on an RNG of their own
+    /// and take from the run's shared bag, so these follow from the seed; a chest skips a relic
+    /// the player already holds. Only the game's own code fills this, not the fast search.
+    /// </summary>
+    public RelicModel[] ChestRelics { get; init; } = [];
+
+    /// <summary>
+    /// The chance that every wanted relic missing from <see cref="Menu"/> turns up within the
+    /// query's later relic rewards; null when the search did not ask for any.
+    /// </summary>
+    public double? RewardChance { get; init; }
 }
 
-/// <summary>The next relics of one rarity that shops sell, soonest first.</summary>
-internal sealed record ShopQueue(RelicRarity Rarity, RelicModel[] Relics);
+/// <summary>The next relics of one rarity from one end of the bag, soonest first.</summary>
+internal sealed record RelicQueue(RelicRarity Rarity, RelicModel[] Relics);
 
 /// <summary>The relics a seed search looks for.</summary>
 /// <param name="MenuCount">How many of the AP menu's first relics may hold the wanted ones.</param>
@@ -49,11 +69,18 @@ internal sealed record ShopQueue(RelicRarity Rarity, RelicModel[] Relics);
 /// How many shops a wanted shop relic may take to turn up: it is in the first shop, or among the
 /// next <c>ShopCount - 1</c> relics of its rarity that shops sell.
 /// </param>
+/// <param name="RewardCount">
+/// How many relic rewards after the menu's may also hold a wanted menu relic. Their rarities are
+/// not known ahead, so a seed matches when the chance that they hold every such relic is at
+/// least <paramref name="MinRewardChance"/>.
+/// </param>
 internal sealed record RelicSeedQuery(
     IReadOnlyList<RelicModel> WantedInMenu,
     IReadOnlyList<RelicModel> WantedInShop,
     int MenuCount,
-    int ShopCount = 1)
+    int ShopCount = 1,
+    int RewardCount = 0,
+    double MinRewardChance = 0.5)
 {
     /// <summary>How far down a rarity's shop queue a wanted shop relic may sit.</summary>
     public int ShopQueueDepth => ShopCount - 1;
@@ -88,6 +115,13 @@ internal sealed record RelicSeedSearchResult(
 /// lists that order per rarity.
 /// </para>
 /// <para>
+/// The same goes for relic rewards after the menu's: an Elite's relic, or a Relic item claimed
+/// later, rolls its rarity on the Rewards RNG, which every card, potion and gold reward before it
+/// has moved. So a forecast lists each rarity's order from the front, and a search turns a
+/// relic's place in that order into the chance of reaching it within a number of rewards. Chests
+/// are the exception: they roll on an RNG nothing else uses and take from the shared bag.
+/// </para>
+/// <para>
 /// A forecast is made twice over. <see cref="GameBag"/> runs the game's own
 /// <see cref="RelicGrabBag"/>, and is what the console shows. <see cref="FastBag"/> repeats the
 /// same shuffle on plain arrays so a search can try millions of seeds on every core. A search
@@ -106,13 +140,18 @@ internal sealed class RelicSeedForecast
     private const int SelfCheckMenuCount = 8;
     private const int SeedsPerBatch = 16384;
 
-    /// <summary>How many relics of each rarity a forecast lists beyond the first shop.</summary>
-    public const int DefaultShopQueueDepth = 4;
+    /// <summary>How many relics of each rarity a forecast lists beyond the menu and the first shop.</summary>
+    public const int DefaultQueueDepth = 4;
 
-    // A bag out of one rarity passes a pull to the next rarity up, Shop to Common to Uncommon to
-    // Rare, so the queues are read from the top down and no reading disturbs one still to come.
-    private static readonly RelicRarity[] ShopQueueReadOrder =
-        [RelicRarity.Rare, RelicRarity.Uncommon, RelicRarity.Common, RelicRarity.Shop];
+    private const int ChestsShown = 3;
+
+    private static readonly RelicRarity[] ShopQueueRarities =
+        [RelicRarity.Shop, RelicRarity.Common, RelicRarity.Uncommon, RelicRarity.Rare];
+
+    // The rarities a relic reward rolls, with RelicFactory.RollRarity's odds for each.
+    private static readonly RelicRarity[] RewardRarities =
+        [RelicRarity.Common, RelicRarity.Uncommon, RelicRarity.Rare];
+    private static readonly double[] RewardRarityOdds = [0.5, 0.33, 0.17];
 
     private readonly Player _player;
     private readonly RunState _runState;
@@ -137,6 +176,7 @@ internal sealed class RelicSeedForecast
     private readonly ulong _upFrontNameHash = RngNameHash(RunRngType.UpFront.ToString());
     private readonly ulong _rewardsNameHash = RngNameHash(PlayerRngType.Rewards.ToString());
     private readonly ulong _shopsNameHash = RngNameHash(PlayerRngType.Shops.ToString());
+    private readonly ulong _chestsNameHash = RngNameHash(RunRngType.TreasureRoomRelics.ToString());
 
     /// <summary>Whether this game version rolls a shop's relics before anything else in the shop.</summary>
     public static bool ForecastsShops =>
@@ -213,25 +253,31 @@ internal sealed class RelicSeedForecast
         StringHelper.GetDeterministicHashCode(StringHelper.SnakeCase(rngTypeName));
 
     /// <summary>The forecast for one seed, from the game's own relic bag code. Main thread only.</summary>
-    public RelicForecast Forecast(string seed, int menuCount, int shopQueueDepth = DefaultShopQueueDepth)
+    public RelicForecast Forecast(string seed, int menuCount, int queueDepth = DefaultQueueDepth)
     {
         seed = SeedHelper.CanonicalizeSeed(seed);
         // The run and the player hash the seed themselves; they differ for old-format seeds.
         ulong runSeed = new RunRngSet(seed).Seed;
         ulong playerSeed = StringHelper.GetDeterministicHashCode(seed) + (ulong)_playerSlotIndex;
-        return ForecastWith(new GameBag(this, runSeed), seed, playerSeed, menuCount, shopQueueDepth);
+        var bag = new GameBag(this, runSeed);
+        RelicForecast forecast = ForecastWith(bag, seed, playerSeed, menuCount, queueDepth);
+        return forecast with { ChestRelics = bag.RollChests(runSeed, forecast.Menu, ChestsShown) };
     }
 
-    private RelicForecast ForecastWith(IBag bag, string seed, ulong playerSeed, int menuCount, int shopQueueDepth)
+    private RelicForecast ForecastWith(IBag bag, string seed, ulong playerSeed, int menuCount, int queueDepth)
     {
         var menu = new RelicModel[menuCount];
         var shop = new ForecastShopSlot[ForecastsShops ? Patches_RandomShopStock.RelicSlotCount : 0];
         Roll(bag, playerSeed, menu, shop);
-        List<ShopQueue> queues = ShopQueueReadOrder
-            .Select(rarity => new ShopQueue(rarity, bag.TakeShopQueue(rarity, shopQueueDepth)))
-            .Reverse()
-            .ToList();
-        return new RelicForecast(seed, menu, shop) { ShopQueues = queues };
+        return new RelicForecast(seed, menu, shop)
+        {
+            ShopQueues = ShopQueueRarities
+                .Select(rarity => new RelicQueue(rarity, bag.PeekQueue(rarity, queueDepth, forShop: true)))
+                .ToList(),
+            RewardQueues = RewardRarities
+                .Select(rarity => new RelicQueue(rarity, bag.PeekQueue(rarity, queueDepth, forShop: false)))
+                .ToList(),
+        };
     }
 
     /// <summary>
@@ -316,7 +362,7 @@ internal sealed class RelicSeedForecast
         {
             string seed = RandomSeed(random);
             RelicForecast game = Forecast(seed, SelfCheckMenuCount);
-            RelicForecast fast = FastForecast(seed, SelfCheckMenuCount, DefaultShopQueueDepth);
+            RelicForecast fast = FastForecast(seed, SelfCheckMenuCount, DefaultQueueDepth);
             if (!SameRelics(game, fast))
             {
                 mismatch = $"seed {seed}: game [{Describe(game)}], search [{Describe(fast)}]";
@@ -327,19 +373,23 @@ internal sealed class RelicSeedForecast
         return true;
     }
 
-    private RelicForecast FastForecast(string seed, int menuCount, int shopQueueDepth)
+    private RelicForecast FastForecast(string seed, int menuCount, int queueDepth)
     {
         ulong hash = StringHelper.GetDeterministicHashCode(seed);
         var bag = new FastBag(this);
         bag.Shuffle(hash);
-        return ForecastWith(bag, seed, hash + (ulong)_playerSlotIndex, menuCount, shopQueueDepth);
+        return ForecastWith(bag, seed, hash + (ulong)_playerSlotIndex, menuCount, queueDepth);
     }
 
     private static bool SameRelics(RelicForecast left, RelicForecast right) =>
         left.Menu.SequenceEqual(right.Menu)
         && left.Shop.SequenceEqual(right.Shop)
-        && left.ShopQueues.Count == right.ShopQueues.Count
-        && left.ShopQueues.Zip(right.ShopQueues).All(pair =>
+        && SameQueues(left.ShopQueues, right.ShopQueues)
+        && SameQueues(left.RewardQueues, right.RewardQueues);
+
+    private static bool SameQueues(IReadOnlyList<RelicQueue> left, IReadOnlyList<RelicQueue> right) =>
+        left.Count == right.Count
+        && left.Zip(right).All(pair =>
             pair.First.Rarity == pair.Second.Rarity && pair.First.Relics.SequenceEqual(pair.Second.Relics));
 
     /// <summary>A forecast as relic IDs, for logs and mismatch reports.</summary>
@@ -348,7 +398,9 @@ internal sealed class RelicSeedForecast
         + " | "
         + string.Join(", ", forecast.Shop.Select(slot => slot.IsAncient ? "(ancient)" : slot.Relic!.Id.Entry))
         + string.Concat(forecast.ShopQueues.Select(queue =>
-            $" | {queue.Rarity}: {string.Join(", ", queue.Relics.Select(relic => relic.Id.Entry))}"));
+            $" | shops {queue.Rarity}: {string.Join(", ", queue.Relics.Select(relic => relic.Id.Entry))}"))
+        + string.Concat(forecast.RewardQueues.Select(queue =>
+            $" | rewards {queue.Rarity}: {string.Join(", ", queue.Relics.Select(relic => relic.Id.Entry))}"));
 
     /// <summary>
     /// Tries random seeds until enough of them give every wanted relic, or the time runs out.
@@ -404,16 +456,77 @@ internal sealed class RelicSeedForecast
         }
 
         // Every seed shown goes back through the game's own code.
-        List<RelicForecast> hits = hitSeeds.Take(maxHits).Select(seed => Confirm(seed, query)).ToList();
+        List<RelicForecast> hits = hitSeeds.Take(maxHits)
+            .Select(seed => Confirm(seed, query))
+            // The likeliest first, when later rewards have to supply some of the relics.
+            .OrderByDescending(hit => hit.RewardChance ?? 1)
+            .ToList();
         RelicForecast? closest = hits.Count == 0 && closestSeed != null ? Confirm(closestSeed, query) : null;
         return new RelicSeedSearchResult(hits, hitSeeds.Count, closest, closestMatched, tried, stopwatch.Elapsed);
     }
 
     private RelicForecast Confirm(string seed, RelicSeedQuery query)
     {
-        int depth = Math.Max(query.ShopQueueDepth, DefaultShopQueueDepth);
+        int depth = Math.Max(Math.Max(query.ShopQueueDepth, query.RewardCount), DefaultQueueDepth);
         RelicForecast game = Forecast(seed, query.MenuCount, depth);
-        return game with { Confirmed = SameRelics(game, FastForecast(seed, query.MenuCount, depth)) };
+        return game with
+        {
+            Confirmed = SameRelics(game, FastForecast(seed, query.MenuCount, depth)),
+            RewardChance = query.RewardCount > 0 ? RewardChance(game, query) : null,
+        };
+    }
+
+    /// <summary>
+    /// The chance that the query's later relic rewards hold every wanted relic the menu lacks.
+    /// </summary>
+    private static double RewardChance(RelicForecast forecast, RelicSeedQuery query)
+    {
+        var needed = new int[RewardRarities.Length];
+        foreach (RelicModel wanted in query.WantedInMenu)
+        {
+            if (forecast.Menu.Contains(wanted))
+                continue;
+            int rarity = Array.IndexOf(RewardRarities, wanted.Rarity);
+            int position = rarity < 0 ? -1 : Array.IndexOf(forecast.RewardQueues[rarity].Relics, wanted);
+            if (position < 0 || position >= query.RewardCount)
+                return 0;
+            needed[rarity] = Math.Max(needed[rarity], position + 1);
+        }
+        return RewardChanceTable(query.RewardCount)[needed[0], needed[1], needed[2]];
+    }
+
+    /// <summary>
+    /// For a number of relic rewards, the chance that at least <c>[common, uncommon, rare]</c> of
+    /// them roll each rarity. A relic in place <c>n</c> of its rarity's order needs <c>n</c>
+    /// rolls of that rarity. Each index runs to <paramref name="rewardCount"/> + 1, which no
+    /// number of rewards reaches. A bag that runs out of a rarity is not accounted for.
+    /// </summary>
+    internal static double[,,] RewardChanceTable(int rewardCount)
+    {
+        int size = rewardCount + 2;
+        var table = new double[size, size, size];
+        var factorial = new double[rewardCount + 1];
+        factorial[0] = 1;
+        for (int n = 1; n <= rewardCount; n++)
+            factorial[n] = factorial[n - 1] * n;
+
+        for (int common = 0; common <= rewardCount; common++)
+        {
+            for (int uncommon = 0; common + uncommon <= rewardCount; uncommon++)
+            {
+                int rare = rewardCount - common - uncommon;
+                double chance = factorial[rewardCount] / (factorial[common] * factorial[uncommon] * factorial[rare])
+                    * Math.Pow(RewardRarityOdds[0], common)
+                    * Math.Pow(RewardRarityOdds[1], uncommon)
+                    * Math.Pow(RewardRarityOdds[2], rare);
+                // This outcome satisfies every need at or below its counts.
+                for (int needCommon = 0; needCommon <= common; needCommon++)
+                    for (int needUncommon = 0; needUncommon <= uncommon; needUncommon++)
+                        for (int needRare = 0; needRare <= rare; needRare++)
+                            table[needCommon, needUncommon, needRare] += chance;
+            }
+        }
+        return table;
     }
 
     /// <summary>A seed of the length and letters the game gives a new run.</summary>
@@ -433,27 +546,34 @@ internal sealed class RelicSeedForecast
         RelicModel? PullFromBackForShop(RelicRarity rarity);
 
         /// <summary>
-        /// Takes the next relics shops would sell of exactly this rarity, soonest first; fewer
-        /// when the rarity runs out.
+        /// The next relics of exactly this rarity, soonest first, without taking them: from the
+        /// back and only what shops may sell when <paramref name="forShop"/>, else from the
+        /// front as relic rewards take them.
         /// </summary>
-        RelicModel[] TakeShopQueue(RelicRarity rarity, int count);
+        RelicModel[] PeekQueue(RelicRarity rarity, int count, bool forShop);
     }
 
     /// <summary>The player's bag for a seed, built and pulled from by the game's own code.</summary>
     private sealed class GameBag : IBag
     {
         private readonly RelicGrabBag _bag = new();
+        private readonly RelicGrabBag _sharedBag = new(refreshAllowed: false);
+        private readonly RelicSeedForecast _forecast;
         private readonly RunState _runState;
 
         public GameBag(RelicSeedForecast forecast, ulong runSeed)
         {
+            _forecast = forecast;
             _runState = forecast._runState;
             // As RunManager.InitializeNewRun: the shared bag first, then the player's, on one RNG.
             var upFront = new Rng(runSeed + forecast._upFrontNameHash);
-            new RelicGrabBag(refreshAllowed: false).Populate(forecast.SharedBagRelics(), upFront);
+            _sharedBag.Populate(forecast.SharedBagRelics(), upFront);
             _bag.Populate(forecast._player, upFront);
             foreach (RelicModel removed in forecast._removedAtRunStart)
+            {
                 _bag.Remove(removed);
+                _sharedBag.Remove(removed);
+            }
         }
 
         public RelicModel? PullFromFront(RelicRarity rarity) => _bag.PullFromFront(rarity, _runState);
@@ -461,17 +581,32 @@ internal sealed class RelicSeedForecast
         public RelicModel? PullFromBackForShop(RelicRarity rarity) =>
             _bag.PullFromBack(rarity, relic => relic.IsAllowedInShops, _runState);
 
-        public RelicModel[] TakeShopQueue(RelicRarity rarity, int count)
+        // The bag has no way to look without taking, so this reads its list for the rarity and
+        // skips what a pull would skip.
+        public RelicModel[] PeekQueue(RelicRarity rarity, int count, bool forShop)
         {
-            var queue = new List<RelicModel>(count);
-            while (queue.Count < count
-                && PullFromBackForShop(rarity) is { } relic
-                // A relic of another rarity means this one ran out and the bag moved up.
-                && relic.Rarity == rarity)
-            {
-                queue.Add(relic);
-            }
-            return queue.ToArray();
+            if (!_bag._deques.TryGetValue(rarity, out List<RelicModel>? deque))
+                return [];
+            IEnumerable<RelicModel> order = forShop ? Enumerable.Reverse(deque) : deque;
+            return order
+                .Where(relic => relic.IsAllowed(_runState) && (!forShop || relic.IsAllowedInShops))
+                .Take(count)
+                .ToArray();
+        }
+
+        /// <summary>
+        /// The relics of the first chests, as TreasureRoomRelicSynchronizer.BeginRelicPicking
+        /// rolls them for one player. The menu's relics have left the shared bag by then, as
+        /// every relic the player is handed does.
+        /// </summary>
+        public RelicModel[] RollChests(ulong runSeed, IEnumerable<RelicModel> alreadyHeld, int count)
+        {
+            foreach (RelicModel held in alreadyHeld)
+                _sharedBag.Remove(held);
+            var chests = new Rng(runSeed + _forecast._chestsNameHash);
+            return Enumerable.Range(0, count)
+                .Select(_ => _sharedBag.PullFromFront(RelicFactory.RollRarity(chests), _runState) ?? _forecast._fallbackRelic)
+                .ToArray();
         }
     }
 
@@ -518,36 +653,43 @@ internal sealed class RelicSeedForecast
 
         public RelicModel? PullFromBackForShop(RelicRarity rarity) => Pull(rarity, fromBack: true, forShop: true);
 
-        public RelicModel[] TakeShopQueue(RelicRarity rarity, int count)
+        public RelicModel[] PeekQueue(RelicRarity rarity, int count, bool forShop)
         {
             var queue = new List<RelicModel>(count);
             int dequeIndex = Array.IndexOf(_forecast._dequeRarities, rarity);
-            while (dequeIndex >= 0 && queue.Count < count && Take(dequeIndex, fromBack: true, forShop: true) is { } relic)
-                queue.Add(relic);
+            int[] deque = dequeIndex < 0 ? [] : _deques[dequeIndex];
+            for (int step = 0; step < deque.Length && queue.Count < count; step++)
+            {
+                int relic = deque[forShop ? deque.Length - 1 - step : step];
+                if (IsAvailable(relic, forShop))
+                    queue.Add(_forecast._relics[relic]);
+            }
             return queue.ToArray();
         }
 
         /// <summary>
-        /// Whether a relic is among the next <paramref name="depth"/> relics of its rarity that
-        /// shops would sell. Takes nothing out of the bag.
+        /// How many relics of its rarity come before this one, counted as
+        /// <see cref="PeekQueue"/> lists them, or -1 when the bag no longer gives it.
         /// </summary>
-        public bool IsWithinShopQueue(int relic, int depth)
+        public int QueuePosition(int relic, bool forShop)
         {
-            if (_taken[relic] || _forecast._blocked[relic] || !_forecast._allowedInShops[relic])
-                return false;
-            int dequeIndex = Array.IndexOf(_forecast._dequeRarities, _forecast._relics[relic].Rarity);
-            int[] deque = _deques[dequeIndex];
+            if (!IsAvailable(relic, forShop))
+                return -1;
+            int[] deque = _deques[Array.IndexOf(_forecast._dequeRarities, _forecast._relics[relic].Rarity)];
             int ahead = 0;
-            for (int position = deque.Length - 1; position >= 0 && ahead < depth; position--)
+            for (int step = 0; step < deque.Length; step++)
             {
-                int other = deque[position];
+                int other = deque[forShop ? deque.Length - 1 - step : step];
                 if (other == relic)
-                    return true;
-                if (!_taken[other] && !_forecast._blocked[other] && _forecast._allowedInShops[other])
+                    return ahead;
+                if (IsAvailable(other, forShop))
                     ahead++;
             }
-            return false;
+            return -1;
         }
+
+        private bool IsAvailable(int relic, bool forShop) =>
+            !_taken[relic] && !_forecast._blocked[relic] && (!forShop || _forecast._allowedInShops[relic]);
 
         // As RelicGrabBag.GetAvailableDeque: a rarity with nothing to give passes the pull upwards.
         private RelicModel? Pull(RelicRarity rarity, bool fromBack, bool forShop)
@@ -567,7 +709,7 @@ internal sealed class RelicSeedForecast
             for (int step = 0; step < deque.Length; step++)
             {
                 int relic = deque[fromBack ? deque.Length - 1 - step : step];
-                if (_taken[relic] || _forecast._blocked[relic] || (forShop && !_forecast._allowedInShops[relic]))
+                if (!IsAvailable(relic, forShop))
                     continue;
                 _taken[relic] = true;
                 return _forecast._relics[relic];
@@ -592,6 +734,8 @@ internal sealed class RelicSeedForecast
         private readonly FastBag _bag;
         private readonly RelicModel[] _menu;
         private readonly ForecastShopSlot[] _shop;
+        private readonly double[,,]? _rewardChances;
+        private readonly int[] _rewardsNeeded = new int[RewardRarities.Length];
 
         public SearchWorker(RelicSeedForecast forecast, RelicSeedQuery query)
         {
@@ -600,6 +744,7 @@ internal sealed class RelicSeedForecast
             _bag = new FastBag(forecast);
             _menu = new RelicModel[query.MenuCount];
             _shop = new ForecastShopSlot[ForecastsShops ? Patches_RandomShopStock.RelicSlotCount : 0];
+            _rewardChances = query.RewardCount > 0 ? RewardChanceTable(query.RewardCount) : null;
         }
 
         /// <summary>How many of the wanted relics a seed gives.</summary>
@@ -609,17 +754,41 @@ internal sealed class RelicSeedForecast
             _forecast.Roll(_bag, seedHash + (ulong)_forecast._playerSlotIndex, _menu, _shop);
 
             int matched = 0;
+            int leftForRewards = 0;
+            Array.Clear(_rewardsNeeded);
             foreach (RelicModel wanted in _query.WantedInMenu)
             {
                 if (Array.IndexOf(_menu, wanted) >= 0)
                     matched++;
+                else if (_rewardChances != null)
+                    leftForRewards += NoteRewardNeeded(wanted);
             }
+            // Later rewards hold all of the relics left to them or, as far as a seed can tell, none.
+            if (leftForRewards > 0
+                && _rewardChances![_rewardsNeeded[0], _rewardsNeeded[1], _rewardsNeeded[2]] >= _query.MinRewardChance)
+            {
+                matched += leftForRewards;
+            }
+
             foreach (RelicModel wanted in _query.WantedInShop)
             {
                 if (IsInFirstShop(wanted) || IsInShopQueue(wanted))
                     matched++;
             }
             return matched;
+        }
+
+        /// <summary>
+        /// Records how many rolls of its rarity a relic the menu lacks needs before a relic
+        /// reward gives it; more than there are rewards when it is out of reach. Returns 1.
+        /// </summary>
+        private int NoteRewardNeeded(RelicModel wanted)
+        {
+            int rarity = Array.IndexOf(RewardRarities, wanted.Rarity);
+            int position = _bag.QueuePosition(Array.IndexOf(_forecast._relics, wanted), forShop: false);
+            int needed = position < 0 || position >= _query.RewardCount ? _query.RewardCount + 1 : position + 1;
+            _rewardsNeeded[rarity] = Math.Max(_rewardsNeeded[rarity], needed);
+            return 1;
         }
 
         private bool IsInFirstShop(RelicModel wanted)
@@ -636,7 +805,10 @@ internal sealed class RelicSeedForecast
         private bool IsInShopQueue(RelicModel wanted)
         {
             int relic = _query.ShopQueueDepth > 0 ? Array.IndexOf(_forecast._relics, wanted) : -1;
-            return relic >= 0 && _bag.IsWithinShopQueue(relic, _query.ShopQueueDepth);
+            if (relic < 0)
+                return false;
+            int position = _bag.QueuePosition(relic, forShop: true);
+            return position >= 0 && position < _query.ShopQueueDepth;
         }
     }
 }
