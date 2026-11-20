@@ -274,6 +274,7 @@ namespace StS2AP.Patches
             );
             RelicCoupons.EnsureOwnedBy(currentPlayer, silent: true);
             AgedCheese.EnsureOwnedIfEarned(currentPlayer, silent: true);
+            ApFrozenEye.EnsureOwnedIfEarned(currentPlayer, silent: true);
             // Rebuild these counts from AP history.
             ArchipelagoClient.Progress.ProgressiveAncients.Clear();
             ArchipelagoClient.Progress.ProgressiveRests.Clear();

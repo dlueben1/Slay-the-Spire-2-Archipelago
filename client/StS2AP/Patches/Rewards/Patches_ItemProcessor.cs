@@ -413,6 +413,7 @@ namespace StS2AP.Patches
                 case APItem.PileSight:
                     ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);
                     PileSight.RefreshVisiblePiles();
+                    ApFrozenEye.EnsureOwnedIfEarned(GameUtility.CurrentPlayer);
                     break;
                 case APItem.MapSight:
                     ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);

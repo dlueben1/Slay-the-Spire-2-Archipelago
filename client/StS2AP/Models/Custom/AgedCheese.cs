@@ -4,8 +4,6 @@ using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.RelicPools;
-using MegaCrit.Sts2.Core.Nodes;
-using MegaCrit.Sts2.Core.Nodes.Relics;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Utils;
@@ -58,38 +56,11 @@ public sealed class AgedCheese : ModRelicTemplate
         await CreatureCmd.GainMaxHp(Owner.Creature, MaxHpPerFight);
     }
 
-    /// <summary>
-    /// Adds the relic when the player has the Health Sight bonus and lacks it. Direct inventory
-    /// insertion, as Relic Coupons uses, keeps it out of the run's reward history.
-    /// </summary>
+    /// <summary>Adds the relic when the player has the Health Sight bonus and lacks it.</summary>
     public static void EnsureOwnedIfEarned(Player? player, bool silent = false)
     {
-        if (player == null || !HealthSight.HasBonus || player.GetRelic<AgedCheese>() != null)
+        if (player == null || !HealthSight.HasBonus)
             return;
-        try
-        {
-            var relic = ModelDb.Relic<AgedCheese>().ToMutable();
-            relic.FloorAddedToDeck = Math.Max(1, player.RunState.TotalFloor);
-            player.AddRelicInternal(relic, silent: silent);
-            if (!silent)
-                RevealInRelicBar(relic);
-            LogUtility.Info("Added Aged Cheese for the Health Sight bonus");
-        }
-        catch (Exception ex)
-        {
-            LogUtility.Warn($"Could not add Aged Cheese for the Health Sight bonus: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// The relic bar adds a newly obtained relic hidden, and RelicCmd.Obtain then plays the pickup
-    /// animation that shows it. A mid-run grant has to do that step itself, or the relic stays
-    /// hidden until the bar is rebuilt. Before the bar exists, as at run start, there is nothing to do.
-    /// </summary>
-    private static void RevealInRelicBar(RelicModel relic)
-    {
-        NRelicInventory? inventory = NRun.Instance?.GlobalUi.RelicInventory;
-        if (inventory != null && inventory._relicNodes.Any(node => node.Relic.Model == relic))
-            inventory.AnimateRelic(relic);
+        SightBonusRelic.EnsureOwned<AgedCheese>(player, silent);
     }
 }

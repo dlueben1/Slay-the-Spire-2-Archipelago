@@ -12,15 +12,15 @@ namespace StS2AP.Utils
     /// Maps a configured bonus entry to the relic it grants. A <see cref="BonusItemDefinition.Value"/>
     /// entry resolves a specific relic by id; a <see cref="BonusItemDefinition.Pools"/> entry builds a
     /// candidate set and the caller picks one deterministically at run start. This never pulls from
-    /// RelicFactory, so a bonus relic stays available in the normal relic pool. Pickup-effect filtering
-    /// is opt-in because it is currently a restriction for bonus wax relics only.
+    /// RelicFactory, so a bonus relic stays available in the normal relic pool. Only wax relics
+    /// reject pickup effects: the effect would outlast the melting, so the wax would mean nothing.
     /// </summary>
     public static class BonusRelicResolver
     {
         /// <summary>
         /// Resolves the relic for an explicit <see cref="BonusItemDefinition.Value"/> entry, or null
-        /// when the id is unknown or blacklisted. Pickup-effect relics are rejected only when requested
-        /// by the bonus category that owns the entry.
+        /// when the id is unknown. Pickup-effect relics are rejected only when requested by the bonus
+        /// category that owns the entry.
         /// </summary>
         public static RelicModel? ResolveValue(string valueId, bool rejectPickupEffectRelics = false)
         {
@@ -31,15 +31,7 @@ namespace StS2AP.Utils
                 return null;
             }
 
-            if (BonusRelicCatalog.Blacklist.Contains(BonusRelicIds.Normalize(valueId)))
-            {
-                LogUtility.Error(
-                    $"Bonus relic value '{valueId}' is on the bonus blacklist and cannot be granted"
-                );
-                return null;
-            }
-
-            if (rejectPickupEffectRelics && relic.HasUponPickupEffect)
+            if (rejectPickupEffectRelics && HasPickupEffect(relic))
             {
                 LogUtility.Error(
                     $"Bonus relic value '{valueId}' has an upon-pickup effect and cannot be granted"
@@ -51,10 +43,10 @@ namespace StS2AP.Utils
         }
 
         /// <summary>
-        /// Builds the deduplicated, blacklist-filtered candidate set for a pool-based entry. The
-        /// caller orders these deterministically and picks one at run start. When requested by the
-        /// owning category, relics with upon-pickup effects are filtered as well. Returns an empty
-        /// list when no pool produced an eligible relic.
+        /// Builds the deduplicated candidate set for a pool-based entry, without the relics a pool
+        /// never rolls. The caller orders these deterministically and picks one at
+        /// run start. When requested by the owning category, relics with upon-pickup effects are
+        /// filtered as well. Returns an empty list when no pool produced an eligible relic.
         /// </summary>
         public static IReadOnlyList<RelicModel> BuildPoolCandidates(
             IReadOnlyList<string> pools,
@@ -72,20 +64,17 @@ namespace StS2AP.Utils
                 AddCustomPool(candidates, poolName);
             }
 
-            foreach (string blacklisted in BonusRelicCatalog.Blacklist)
-                candidates.Remove(blacklisted);
+            foreach (string excluded in BonusRelicCatalog.NeverRandom)
+                candidates.Remove(excluded);
 
             if (rejectPickupEffectRelics)
             {
-                foreach (RelicModel relic in candidates.Values
-                    .Where(relic => relic.HasUponPickupEffect)
-                    .ToList())
-                {
+                List<RelicModel> pickupRelics = candidates.Values.Where(HasPickupEffect).ToList();
+                foreach (RelicModel relic in pickupRelics)
                     candidates.Remove(BonusRelicIds.Normalize(relic.Id.Entry));
-                    LogUtility.Info(
-                        $"Excluded bonus relic '{relic.Id.Entry}' because it has an upon-pickup effect"
-                    );
-                }
+                // One line, not one per relic: most of the Ancient pool is pickup effects.
+                if (pickupRelics.Count > 0)
+                    LogUtility.Info($"Excluded {pickupRelics.Count} bonus relic(s) with an upon-pickup effect");
             }
 
             if (candidates.Count == 0)
@@ -95,6 +84,10 @@ namespace StS2AP.Utils
 
             return candidates.Values.ToList();
         }
+
+        private static bool HasPickupEffect(RelicModel relic) =>
+            relic.HasUponPickupEffect
+            || BonusRelicCatalog.AncientPickupEffects.Contains(BonusRelicIds.Normalize(relic.Id.Entry));
 
         private static void AddRarityBucket(
             Dictionary<string, RelicModel> candidates,

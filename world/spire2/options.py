@@ -511,7 +511,7 @@ class SightBonuses(OptionSet):
     - 'IntentSight': Start each combat with Forewarned: for each enemy whose attacks your Block stops
       completely on its turn, draw 1 more card next turn.
     - 'HealthSight': Gain Aged Cheese: after defeating an Elite or a boss, raise your Max HP by 3.
-    - 'PileSight': The draw pile shows cards in the order you will draw them.
+    - 'PileSight': Gain Frozen Eye: the draw pile shows cards in the order you will draw them.
     - 'MapSight': The map shows your next 2 fights, your next elite and what your next 2 ? rooms will be.
     - 'CardSight': Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.
 
@@ -602,11 +602,13 @@ class BonusItems(OptionList):
     These items make the game easier to complete, and are not accounted for in logic.
     Once found, each one can be claimed once in every run, from the Archipelago reward menu.
 
-    Each ordered entry creates one bonus item and gives either a list of Pools to roll from or
-    one specific Value:
+    Each entry creates one bonus item and gives either a list of Pools to roll from or
+    one specific Value. Entries of the same kind are handed out in a random order.
 
-    - WAX_RELIC: a relic that melts after a few combats. Pools are relic pools such as Common.
-    - RELIC: a relic that stays for the whole run, from the same Pools or Value.
+    - WAX_RELIC: a relic that melts after a few combats. Pools are relic pools such as Common
+      or Ancient. Relics with an "Upon pickup" effect can't be wax.
+    - RELIC: a relic that stays for the whole run, from the same Pools or Value. These can
+      have an "Upon pickup" effect.
     - ENCHANTMENT: choose a card to enchant. Pools: Common, Uncommon, Rare; or name an
       enchantment as the Value.
     - ENCHANTED_CARDS: a card reward whose cards are all enchanted, from the same Pools or Value.

@@ -15,7 +15,7 @@ game: "Slay the Spire II"
 requires:
   version: 0.6.7 # Minimum Archipelago version for this YAML.
   game:
-    Slay the Spire II: 1.4.0 # Minimum APWorld version for this YAML.
+    Slay the Spire II: 1.4.1 # Minimum APWorld version for this YAML.
 Slay the Spire II:
   #####################
   # Character Options #
@@ -113,7 +113,7 @@ Slay the Spire II:
   # Sights whose second copy adds a bonus; a Sight left out stops at undoing its Hidden option.
   #   IntentSight: Forewarned each combat; each enemy whose attacks you fully block gives +1 card next turn.
   #   HealthSight: Aged Cheese; each Elite or boss you defeat raises your Max HP by 3.
-  #   PileSight: the draw pile shows cards in draw order.
+  #   PileSight: Frozen Eye; the draw pile shows cards in draw order.
   #   MapSight: the map shows your next 2 fights, next elite and next 2 ? rooms.
   #   CardSight: card rewards offer 1 more card, and Act 1 card rewards can be upgraded.
   # Logic counts each bonus as extra power in Act 3. Intent, Health and Card Sight bonuses are singleplayer
@@ -304,6 +304,8 @@ Slay the Spire II:
   # Each one can be claimed once in every run. Types: WAX_RELIC, RELIC, ENCHANTMENT,
   # ENCHANTED_CARDS (enchantment Pools: Common, Uncommon, Rare), MAX_HP (Value only) and
   # CARDS (Pools like "Regent Attack", "Colorless Rare", "Rare Upgraded" or Random; or a card as Value).
+  # Relic Pools: Common, Uncommon, Rare, Shop, Ancient, Fake, Classic. RELIC can be a relic with an
+  # "Upon pickup" effect; WAX_RELIC can't. Entries of the same type are handed out in a random order.
   #   bonus_items:
   #     - WAX_RELIC:
   #         Pools: [Common, Uncommon]

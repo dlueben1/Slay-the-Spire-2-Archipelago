@@ -252,7 +252,7 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
         {
           kind: "WAX_RELIC",
           mode: "specific",
-          relicId: getEligibleSpecificRelics()[0]!.id,
+          relicId: getEligibleSpecificRelics("WAX_RELIC")[0]!.id,
         },
         { kind: "WAX_RELIC", mode: "random", pools: ["Uncommon", "Common"] },
       ];

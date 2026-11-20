@@ -46,6 +46,7 @@ import {
   type ShopCardAnswers,
   type ShopsAnswers,
   type ShopStockAnswers,
+  type RelicBonusKind,
   type SightCopies,
 } from "../WizardAnswers";
 import {
@@ -130,14 +131,18 @@ export function readRunAnswers(options: CompiledOptions): RunAnswers {
 }
 
 /**
- * Finds the eligible relic a Wax Relic `Value` names.
+ * Finds the eligible relic a relic bonus `Value` names.
  *
  * @param value - Relic ID or display name, in any letter case.
+ * @param kind - Wax Relics can't be relics with a pickup effect.
  * @returns The relic ID the compiler accepts, or `undefined`.
  */
-function findSpecificRelicId(value: string): string | undefined {
+function findSpecificRelicId(
+  value: string,
+  kind: RelicBonusKind,
+): string | undefined {
   const key = value.trim().toLowerCase();
-  return getEligibleSpecificRelics().find(
+  return getEligibleSpecificRelics(kind).find(
     (relic) =>
       relic.id.toLowerCase() === key || relic.name.toLowerCase() === key,
   )?.id;
@@ -292,7 +297,7 @@ function readBonusItem(
   }
 
   if ("Value" in selector) {
-    const relicId = findSpecificRelicId(String(selector.Value));
+    const relicId = findSpecificRelicId(String(selector.Value), kind);
     if (!relicId) {
       warn(
         `${context}: left out ${describeValue(selector.Value)}, which is not an eligible bonus relic.`,

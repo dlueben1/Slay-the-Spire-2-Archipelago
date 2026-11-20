@@ -12,8 +12,9 @@ using StS2AP.Utils;
 namespace StS2AP.Patches;
 
 /// <summary>
-/// The Map Sight bonus: the Scouting list under the map legend, and a tip naming what is inside
-/// each room the player can move to next.
+/// The Map Sight bonus: the Scouting list under the map legend, a tip naming what is inside
+/// each room the player can move to next, and a tip on every shop further ahead saying whether
+/// it holds a Blitz merchant.
 /// </summary>
 public static class Patches_MapScouting
 {
@@ -26,7 +27,7 @@ public static class Patches_MapScouting
     }
 
     /// <summary>
-    /// Rooms the player can move to next have no tip of their own, only visited rooms do, so this
+    /// Rooms the player has not visited have no tip of their own, only visited rooms do, so this
     /// one never covers a game tip. Unfocusing the room already removes every tip it owns.
     /// </summary>
     [HarmonyPatch(typeof(NNormalMapPoint), nameof(NNormalMapPoint.OnFocus))]
@@ -35,10 +36,15 @@ public static class Patches_MapScouting
         [HarmonyPostfix]
         public static void Postfix(NNormalMapPoint __instance)
         {
-            if (__instance.State != MapPointState.Travelable
+            if (__instance.State == MapPointState.Traveled
                 || !MapScouting.IsActive
-                || RunManager.Instance.State is not { } runState
-                || MapScouting.DescribeNextRoom(runState, __instance.Point) is not { } contents)
+                || RunManager.Instance.State is not { } runState)
+                return;
+            // Rooms further ahead depend on the path taken, except for which merchant a shop holds.
+            string? contents = __instance.State == MapPointState.Travelable
+                ? MapScouting.DescribeNextRoom(runState, __instance.Point)
+                : MapScouting.DescribeMerchant(runState, __instance.Point);
+            if (contents == null)
                 return;
             var tip = new HoverTip(new LocString("gameplay_ui", "AP_SCOUTING.tipTitle"), contents);
             NHoverTipSet? tipSet = NHoverTipSet.CreateAndShow(__instance, tip);

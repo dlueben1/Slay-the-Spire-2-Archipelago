@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Models;
 using StS2AP.Multiplayer;
@@ -21,27 +22,39 @@ internal static class BlitzMerchantVisits
     public const int FreePicks = 3;
 
     /// <summary>Whether the shop the run is entering is a Blitz merchant.</summary>
-    public static bool IsBlitzMerchant(IRunState? runState)
+    public static bool IsBlitzMerchant(IRunState? runState) =>
+        // A shop the game opens away from the map, such as a debug room, has no place to roll for.
+        runState?.CurrentMapCoord is { } coord && IsBlitzMerchantAt(runState, coord);
+
+    /// <summary>
+    /// Whether a shop at this place of the current act's map is a Blitz merchant. The answer
+    /// depends only on the run's seed and the place, so it is known before the shop is reached.
+    /// A ? room that turns into a shop is a shop at the ? room's own place.
+    /// </summary>
+    public static bool IsBlitzMerchantAt(IRunState? runState, MapCoord coord)
     {
 #if STS2_AT_LEAST_0_113_0
-        int chance = RunSettings(runState)?.BlitzMerchantChance ?? 0;
-        if (chance <= 0
-            || runState == null
-            // A Blitz run has its own merchants already.
-            || runState.GameMode == GameMode.Blitz)
-        {
-            return false;
-        }
+        return runState != null
+            && CanAppear(runState)
+            && BlitzMerchantRoll.IsBlitzMerchant(
+                runState.Rng.Seed,
+                runState.CurrentActIndex,
+                coord.col,
+                coord.row,
+                RunSettings(runState)!.BlitzMerchantChance);
+#else
+        return false;
+#endif
+    }
 
-        // A shop the game opens away from the map, such as a debug room, has no place to roll for.
-        if (runState.CurrentMapCoord is not { } coord)
-            return false;
-        return BlitzMerchantRoll.IsBlitzMerchant(
-            runState.Rng.Seed,
-            runState.CurrentActIndex,
-            coord.col,
-            coord.row,
-            chance);
+    /// <summary>Whether any shop of this run can be a Blitz merchant.</summary>
+    public static bool CanAppear(IRunState? runState)
+    {
+#if STS2_AT_LEAST_0_113_0
+        return runState != null
+            // A Blitz run has its own merchants already.
+            && runState.GameMode != GameMode.Blitz
+            && (RunSettings(runState)?.BlitzMerchantChance ?? 0) > 0;
 #else
         return false;
 #endif

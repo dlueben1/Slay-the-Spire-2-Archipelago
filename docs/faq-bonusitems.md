@@ -10,14 +10,18 @@ However, they are usable by _all_ characters, rather than generated per-characte
 
 Claim them from the Archipelago reward menu whenever you like. The kinds are:
 
-- **Wax Relic**: a relic that melts after a few combats.
-- **Relic**: a relic that stays for the whole run.
+- **Wax Relic**: a relic that melts after a few combats. Relics with an "Upon pickup" effect can't be wax.
+- **Relic**: a relic that stays for the whole run. These can have an "Upon pickup" effect.
 - **Enchantment**: choose a card in your deck that has no enchantment yet and enchant it.
 - **Enchanted Cards**: a card reward whose three cards are already enchanted.
 - **Max HP**: raise your max HP.
 - **Card Reward**: choose 1 of 3 cards from the pools you pick, such as Regent Attacks, Colorless Rares or Event cards, or a reward offering one card you name.
 
 Random relics, enchantments and cards are picked once per run, so reloading doesn't change them.
+
+Relics can be named or rolled from pools: Common, Uncommon, Rare, Shop, Ancient, Fake and Classic. A few relics that would be too strong every run are never rolled, but you can still name them.
+
+Each seed hands out your entries of the same kind in a random order, so the first Wax Relic you find isn't always the first one in your YAML.
 
 > [!WARNING]
 > Generation may fail if you have more Bonus Items defined than you have slots for filler items available! We recommend turning on **Floorsanity** when playing with Bonus Items on.

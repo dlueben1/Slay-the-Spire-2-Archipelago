@@ -50,8 +50,9 @@ const modeItems: RadioGroupItem[] = [
   },
 ];
 
-const eligibleRelics = getEligibleSpecificRelics();
-const poolOptions = getBonusRelicPoolOptions();
+// Wax Relics can't be relics with a pickup effect, so each kind has its own lists.
+const eligibleRelics = computed(() => getEligibleSpecificRelics(props.kind));
+const poolOptions = computed(() => getBonusRelicPoolOptions(props.kind));
 
 const draft = ref<WaxRelicDraft>({
   mode: "specific",
@@ -62,7 +63,7 @@ const searchQuery = ref("");
 
 /** Relics matching the current case-insensitive name filter. */
 const filteredRelics = computed(() =>
-  filterRelicsByName(eligibleRelics, searchQuery.value),
+  filterRelicsByName(eligibleRelics.value, searchQuery.value),
 );
 
 /** Whether the draft in the active mode is complete enough to submit. */
@@ -82,7 +83,7 @@ const dialogTitle = computed(
 
 const dialogDescription = computed(() =>
   props.kind === "WAX_RELIC"
-    ? "Wax Relics are pulled from the normal relic pool and melt away after enough combats."
+    ? "Wax Relics are pulled from the normal relic pool and melt away after enough combats. Relics with a pickup effect can't be wax."
     : "Relics are pulled from the normal relic pool and stay for the whole run.",
 );
 
@@ -141,7 +142,7 @@ function togglePool(poolName: string, checked: unknown): void {
   }
 
   // Emit pools in the source-defined order so YAML output is deterministic.
-  const ordered = poolOptions
+  const ordered = poolOptions.value
     .map((option) => option.name)
     .filter((name) => selected.has(name));
   draft.value = { ...draft.value, pools: ordered };

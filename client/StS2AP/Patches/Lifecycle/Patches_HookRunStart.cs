@@ -155,6 +155,7 @@ namespace StS2AP.Patches
             // Relic Coupons is a presentation-only starting relic backed by the saved bank.
             RelicCoupons.EnsureOwnedBy(player);
             AgedCheese.EnsureOwnedIfEarned(player);
+            ApFrozenEye.EnsureOwnedIfEarned(player);
 
             // Send "Press Start" check
             GameUtility.TrySendPressStartCheck();

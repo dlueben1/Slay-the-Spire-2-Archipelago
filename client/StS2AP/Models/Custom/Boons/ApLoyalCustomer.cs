@@ -20,7 +20,10 @@ public sealed class ApLoyalCustomer : ApRunModifier
 
     protected override string IconModifierEntry => "hoarder";
 
-    public override Task AfterRoomEntered(AbstractRoom room)
+    // Reset before the room is entered, not after: MerchantRoom builds its screen, which writes the
+    // price labels, before the after-entered hook runs. Resetting there left a new shop showing the
+    // previous shop's discount until the first gold change, while charging the real price.
+    public override Task BeforeRoomEntered(AbstractRoom room)
     {
         _purchasesHere?.Clear();
         return Task.CompletedTask;

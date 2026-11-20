@@ -668,9 +668,9 @@ export const challengeSetupStep: WizardStep = {
           },
           {
             field: "sightBonuses.pile",
-            label: "Pile Sight: Draw Order",
+            label: "Pile Sight: Frozen Eye",
             description:
-              "The draw pile shows cards in the order you will draw them.",
+              "Gain Frozen Eye: the draw pile shows cards in the order you will draw them.",
           },
           {
             field: "sightBonuses.map",
