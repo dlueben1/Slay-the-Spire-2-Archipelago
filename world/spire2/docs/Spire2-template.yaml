@@ -304,6 +304,8 @@ Slay the Spire II:
   # Each one can be claimed once in every run. Types: WAX_RELIC, RELIC, ENCHANTMENT,
   # ENCHANTED_CARDS (enchantment Pools: Common, Uncommon, Rare), MAX_HP (Value only) and
   # CARDS (Pools like "Regent Attack", "Colorless Rare", "Rare Upgraded" or Random; or a card as Value).
+  # Relic Pools: Common, Uncommon, Rare, Shop, Ancient, Fake, Classic. RELIC can be a relic with an
+  # "Upon pickup" effect; WAX_RELIC can't. Entries of the same type are handed out in a random order.
   #   bonus_items:
   #     - WAX_RELIC:
   #         Pools: [Common, Uncommon]

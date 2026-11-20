@@ -5,7 +5,8 @@
  *   - `web/src/generated/relics.json` — Spire Codex relic records (id, name,
  *     description, rarity_key, pool, image_url). Regenerate with
  *     `scripts/download_latest_relics.ps1`.
- *   - `shared/bonus_relic_blacklist.json` — relic IDs that may never be bonus items.
+ *   - `shared/bonus_relic_blacklist.json` — relic IDs a random pool never rolls
+ *     (they can still be named), and the Ancient relics with a pickup effect.
  *   - `shared/relic_custom_pools.json` — named custom pools (currently Fake and
  *     Classic) mapping pool name to an explicit list of relic IDs.
  *
@@ -18,6 +19,7 @@
 import relicsJson from "../generated/relics.json";
 import bonusRelicBlacklistJson from "@shared/bonus_relic_blacklist.json";
 import relicCustomPoolsJson from "@shared/relic_custom_pools.json";
+import type { RelicBonusKind } from "./WizardAnswers";
 
 /** One relic record from the generated Spire Codex export. */
 export interface GeneratedRelic {
@@ -49,7 +51,13 @@ export interface BonusRelicPoolOption {
  * Standard rarity-backed pools. Membership comes from each relic's `rarity_key`.
  * These names are part of the world's YAML contract and are intentionally fixed.
  */
-const STANDARD_RELIC_POOLS = ["Common", "Uncommon", "Rare", "Shop"] as const;
+const STANDARD_RELIC_POOLS = [
+  "Common",
+  "Uncommon",
+  "Rare",
+  "Shop",
+  "Ancient",
+] as const;
 
 type StandardRelicPool = (typeof STANDARD_RELIC_POOLS)[number];
 
@@ -67,7 +75,8 @@ export const RANDOM_WAX_RELIC_NAME = "Random Wax Relic";
 
 /**
  * Descriptions that begin with this prefix grant an immediate pickup effect rather
- * than a lasting relic, so they are never valid bonus items regardless of pool.
+ * than a lasting relic, so they are never valid Wax Relics regardless of pool: the
+ * effect would outlast the melting. A permanent Relic may have one.
  */
 const PICKUP_DESCRIPTION_PREFIX = "Upon pickup,";
 
@@ -77,6 +86,7 @@ const POOL_DESCRIPTIONS: Record<string, string> = {
   Uncommon: "Mid-tier relics with stronger or more specialized effects.",
   Rare: "Powerful relics that can define a run's strategy.",
   Shop: "Relics normally sold by the Merchant.",
+  Ancient: "Relics that Ancients offer. Very strong.",
   Fake: "Knockoff relics with weaker, suspiciously familiar effects.",
   Classic: "Relics returning from the original Slay the Spire.",
 };
@@ -131,14 +141,36 @@ function parseRelics(value: unknown): GeneratedRelic[] {
   return relics;
 }
 
-/** Validates and narrows the shared blacklist. */
-function parseBlacklist(value: unknown): string[] {
+/** The exclusion lists of the shared blacklist file. */
+interface BonusRelicRules {
+  /** Never rolled from a pool, but can be named. */
+  neverRandom: string[];
+  /** Ancient relics with a pickup effect, whatever their description says. */
+  ancientPickupEffects: string[];
+}
+
+/** Validates and narrows the shared blacklist file. */
+function parseRelicRules(value: unknown): BonusRelicRules {
   requireSourceData(
-    Array.isArray(value) &&
-      value.every((entry) => typeof entry === "string" && entry.length > 0),
-    "bonus_relic_blacklist.json must be an array of non-empty relic ID strings.",
+    value !== null && typeof value === "object" && !Array.isArray(value),
+    "bonus_relic_blacklist.json must be an object of relic ID lists.",
   );
-  return value as string[];
+  const record = value as Record<string, unknown>;
+
+  const readIds = (key: string): string[] => {
+    const ids = record[key];
+    requireSourceData(
+      Array.isArray(ids) &&
+        ids.every((entry) => typeof entry === "string" && entry.length > 0),
+      `bonus_relic_blacklist.json '${key}' must be an array of non-empty relic ID strings.`,
+    );
+    return ids as string[];
+  };
+
+  return {
+    neverRandom: readIds("never_random"),
+    ancientPickupEffects: readIds("ancient_pickup_effects"),
+  };
 }
 
 /** Validates and narrows the shared custom pools. */
@@ -188,7 +220,9 @@ function formatRelicDescription(description: string): string {
 // --- Module initialization: parse, validate, and index the three sources. ---
 
 const relics = parseRelics(relicsJson);
-const blacklistIds = parseBlacklist(bonusRelicBlacklistJson);
+const relicRules = parseRelicRules(bonusRelicBlacklistJson);
+const neverRandomIds = new Set(relicRules.neverRandom);
+const ancientPickupEffectIds = new Set(relicRules.ancientPickupEffects);
 const customPools = parseCustomPools(relicCustomPoolsJson);
 
 const relicById = new Map<string, GeneratedRelic>();
@@ -196,11 +230,12 @@ for (const relic of relics) {
   relicById.set(relic.id, relic);
 }
 
-// Every referenced ID must resolve to a real relic so source edits fail loudly.
-for (const id of blacklistIds) {
+// Every referenced ID must resolve to a real relic so source edits fail loudly. The
+// pickup-effect list is exempt: it also names relics newer than the relics.json export.
+for (const id of neverRandomIds) {
   requireSourceData(
     relicById.has(id),
-    `blacklisted relic '${id}' is missing from relics.json.`,
+    `never-rolled relic '${id}' is missing from relics.json.`,
   );
 }
 for (const [poolName, members] of Object.entries(customPools)) {
@@ -256,53 +291,55 @@ for (const [poolName, members] of Object.entries(customPools)) {
   poolMemberIds.set(poolName as CustomRelicPool, new Set(members));
 }
 
-/** Whether a relic may ever be a bonus item, regardless of pool membership. */
-function isExcludedRelic(relic: GeneratedRelic): boolean {
+/** Whether picking the relic up does something, so it cannot be a Wax Relic. */
+function hasPickupEffect(relic: GeneratedRelic): boolean {
   return (
-    blacklistIds.includes(relic.id) ||
-    relic.description.startsWith(PICKUP_DESCRIPTION_PREFIX)
+    relic.description.startsWith(PICKUP_DESCRIPTION_PREFIX) ||
+    ancientPickupEffectIds.has(relic.id)
   );
 }
 
-/** Eligible relic IDs per pool for specific Wax Relic selection. */
-const eligiblePoolMemberIds = new Map<BonusRelicPool, Set<string>>();
-/** Eligible shared relic IDs per pool for randomized Wax Relic selection. */
-const eligibleRandomPoolMemberIds = new Map<BonusRelicPool, Set<string>>();
-for (const [pool, memberIds] of poolMemberIds) {
-  const eligible = new Set<string>();
-  const randomEligible = new Set<string>();
-  for (const id of memberIds) {
-    const relic = relicById.get(id)!;
-    if (isExcludedRelic(relic)) {
-      continue;
-    }
-
-    eligible.add(id);
-    if (relic.pool === "shared") {
-      randomEligible.add(id);
-    }
-  }
-  eligiblePoolMemberIds.set(pool, eligible);
-  eligibleRandomPoolMemberIds.set(pool, randomEligible);
+/** Whether a relic may be named for this kind of bonus, whatever its pool. */
+function isEligibleRelic(relic: GeneratedRelic, kind: RelicBonusKind): boolean {
+  return kind === "RELIC" || !hasPickupEffect(relic);
 }
 
-/** Sorted eligible specific relics: union of all pools, minus exclusions. */
-const eligibleSpecificRelics: readonly BonusRelicInfo[] = (() => {
+/** Whether a pool may roll this relic for this kind of bonus. */
+function isRandomEligibleRelic(
+  relic: GeneratedRelic,
+  kind: RelicBonusKind,
+): boolean {
+  return (
+    isEligibleRelic(relic, kind) &&
+    relic.pool === "shared" &&
+    !neverRandomIds.has(relic.id)
+  );
+}
+
+/** Every relic that belongs to at least one pool, sorted by name. */
+const pooledRelics: readonly GeneratedRelic[] = (() => {
   const unionIds = new Set<string>();
-  for (const memberIds of eligiblePoolMemberIds.values()) {
+  for (const memberIds of poolMemberIds.values()) {
     for (const id of memberIds) {
       unionIds.add(id);
     }
   }
 
   return [...unionIds]
-    .map((id) => toRelicInfo(relicById.get(id)!))
+    .map((id) => relicById.get(id)!)
     .sort((a, b) => a.name.localeCompare(b.name));
 })();
 
-const eligibleSpecificRelicIds = new Set(
-  eligibleSpecificRelics.map((r) => r.id),
-);
+/** Sorted relics that can be named for each kind of bonus. */
+const eligibleSpecificRelics: Record<RelicBonusKind, readonly BonusRelicInfo[]> =
+  {
+    WAX_RELIC: pooledRelics
+      .filter((relic) => isEligibleRelic(relic, "WAX_RELIC"))
+      .map(toRelicInfo),
+    RELIC: pooledRelics
+      .filter((relic) => isEligibleRelic(relic, "RELIC"))
+      .map(toRelicInfo),
+  };
 
 /** Returns the display model for any relic ID, or throws when the ID is unknown. */
 export function getRelicById(id: string): BonusRelicInfo {
@@ -313,14 +350,19 @@ export function getRelicById(id: string): BonusRelicInfo {
   return toRelicInfo(relic);
 }
 
-/** Returns every relic eligible for a specific Wax Relic reward, sorted by name. */
-export function getEligibleSpecificRelics(): readonly BonusRelicInfo[] {
-  return eligibleSpecificRelics;
+/** Returns every relic that can be named for this kind of bonus, sorted by name. */
+export function getEligibleSpecificRelics(
+  kind: RelicBonusKind,
+): readonly BonusRelicInfo[] {
+  return eligibleSpecificRelics[kind];
 }
 
-/** Whether a relic ID is a valid specific Wax Relic value. */
-export function isEligibleSpecificRelicId(id: string): boolean {
-  return eligibleSpecificRelicIds.has(id);
+/** Whether a relic ID can be named for this kind of bonus. */
+export function isEligibleSpecificRelicId(
+  id: string,
+  kind: RelicBonusKind,
+): boolean {
+  return eligibleSpecificRelics[kind].some((relic) => relic.id === id);
 }
 
 /** Whether a value is one of the known pool names. */
@@ -331,33 +373,34 @@ export function isBonusRelicPool(value: unknown): value is BonusRelicPool {
   );
 }
 
-/** Returns pool display models with shared relic counts for the checkbox grid. */
-export function getBonusRelicPoolOptions(): readonly BonusRelicPoolOption[] {
+/** Returns pool display models, counting the relics each pool can roll for this kind. */
+export function getBonusRelicPoolOptions(
+  kind: RelicBonusKind,
+): readonly BonusRelicPoolOption[] {
   return BONUS_RELIC_POOLS.map((pool) => ({
     name: pool,
     description:
       POOL_DESCRIPTIONS[pool] ?? `Relics from the ${pool} custom pool.`,
-    relicCount: eligibleRandomPoolMemberIds.get(pool)?.size ?? 0,
+    relicCount: getEligiblePoolRelicIds(pool, kind).length,
   }));
 }
 
-/** Eligible shared relic IDs for one randomized pool, in relic catalog order. */
+/** Relic IDs one pool can roll for this kind of bonus, in relic catalog order. */
 export function getEligiblePoolRelicIds(
   pool: BonusRelicPool,
+  kind: RelicBonusKind,
 ): readonly string[] {
-  const memberIds = eligibleRandomPoolMemberIds.get(pool) ?? new Set<string>();
-  return relics.filter((relic) => memberIds.has(relic.id)).map((r) => r.id);
+  const memberIds = poolMemberIds.get(pool) ?? new Set<string>();
+  return relics
+    .filter(
+      (relic) => memberIds.has(relic.id) && isRandomEligibleRelic(relic, kind),
+    )
+    .map((relic) => relic.id);
 }
 
 /** Names of the pools a relic belongs to, in canonical pool order. */
 export function getPoolsForRelic(id: string): readonly string[] {
-  const pools: string[] = [];
-  for (const pool of BONUS_RELIC_POOLS) {
-    if (eligiblePoolMemberIds.get(pool)?.has(id)) {
-      pools.push(pool);
-    }
-  }
-  return pools;
+  return BONUS_RELIC_POOLS.filter((pool) => poolMemberIds.get(pool)?.has(id));
 }
 
 /** Filters relics by case-insensitive name substring; empty query returns all. */

@@ -145,9 +145,9 @@ function compileBonusItem(
   }
 
   if (item.mode === "specific") {
-    if (!isEligibleSpecificRelicId(item.relicId)) {
+    if (!isEligibleSpecificRelicId(item.relicId, item.kind)) {
       throw new Error(
-        `${context} selects '${item.relicId}', which is not an eligible bonus relic. It may be blacklisted, a pickup effect, or outside the valid pools.`,
+        `${context} selects '${item.relicId}', which is not an eligible bonus relic. It may be a pickup effect on a Wax Relic, or outside the valid pools.`,
       );
     }
 

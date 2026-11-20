@@ -65,11 +65,14 @@ const CHARACTER_SPECIFIC_RELIC_ID = "BIG_HAT";
 /** A relic that exists only through a custom pool (the Fake whitelist). */
 const CUSTOM_POOL_RELIC_ID = "FAKE_STRIKE_DUMMY";
 
-/** A relic excluded by the shared blacklist. */
-const BLACKLISTED_RELIC_ID = "BOWLER_HAT";
+/** A relic whose description starts with "Upon pickup,", so it can't be wax. */
+const PICKUP_RELIC_ID = "STRAWBERRY";
 
-/** A relic excluded because its description starts with "Upon pickup,". */
-const PICKUP_RELIC_ID = "ALCHEMICAL_COFFER";
+/** An Ancient pickup relic the description check alone would miss. */
+const UNMARKED_PICKUP_RELIC_ID = "PANDORAS_BOX";
+
+/** Relics no pool rolls, though they can be named. */
+const NEVER_RANDOM_RELIC_IDS = ["GLITTER", "BOWLER_HAT", "WHITE_STAR"];
 
 /**
  * Verifies the three JSON sources loaded through the data module stay consistent.
@@ -80,7 +83,7 @@ function keepsSourceDataConsistent(): void {
   // Every blacklist and custom-pool ID must resolve to a generated relic record.
   const relicIds = new Set(relicsJson.map((relic) => relic.id));
 
-  for (const id of blacklistJson) {
+  for (const id of blacklistJson.never_random) {
     expect(relicIds.has(id)).toBe(true);
   }
 
@@ -108,6 +111,7 @@ function derivesPoolsFromSources(): void {
     "Uncommon",
     "Rare",
     "Shop",
+    "Ancient",
     "Fake",
     "Classic",
   ]);
@@ -119,7 +123,7 @@ function derivesPoolsFromSources(): void {
 
   // Pool membership lists resolve to real relic IDs in catalog order.
   for (const pool of BONUS_RELIC_POOLS) {
-    const memberIds = getEligiblePoolRelicIds(pool);
+    const memberIds = getEligiblePoolRelicIds(pool, "WAX_RELIC");
     expect(memberIds.length).toBeGreaterThan(0);
 
     for (const id of memberIds) {
@@ -128,18 +132,22 @@ function derivesPoolsFromSources(): void {
   }
 
   // Randomized pools count only shared relics from the generated source data.
-  const rareOption = getBonusRelicPoolOptions().find(
-    (option) => option.name === "Rare",
-  );
-  const expectedSharedRareCount = relicsJson.filter(
+  const sharedRares = relicsJson.filter(
     (relic) =>
       relic.rarity_key === "Rare" &&
       relic.pool === "shared" &&
-      !blacklistJson.includes(relic.id) &&
-      !relic.description.startsWith("Upon pickup,"),
-  ).length;
-  expect(rareOption?.relicCount).toBe(expectedSharedRareCount);
-  expect(getEligiblePoolRelicIds("Rare")).not.toContain(
+      !blacklistJson.never_random.includes(relic.id),
+  );
+  const rareCount = (kind: "WAX_RELIC" | "RELIC") =>
+    getBonusRelicPoolOptions(kind).find((option) => option.name === "Rare")
+      ?.relicCount;
+  expect(rareCount("RELIC")).toBe(sharedRares.length);
+  expect(rareCount("WAX_RELIC")).toBe(
+    sharedRares.filter(
+      (relic) => !relic.description.startsWith("Upon pickup,"),
+    ).length,
+  );
+  expect(getEligiblePoolRelicIds("Rare", "RELIC")).not.toContain(
     CHARACTER_SPECIFIC_RELIC_ID,
   );
 }
@@ -150,24 +158,43 @@ function derivesPoolsFromSources(): void {
  * @returns Nothing; Vitest records assertion failures.
  */
 function appliesExclusionsLast(): void {
-  // Blacklisted relics are excluded even though their rarity pool is valid.
-  expect(isEligibleSpecificRelicId(BLACKLISTED_RELIC_ID)).toBe(false);
+  // Pickup-effect relics can't be wax, named or rolled, but a permanent Relic can be one.
+  for (const id of [PICKUP_RELIC_ID, UNMARKED_PICKUP_RELIC_ID]) {
+    expect(isEligibleSpecificRelicId(id, "WAX_RELIC")).toBe(false);
+    expect(isEligibleSpecificRelicId(id, "RELIC")).toBe(true);
+  }
+  expect(getEligiblePoolRelicIds("Fake", "WAX_RELIC")).not.toContain("FAKE_MANGO");
+  expect(getEligiblePoolRelicIds("Fake", "RELIC")).toContain("FAKE_MANGO");
+  expect(getEligiblePoolRelicIds("Ancient", "WAX_RELIC")).not.toContain(
+    UNMARKED_PICKUP_RELIC_ID,
+  );
+  expect(getEligiblePoolRelicIds("Ancient", "RELIC")).toContain(
+    UNMARKED_PICKUP_RELIC_ID,
+  );
 
-  // Pickup-effect relics are excluded from both standard and custom pools.
-  expect(isEligibleSpecificRelicId(PICKUP_RELIC_ID)).toBe(false);
-  expect(getEligiblePoolRelicIds("Fake")).not.toContain("FAKE_MANGO");
+  // Some relics are too strong to roll every run, but can still be named.
+  for (const kind of ["WAX_RELIC", "RELIC"] as const) {
+    const rolled = BONUS_RELIC_POOLS.flatMap((pool) =>
+      getEligiblePoolRelicIds(pool, kind),
+    );
+    for (const id of NEVER_RANDOM_RELIC_IDS) {
+      expect(rolled).not.toContain(id);
+      expect(isEligibleSpecificRelicId(id, kind)).toBe(true);
+    }
+  }
 
   // The exclusions shrink the union below the raw pool membership counts.
-  const eligible = getEligibleSpecificRelics();
+  const eligible = getEligibleSpecificRelics("WAX_RELIC");
   expect(eligible.length).toBeGreaterThan(0);
-  expect(eligible.map((relic) => relic.id)).not.toContain(BLACKLISTED_RELIC_ID);
   expect(eligible.map((relic) => relic.id)).not.toContain(PICKUP_RELIC_ID);
 
   // Custom-pool relics with neutral descriptions remain eligible.
-  expect(isEligibleSpecificRelicId(CUSTOM_POOL_RELIC_ID)).toBe(true);
+  expect(isEligibleSpecificRelicId(CUSTOM_POOL_RELIC_ID, "WAX_RELIC")).toBe(true);
 
   // Character-specific relics remain available only for explicit selection.
-  expect(isEligibleSpecificRelicId(CHARACTER_SPECIFIC_RELIC_ID)).toBe(true);
+  expect(
+    isEligibleSpecificRelicId(CHARACTER_SPECIFIC_RELIC_ID, "WAX_RELIC"),
+  ).toBe(true);
 }
 
 /**
@@ -176,7 +203,7 @@ function appliesExclusionsLast(): void {
  * @returns Nothing; Vitest records assertion failures.
  */
 function filtersRelicsByNameCaseInsensitively(): void {
-  const eligible = getEligibleSpecificRelics();
+  const eligible = getEligibleSpecificRelics("WAX_RELIC");
 
   // An empty query returns the complete eligible list unchanged.
   expect(filterRelicsByName(eligible, "")).toHaveLength(eligible.length);
@@ -196,7 +223,7 @@ function filtersRelicsByNameCaseInsensitively(): void {
  * @returns Nothing; Vitest records assertion failures.
  */
 function describesEveryPoolOption(): void {
-  const options = getBonusRelicPoolOptions();
+  const options = getBonusRelicPoolOptions("WAX_RELIC");
 
   // The checkbox grid mirrors the canonical pool ordering.
   expect(options.map((option) => option.name)).toEqual([...BONUS_RELIC_POOLS]);
@@ -271,12 +298,12 @@ function compilesDuplicatesAndManyRows(): void {
  * @returns Nothing; Vitest records assertion failures.
  */
 function rejectsInvalidBonusItemAnswers(): void {
-  // An excluded relic cannot be selected even when hand-constructed.
-  const blacklisted = createTestAnswers();
-  blacklisted.itemPool.bonusItems = [
-    { kind: "WAX_RELIC", mode: "specific", relicId: BLACKLISTED_RELIC_ID },
+  // A pickup-effect relic cannot be a Wax Relic even when hand-constructed.
+  const pickupWax = createTestAnswers();
+  pickupWax.itemPool.bonusItems = [
+    { kind: "WAX_RELIC", mode: "specific", relicId: PICKUP_RELIC_ID },
   ];
-  expect(() => compileWizardAnswers(blacklisted, optionCatalog)).toThrow(
+  expect(() => compileWizardAnswers(pickupWax, optionCatalog)).toThrow(
     "not an eligible bonus relic",
   );
 

@@ -688,6 +688,20 @@ class SlayTheSpire2World(World):
                 pool.append(self.create_item(self.get_filler_item(character=config.name)))
 
         self.multiworld.itempool += pool
+        self.shuffle_bonus_items()
+
+    def shuffle_bonus_items(self) -> None:
+        """Shuffles the Bonus Items entries within each kind, once per seed. The client gives the
+        Nth copy found of a kind that kind's Nth entry, so a YAML would otherwise hand out its
+        entries in the order they were written, every seed. Each kind keeps its places in the list.
+        Called after the item pool is built, so the extra draw does not move the filler rolls."""
+        entries = self.options.bonus_items.value
+        entries_by_kind: dict[str, list] = {}
+        for entry in entries:
+            entries_by_kind.setdefault(next(iter(entry)), []).append(entry)
+        for kind_entries in entries_by_kind.values():
+            self.random.shuffle(kind_entries)
+        self.options.bonus_items.value = [entries_by_kind[next(iter(entry))].pop() for entry in entries]
 
     def _should_include_location(self, data: Optional[LocationData], config: CharacterConfig) -> bool:
         if data is None:

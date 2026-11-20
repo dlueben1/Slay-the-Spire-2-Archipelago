@@ -22,8 +22,8 @@ class TestBonusWaxItems(Spire2TestBase):
         self.assertEqual({600}, {item.code for item in bonus})
         self.assertEqual(600, universal_bonus_items["Bonus Wax Relic"].code)
 
-    def test_bonus_entries_preserve_slot_order(self):
-        self.assertEqual(self.options["bonus_items"], self.world.fill_slot_data()["bonus_items"])
+    def test_slot_data_keeps_every_entry(self):
+        self.assertCountEqual(self.options["bonus_items"], self.world.fill_slot_data()["bonus_items"])
 
     def test_bonus_items_replace_filler_without_changing_pool_size(self):
         locations = [location for location in self.multiworld.get_locations()
@@ -50,7 +50,35 @@ class TestNewBonusItems(Spire2TestBase):
                     "Bonus Max HP"]),
             sorted(names),
         )
-        self.assertEqual(self.options["bonus_items"], self.world.fill_slot_data()["bonus_items"])
+        self.assertCountEqual(self.options["bonus_items"], self.world.fill_slot_data()["bonus_items"])
+
+
+class TestBonusItemShuffle(Spire2TestBase):
+    relics = ["Anchor", "Vajra", "Orichalcum", "Lantern", "Akabeko", "Pantograph"]
+    options = {
+        "characters": ["ironclad"],
+        "bonus_items": [
+            *({"WAX_RELIC": {"Value": relic}} for relic in relics[:3]),
+            {"MAX_HP": {"Value": 6}},
+            *({"WAX_RELIC": {"Value": relic}} for relic in relics[3:]),
+            {"MAX_HP": {"Value": 9}},
+        ],
+    }
+
+    def test_each_kind_keeps_its_places_and_entries(self):
+        shuffled = self.world.fill_slot_data()["bonus_items"]
+        self.assertEqual([next(iter(entry)) for entry in self.options["bonus_items"]],
+                         [next(iter(entry)) for entry in shuffled])
+        self.assertCountEqual(self.options["bonus_items"], shuffled)
+
+    def test_order_changes_between_seeds(self):
+        orders = set()
+        for seed in range(5):
+            self.world.random.seed(seed)
+            self.world.shuffle_bonus_items()
+            orders.add(tuple(entry["WAX_RELIC"]["Value"]
+                             for entry in self.world.options.bonus_items.value if "WAX_RELIC" in entry))
+        self.assertGreater(len(orders), 1)
 
 
 class TestBonusEntryValidation(unittest.TestCase):
@@ -88,7 +116,7 @@ class TestBonusCards(Spire2TestBase):
     def test_each_entry_adds_a_bonus_cards_item(self):
         codes = [item.code for item in self.multiworld.itempool if item.name == "Bonus Cards"]
         self.assertEqual([605, 605], codes)
-        self.assertEqual(self.options["bonus_items"], self.world.fill_slot_data()["bonus_items"])
+        self.assertCountEqual(self.options["bonus_items"], self.world.fill_slot_data()["bonus_items"])
 
 
 class TestBonusCardPools(unittest.TestCase):

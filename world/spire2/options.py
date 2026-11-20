@@ -602,11 +602,13 @@ class BonusItems(OptionList):
     These items make the game easier to complete, and are not accounted for in logic.
     Once found, each one can be claimed once in every run, from the Archipelago reward menu.
 
-    Each ordered entry creates one bonus item and gives either a list of Pools to roll from or
-    one specific Value:
+    Each entry creates one bonus item and gives either a list of Pools to roll from or
+    one specific Value. Entries of the same kind are handed out in a random order.
 
-    - WAX_RELIC: a relic that melts after a few combats. Pools are relic pools such as Common.
-    - RELIC: a relic that stays for the whole run, from the same Pools or Value.
+    - WAX_RELIC: a relic that melts after a few combats. Pools are relic pools such as Common
+      or Ancient. Relics with an "Upon pickup" effect can't be wax.
+    - RELIC: a relic that stays for the whole run, from the same Pools or Value. These can
+      have an "Upon pickup" effect.
     - ENCHANTMENT: choose a card to enchant. Pools: Common, Uncommon, Rare; or name an
       enchantment as the Value.
     - ENCHANTED_CARDS: a card reward whose cards are all enchanted, from the same Pools or Value.

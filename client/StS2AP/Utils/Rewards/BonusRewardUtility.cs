@@ -102,13 +102,13 @@ internal static class BonusRewardUtility
         RelicModel? selected;
         if (definition.HasExplicitValue)
         {
-            selected = BonusRelicResolver.ResolveValue(definition.Value!, rejectPickupEffectRelics: true);
+            selected = BonusRelicResolver.ResolveValue(definition.Value!, rejectPickupEffectRelics: isWax);
             if (selected != null && !selected.IsAllowed(player.RunState))
                 selected = null;
         }
         else
         {
-            selected = BonusRelicResolver.BuildPoolCandidates(definition.Pools, rejectPickupEffectRelics: true)
+            selected = BonusRelicResolver.BuildPoolCandidates(definition.Pools, rejectPickupEffectRelics: isWax)
                 .Where(relic => relic.IsAllowed(player.RunState))
                 .Where(relic => relic.Pool == player.Character.RelicPool
                     || !ModelDb.CharacterRelicPools.Contains(relic.Pool))
