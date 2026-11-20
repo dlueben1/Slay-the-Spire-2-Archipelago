@@ -21,7 +21,11 @@ public static class ApGrantDispatcher
     public static void RebuildGoldBank(IReadOnlyList<ItemInfo> receivedItems)
     {
         ArchipelagoSettings settings = RequireSettings("rebuild the AP gold bank");
+        long[] characterOffsets = settings.Characters.Values
+            .Select(config => (long)config.CharOffset)
+            .ToArray();
         var rebuilt = new Dictionary<long, int>();
+        var gainItemEnds = new Dictionary<long, List<int>>();
         int buffCount = 0;
         foreach (ItemInfo item in receivedItems)
         {
@@ -29,33 +33,53 @@ public static class ApGrantDispatcher
                 continue;
             if (ArchipelagoIdCodec.IsUniversalItemId(item.ItemId))
             {
+                // Add buff gold in receipt order, as live receipts do, so the gain item positions
+                // in GoldGainItemEnds match either way.
                 if (ItemTable.IsMultiplayerBuffGoldFallback(item.ItemId) || BonusRewardUtility.ConvertToGold(item.ItemId))
+                {
+                    UniversalBuffGold.AddToBank(rebuilt, characterOffsets, buffCount, addedBuffCount: 1);
                     buffCount++;
+                }
                 continue;
             }
 
-            APItem itemId = item.GetCharacterItemType();
-            if (!ItemTable.GoldItemAmounts.TryGetValue(itemId, out int amount))
-                continue;
-
-            long characterOffset = item.GetAPCharacterNumber();
-            rebuilt.TryGetValue(characterOffset, out int previous);
-            rebuilt[characterOffset] = previous + amount;
+            AddGoldItem(rebuilt, gainItemEnds, item.GetAPCharacterNumber(), item.GetCharacterItemType());
         }
 
-        UniversalBuffGold.AddToBank(
-            rebuilt,
-            settings.Characters.Values.Select(config => (long)config.CharOffset),
-            previousBuffCount: 0,
-            addedBuffCount: buffCount
-        );
+        // Gives every configured character a bank entry, even one with no gold yet.
+        UniversalBuffGold.AddToBank(rebuilt, characterOffsets, buffCount, addedBuffCount: 0);
         ArchipelagoClient.Progress.GoldReceived = rebuilt;
+        ArchipelagoClient.Progress.GoldGainItemEnds = gainItemEnds;
         ArchipelagoClient.Progress.UniversalBuffsConvertedToGold = buffCount;
         LogUtility.Info(
             $"Rebuilt AP gold bank from {receivedItems.Count} receipt(s): "
                 + string.Join(",", rebuilt.OrderBy(pair => pair.Key)
                     .Select(pair => $"{pair.Key}={pair.Value}"))
         );
+    }
+
+    /// <summary>Adds one live character gold receipt to the bank, as the history rebuild does.</summary>
+    public static bool AddGoldItem(long characterOffset, APItem itemId)
+    {
+        var progress = ArchipelagoClient.Progress;
+        return AddGoldItem(progress.GoldReceived, progress.GoldGainItemEnds, characterOffset, itemId);
+    }
+
+    private static bool AddGoldItem(
+        Dictionary<long, int> bank,
+        Dictionary<long, List<int>> gainItemEnds,
+        long characterOffset,
+        APItem itemId)
+    {
+        if (!ItemTable.GoldItemAmounts.TryGetValue(itemId, out int amount))
+            return false;
+
+        bank.TryGetValue(characterOffset, out int previous);
+        int total = previous + amount;
+        bank[characterOffset] = total;
+        if (itemId is APItem.CombatGold or APItem.EliteGold or APItem.BossGold)
+            GoldGainCount.RecordItemEnd(gainItemEnds, characterOffset, total);
+        return true;
     }
 
     /// <summary>
@@ -126,11 +150,17 @@ public static class ApGrantDispatcher
         if (offer.SourceAmount <= 0 || offer.GrantedAmount <= 0)
             return null;
 
-        return new ApGoldClaim(
-            offer.SourceAmount,
-            offer.GrantedAmount,
-            ArchipelagoClient.Progress.GoldRedeemed + offer.SourceAmount
-        );
+        var progress = ArchipelagoClient.Progress;
+        int redeemedBefore = progress.GoldRedeemed;
+        int redeemedAfter = redeemedBefore + offer.SourceAmount;
+        int gainCount = 0;
+        if (GameUtility.CurrentConfig is { } config
+            && progress.GoldGainItemEnds.TryGetValue(config.CharOffset, out List<int>? itemEnds))
+        {
+            gainCount = GoldGainCount.CountWithin(itemEnds, redeemedBefore, redeemedAfter);
+        }
+
+        return new ApGoldClaim(offer.SourceAmount, offer.GrantedAmount, redeemedAfter, gainCount);
     }
 
     /// <summary>

@@ -27,6 +27,7 @@ using StS2AP.DomainAdapters;
 using StS2AP.Extensions;
 using StS2AP.Patches;
 using StS2AP.UI;
+using StS2AP.Utils.Combat;
 using STS2RitsuLib.Combat.Rewards;
 using STS2RitsuLib.Networking.Sidecar;
 using StS2AP.Utils.RunGraph;
@@ -38,7 +39,7 @@ namespace StS2AP.Utils;
 /// complete recipe before any native RewardsSet begins, so every replica has matching reward
 /// indexes and MegaCrit can own the entire selection lifecycle.
 /// </summary>
-public static class ApMirroredRewardDispatcher
+public static partial class ApMirroredRewardDispatcher
 {
     private const string SidecarMessageKey = "received_reward_menu";
     private const string ReplicatedCardStrategyId = "ap_rng_replicated_card_v1";
@@ -140,6 +141,7 @@ public static class ApMirroredRewardDispatcher
         Patches_APRewardSelectionOrder.Reset();
         ActiveRemoteMenus.Clear();
         ReplicaCardAssignments.Clear();
+        BonusCardRewards.Clear();
     }
 
     /// <summary>Opens the local player's current AP receipt catalog as a native reward screen.</summary>
@@ -283,6 +285,7 @@ public static class ApMirroredRewardDispatcher
                 SourceAmount = gold.SourceAmount,
                 GrantedAmount = gold.GrantedAmount,
                 RedeemedRawAfter = gold.RedeemedRawAfter,
+                GainCount = gold.GainCount,
             };
         }
 
@@ -396,14 +399,16 @@ public static class ApMirroredRewardDispatcher
             }
             case ApMirroredRewardKind.Bonus:
             {
-                RelicModel? relic = BonusRewardUtility.GetOrAssign(receipt, player);
-                if (relic == null)
+                BonusAssignment? assignment = BonusRewardUtility.GetOrAssign(receipt, player);
+                if (assignment == null)
                 {
                     spec.Kind = ApMirroredRewardKind.Unavailable;
-                    spec.UnavailableReason = "No eligible bonus wax relic is configured for this receipt.";
+                    spec.UnavailableReason = "No eligible bonus is configured for this receipt.";
                     break;
                 }
-                spec.SerializedModels.Add(SerializeRelic(relic));
+                spec.SerializedModels.Add(assignment.Relic != null
+                    ? SerializeRelic(assignment.Relic)
+                    : assignment.Payload!.ToJson());
                 break;
             }
             case ApMirroredRewardKind.Relic:
@@ -504,7 +509,7 @@ public static class ApMirroredRewardDispatcher
         relic => BuildStandardRelicReward(spec.Origin, relic, owner),
         choices => BuildAncientReward(spec.Origin, choices, owner),
         reason => new ApUnavailableReward(spec.Origin.ItemName, reason, owner, spec.Origin),
-        relic => new ApNativeRelicReward(DeserializeRelic(relic), owner, spec.Origin, ApMirroredRewardKind.Bonus));
+        bonus => BuildBonusReward(spec.Origin, bonus, owner));
 
     private static Reward BuildCardReward(RewardOrigin origin, CardRewardData card, Player player)
     {
@@ -652,6 +657,8 @@ public static class ApMirroredRewardDispatcher
         bool modified;
         using (Patches_APCardRewardUpgradeOdds.EnterApRewardRng(rng))
         using (Patches_APCardRewardUpgradeOdds.EnterRewardAct(configuration.Recipe.ActIndex))
+        // The Card Sight bonus adds its extra card to the 3 asked for here.
+        using (CardSight.EnterRewardGeneration(addsExtraCard: true))
         {
             cards = Patches_APCardRewardUpgradeOdds.RunDeferringOptionHooks(
                 () => CardFactory.CreateForReward(player, 3, options).ToList()
@@ -892,7 +899,7 @@ public static class ApMirroredRewardDispatcher
         if (ArchipelagoIdCodec.IsUniversalItemId(receipt.Item.ItemId))
         {
             kind = ApMirroredRewardKind.Bonus;
-            return receipt.Item.GetUniversalItemId() == ItemTable.APItem.BonusWaxRelic;
+            return BonusRewardUtility.IsBonusItem(receipt.Item.GetUniversalItemId());
         }
         switch (receipt.Item.GetCharacterItemType())
         {
@@ -969,9 +976,20 @@ public static class ApMirroredRewardDispatcher
         protected override async Task<bool> OnSelect()
         {
             // Known edge case: removing Poverty while this menu stays open leaves this offer underpaying.
+            int goldBefore = Player.Gold;
             bool applied = await base.OnSelect();
             if (applied && LocalContext.IsMe(Player))
                 ApGrantDispatcher.CommitGoldClaim(claim);
+
+            // The single gain above already fired "after gaining gold" once. Fire it again for each
+            // further Combat, Elite or Boss Gold item, so Dragon Fruit counts them separately.
+            // Every replica selects this reward from the same published menu, so all of them do
+            // this. Nothing more fires when no gold arrived, for example with Ectoplasm.
+            if (applied && Player.Gold > goldBefore)
+            {
+                for (int gain = 1; gain < claim.GainCount; gain++)
+                    await Hook.AfterGoldGained(Player.RunState, Player);
+            }
             return applied;
         }
     }

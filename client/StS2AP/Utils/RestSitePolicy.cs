@@ -8,6 +8,12 @@ internal sealed class RestSitePolicy(int currentAct, int restLevel, int smithLev
 {
     public int CurrentAct { get; } = Math.Min(currentAct, 3);
 
+    /// <summary>Whether this act's Progressive Rest has been received.</summary>
+    public bool CanRest => restLevel >= CurrentAct;
+
+    /// <summary>Whether this act's Progressive Smith has been received.</summary>
+    public bool CanSmith => smithLevel >= CurrentAct;
+
     /// <summary>Applies progression locks, then provides a safe exit before AP checks are added.</summary>
     public bool ApplyLocks<TOption>(
         ICollection<TOption> options,
@@ -15,8 +21,8 @@ internal sealed class RestSitePolicy(int currentAct, int restLevel, int smithLev
         Func<TOption, bool> isEnabled,
         Func<TOption> createFallback)
     {
-        bool canRest = restLevel >= CurrentAct;
-        bool canSmith = smithLevel >= CurrentAct;
+        bool canRest = CanRest;
+        bool canSmith = CanSmith;
         foreach (TOption option in options.ToArray())
         {
             string id = getOptionId(option);

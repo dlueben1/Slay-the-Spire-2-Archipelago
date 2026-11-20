@@ -1,0 +1,8 @@
+{
+  "AP_CHECKBOUND.title": "Checkbound",
+  "AP_CHECKBOUND.description": "Gains +1 damage and [gold]Block[/gold] each time this character's checks sent pass 5%, 12%, 22%, 36%, 55% and 80%.",
+  "AP_EAGER.title": "Eager",
+  "AP_EAGER.description": "The first time you draw this card each combat, it costs [blue]1[/blue] less until played.",
+  "AP_EXPOSING.title": "Exposing",
+  "AP_EXPOSING.description": "This card applies [blue]{Amount}[/blue] [gold]Vulnerable[/gold]."
+}

@@ -43,4 +43,4 @@ To join an Archipelago session, click "Connect", then fill in the information pr
 > While playing the Slay the Spire II Archipelago mod, please disable any mods that are **not** being used by the randomizer (i.e. every mod that isn't RitsuLib, Slay the Spire II Archipelago, and any custom characters you've configured). These may cause the mod to break, or behave unexpectedly.
 
 > [!WARNING]
-> While we have support for custom (modded) characters, we cannot guarantee that all custom characters will work. Please use this feature at your own risk, and test a practice game in advance to ensure that the custom characters you've chosen do not break the Archipelago mod.
+> While we have support for custom (modded) characters, we cannot guarantee that all custom characters will work. Please use this feature at your own risk, and test a practice game in advance to ensure that the custom characters you've chosen do not break the Archipelago mod. See [Modded Characters](/#/setup/modded-characters) for how to add them and what to do when a character mod breaks.

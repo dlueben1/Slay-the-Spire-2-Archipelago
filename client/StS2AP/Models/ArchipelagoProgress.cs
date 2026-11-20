@@ -456,7 +456,7 @@ namespace StS2AP.Models
         public bool IsAvailableInRewardMenu(IndexedItemInfo item, Player player)
         {
             if (ArchipelagoIdCodec.IsUniversalItemId(item.Item.ItemId))
-                return item.Item.GetUniversalItemId() == APItem.BonusWaxRelic
+                return BonusRewardUtility.IsBonusItem(item.Item.GetUniversalItemId())
                     && !Items.IsUsed(item.Index)
                     && !BonusRewardUtility.ConvertToGold(item.Item.ItemId);
             var itemId = item.Item.GetCharacterItemType();
@@ -483,6 +483,13 @@ namespace StS2AP.Models
         /// item separately. Rebuilt with GoldReceived from AP history, not saved or reset per run.
         /// </summary>
         internal int UniversalBuffsConvertedToGold { get; set; }
+
+        /// <summary>
+        /// Per character, the raw GoldReceived totals at which each Combat, Elite and Boss Gold
+        /// item ends, in receipt order. A claim counts each one as a separate gold gain. Built
+        /// alongside GoldReceived; not saved.
+        /// </summary>
+        internal Dictionary<long, List<int>> GoldGainItemEnds { get; set; } = new();
 
         /// <summary>
         /// The Gold you've redeemed so far this run

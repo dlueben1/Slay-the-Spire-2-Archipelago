@@ -8,8 +8,9 @@ import {
 } from "../../../wizard/BonusRelicData";
 import type {
   BonusItemAnswer,
-  RandomWaxRelicBonusItem,
-  SpecificWaxRelicBonusItem,
+  RandomRelicBonusItem,
+  RelicBonusKind,
+  SpecificRelicBonusItem,
 } from "../../../wizard/WizardAnswers";
 
 type WaxRelicMode = "specific" | "random";
@@ -23,6 +24,8 @@ interface WaxRelicDraft {
 
 const props = defineProps<{
   open: boolean;
+  /** Wax Relics melt after a few combats; Relics stay for the whole run. */
+  kind: RelicBonusKind;
   /** The existing item when editing, or `null` when adding a new one. */
   editItem: BonusItemAnswer | null;
 }>();
@@ -47,8 +50,9 @@ const modeItems: RadioGroupItem[] = [
   },
 ];
 
-const eligibleRelics = getEligibleSpecificRelics();
-const poolOptions = getBonusRelicPoolOptions();
+// Wax Relics can't be relics with a pickup effect, so each kind has its own lists.
+const eligibleRelics = computed(() => getEligibleSpecificRelics(props.kind));
+const poolOptions = computed(() => getBonusRelicPoolOptions(props.kind));
 
 const draft = ref<WaxRelicDraft>({
   mode: "specific",
@@ -59,7 +63,7 @@ const searchQuery = ref("");
 
 /** Relics matching the current case-insensitive name filter. */
 const filteredRelics = computed(() =>
-  filterRelicsByName(eligibleRelics, searchQuery.value),
+  filterRelicsByName(eligibleRelics.value, searchQuery.value),
 );
 
 /** Whether the draft in the active mode is complete enough to submit. */
@@ -69,8 +73,18 @@ const isSubmittable = computed(() =>
     : draft.value.pools.length > 0,
 );
 
-const dialogTitle = computed(() =>
-  props.editItem ? "Edit Wax Relic" : "Add Wax Relic",
+const kindName = computed(() =>
+  props.kind === "WAX_RELIC" ? "Wax Relic" : "Relic",
+);
+
+const dialogTitle = computed(
+  () => `${props.editItem ? "Edit" : "Add"} ${kindName.value}`,
+);
+
+const dialogDescription = computed(() =>
+  props.kind === "WAX_RELIC"
+    ? "Wax Relics are pulled from the normal relic pool and melt away after enough combats. Relics with a pickup effect can't be wax."
+    : "Relics are pulled from the normal relic pool and stay for the whole run.",
 );
 
 const submitLabel = computed(() => (props.editItem ? "Save" : "Add"));
@@ -91,14 +105,15 @@ watch(
     searchQuery.value = "";
 
     const item = props.editItem;
-    if (item && item.kind === "WAX_RELIC" && item.mode === "specific") {
+    if (item && item.kind === props.kind && item.mode === "specific") {
       draft.value = { mode: "specific", relicId: item.relicId, pools: [] };
-    } else if (item && item.kind === "WAX_RELIC" && item.mode === "random") {
+    } else if (item && item.kind === props.kind && item.mode === "random") {
       draft.value = { mode: "random", relicId: null, pools: [...item.pools] };
     } else {
       draft.value = { mode: "specific", relicId: null, pools: [] };
     }
   },
+  { immediate: true }
 );
 
 /** Narrows and applies the reward-mode radio selection. */
@@ -127,7 +142,7 @@ function togglePool(poolName: string, checked: unknown): void {
   }
 
   // Emit pools in the source-defined order so YAML output is deterministic.
-  const ordered = poolOptions
+  const ordered = poolOptions.value
     .map((option) => option.name)
     .filter((name) => selected.has(name));
   draft.value = { ...draft.value, pools: ordered };
@@ -146,15 +161,15 @@ function submit(): void {
 
   let item: BonusItemAnswer;
   if (draft.value.mode === "specific") {
-    const specific: SpecificWaxRelicBonusItem = {
-      kind: "WAX_RELIC",
+    const specific: SpecificRelicBonusItem = {
+      kind: props.kind,
       mode: "specific",
       relicId: draft.value.relicId!,
     };
     item = specific;
   } else {
-    const random: RandomWaxRelicBonusItem = {
-      kind: "WAX_RELIC",
+    const random: RandomRelicBonusItem = {
+      kind: props.kind,
       mode: "random",
       pools: [...draft.value.pools],
     };
@@ -170,7 +185,7 @@ function submit(): void {
   <UModal
     :open="open"
     :title="dialogTitle"
-    :description="'Wax Relics are pulled from the normal relic pool and melt away after enough combats.'"
+    :description="dialogDescription"
     scrollable
     :ui="{ content: 'sm:max-w-2xl', footer: 'justify-end' }"
     @update:open="emit('update:open', $event)"

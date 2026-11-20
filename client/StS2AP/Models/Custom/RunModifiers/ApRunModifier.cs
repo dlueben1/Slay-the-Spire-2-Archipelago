@@ -7,7 +7,8 @@ using MegaCrit.Sts2.Core.Rooms;
 namespace StS2AP.Models;
 
 /// <summary>
-/// A difficulty modifier that the slot's Run Modifiers option adds to every new AP run. They are
+/// A modifier that the slot's Run Modifiers (difficulty) or Boons (helpful) option adds to every
+/// new AP run. They are
 /// ordinary run modifiers, so saves, multiplayer and the top bar treat them like the base game's,
 /// but they are never offered in Daily or Custom runs and Neow ignores them (see
 /// <see cref="ApRunModifiers"/>).

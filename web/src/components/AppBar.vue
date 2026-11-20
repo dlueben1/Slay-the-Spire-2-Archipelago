@@ -42,6 +42,14 @@ function getNavigationItems(): NavigationMenuItem[] {
           to: "/setup/client",
           active: route.path === "/setup/client",
         },
+        {
+          icon: "i-glyphs-puzzle-piece-bold",
+          label: "Modded Characters",
+          description:
+            "Adding modded characters to your YAML, and what to do when a character mod breaks.",
+          to: "/setup/modded-characters",
+          active: route.path === "/setup/modded-characters",
+        },
       ],
     },
     {

@@ -1,15 +1,19 @@
+using Godot;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Merchant;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Factories;
 using MegaCrit.Sts2.Core.Helpers;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Multiplayer.Game.Lobby;
+using MegaCrit.Sts2.Core.Nodes.HoverTips;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Nodes.Screens.GameOverScreen;
 using MegaCrit.Sts2.Core.Nodes.Screens.MainMenu;
+using MegaCrit.Sts2.Core.Random;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves;
 using MegaCrit.Sts2.Core.Saves.Managers;
@@ -97,6 +101,24 @@ public static class GameApiCompat
 #endif
     }
 
+    /// <summary>
+    /// Shows hover tips hanging below a point, with any card tips laid out beside the text, the way
+    /// the game's boss icon shows a Dread run's Dominion. 0.113.1 replaced the Center alignment
+    /// with SetAlignmentBelow.
+    /// </summary>
+    public static void ShowHoverTipsBelow(
+        Control owner,
+        IEnumerable<IHoverTip> hoverTips,
+        Vector2 globalPosition)
+    {
+#if STS2_AT_LEAST_0_113_1
+        NHoverTipSet.CreateAndShow(owner, hoverTips)?.SetAlignmentBelow(globalPosition);
+#else
+        NHoverTipSet.CreateAndShow(owner, hoverTips, HoverTipAlignment.Center)
+            ?.SetGlobalPosition(globalPosition);
+#endif
+    }
+
     /// <summary>The finished run the game-over screen was opened for.</summary>
     public static SerializableRun? GetRun(NGameOverScreen screen)
     {
@@ -153,6 +175,19 @@ public static class GameApiCompat
 #else
         // Older versions clear the filter unless it is explicitly passed back in.
         return options.WithCardPools(pools, options.CardPoolFilter);
+#endif
+    }
+
+    /// <summary>
+    /// A copy of a random number generator at its current position, for looking ahead at its rolls
+    /// without moving the original. 0.111 replaced the seed-and-counter state with a saved form.
+    /// </summary>
+    public static Rng CopyRng(Rng rng)
+    {
+#if STS2_AT_LEAST_0_111_0
+        return new Rng(rng.ToSerializable());
+#else
+        return new Rng(rng.Seed, rng.Counter);
 #endif
     }
 }

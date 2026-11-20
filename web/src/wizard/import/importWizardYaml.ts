@@ -29,11 +29,14 @@ import {
   readOptionValue,
 } from "./readOptionValue";
 import {
+  readBoonAnswers,
   readChallengeAnswers,
-  readChecksAndRewardsAnswers,
+  readChecksAnswers,
   readDeathLinkAnswers,
+  readItemPoolAnswers,
   readProgressionAnswers,
   readRunAnswers,
+  readShopsAnswers,
 } from "./readSectionAnswers";
 import { readSpire2Document } from "./readYamlDocument";
 
@@ -200,8 +203,11 @@ export function importWizardYaml(
       warn,
     ),
     run: readRunAnswers(options),
+    checks: readChecksAnswers(options),
+    shops: readShopsAnswers(options, warn),
+    itemPool: readItemPoolAnswers(options, warn),
+    boons: readBoonAnswers(options, warn),
     challenges: readChallengeAnswers(options, defaults.challenges, catalog),
-    checksAndRewards: readChecksAndRewardsAnswers(options, warn),
     deathLink: readDeathLinkAnswers(options, defaults.deathLink),
     progression: readProgressionAnswers(options),
   };

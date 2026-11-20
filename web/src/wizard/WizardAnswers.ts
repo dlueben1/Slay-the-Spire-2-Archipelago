@@ -14,6 +14,7 @@ import {
   getDefaultAscensionLevels,
   type AscensionLevel,
 } from "./AscensionModifier";
+import { getOrderedBoons } from "./Boon";
 import { getOrderedRunModifiers } from "./RunModifier";
 import { createDefaultShopCardWeights } from "./ShopCardKind";
 import {
@@ -22,6 +23,7 @@ import {
   SHOP_RELIC_KIND_DEFINITIONS,
 } from "./ShopStockKind";
 import {
+  BOON_OPTION_KEYS,
   CHALLENGE_OPTION_KEYS,
   CHECK_OPTION_KEYS,
   DEATH_LINK_OPTION_KEYS,
@@ -41,26 +43,85 @@ export type CharacterAvailability = "all" | "random" | "fixed";
 export type CharacterGoal = "all" | number;
 export type CharacterAscensionMode = "shared" | "individual";
 
-/** Bonus item types currently supported by the wizard. More arrive in later passes. */
-export type BonusItemKind = "WAX_RELIC";
+/** Bonus item types the builder supports, as the YAML names them. */
+export type BonusItemKind =
+  | "WAX_RELIC"
+  | "RELIC"
+  | "ENCHANTMENT"
+  | "ENCHANTED_CARDS"
+  | "MAX_HP"
+  | "CARDS";
 
-/** A Wax Relic that always grants one chosen relic. */
-export interface SpecificWaxRelicBonusItem {
-  kind: "WAX_RELIC";
+/** Bonus item types that grant a relic: a Wax Relic melts, a Relic stays all run. */
+export type RelicBonusKind = "WAX_RELIC" | "RELIC";
+
+/** Bonus item types that give an enchantment: enchant a card, or an enchanted card reward. */
+export type EnchantmentBonusKind = "ENCHANTMENT" | "ENCHANTED_CARDS";
+
+/** A relic bonus that always grants one chosen relic. */
+export interface SpecificRelicBonusItem {
+  kind: RelicBonusKind;
   mode: "specific";
   relicId: string;
 }
 
-/** A Wax Relic randomized from one or more selected pools. */
-export interface RandomWaxRelicBonusItem {
-  kind: "WAX_RELIC";
+/** A relic bonus randomized from one or more selected pools. */
+export interface RandomRelicBonusItem {
+  kind: RelicBonusKind;
+  mode: "random";
+  pools: string[];
+}
+
+/** An enchantment bonus that always gives one named enchantment. */
+export interface SpecificEnchantmentBonusItem {
+  kind: EnchantmentBonusKind;
+  mode: "specific";
+  enchantment: string;
+}
+
+/** An enchantment bonus rolled from one or more enchantment tiers. */
+export interface RandomEnchantmentBonusItem {
+  kind: EnchantmentBonusKind;
+  mode: "random";
+  tiers: string[];
+}
+
+/** Gain a fixed amount of max HP. */
+export interface MaxHpBonusItem {
+  kind: "MAX_HP";
+  amount: number;
+}
+
+/** A card reward that always offers one named card. */
+export interface SpecificCardsBonusItem {
+  kind: "CARDS";
+  mode: "specific";
+  card: string;
+}
+
+/** A card reward rolled from pools such as "Regent Attack", written as the YAML has them. */
+export interface PoolCardsBonusItem {
+  kind: "CARDS";
   mode: "random";
   pools: string[];
 }
 
 /** Discriminated union of every supported Bonus Item configuration. */
 export type BonusItemAnswer =
-  SpecificWaxRelicBonusItem | RandomWaxRelicBonusItem;
+  | SpecificRelicBonusItem
+  | RandomRelicBonusItem
+  | SpecificEnchantmentBonusItem
+  | RandomEnchantmentBonusItem
+  | MaxHpBonusItem
+  | SpecificCardsBonusItem
+  | PoolCardsBonusItem;
+
+/** Whether a row gives an enchantment (enchant a card, or enchanted cards). */
+export function isEnchantmentBonusItem(
+  item: BonusItemAnswer,
+): item is SpecificEnchantmentBonusItem | RandomEnchantmentBonusItem {
+  return item.kind === "ENCHANTMENT" || item.kind === "ENCHANTED_CARDS";
+}
 
 export type AncientRelicLocation = "start_of_act" | "anytime";
 export type AncientRelicPool = "balanced" | "chaos" | "true_chaos";
@@ -152,20 +213,79 @@ export interface RunAnswers {
   relicRewardsAvailableAnytime: number;
   removeOpRelics: OpRelicRemovalAnswers;
   releaseOnVictory: boolean;
+  /** Whether singleplayer runs can meet any event in any act. */
+  eventsInAnyAct: boolean;
   seeded: boolean;
+  /** When and from which pool Progressive Ancient rewards are offered. */
+  ancients: AncientAnswers;
+}
+
+/** Helpful run modifiers that logic does not account for. */
+export interface BoonAnswers {
+  /** Canonical Boon names in `BOONS` order. */
+  selected: string[];
   /** Percent of shops that are Blitz merchants. Only the game's beta branch has them. */
   blitzMerchantChance: number;
 }
 
 /** How many Sight items a hidden-information challenge adds; `off` leaves it off. */
-export type SightCopies = "off" | "one" | "two";
+export type SightCopies = "off" | "one" | "two" | "three" | "four";
 
 /** Sight item counts written to the `hidden_*` options. */
 export const SIGHT_COPY_COUNTS: Readonly<Record<SightCopies, number>> = {
   off: 0,
   one: 1,
   two: 2,
+  three: 3,
+  four: 4,
 };
+
+/** Which Sight items' second copy adds a bonus, one switch per Sight. */
+export interface SightBonusAnswers {
+  intent: boolean;
+  health: boolean;
+  pile: boolean;
+  map: boolean;
+  card: boolean;
+}
+
+/** Generated `sight_bonuses` names keyed by their answer field, in display order. */
+export const SIGHT_BONUS_NAMES: Readonly<Record<keyof SightBonusAnswers, string>> = {
+  intent: "IntentSight",
+  health: "HealthSight",
+  pile: "PileSight",
+  map: "MapSight",
+  card: "CardSight",
+};
+
+/**
+ * Turns `sight_bonuses` names into the bonus switches.
+ *
+ * @param names - Canonical Sight Bonus names.
+ * @returns One switch per Sight, on when its name is listed.
+ */
+export function readSightBonusNames(names: Iterable<string>): SightBonusAnswers {
+  const selected = new Set(names);
+  return {
+    intent: selected.has(SIGHT_BONUS_NAMES.intent),
+    health: selected.has(SIGHT_BONUS_NAMES.health),
+    pile: selected.has(SIGHT_BONUS_NAMES.pile),
+    map: selected.has(SIGHT_BONUS_NAMES.map),
+    card: selected.has(SIGHT_BONUS_NAMES.card),
+  };
+}
+
+/**
+ * Lists the switched-on Sight Bonuses in display order.
+ *
+ * @param answers - Sight Bonus switches.
+ * @returns Canonical `sight_bonuses` names.
+ */
+export function getSightBonusNames(answers: SightBonusAnswers): string[] {
+  return (Object.keys(SIGHT_BONUS_NAMES) as (keyof SightBonusAnswers)[])
+    .filter((field) => answers[field])
+    .map((field) => SIGHT_BONUS_NAMES[field]);
+}
 
 /** Optional difficulty settings that logic does not account for. */
 export interface ChallengeAnswers {
@@ -182,10 +302,12 @@ export interface ChallengeAnswers {
   hiddenPiles: SightCopies;
   hiddenMap: SightCopies;
   hiddenCards: SightCopies;
+  /** Which Sights' second copy adds a bonus. */
+  sightBonuses: SightBonusAnswers;
   strictCardRewards: boolean;
 }
 
-/** Progressive starting card and relic choices presented under Checks & Rewards. */
+/** Progressive starting card and relic choices presented on the Checks step. */
 export interface StartingEquipmentAnswers {
   progressiveStarterCard: boolean;
   progressiveStarterRelic: boolean;
@@ -197,12 +319,12 @@ export interface AncientAnswers {
 }
 
 export interface ProgressionAnswers {
-  useNewLogic: boolean;
   progressionBalancing: number;
   accessibility: AccessibilityMode;
 }
 
-export interface CheckAnswers {
+/** The additional check and reward categories in the Checks step's grid. */
+export interface CheckTypeAnswers {
   neowSanity: boolean;
   includeFloorChecks: boolean;
   campfireSanity: boolean;
@@ -235,14 +357,22 @@ export interface ShopStockAnswers<KindId extends string> {
   weights: Record<KindId, FillerWeightLevel>;
 }
 
-export interface ChecksAndRewardsAnswers {
+/** Checks step: which locations exist, plus the starter items Floor Checks make room for. */
+export interface ChecksAnswers {
   startingEquipment: StartingEquipmentAnswers;
-  ancients: AncientAnswers;
-  checks: CheckAnswers;
+  types: CheckTypeAnswers;
+}
+
+/** Shops step: Shop Sanity and what shops sell, which work independently. */
+export interface ShopsAnswers {
   shop: ShopAnswers;
   shopCards: ShopCardAnswers;
   shopRelics: ShopStockAnswers<ShopRelicKindId>;
   shopPotions: ShopStockAnswers<ShopPotionKindId>;
+}
+
+/** Item Pool step: what fills the item pool besides progression. */
+export interface ItemPoolAnswers {
   bonusItems: BonusItemAnswer[];
   filler: FillerAnswers;
   traps: TrapAnswers;
@@ -260,8 +390,11 @@ export interface WizardAnswers {
   playerName: string;
   characters: CharacterAnswers;
   run: RunAnswers;
+  checks: ChecksAnswers;
+  shops: ShopsAnswers;
+  itemPool: ItemPoolAnswers;
+  boons: BoonAnswers;
   challenges: ChallengeAnswers;
-  checksAndRewards: ChecksAndRewardsAnswers;
   deathLink: DeathLinkAnswers;
   progression: ProgressionAnswers;
 }
@@ -490,11 +623,23 @@ export function createDefaultWizardAnswers(
         catalog,
         RUN_OPTION_KEYS.releaseOnVictory,
       ),
-      seeded: getBooleanDefault(catalog, RUN_OPTION_KEYS.seeded),
-      blitzMerchantChance: getNumberDefault(
+      eventsInAnyAct: getBooleanDefault(
         catalog,
-        RUN_OPTION_KEYS.blitzMerchantChance,
+        RUN_OPTION_KEYS.eventsInAnyAct,
       ),
+      seeded: getBooleanDefault(catalog, RUN_OPTION_KEYS.seeded),
+      ancients: {
+        relicLocation: getChoiceDefault(
+          catalog,
+          ANCIENT_OPTION_KEYS.relicLocation,
+          ["start_of_act", "anytime"],
+        ),
+        relicPool: getChoiceDefault(catalog, ANCIENT_OPTION_KEYS.relicPool, [
+          "balanced",
+          "chaos",
+          "true_chaos",
+        ]),
+      },
     },
     challenges: {
       // Challenges are opt-in regardless of their generated defaults.
@@ -531,12 +676,15 @@ export function createDefaultWizardAnswers(
         catalog,
         CHALLENGE_OPTION_KEYS.hiddenCards,
       ),
+      sightBonuses: readSightBonusNames(
+        getStringSetDefault(catalog, CHALLENGE_OPTION_KEYS.sightBonuses),
+      ),
       strictCardRewards: getBooleanDefault(
         catalog,
         CHALLENGE_OPTION_KEYS.strictCardRewards,
       ),
     },
-    checksAndRewards: {
+    checks: {
       startingEquipment: {
         progressiveStarterCard: getBooleanDefault(
           catalog,
@@ -547,19 +695,7 @@ export function createDefaultWizardAnswers(
           STARTING_EQUIPMENT_OPTION_KEYS.progressiveStarterRelic,
         ),
       },
-      ancients: {
-        relicLocation: getChoiceDefault(
-          catalog,
-          ANCIENT_OPTION_KEYS.relicLocation,
-          ["start_of_act", "anytime"],
-        ),
-        relicPool: getChoiceDefault(catalog, ANCIENT_OPTION_KEYS.relicPool, [
-          "balanced",
-          "chaos",
-          "true_chaos",
-        ]),
-      },
-      checks: {
+      types: {
         neowSanity: getBooleanDefault(catalog, CHECK_OPTION_KEYS.neowSanity),
         includeFloorChecks: getBooleanDefault(
           catalog,
@@ -579,6 +715,8 @@ export function createDefaultWizardAnswers(
           CHECK_OPTION_KEYS.shuffleAllCards,
         ),
       },
+    },
+    shops: {
       shop: {
         enabled: getBooleanDefault(catalog, SHOP_OPTION_KEYS.enabled),
         cardSlots: getNumberDefault(catalog, SHOP_OPTION_KEYS.cardSlots),
@@ -614,16 +752,23 @@ export function createDefaultWizardAnswers(
           catalog,
         ),
       },
+    },
+    itemPool: {
       // Bonus Items start empty; each one is added deliberately through the table UI.
       bonusItems: [],
       filler,
       traps: createDefaultTrapAnswers(catalog),
     },
-    progression: {
-      useNewLogic: getBooleanDefault(
-        catalog,
-        PROGRESSION_OPTION_KEYS.useNewLogic,
+    boons: {
+      selected: getOrderedBoons(
+        getStringSetDefault(catalog, BOON_OPTION_KEYS.boons),
       ),
+      blitzMerchantChance: getNumberDefault(
+        catalog,
+        BOON_OPTION_KEYS.blitzMerchantChance,
+      ),
+    },
+    progression: {
       progressionBalancing: getNumberDefault(
         catalog,
         PROGRESSION_OPTION_KEYS.progressionBalancing,

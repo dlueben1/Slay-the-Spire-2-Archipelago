@@ -9,9 +9,12 @@ import { fileURLToPath } from "url";
 
 // Sync docs/ folder to web/public/docs/
 function syncDocs() {
-  const repoRoot = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
+  const webRoot = path.dirname(fileURLToPath(import.meta.url));
+  const repoRoot = path.resolve(webRoot, "..");
   const docsSource = path.join(repoRoot, "docs");
-  const docsDest = path.resolve("public", "docs");
+  // Resolve from this file, not the working directory, so starting Vite from
+  // another folder (such as the repository root) never writes docs there.
+  const docsDest = path.join(webRoot, "public", "docs");
 
   function copyMdFiles() {
     if (!fs.existsSync(docsDest)) {

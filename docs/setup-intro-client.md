@@ -2,6 +2,9 @@
 
 This guide will walk you through setting up the Slay the Spire II Archipelago Mod, and connecting to an Archipelago session.
 
+> [!TIP]
+> The [setup guide on GitHub](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/world/spire2/docs/setup_en.md) is the most up-to-date version of these instructions. This page can lag behind it. GitHub also has the [multiplayer](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/world/spire2/docs/multiplayer_setup_en.md), [troubleshooting](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/world/spire2/docs/troubleshooting_en.md) and [hinting](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/world/spire2/docs/hinting_en.md) guides.
+
 > [!IMPORTANT]
 > We recommend the **beta branch** of Slay the Spire II. Terairk mainly develops and tests the mod on the beta branch. The main branch remains supported, but receives little, if any, gameplay testing; compatibility is assessed primarily through compile-time checks and player bug reports.
 >

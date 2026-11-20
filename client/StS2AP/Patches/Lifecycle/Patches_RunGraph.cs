@@ -148,6 +148,7 @@ namespace StS2AP.Patches
             button.AddThemeColorOverride("font_color", RunGraphStyle.Text);
             button.AddThemeColorOverride("font_hover_color", RunGraphStyle.Text);
             button.Pressed += open;
+            ApButtonInput.PressOnGameInput(button);
 
             // A slow brightness pulse so the button is noticed on a busy end-of-run screen.
             // The tween belongs to the button and is freed with it.

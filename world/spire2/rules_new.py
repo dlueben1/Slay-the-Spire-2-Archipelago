@@ -11,7 +11,8 @@ from .characters import CharacterConfig, DEFAULT_STARTER_POWER, character_regist
 from .logic_table import (
     ANCIENT_POWER_BY_TIER, BOSS_GOLD, COMBAT_GOLD, ELITE_GOLD, ELITE_RELIC_REWARDS, FULL_SHOP_PAGE_VALUE,
     PATH_RELIC_REWARDS, RARE_CARD_POWER, REGIONS, RELIC_POWER, REST_POWER_BY_ACT, REST_SHARE_WHILE_SMITHING,
-    SHOP_GOLD_BY_COST_MODE, SHOP_REMOVE_POWER_BY_TIER, SHOP_SLOT_VALUES, SMITH_POWER_BY_TIER,
+    SHOP_GOLD_BY_COST_MODE, SHOP_REMOVE_POWER_BY_TIER, SHOP_SLOT_VALUES, SIGHT_BONUS_FIRST_ACT,
+    SIGHT_BONUS_POWER, SMITH_POWER_BY_TIER,
     PowerCheck, card_reward_strength, card_reward_table, gold_sanity_run_gold, last_elite, normal_run_gold,
 )
 from .options import AncientRelicLocation
@@ -58,6 +59,21 @@ class PowerItems(NamedTuple):
         return cls(*(f"{char} {item}" for item in singles),
                    tuple(f"{char} {item}" for item, _ in SHOP_SLOT_VALUES),
                    f"{char} Elite Gold", f"{char} Boss Gold")
+
+
+# Each Sight item with its Sight Bonuses key and the Hidden option that sets its copies.
+SIGHT_ITEMS = (("Intent Sight", "IntentSight", "hidden_intents"), ("Health Sight", "HealthSight", "hidden_health"),
+               ("Pile Sight", "PileSight", "hidden_piles"), ("Map Sight", "MapSight", "hidden_map"),
+               ("Card Sight", "CardSight", "hidden_cards"))
+
+
+def sight_bonus_power(options: 'Spire2Options', act: int) -> tuple[tuple[str, float], ...]:
+    """The Sight items whose second copy adds power in this act: from SIGHT_BONUS_FIRST_ACT, those
+    with at least two copies in the pool and a bonus the player left on."""
+    if act < SIGHT_BONUS_FIRST_ACT:
+        return ()
+    return tuple((item, SIGHT_BONUS_POWER[item]) for item, key, option in SIGHT_ITEMS
+                 if getattr(options, option).value >= 2 and key in options.sight_bonuses.value)
 
 
 def tier_range(first: int, last: int) -> str:
@@ -124,6 +140,7 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
             starter_card_power=starter.card if config.progressive_starter_card else (0, 0),
             starter_relic_power=starter.relic if config.progressive_starter_relic else (0, 0),
             starter_pair_power=starter.missing_pair,
+            sight_bonuses=sight_bonus_power(options, self.act),
             region=self.region or f"Act {self.act}",
             relic_cap=None if self.relic_rewards is None else anytime + self.relic_rewards,
             elite_relic_caps=tuple(sorted(((region, anytime + rewards) for region, rewards in self.elite_relic_rewards),
@@ -151,6 +168,8 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
         starter_card_power: tuple[float, float]
         starter_relic_power: tuple[float, float]
         starter_pair_power: float
+        # Sight items whose second copy adds power, with that power.
+        sight_bonuses: tuple[tuple[str, float], ...]
         region: str
         relic_cap: int | None
         # Elite track regions, each with the relics claimable once a run can reach it, most first.
@@ -243,6 +262,12 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
                 power += self.starter_relic_power[1]
                 if ledger is not None:
                     ledger.relics.append(LedgerEntry("Upgraded starter relic", self.starter_relic_power[1]))
+            # The first copy only undoes the Hidden option; the second adds its Sight Bonus.
+            for item, amount in self.sight_bonuses:
+                if held[item] >= 2:
+                    power += amount
+                    if ledger is not None:
+                        ledger.relics.append(LedgerEntry(f"{item} bonus", amount))
 
             # Requirement: base power plus missing support, added in the order the explanation lists it.
             required = self.power_level
@@ -403,6 +428,9 @@ class SpireHasPower(Rule['SlayTheSpire2World'], game="Slay the Spire II"):
                 f"  Card strength by ordinary card rewards held: {strengths}; each later one adds {later_step:.3g}.",
                 f"  Rare card rewards {RARE_CARD_POWER:g}; relics {RELIC_POWER:g}.",
             ]
+            if self.sight_bonuses:
+                bonuses = ", ".join(f"{item} {amount:g}" for item, amount in self.sight_bonuses)
+                lines.append(f"  A second copy of a Sight item adds its bonus: {bonuses}.")
             if self.relic_cap is not None:
                 lines.append(f"  At most {self.relic_cap} relics count: the anytime claims and relic rewards so far.")
             for region, cap in reversed(self.elite_relic_caps):

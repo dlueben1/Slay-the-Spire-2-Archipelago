@@ -1,5 +1,5 @@
 /**
- * @file Defines the Random Shop Relics and Potions kinds used by Checks & Rewards.
+ * @file Defines the Random Shop Relics and Potions kinds used by the Shops step.
  *
  * Each kind has one generated weight option with the same four choices as the filler
  * weights (`none`, `low`, `medium`, `high`), so the answers reuse the filler slider

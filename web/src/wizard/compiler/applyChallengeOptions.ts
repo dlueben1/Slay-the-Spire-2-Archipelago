@@ -11,7 +11,11 @@
 
 import type { OptionCatalog } from "../../generated/optionCatalog";
 import { getOrderedRunModifiers } from "../RunModifier";
-import { type ChallengeAnswers, SIGHT_COPY_COUNTS } from "../WizardAnswers";
+import {
+  type ChallengeAnswers,
+  getSightBonusNames,
+  SIGHT_COPY_COUNTS,
+} from "../WizardAnswers";
 import { CHALLENGE_OPTION_KEYS } from "../WizardOptionKey";
 import type { CompiledOptions } from "./applyCharacterOptions";
 
@@ -69,5 +73,17 @@ export function applyChallengeOptions(
     SIGHT_COPY_COUNTS[answers.hiddenMap];
   target[CHALLENGE_OPTION_KEYS.hiddenCards] =
     SIGHT_COPY_COUNTS[answers.hiddenCards];
+
+  const validSightBonuses =
+    catalog.options[CHALLENGE_OPTION_KEYS.sightBonuses]!.valid_keys ?? [];
+  const sightBonuses = getSightBonusNames(answers.sightBonuses);
+  for (const bonus of sightBonuses) {
+    if (!validSightBonuses.includes(bonus)) {
+      throw new Error(
+        `Generated option '${CHALLENGE_OPTION_KEYS.sightBonuses}' no longer accepts '${bonus}'.`,
+      );
+    }
+  }
+  target[CHALLENGE_OPTION_KEYS.sightBonuses] = sightBonuses;
   target[CHALLENGE_OPTION_KEYS.strictCardRewards] = answers.strictCardRewards;
 }

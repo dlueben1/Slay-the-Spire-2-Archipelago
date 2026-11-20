@@ -22,13 +22,24 @@ namespace StS2AP.Data
 
         private static readonly Lazy<IReadOnlyDictionary<string, IReadOnlyList<string>>> CustomPools =
             new(LoadCustomPools);
-        private static readonly Lazy<IReadOnlySet<string>> _blacklist = new(LoadBlacklist);
+        private static readonly Lazy<RelicRules> Rules = new(LoadRules);
 
         /// <summary>
-        /// Normalized (PascalCase) ids of relics that must never become bonus wax relics, regardless
-        /// of which pool selected them or whether they were named explicitly.
+        /// Normalized (PascalCase) ids of relics a pool never rolls, because getting one every run
+        /// is too strong. A YAML can still name one as a Value.
         /// </summary>
-        public static IReadOnlySet<string> Blacklist => _blacklist.Value;
+        public static IReadOnlySet<string> NeverRandom => Rules.Value.NeverRandom;
+
+        /// <summary>
+        /// Ancient relics whose effect happens when they are picked up. The game's
+        /// HasUponPickupEffect marks only some of them (it decides what relic traders may take),
+        /// so wax relics, which must not keep an effect after melting, check this list as well.
+        /// </summary>
+        public static IReadOnlySet<string> AncientPickupEffects => Rules.Value.AncientPickupEffects;
+
+        private sealed record RelicRules(
+            IReadOnlySet<string> NeverRandom,
+            IReadOnlySet<string> AncientPickupEffects);
 
         /// <summary>
         /// Returns the normalized ids whitelisted for one custom pool by name (e.g. "Fake",
@@ -62,15 +73,23 @@ namespace StS2AP.Data
             return result;
         }
 
-        private static IReadOnlySet<string> LoadBlacklist()
+        private static RelicRules LoadRules()
+        {
+            JObject? rules = TryReadJsonFile(BlacklistFileName, out JToken? root) ? root as JObject : null;
+            return new RelicRules(
+                ReadIdSet(rules?["never_random"]),
+                ReadIdSet(rules?["ancient_pickup_effects"]));
+        }
+
+        private static IReadOnlySet<string> ReadIdSet(JToken? token)
         {
             var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            if (!TryReadJsonFile(BlacklistFileName, out JToken? root) || root is not JArray idArray)
+            if (token is not JArray idArray)
                 return result;
 
-            foreach (JToken token in idArray)
+            foreach (JToken id in idArray)
             {
-                string normalized = BonusRelicIds.Normalize(token.ToString());
+                string normalized = BonusRelicIds.Normalize(id.ToString());
                 if (normalized.Length > 0)
                     result.Add(normalized);
             }

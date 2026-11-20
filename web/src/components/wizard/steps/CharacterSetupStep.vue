@@ -665,8 +665,8 @@ watch(getRosterForReconciliation, applyRosterReconciliation, { deep: true });
           />
           <CharacterStarterOverrides
             :model-value="item.starterOverrides"
-            :global-settings="answers.checksAndRewards.startingEquipment"
-            :disabled="!answers.checksAndRewards.checks.includeFloorChecks"
+            :global-settings="answers.checks.startingEquipment"
+            :disabled="!answers.checks.types.includeFloorChecks"
             @update:model-value="setStarterOverrides(item, $event)"
           />
         </template>

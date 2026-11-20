@@ -29,6 +29,15 @@ internal static class IntentSight
                 (int)IntentDetail.Full)
             : IntentDetail.Full;
 
+    /// <summary>
+    /// The Intent Sight bonus: the player starts each combat with Forewarned. Singleplayer only.
+    /// </summary>
+    internal static bool HasBonus =>
+        ChallengeSightItems.HasGameplayBonus(
+            ArchipelagoClient.Settings?.HiddenIntents == true,
+            ItemTable.APItem.IntentSight,
+            "IntentSight");
+
     /// <summary>Applies a newly received Intent Sight to the intents already on screen.</summary>
     internal static void RefreshVisibleIntents()
     {

@@ -16,7 +16,6 @@ class TestHiddenIntents(Spire2TestBase):
         self.assertEqual(1, len(sights))
         self.assertEqual({800}, {item.code for item in sights})
         self.assertEqual(800, challenge_item_table["Intent Sight"].code)
-        self.assertTrue(all(item.useful and not item.advancement for item in sights))
 
     def test_intent_sights_replace_filler_without_changing_pool_size(self):
         locations = [location for location in self.multiworld.get_locations()
@@ -59,6 +58,24 @@ class TestHiddenOptionsNeedFloorChecks(Spire2TestBase):
         self.assertFalse(any(item.name.endswith(" Sight") for item in regenerated.itempool))
 
 
+class TestTrackerRestoresSightBonuses(Spire2TestBase):
+    options = {
+        "characters": ["ironclad"],
+        "hidden_cards": 2,
+        "sight_bonuses": ["PileSight"],
+    }
+
+    def test_tracker_uses_the_generated_sight_bonuses_not_the_yamls(self):
+        # Logic counts Sight Bonuses, so Universal Tracker must count the same ones as the server.
+        regenerated = setup_solo_multiworld(SlayTheSpire2World, steps=())
+        # noinspection PyUnresolvedReferences
+        regenerated.re_gen_passthrough = {self.game: self.world.fill_slot_data()}
+        regenerated.worlds[1].options.sight_bonuses.value = {"CardSight"}
+        for step in ("generate_early", "create_regions", "create_items", "set_rules"):
+            call_all(regenerated, step)
+        self.assertEqual({"PileSight"}, regenerated.worlds[1].options.sight_bonuses.value)
+
+
 class TestChallengeItemsOff(Spire2TestBase):
     def test_no_sight_items_by_default(self):
         self.assertFalse(any(item.name.endswith(" Sight") for item in self.multiworld.itempool))
@@ -81,7 +98,6 @@ class TestHiddenHealth(Spire2TestBase):
         sights = [item for item in self.multiworld.itempool if item.name == "Health Sight"]
         self.assertEqual(1, len(sights))
         self.assertEqual({801}, {item.code for item in sights})
-        self.assertTrue(all(item.useful and not item.advancement for item in sights))
         self.assertEqual(1, sum(item.name == "Intent Sight" for item in self.multiworld.itempool))
 
     def test_health_sights_replace_filler_without_changing_pool_size(self):
@@ -103,7 +119,6 @@ class TestHiddenPiles(Spire2TestBase):
         sights = [item for item in self.multiworld.itempool if item.name == "Pile Sight"]
         self.assertEqual(1, len(sights))
         self.assertEqual({802}, {item.code for item in sights})
-        self.assertTrue(all(item.useful and not item.advancement for item in sights))
 
     def test_pile_sights_replace_filler_without_changing_pool_size(self):
         locations = [location for location in self.multiworld.get_locations()
@@ -124,7 +139,6 @@ class TestHiddenMap(Spire2TestBase):
         sights = [item for item in self.multiworld.itempool if item.name == "Map Sight"]
         self.assertEqual(1, len(sights))
         self.assertEqual({803}, {item.code for item in sights})
-        self.assertTrue(all(item.useful and not item.advancement for item in sights))
 
     def test_map_sights_replace_filler_without_changing_pool_size(self):
         locations = [location for location in self.multiworld.get_locations()
@@ -145,7 +159,6 @@ class TestHiddenCards(Spire2TestBase):
         sights = [item for item in self.multiworld.itempool if item.name == "Card Sight"]
         self.assertEqual(1, len(sights))
         self.assertEqual({804}, {item.code for item in sights})
-        self.assertTrue(all(item.useful and not item.advancement for item in sights))
 
     def test_card_sights_replace_filler_without_changing_pool_size(self):
         locations = [location for location in self.multiworld.get_locations()
@@ -177,3 +190,31 @@ class TestTwoSightCopies(Spire2TestBase):
         self.assertEqual(2, slot_data["hidden_piles"])
         self.assertEqual(2, slot_data["hidden_map"])
         self.assertEqual(2, slot_data["hidden_cards"])
+
+
+class TestFourSightCopiesAndBonuses(Spire2TestBase):
+    options = {
+        "characters": ["ironclad", "silent"],
+        "hidden_intents": 4,
+        "hidden_map": 4,
+        "sight_bonuses": ["MapSight", "PileSight"],
+    }
+
+    def test_four_copies_of_each_sight_are_added(self):
+        for name in ("Intent Sight", "Map Sight"):
+            self.assertEqual(4, sum(item.name == name for item in self.multiworld.itempool))
+
+    def test_sight_bonuses_are_sent_in_slot_data(self):
+        self.assertEqual(["MapSight", "PileSight"], sorted(self.world.fill_slot_data()["sight_bonuses"]))
+
+
+class TestSightBonusesDefaultToAll(Spire2TestBase):
+    options = {
+        "characters": ["ironclad"],
+    }
+
+    def test_every_sight_bonus_is_on_by_default(self):
+        self.assertEqual(
+            ["CardSight", "HealthSight", "IntentSight", "MapSight", "PileSight"],
+            sorted(self.world.fill_slot_data()["sight_bonuses"]),
+        )
