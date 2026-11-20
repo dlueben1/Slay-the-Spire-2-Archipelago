@@ -99,30 +99,33 @@ internal static class BonusRewardUtility
     private static BonusAssignment? AssignRelic(
         BonusItemDefinition definition, Player player, int ordinal, string category, bool isWax)
     {
-        RelicModel? selected;
+        string SelectionKey(string id) => BonusRewardSelectionKey.Create(
+            player.RunState.Rng.StringSeed, ordinal, id, PlayerSlotIndex(player), category);
+
+        IEnumerable<RelicModel> candidates;
         if (definition.HasExplicitValue)
         {
-            selected = BonusRelicResolver.ResolveValue(definition.Value!, rejectPickupEffectRelics: isWax);
-            if (selected != null && !selected.IsAllowed(player.RunState))
-                selected = null;
+            RelicModel? named = BonusRelicResolver.ResolveValue(definition.Value!, rejectPickupEffectRelics: isWax);
+            candidates = named == null ? [] : [named];
         }
         else
         {
-            selected = BonusRelicResolver.BuildPoolCandidates(definition.Pools, rejectPickupEffectRelics: isWax)
-                .Where(relic => relic.IsAllowed(player.RunState))
+            candidates = BonusRelicResolver.BuildPoolCandidates(definition.Pools, rejectPickupEffectRelics: isWax)
                 .Where(relic => relic.Pool == player.Character.RelicPool
                     || !ModelDb.CharacterRelicPools.Contains(relic.Pool))
-                .OrderBy(relic => BonusRewardSelectionKey.Create(
-                    player.RunState.Rng.StringSeed, ordinal, relic.Id.ToString(), PlayerSlotIndex(player), category),
-                    StringComparer.Ordinal)
-                .FirstOrDefault();
+                .OrderBy(relic => SelectionKey(relic.Id.ToString()), StringComparer.Ordinal);
         }
-        if (selected == null)
-            return null;
 
-        RelicModel mutable = selected.ToMutable();
-        mutable.IsWax = isWax;
-        return new BonusAssignment(mutable, null);
+        // The first candidate the run allows and that can be set up for this player.
+        foreach (RelicModel candidate in candidates.Where(relic => relic.IsAllowed(player.RunState)))
+        {
+            RelicModel mutable = candidate.ToMutable();
+            if (!BonusRelicResolver.TrySetUpForPlayer(mutable, player, SelectionKey))
+                continue;
+            mutable.IsWax = isWax;
+            return new BonusAssignment(mutable, null);
+        }
+        return null;
     }
 
     /// <summary>

@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Relics;
 using StS2AP.Data;
 using StS2AP.Models;
 
@@ -83,6 +86,46 @@ namespace StS2AP.Utils
                 );
 
             return candidates.Values.ToList();
+        }
+
+        /// <summary>
+        /// Gives a relic the per-player state the game sets while it builds an Ancient's options,
+        /// before the relic is offered. Without it Dusty Tome adds no card and Sea Glass shows
+        /// Ironclad's cards. AP's Ancient rewards do the same in <see cref="AncientRelicPool"/>.
+        /// The picks use the bonus's own selection key, not the game's RNG, so every replica of a
+        /// multiplayer run agrees. Returns false when the relic cannot work for this player.
+        /// </summary>
+        public static bool TrySetUpForPlayer(RelicModel relic, Player player, Func<string, string> selectionKey)
+        {
+            switch (relic)
+            {
+                case DustyTome dustyTome:
+                    // The same cards the game's own setup chooses from.
+                    List<CardModel> transcendenceCards = ArchaicTooth.TranscendenceCards;
+                    CardModel? ancientCard = player.Character.CardPool
+                        .GetUnlockedCards(player.UnlockState, player.RunState.CardMultiplayerConstraint)
+                        .Where(card => card.Rarity == CardRarity.Ancient && !transcendenceCards.Contains(card))
+                        .OrderBy(card => selectionKey(card.Id.ToString()), StringComparer.Ordinal)
+                        .FirstOrDefault();
+                    if (ancientCard == null)
+                        return false;
+                    dustyTome.AncientCard = ancientCard.Id;
+                    return true;
+                case SeaGlass seaGlass:
+                    // Orobas offers another unlocked character's cards.
+                    CharacterModel? otherCharacter = player.UnlockState.Characters
+                        .Where(character => character.Id != player.Character.Id)
+                        .OrderBy(character => selectionKey(character.Id.ToString()), StringComparer.Ordinal)
+                        .FirstOrDefault();
+                    seaGlass.CharacterId = (otherCharacter ?? player.Character).Id;
+                    return true;
+                case ArchaicTooth archaicTooth:
+                    return archaicTooth.SetupForPlayer(player);
+                case TouchOfOrobas touchOfOrobas:
+                    return touchOfOrobas.SetupForPlayer(player);
+                default:
+                    return true;
+            }
         }
 
         private static bool HasPickupEffect(RelicModel relic) =>
