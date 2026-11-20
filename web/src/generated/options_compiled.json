@@ -12,7 +12,7 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "9bc04c56f13673ae4c8ee3256d9490adf5eecf7e8d0c8e20feff42c597f27bfe"
+      "sha256": "9abac9d2eaf32d1c2ac44bf756879b8c2111a6033363b85b092362cf6d647bb8"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
@@ -4487,7 +4487,7 @@
       "module": "worlds.spire2.options",
       "kind": "set",
       "display_name": "Sight Bonuses",
-      "description": "Sight items whose second copy adds a bonus. A Sight left out stops at undoing its Hidden\noption. Names are case-sensitive.\n\n- 'IntentSight': Start each combat with Forewarned: for each enemy whose attacks your Block stops\n  completely on its turn, draw 1 more card next turn.\n- 'HealthSight': Gain Aged Cheese: after defeating an Elite or a boss, raise your Max HP by 3.\n- 'PileSight': The draw pile shows cards in the order you will draw them.\n- 'MapSight': The map shows your next 2 fights, your next elite and what your next 2 ? rooms will be.\n- 'CardSight': Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.\n\nLogic counts each bonus as extra power in Act 3. The Intent, Health and Card Sight bonuses are\nsingleplayer only, but logic still counts them.",
+      "description": "Sight items whose second copy adds a bonus. A Sight left out stops at undoing its Hidden\noption. Names are case-sensitive.\n\n- 'IntentSight': Start each combat with Forewarned: for each enemy whose attacks your Block stops\n  completely on its turn, draw 1 more card next turn.\n- 'HealthSight': Gain Aged Cheese: after defeating an Elite or a boss, raise your Max HP by 3.\n- 'PileSight': Gain Frozen Eye: the draw pile shows cards in the order you will draw them.\n- 'MapSight': The map shows your next 2 fights, your next elite and what your next 2 ? rooms will be.\n- 'CardSight': Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.\n\nLogic counts each bonus as extra power in Act 3. The Intent, Health and Card Sight bonuses are\nsingleplayer only, but logic still counts them.",
       "default": [
         "CardSight",
         "HealthSight",

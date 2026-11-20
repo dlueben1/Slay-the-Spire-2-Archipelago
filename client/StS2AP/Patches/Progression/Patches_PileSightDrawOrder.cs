@@ -27,3 +27,23 @@ public static class Patches_PileSightDrawOrder
         return false;
     }
 }
+
+/// <summary>
+/// The draw pile screen's footer says its cards are sorted by rarity. With the Pile Sight bonus
+/// they are in draw order, so the footer says that instead. It is also the only sign of the bonus
+/// in multiplayer, where the Frozen Eye relic is not granted.
+/// </summary>
+[HarmonyPatch(typeof(NCardPileScreen), nameof(NCardPileScreen._Ready))]
+public static class Patches_PileSightDrawOrderFooter
+{
+    [HarmonyPostfix]
+    public static void Postfix(NCardPileScreen __instance)
+    {
+        if (__instance.Pile.Type != PileType.Draw || !PileSight.ShowsDrawOrder)
+            return;
+        // The game's own footer, with its second line changed.
+        __instance._bottomLabel.Text =
+            "[center]Cards are drawn from here at the start of each turn.\n"
+            + "[gold](Frozen Eye: cards shown are in draw order)[/gold]";
+    }
+}

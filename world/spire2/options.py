@@ -511,7 +511,7 @@ class SightBonuses(OptionSet):
     - 'IntentSight': Start each combat with Forewarned: for each enemy whose attacks your Block stops
       completely on its turn, draw 1 more card next turn.
     - 'HealthSight': Gain Aged Cheese: after defeating an Elite or a boss, raise your Max HP by 3.
-    - 'PileSight': The draw pile shows cards in the order you will draw them.
+    - 'PileSight': Gain Frozen Eye: the draw pile shows cards in the order you will draw them.
     - 'MapSight': The map shows your next 2 fights, your next elite and what your next 2 ? rooms will be.
     - 'CardSight': Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.
 
