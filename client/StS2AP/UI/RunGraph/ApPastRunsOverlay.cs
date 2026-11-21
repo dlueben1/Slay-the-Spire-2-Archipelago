@@ -4,6 +4,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Runs.History;
 using MegaCrit.Sts2.Core.Saves;
+using StS2AP.Persistence;
 using StS2AP.Utils;
 using StS2AP.Utils.RunGraph;
 using static StS2AP.UI.RunGraph.RunGraphStyle;
@@ -11,7 +12,7 @@ using static StS2AP.UI.RunGraph.RunGraphStyle;
 namespace StS2AP.UI.RunGraph;
 
 /// <summary>
-/// Main-menu list of every AP run with a graph log on this profile, grouped by Archipelago seed.
+/// Main-menu list of every AP run with a graph log, from every profile, grouped by Archipelago seed.
 /// Each run card opens the same recap as the game-over screen and can be exported or deleted.
 /// </summary>
 internal sealed partial class ApPastRunsOverlay : Control
@@ -19,7 +20,7 @@ internal sealed partial class ApPastRunsOverlay : Control
     private const string EmptyText =
         "No AP runs recorded yet. Finish a run while connected to Archipelago and it will appear here.";
 
-    private readonly ApRunGraphStore _store = ApRunGraphRecorder.Store;
+    private readonly ApRunGraphArchive _store = ApRunGraphRecorder.Archive;
     private List<SeedGroup> _seeds = new();
     private string? _selectedSeed;
     private bool _showRestarts;
@@ -135,7 +136,7 @@ internal sealed partial class ApPastRunsOverlay : Control
         header.AddChild(exportAll);
         var openFolder = ActionButton("Open folder");
         openFolder.TooltipText = "Open the folder that holds the run logs, exports and saved images.";
-        openFolder.Pressed += () => ApRunGraphFiles.ShowInFileManager(_store.RootDirectory);
+        openFolder.Pressed += () => ApRunGraphFiles.ShowInFileManager(ApLocalStorage.Root);
         header.AddChild(openFolder);
         // Escape and the controller's back button close it through ApOverlayLayer.
         _close = ActionButton("Close  (Esc)");
@@ -148,7 +149,7 @@ internal sealed partial class ApPastRunsOverlay : Control
     private void Reload()
     {
         var logs = LoadLogs().ToList();
-        var histories = logs.ToDictionary(log => log.StartTime, log => LoadHistory(log.StartTime));
+        var histories = logs.ToDictionary(log => log.StartTime, LoadHistory);
         var statuses = ApPastRunRules.Classify(logs, log => histories[log.StartTime] != null);
         _seeds = logs
             .GroupBy(log => log.Seed)
@@ -168,9 +169,9 @@ internal sealed partial class ApPastRunsOverlay : Control
         if (restarts > 0)
             parts.Add($"{restarts} {(restarts == 1 ? "restart" : "restarts")}");
         _subtitle.Text = logs.Count == 0
-            ? "Every Archipelago run recorded on this profile"
+            ? "Every Archipelago run recorded on this account"
             : string.Join(", ", parts.Take(parts.Count - 1)) + (parts.Count > 1 ? " and " : "") + parts[^1]
-                + $" on this profile, across {_seeds.Count} Archipelago {(_seeds.Count == 1 ? "seed" : "seeds")}";
+                + $" across {_seeds.Count} Archipelago {(_seeds.Count == 1 ? "seed" : "seeds")}";
         ShowSeeds();
         ShowSelectedSeed();
     }
@@ -563,16 +564,16 @@ internal sealed partial class ApPastRunsOverlay : Control
     }
 
     /// <summary>The game saves a run's history as "{StartTime}.run" once the run ends.</summary>
-    private static RunHistory? LoadHistory(long startTime)
+    private static RunHistory? LoadHistory(ApRunGraphLog log)
     {
         try
         {
-            var history = SaveManager.Instance.LoadRunHistory($"{startTime}.run");
+            var history = ApRunGraphRecorder.LoadRunHistory(log);
             return history.Success ? history.SaveData : null;
         }
         catch (Exception ex)
         {
-            LogUtility.Warn($"Could not read the game's history for run {startTime}: {ex.Message}");
+            LogUtility.Warn($"Could not read the game's history for run {log.StartTime}: {ex.Message}");
             return null;
         }
     }
@@ -612,7 +613,7 @@ internal sealed partial class ApPastRunsOverlay : Control
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
-                    LogUtility.Warn($"Could not delete run graph log {_store.PathFor(log.StartTime)}: {ex.Message}");
+                    LogUtility.Warn($"Could not delete run graph log {log.StartTime}: {ex.Message}");
                     NotificationUtility.ShowRawText("Couldn't delete a run's log: " + ex.Message);
                     break;
                 }
@@ -628,7 +629,7 @@ internal sealed partial class ApPastRunsOverlay : Control
     private void ExportRun(ApRunGraphLog log)
     {
         string fileName = $"{log.StartTime}-{log.Character.ToLowerInvariant()}.json";
-        Export(fileName, () => ApRunGraphStore.ExportBundle(log, LoadRunHistoryJson(log.StartTime)));
+        Export(fileName, () => ApRunGraphStore.ExportBundle(log, LoadRunHistoryJson(log)));
     }
 
     private void ExportAll()
@@ -641,7 +642,7 @@ internal sealed partial class ApPastRunsOverlay : Control
         }
         string fileName = $"all-runs-{DateTimeOffset.Now.ToUnixTimeSeconds()}.json";
         Export(fileName, () => ApRunGraphStore.ExportAllBundle(
-            logs.Select(log => ApRunGraphStore.ExportBundle(log, LoadRunHistoryJson(log.StartTime)))));
+            logs.Select(log => ApRunGraphStore.ExportBundle(log, LoadRunHistoryJson(log)))));
     }
 
     private void Export(string fileName, Func<JsonObject> buildBundle)
@@ -663,9 +664,9 @@ internal sealed partial class ApPastRunsOverlay : Control
     }
 
     /// <summary>The game's history for a finished run, as the JSON it saves; null for an unfinished one.</summary>
-    private static string? LoadRunHistoryJson(long startTime)
+    private static string? LoadRunHistoryJson(ApRunGraphLog log)
     {
-        var history = SaveManager.Instance.LoadRunHistory($"{startTime}.run");
+        var history = ApRunGraphRecorder.LoadRunHistory(log);
         return history.Success && history.SaveData != null
             ? JsonSerializationUtility.ToJson(history.SaveData)
             : null;

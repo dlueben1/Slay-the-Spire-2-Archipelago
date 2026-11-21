@@ -10,6 +10,7 @@ using MegaCrit.Sts2.Core.Saves;
 using MegaCrit.Sts2.Core.Saves.Managers;
 using MegaCrit.Sts2.Core.Saves.Runs;
 using StS2AP.Extensions;
+using StS2AP.Persistence;
 using StS2AP.Utils;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -23,7 +24,6 @@ namespace StS2AP.Multiplayer;
 public static class ApMultiplayerCampaignStore
 {
     private const int MetadataSchemaVersion = 2;
-    private const string CampaignRootName = "ArchipelagoMultiplayerCampaigns";
     private const string MetadataFileName = "metadata.json";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -101,8 +101,6 @@ public static class ApMultiplayerCampaignStore
         public bool IsUsable => Metadata != null && Error == null;
     }
 
-    internal sealed record DeleteAllResult(int CampaignDirectories, bool ActiveApSaveDeleted);
-
     public static void BeginNewCampaign()
     {
         _selectedCampaignId = null;
@@ -118,11 +116,7 @@ public static class ApMultiplayerCampaignStore
     internal static IReadOnlyList<CampaignEntry> ListCampaigns(bool verifyPayloads = true)
     {
         var result = new List<CampaignEntry>();
-        string root = GetCampaignRoot();
-        if (!Directory.Exists(root))
-            return result;
-
-        foreach (string directory in Directory.EnumerateDirectories(root))
+        foreach (string directory in EnumerateCampaignDirectories())
         {
             string campaignId = Path.GetFileName(directory);
             if (!Guid.TryParseExact(campaignId, "N", out _))
@@ -234,32 +228,82 @@ public static class ApMultiplayerCampaignStore
         }
     }
 
-    internal static DeleteAllResult DeleteAllLocalCampaignsForCurrentProfile()
+    /// <summary>
+    /// Called before a slot's local folder is forgotten. Drops the selected campaign if it is that
+    /// slot's, and deletes the game's current multiplayer save when it is that slot's AP run, so
+    /// the next lobby cannot import it back. Returns whether the current save was deleted.
+    /// </summary>
+    internal static bool ReleaseSlot(string roomSeed, int teamId, int slotId)
     {
         if (GameUtility.IsInRun || MultiplayerSupport.IsMultiplayerScope)
             throw new InvalidOperationException(
-                "Local AP multiplayer campaigns cannot be deleted during a run or multiplayer setup."
+                "Local AP data cannot be forgotten during a run or multiplayer setup."
             );
 
-        string activeSavePath = GetActiveSavePath();
-        bool deleteActiveSave = File.Exists(activeSavePath)
-            && LocalApSaveDeletion.ContainsArchipelagoRunData(
-                File.ReadAllText(activeSavePath),
-                ModEntry.ModId
-            );
-        string root = GetCampaignRoot();
-        int campaignDirectories = Directory.Exists(root)
-            ? Directory.EnumerateDirectories(root).Count()
-            : 0;
+        bool Matches(string seed, int team, int slot) =>
+            string.Equals(seed, roomSeed, StringComparison.Ordinal) && team == teamId && slot == slotId;
 
-        if (Directory.Exists(root))
-            Directory.Delete(root, recursive: true);
-        if (deleteActiveSave)
+        bool selectedInSlot = false;
+        if (_selectedCampaignId != null)
+        {
+            try
+            {
+                CampaignMetadata selected = ReadMetadata(_selectedCampaignId);
+                selectedInSlot = Matches(selected.ApRoomSeed, selected.ApTeamId, selected.ApSlotId);
+            }
+            catch (Exception ex) when (ex is IOException or JsonException or InvalidDataException)
+            {
+                // Unreadable metadata cannot prove the selection belongs to another slot.
+                selectedInSlot = true;
+            }
+        }
+        bool activeSaveInSlot = TryReadActiveSaveHostSlot(out string activeSeed, out int activeTeam, out int activeSlot)
+            && Matches(activeSeed, activeTeam, activeSlot);
+
+        if (selectedInSlot || activeSaveInSlot)
             DeleteCanonicalSaveIfPresent();
-
-        _selectedCampaignId = null;
+        if (selectedInSlot)
+            _selectedCampaignId = null;
         IsStartingNewCampaign = false;
-        return new DeleteAllResult(campaignDirectories, deleteActiveSave);
+        return activeSaveInSlot;
+    }
+
+    /// <summary>The AP slot the local host played in the game's current multiplayer save, if any.</summary>
+    private static bool TryReadActiveSaveHostSlot(out string roomSeed, out int teamId, out int slotId)
+    {
+        roomSeed = string.Empty;
+        teamId = -1;
+        slotId = -1;
+        try
+        {
+            string activeSavePath = GetActiveSavePath();
+            if (!File.Exists(activeSavePath)
+                || !LocalApSaveDeletion.ContainsArchipelagoRunData(File.ReadAllText(activeSavePath), ModEntry.ModId))
+                return false;
+
+            ReadSaveResult<SerializableRun> read = SaveManager.Instance
+                .LoadAndCanonicalizeMultiplayerRunSave(PlatformUtil.GetLocalPlayerId(GetVanillaPlatform()));
+            if (!read.Success || read.SaveData == null)
+                return false;
+            ulong localNetId = PlatformUtil.GetLocalPlayerId(read.SaveData.PlatformType);
+            RunState run = RunState.FromSerializable(read.SaveData);
+            if (!ApRunData.TryGetPlayerState(run, localNetId, out ApPlayerRunState hostState)
+                || hostState.Participation != ApParticipationKind.OwnApSlot
+                || string.IsNullOrWhiteSpace(hostState.ApRoomSeed)
+                || hostState.ApTeamId is not int team
+                || hostState.ApSlotId is not int slot)
+                return false;
+
+            roomSeed = hostState.ApRoomSeed;
+            teamId = team;
+            slotId = slot;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LogUtility.Warn($"Could not read the current multiplayer save's AP slot: {ex.Message}");
+            return false;
+        }
     }
 
     /// <summary>Imports the pre-feature canonical host save once so it is not stranded.</summary>
@@ -358,7 +402,7 @@ public static class ApMultiplayerCampaignStore
             CompletedFloorCount = read.SaveData.MapPointHistory?.Sum(act => act.Count) ?? 0,
         };
 
-        Directory.CreateDirectory(GetCampaignDirectory(campaignId));
+        Directory.CreateDirectory(GetCampaignDirectory(metadata));
         metadata.ApCheckpoint = StoreSnapshot(campaignId, activeSavePath, now,
             metadata.Act, metadata.CompletedFloorCount);
         WriteMetadata(metadata);
@@ -521,7 +565,7 @@ public static class ApMultiplayerCampaignStore
         CampaignSnapshot? previousRecovery = previous?.FloorRecovery;
         CampaignSnapshot? previousCheckpoint = previous?.ApCheckpoint;
 
-        Directory.CreateDirectory(GetCampaignDirectory(campaignId));
+        Directory.CreateDirectory(GetCampaignDirectory(metadata));
         CampaignSnapshot snapshot = StoreSnapshot(campaignId, GetActiveSavePath(), metadata.LastSavedAtUtc,
             metadata.Act, metadata.CompletedFloorCount);
         metadata.FloorRecovery = snapshot;
@@ -681,7 +725,7 @@ public static class ApMultiplayerCampaignStore
     private static void WriteMetadata(CampaignMetadata metadata)
     {
         ValidateCampaignId(metadata.CampaignId);
-        Directory.CreateDirectory(GetCampaignDirectory(metadata.CampaignId));
+        Directory.CreateDirectory(GetCampaignDirectory(metadata));
         AtomicWriteText(
             GetMetadataPath(metadata.CampaignId),
             JsonSerializer.Serialize(metadata, JsonOptions)
@@ -696,17 +740,39 @@ public static class ApMultiplayerCampaignStore
         return !string.IsNullOrWhiteSpace(roomSeed) && teamId >= 0 && slotId >= 0;
     }
 
-    private static string GetCampaignRoot()
-    {
-        string activeDirectory = Path.GetDirectoryName(GetActiveSavePath())
-            ?? throw new InvalidOperationException("The active multiplayer save directory is unavailable.");
-        return Path.Combine(activeDirectory, CampaignRootName);
-    }
+    /// <summary>Every campaign folder, across the slot folders that hold them.</summary>
+    private static IEnumerable<string> EnumerateCampaignDirectories() =>
+        ApStorageLayout.EnumerateSlotDirectories(ApLocalStorage.Root)
+            .Select(ApStorageLayout.CampaignsDirectory)
+            .Where(Directory.Exists)
+            .SelectMany(Directory.EnumerateDirectories)
+            .ToArray();
 
+    /// <summary>
+    /// An existing campaign's folder, wherever its slot is. A campaign not created yet belongs to
+    /// the connected slot; creation goes through <see cref="GetCampaignDirectory(CampaignMetadata)"/>.
+    /// </summary>
     private static string GetCampaignDirectory(string campaignId)
     {
         ValidateCampaignId(campaignId);
-        return Path.Combine(GetCampaignRoot(), campaignId);
+        foreach (string slotDirectory in ApStorageLayout.EnumerateSlotDirectories(ApLocalStorage.Root))
+        {
+            string candidate = Path.Combine(ApStorageLayout.CampaignsDirectory(slotDirectory), campaignId);
+            if (Directory.Exists(candidate))
+                return candidate;
+        }
+        if (!TryGetCurrentIdentity(out string roomSeed, out int teamId, out int slotId))
+            throw new InvalidOperationException("The campaign's AP slot is unknown.");
+        return Path.Combine(ApStorageLayout.CampaignsDirectory(
+            ApLocalStorage.SlotDirectory(roomSeed, teamId, slotId)), campaignId);
+    }
+
+    /// <summary>The campaign's folder inside the AP slot its metadata names.</summary>
+    private static string GetCampaignDirectory(CampaignMetadata metadata)
+    {
+        ValidateCampaignId(metadata.CampaignId);
+        return Path.Combine(ApStorageLayout.CampaignsDirectory(ApLocalStorage.SlotDirectory(
+            metadata.ApRoomSeed, metadata.ApTeamId, metadata.ApSlotId)), metadata.CampaignId);
     }
 
     private static string GetMetadataPath(string campaignId) =>

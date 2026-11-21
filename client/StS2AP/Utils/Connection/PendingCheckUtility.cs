@@ -1,3 +1,4 @@
+using StS2AP.Persistence;
 using StS2AP.Data;
 using Archipelago.MultiClient.Net;
 using System.Text.Json;
@@ -10,7 +11,6 @@ namespace StS2AP.Utils
     /// </summary>
     public static class PendingCheckUtility
     {
-        private const string OutboxPrefix = "user://sts_ap_pending_checks_v2_";
         private static readonly object _stateLock = new();
         private static BoundApSession? _boundSession;
         internal static bool HasAuthenticatedSlot => GetBoundSession() != null;
@@ -301,8 +301,15 @@ namespace StS2AP.Utils
             }
         }
 
+        /// <summary>
+        /// One outbox per server inside the slot's folder: the same generated seed hosted as two
+        /// rooms has two independent sets of checked locations.
+        /// </summary>
         private static string GetPendingCheckPath(ApSessionIdentity identity) =>
-            $"{OutboxPrefix}{identity.GetFileKey()}.json";
+            Path.Combine(
+                ApStorageLayout.PendingChecksDirectory(ApLocalStorage.SlotDirectory(
+                    identity.RoomSeed, identity.ApTeamId, identity.ApSlotId)),
+                $"{identity.GetFileKey()}.json");
 
         /// <summary>
         /// Reads and validates an outbox. Its embedded identity, not its filename, is the
@@ -310,19 +317,10 @@ namespace StS2AP.Utils
         /// </summary>
         private static PendingCheckOutbox Load(string path, ApSessionIdentity expectedIdentity)
         {
-            if (!Godot.FileAccess.FileExists(path))
+            if (!File.Exists(path))
                 return PendingCheckOutbox.Create(expectedIdentity);
 
-            using var file = Godot.FileAccess.Open(path, Godot.FileAccess.ModeFlags.Read);
-            if (file == null)
-            {
-                throw new IOException(
-                    $"Could not open pending-check outbox: {Godot.FileAccess.GetOpenError()}"
-                );
-            }
-
-            string json = file.GetAsText();
-            PendingCheckOutbox outbox = JsonSerializer.Deserialize<PendingCheckOutbox>(json)
+            PendingCheckOutbox outbox = JsonSerializer.Deserialize<PendingCheckOutbox>(File.ReadAllText(path))
                 ?? throw new JsonException("The pending-check outbox was empty.");
             if (outbox.SchemaVersion != PendingCheckOutbox.CurrentSchemaVersion)
             {
@@ -349,17 +347,9 @@ namespace StS2AP.Utils
         {
             if (outbox.LocationIds.Count == 0)
             {
-                if (Godot.FileAccess.FileExists(path))
-                    Godot.DirAccess.RemoveAbsolute(path);
+                if (File.Exists(path))
+                    File.Delete(path);
                 return;
-            }
-
-            using var file = Godot.FileAccess.Open(path, Godot.FileAccess.ModeFlags.Write);
-            if (file == null)
-            {
-                throw new IOException(
-                    $"Could not write pending-check outbox: {Godot.FileAccess.GetOpenError()}"
-                );
             }
 
             var persisted = new PendingCheckOutbox
@@ -368,7 +358,7 @@ namespace StS2AP.Utils
                 Identity = outbox.Identity,
                 LocationIds = new SortedSet<long>(outbox.LocationIds),
             };
-            file.StoreString(JsonSerializer.Serialize(persisted));
+            ApStorageLayout.WriteAtomically(path, JsonSerializer.Serialize(persisted));
         }
     }
 }

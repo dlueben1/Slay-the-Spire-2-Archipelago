@@ -11,6 +11,7 @@ using MegaCrit.Sts2.Core.Models;
 using Newtonsoft.Json.Linq;
 using System.Text.Json;
 using StS2AP.Data;
+using StS2AP.Persistence;
 using StS2AP.Patches;
 using StS2AP.UI;
 using StS2AP.Utils;
@@ -1272,6 +1273,7 @@ namespace StS2AP
             // Bind durable external effects only after login has authenticated the exact room,
             // team, and slot represented by this session.
             PendingCheckUtility.BindAuthenticatedSession(session, ServerAddress, Seed);
+            ApLocalStorage.NoteSlotPlayed(Seed, apTeamId, apSlotId, PlayerName, ServerAddress);
 
             // Restore checked locations from server so "Claimed" state survives restarts
             CheckedLocations = session.Locations.AllLocationsChecked.ToHashSet();

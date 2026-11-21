@@ -34,7 +34,7 @@ internal sealed partial class ApRunRecapOverlay : Control
     /// </summary>
     internal static void Open(Node host, long startTime, Func<ApRunGraphLog, ApRunRecapData> build)
     {
-        var log = ApRunGraphRecorder.Store.Load(startTime, out string? error);
+        var log = ApRunGraphRecorder.Archive.Load(startTime, out string? error);
         if (log == null)
         {
             LogUtility.Warn(error ?? $"No run graph log exists for run {startTime}.");
@@ -241,7 +241,7 @@ internal sealed partial class ApRunRecapOverlay : Control
         try
         {
             string fileName = $"{_data.Log.StartTime}-{kind}.png";
-            string? path = await ApRecapImage.SaveAsync(this, build, width, ApRunGraphRecorder.Store.ExportsDirectory, fileName);
+            string? path = await ApRecapImage.SaveAsync(this, build, width, ApRunGraphRecorder.Archive.ExportsDirectory, fileName);
             if (path != null)
             {
                 NotificationUtility.ShowRawText($"Saved the {kind} to {path}", timeout: 8);
