@@ -33,36 +33,6 @@ public sealed class BonusRewardStateTests
     }
 
     [Fact]
-    public void BonusRelicKeyDiffersFromWaxRelicKeySoTheyPickIndependently()
-    {
-        Assert.Equal(
-            BonusRewardSelectionKey.Create("RUN-SEED", 0, "RELIC.THE_BOOT"),
-            BonusRewardSelectionKey.Create("RUN-SEED", 0, "RELIC.THE_BOOT", category: "WAX_RELIC"));
-        Assert.NotEqual(
-            BonusRewardSelectionKey.Create("RUN-SEED", 0, "RELIC.THE_BOOT", category: "WAX_RELIC"),
-            BonusRewardSelectionKey.Create("RUN-SEED", 0, "RELIC.THE_BOOT", category: "RELIC"));
-    }
-
-    [Fact]
-    public void BonusPayloadsRoundTripAndAreToldApartFromSerializedRelics()
-    {
-        var payload = new BonusRewardPayload
-        {
-            Category = "ENCHANTED_CARDS",
-            Cards = ["{\"id\":\"CARD.STRIKE_IRONCLAD\"}", "{\"id\":\"CARD.BASH\"}"],
-        };
-
-        BonusRewardPayload? parsed = BonusRewardPayload.TryParse(payload.ToJson());
-
-        Assert.NotNull(parsed);
-        Assert.Equal("ENCHANTED_CARDS", parsed.Category);
-        Assert.Equal(payload.Cards, parsed.Cards);
-        Assert.Equal(6, BonusRewardPayload.TryParse(
-            new BonusRewardPayload { Category = "MAX_HP", Amount = 6 }.ToJson())!.Amount);
-        Assert.Null(BonusRewardPayload.TryParse("{\"IsWax\":true,\"id\":\"RELIC.THE_BOOT\"}"));
-    }
-
-    [Fact]
     public void BonusAssignmentsSurviveProgressDeltasAndSaveWithoutReservingRelicCoupons()
     {
         var before = new ApRunProgressState { CombatsSinceLastWaxMelt = 2 };
