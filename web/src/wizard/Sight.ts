@@ -108,7 +108,7 @@ export const SIGHTS: readonly Sight[] = [
     bonusField: "relic",
     bonusName: "RelicSight",
     itemName: "Relic Sight",
-    hiddenSummary: "Relics hide what they do",
+    hiddenSummary: "Relics are unknown",
     bonusLabel: "Relic Sight: Choose Your Relic",
     bonusEffect:
       "Relic rewards offer 2 relics to choose from. The one you leave goes back into the relic pool.",
