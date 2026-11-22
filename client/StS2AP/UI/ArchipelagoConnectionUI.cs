@@ -1,3 +1,4 @@
+using StS2AP.Persistence;
 using Godot;
 using Newtonsoft.Json;
 using StS2AP.Utils;
@@ -645,7 +646,7 @@ namespace StS2AP.UI
 
         private class ConnectionData
         {
-            private static readonly string CONNECTION_FILE = "user://ap.connection";
+            private static string ConnectionFile => ApStorageLayout.ConnectionFile(ApLocalStorage.Root);
             public string SlotName { get; set; } = "Player1";
             public string Connection { get; set; } = "archipelago.gg:38281";
             public string Password { get; set; } = "";
@@ -653,17 +654,12 @@ namespace StS2AP.UI
 
             public static ConnectionData Load()
             {
-                if (!Godot.FileAccess.FileExists(CONNECTION_FILE))
-                {
-                    return new ConnectionData();
-                }
-
                 try
                 {
-                    using var data = Godot.FileAccess.Open(CONNECTION_FILE, Godot.FileAccess.ModeFlags.Read);
-
-                    var rawJson = data.GetAsText();
-                    var connectionData = JsonConvert.DeserializeObject<ConnectionData>(rawJson);
+                    string path = ConnectionFile;
+                    if (!File.Exists(path))
+                        return new ConnectionData();
+                    var connectionData = JsonConvert.DeserializeObject<ConnectionData>(File.ReadAllText(path));
                     return connectionData ?? new ConnectionData();
                 }
                 catch(Exception ex)
@@ -677,10 +673,7 @@ namespace StS2AP.UI
             {
                 try
                 {
-                    using var handle = Godot.FileAccess.Open(CONNECTION_FILE, Godot.FileAccess.ModeFlags.Write);
-
-                    var connectionData = JsonConvert.SerializeObject(this);
-                    handle.StoreLine(connectionData);
+                    ApStorageLayout.WriteAtomically(ConnectionFile, JsonConvert.SerializeObject(this));
                 }
                 catch(Exception ex)
                 {

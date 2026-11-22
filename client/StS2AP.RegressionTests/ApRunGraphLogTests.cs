@@ -128,7 +128,7 @@ public sealed class ApRunGraphLogTests : IDisposable
         Store.Save(log);
 
         var bundle = ApRunGraphStore.ExportBundle(log, """{ "win": true, "map_point_history": [[{ "unknown_field": 4 }]] }""");
-        string path = Store.WriteExport("7-ironclad.json", bundle);
+        string path = ApRunGraphStore.WriteExport(Path.Combine(_root, "exports"), "7-ironclad.json", bundle);
 
         var read = JsonNode.Parse(File.ReadAllText(path))!;
         Assert.Equal(ApRunGraphStore.ExportFormat, read["format"]!.GetValue<string>());

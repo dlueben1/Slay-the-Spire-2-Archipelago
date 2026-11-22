@@ -44,8 +44,9 @@ public static class ModSettingsRegistration
     private const string CloudSaves_EnableId = "enable_remote_singleplayer_saves";
 
     // Local saves
-    private const string LocalSaves_DeleteSingleplayerId = "delete_local_singleplayer_saves";
-    private const string LocalSaves_DeleteMultiplayerId = "delete_local_multiplayer_saves";
+    private const string LocalSaves_ForgetUnplayedId = "forget_unplayed_local_seeds";
+    private const string LocalSaves_ForgetOthersId = "forget_other_local_seeds";
+    private const string LocalSaves_OpenFolderId = "open_local_data_folder";
 
     #endregion
 
@@ -394,32 +395,34 @@ public static class ModSettingsRegistration
     {
         section.WithTitle(ModSettingsText.Literal("Local Save Management"))
             .WithDescription(ModSettingsText.Literal(
-                "Permanently remove Archipelago checkpoints stored on this machine for the current STS profile."))
+                "Each AP seed keeps its checkpoints, multiplayer campaigns, run graphs and unsent checks on this computer until you forget it."))
             .WithMenuCapabilities(ModSettingsMenuCapabilities.None)
             .AddButton(
-                LocalSaves_DeleteSingleplayerId,
-                ModSettingsText.Literal("Singleplayer AP checkpoints"),
-                ModSettingsText.Literal("Delete All"),
-                host => LocalSaveManagement.ShowDeleteConfirmation(
-                    multiplayer: false,
-                    host.RequestRefresh
-                ),
+                LocalSaves_ForgetUnplayedId,
+                ModSettingsText.Literal($"Seeds not played in {LocalSaveManagement.UnplayedDays} days"),
+                ModSettingsText.Literal("Forget"),
+                host => LocalSaveManagement.ShowForgetConfirmation(onlyUnplayed: true, host.RequestRefresh),
                 description: ModSettingsText.Literal(
-                    "Deletes every local AP singleplayer checkpoint for this profile. AP server cloud backups are unaffected."))
-            .ConfigureEntryMenu(LocalSaves_DeleteSingleplayerId, ModSettingsMenuCapabilities.None)
-            .WithEntryEnabledWhen(LocalSaves_DeleteSingleplayerId, LocalSaveManagement.CanDelete)
+                    "Deletes the local data of every AP seed you have not played for a while. You see the list before anything is deleted."))
+            .ConfigureEntryMenu(LocalSaves_ForgetUnplayedId, ModSettingsMenuCapabilities.None)
+            .WithEntryEnabledWhen(LocalSaves_ForgetUnplayedId, LocalSaveManagement.CanForget)
             .AddButton(
-                LocalSaves_DeleteMultiplayerId,
-                ModSettingsText.Literal("Multiplayer AP campaigns"),
-                ModSettingsText.Literal("Delete All"),
-                host => LocalSaveManagement.ShowDeleteConfirmation(
-                    multiplayer: true,
-                    host.RequestRefresh
-                ),
+                LocalSaves_ForgetOthersId,
+                ModSettingsText.Literal("All seeds except the connected one"),
+                ModSettingsText.Literal("Forget"),
+                host => LocalSaveManagement.ShowForgetConfirmation(onlyUnplayed: false, host.RequestRefresh),
                 description: ModSettingsText.Literal(
-                    "Deletes every active, completed, and archived local AP multiplayer campaign for this profile. Non-AP multiplayer saves are preserved."))
-            .ConfigureEntryMenu(LocalSaves_DeleteMultiplayerId, ModSettingsMenuCapabilities.None)
-            .WithEntryEnabledWhen(LocalSaves_DeleteMultiplayerId, LocalSaveManagement.CanDelete);
+                    "Deletes the local data of every AP seed but the one you are connected to. AP server cloud saves are kept."))
+            .ConfigureEntryMenu(LocalSaves_ForgetOthersId, ModSettingsMenuCapabilities.None)
+            .WithEntryEnabledWhen(LocalSaves_ForgetOthersId, LocalSaveManagement.CanForget)
+            .AddButton(
+                LocalSaves_OpenFolderId,
+                ModSettingsText.Literal("Local AP data folder"),
+                ModSettingsText.Literal("Open"),
+                _ => LocalSaveManagement.OpenFolder(),
+                description: ModSettingsText.Literal(
+                    "Opens the folder with every seed's data, plus saved recap images and run exports."))
+            .ConfigureEntryMenu(LocalSaves_OpenFolderId, ModSettingsMenuCapabilities.None);
     }
 
     private static void ConfigureRelicRewardsSection(ModSettingsSectionBuilder section)

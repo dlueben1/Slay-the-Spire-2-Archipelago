@@ -59,7 +59,7 @@ namespace StS2AP.Patches
                 try
                 {
                     var run = GameApiCompat.GetRun(__instance);
-                    if (run == null || !ApRunGraphRecorder.Store.Exists(run.StartTime))
+                    if (run == null || !ApRunGraphRecorder.Archive.Exists(run.StartTime))
                         return;
 
                     void OpenRecap() => ApRunRecapOverlay.Open(__instance, run.StartTime, log => RecapAtGameOver(run, log));
@@ -121,7 +121,7 @@ namespace StS2AP.Patches
             public static void Postfix(NRunHistory __instance, RunHistory history)
             {
                 if (__instance.GetNodeOrNull<Button>(ButtonName) is { } button)
-                    button.Visible = ApRunGraphRecorder.Store.Exists(history.StartTime);
+                    button.Visible = ApRunGraphRecorder.Archive.Exists(history.StartTime);
             }
         }
 

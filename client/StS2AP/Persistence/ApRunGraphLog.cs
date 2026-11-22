@@ -61,6 +61,11 @@ public sealed class ApRunGraphLog
     public long StartTime { get; set; }
     public string Seed { get; set; } = "";
     public string SlotName { get; set; } = "";
+    /// <summary>The AP team and slot played; null in logs from before they were recorded.</summary>
+    public int? Team { get; set; }
+    public int? Slot { get; set; }
+    /// <summary>The game profile whose run history holds this run; null in logs from before it was recorded.</summary>
+    public int? ProfileId { get; set; }
     public string Character { get; set; } = "";
     public ulong LocalNetId { get; set; }
     public int SlotChecksAtStart { get; set; }
@@ -131,8 +136,6 @@ public sealed class ApRunGraphStore(string root)
     public const string ExportAllFormat = "sts2-ap-runs";
     public const int ExportVersion = 1;
 
-    public string RootDirectory => root;
-
     public string PathFor(long startTime) => Path.Combine(root, $"{startTime}.json");
 
     /// <summary>
@@ -140,9 +143,6 @@ public sealed class ApRunGraphStore(string root)
     /// no history for, still open a full recap. The extension keeps it out of <see cref="ListStartTimes"/>.
     /// </summary>
     public string SnapshotPathFor(long startTime) => Path.Combine(root, $"{startTime}.last");
-
-    /// <summary>Exports go in a subfolder, so <see cref="ListStartTimes"/> never sees them.</summary>
-    public string ExportsDirectory => Path.Combine(root, "exports");
 
     public bool Exists(long startTime) => File.Exists(PathFor(startTime));
 
@@ -254,11 +254,11 @@ public sealed class ApRunGraphStore(string root)
         ["runs"] = new JsonArray(runs.Cast<JsonNode>().ToArray()),
     };
 
-    /// <summary>Writes an export to <see cref="ExportsDirectory"/> and returns its full path.</summary>
-    public string WriteExport(string fileName, JsonObject bundle)
+    /// <summary>Writes an export into <paramref name="directory"/> and returns its full path.</summary>
+    public static string WriteExport(string directory, string fileName, JsonObject bundle)
     {
-        Directory.CreateDirectory(ExportsDirectory);
-        string path = Path.Combine(ExportsDirectory, fileName);
+        Directory.CreateDirectory(directory);
+        string path = Path.Combine(directory, fileName);
         File.WriteAllText(path, bundle.ToJsonString(Options));
         return path;
     }
@@ -279,6 +279,51 @@ public sealed class ApRunGraphStore(string root)
                 File.Delete(temporary);
         }
     }
+}
+
+/// <summary>
+/// Every slot's run graph logs under one storage root, found by the run's StartTime. Exports go
+/// to the root's shared exports folder.
+/// </summary>
+public sealed class ApRunGraphArchive(string storageRoot)
+{
+    public string ExportsDirectory => ApStorageLayout.ExportsDirectory(storageRoot);
+
+    public IEnumerable<ApRunGraphStore> Stores => ApStorageLayout.EnumerateSlotDirectories(storageRoot)
+        .Select(ApStorageLayout.RunGraphsDirectory)
+        .Where(Directory.Exists)
+        .Select(directory => new ApRunGraphStore(directory));
+
+    /// <summary>The store holding the run's log or snapshot, or null when no slot has it.</summary>
+    public ApRunGraphStore? Find(long startTime) =>
+        Stores.FirstOrDefault(store => store.Exists(startTime) || store.HasSnapshot(startTime));
+
+    public bool Exists(long startTime) => Stores.Any(store => store.Exists(startTime));
+
+    /// <summary>Start times of every logged run in every slot, newest first.</summary>
+    public IReadOnlyList<long> ListStartTimes() => Stores
+        .SelectMany(store => store.ListStartTimes())
+        .Distinct()
+        .OrderByDescending(startTime => startTime)
+        .ToList();
+
+    public ApRunGraphLog? Load(long startTime, out string? error)
+    {
+        error = null;
+        return Find(startTime)?.Load(startTime, out error);
+    }
+
+    public string? LoadSnapshot(long startTime, out string? error)
+    {
+        error = null;
+        return Find(startTime)?.LoadSnapshot(startTime, out error);
+    }
+
+    public void Delete(long startTime) => Find(startTime)?.Delete(startTime);
+
+    /// <summary>Writes an export to <see cref="ExportsDirectory"/> and returns its full path.</summary>
+    public string WriteExport(string fileName, JsonObject bundle) =>
+        ApRunGraphStore.WriteExport(ExportsDirectory, fileName, bundle);
 }
 
 public enum ApPastRunStatus
