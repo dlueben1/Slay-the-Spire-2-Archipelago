@@ -10,8 +10,15 @@ namespace StS2AP.Utils
     /// </summary>
     public static class PendingCheckUtility
     {
-        private const string OutboxPrefix = "user://sts_ap_pending_checks_v2_";
+        private const string OutboxDirectory = "user://ArchipelagoPendingChecks";
+
+        // Releases up to 2.2.x wrote every outbox straight into user://, cluttering the
+        // game's data folder. They are moved into OutboxDirectory under the same name.
+        private const string LegacyRootDirectory = "user://";
+        private const string OutboxFilePrefix = "sts_ap_pending_checks_v2_";
+
         private static readonly object _stateLock = new();
+        private static bool _outboxDirectoryReady;
         private static BoundApSession? _boundSession;
         internal static bool HasAuthenticatedSlot => GetBoundSession() != null;
 
@@ -301,8 +308,85 @@ namespace StS2AP.Utils
             }
         }
 
-        private static string GetPendingCheckPath(ApSessionIdentity identity) =>
-            $"{OutboxPrefix}{identity.GetFileKey()}.json";
+        /// <summary>
+        /// Returns the outbox path for an identity. Callers hold <see cref="_stateLock"/>, so the
+        /// one-time folder setup cannot race with another outbox operation.
+        /// </summary>
+        private static string GetPendingCheckPath(ApSessionIdentity identity)
+        {
+            EnsureOutboxDirectory();
+            return $"{OutboxDirectory}/{OutboxFilePrefix}{identity.GetFileKey()}.json";
+        }
+
+        /// <summary>
+        /// Creates the outbox folder and, once per launch, moves outboxes left in the data
+        /// folder's root by older releases into it.
+        /// </summary>
+        private static void EnsureOutboxDirectory()
+        {
+            if (_outboxDirectoryReady)
+                return;
+
+            string directory = Godot.ProjectSettings.GlobalizePath(OutboxDirectory);
+            Directory.CreateDirectory(directory);
+            _outboxDirectoryReady = true;
+
+            string legacyRoot = Godot.ProjectSettings.GlobalizePath(LegacyRootDirectory);
+            LegacyOutboxMove result = MoveLegacyOutboxes(legacyRoot, directory);
+            foreach (string problem in result.Problems)
+                LogUtility.Warn(problem);
+            if (result.Moved > 0)
+                LogUtility.Info($"Moved {result.Moved} pending-check file(s) into {OutboxDirectory}");
+        }
+
+        internal readonly record struct LegacyOutboxMove(int Moved, IReadOnlyList<string> Problems);
+
+        /// <summary>
+        /// Moves old outboxes from <paramref name="legacyRoot"/> into
+        /// <paramref name="outboxDirectory"/>, keeping their names. A file is never overwritten
+        /// or deleted: if both places hold the same outbox, the old one stays where it is.
+        /// </summary>
+        internal static LegacyOutboxMove MoveLegacyOutboxes(string legacyRoot, string outboxDirectory)
+        {
+            var problems = new List<string>();
+            string[] legacyFiles;
+            try
+            {
+                legacyFiles = Directory.GetFiles(legacyRoot, $"{OutboxFilePrefix}*.json");
+            }
+            catch (Exception ex)
+            {
+                problems.Add($"Could not look for old pending-check files: {ex.Message}");
+                return new LegacyOutboxMove(0, problems);
+            }
+
+            int moved = 0;
+            foreach (string source in legacyFiles)
+            {
+                string name = Path.GetFileName(source);
+                string destination = Path.Combine(outboxDirectory, name);
+                if (File.Exists(destination))
+                {
+                    problems.Add(
+                        $"Left old pending-check file {name} in place: "
+                            + "the pending-check folder already has one with that name"
+                    );
+                    continue;
+                }
+
+                try
+                {
+                    File.Move(source, destination);
+                    moved++;
+                }
+                catch (Exception ex)
+                {
+                    problems.Add($"Could not move old pending-check file {name}: {ex.Message}");
+                }
+            }
+
+            return new LegacyOutboxMove(moved, problems);
+        }
 
         /// <summary>
         /// Reads and validates an outbox. Its embedded identity, not its filename, is the
