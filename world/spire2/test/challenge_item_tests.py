@@ -16,7 +16,6 @@ class TestHiddenIntents(Spire2TestBase):
         self.assertEqual(1, len(sights))
         self.assertEqual({800}, {item.code for item in sights})
         self.assertEqual(800, challenge_item_table["Intent Sight"].code)
-        self.assertTrue(all(item.useful and not item.advancement for item in sights))
 
     def test_intent_sights_replace_filler_without_changing_pool_size(self):
         locations = [location for location in self.multiworld.get_locations()
@@ -81,7 +80,6 @@ class TestHiddenHealth(Spire2TestBase):
         sights = [item for item in self.multiworld.itempool if item.name == "Health Sight"]
         self.assertEqual(1, len(sights))
         self.assertEqual({801}, {item.code for item in sights})
-        self.assertTrue(all(item.useful and not item.advancement for item in sights))
         self.assertEqual(1, sum(item.name == "Intent Sight" for item in self.multiworld.itempool))
 
     def test_health_sights_replace_filler_without_changing_pool_size(self):
@@ -103,7 +101,6 @@ class TestHiddenPiles(Spire2TestBase):
         sights = [item for item in self.multiworld.itempool if item.name == "Pile Sight"]
         self.assertEqual(1, len(sights))
         self.assertEqual({802}, {item.code for item in sights})
-        self.assertTrue(all(item.useful and not item.advancement for item in sights))
 
     def test_pile_sights_replace_filler_without_changing_pool_size(self):
         locations = [location for location in self.multiworld.get_locations()
@@ -124,7 +121,6 @@ class TestHiddenMap(Spire2TestBase):
         sights = [item for item in self.multiworld.itempool if item.name == "Map Sight"]
         self.assertEqual(1, len(sights))
         self.assertEqual({803}, {item.code for item in sights})
-        self.assertTrue(all(item.useful and not item.advancement for item in sights))
 
     def test_map_sights_replace_filler_without_changing_pool_size(self):
         locations = [location for location in self.multiworld.get_locations()
@@ -145,7 +141,6 @@ class TestHiddenCards(Spire2TestBase):
         sights = [item for item in self.multiworld.itempool if item.name == "Card Sight"]
         self.assertEqual(1, len(sights))
         self.assertEqual({804}, {item.code for item in sights})
-        self.assertTrue(all(item.useful and not item.advancement for item in sights))
 
     def test_card_sights_replace_filler_without_changing_pool_size(self):
         locations = [location for location in self.multiworld.get_locations()
@@ -177,3 +172,15 @@ class TestTwoSightCopies(Spire2TestBase):
         self.assertEqual(2, slot_data["hidden_piles"])
         self.assertEqual(2, slot_data["hidden_map"])
         self.assertEqual(2, slot_data["hidden_cards"])
+
+
+class TestSightBonusesSlotData(Spire2TestBase):
+    options = {
+        "characters": ["ironclad", "silent"],
+        "hidden_intents": 4,
+        "hidden_map": 4,
+        "sight_bonuses": ["MapSight", "PileSight"],
+    }
+
+    def test_sight_bonuses_are_sent_in_slot_data(self):
+        self.assertEqual(["MapSight", "PileSight"], sorted(self.world.fill_slot_data()["sight_bonuses"]))

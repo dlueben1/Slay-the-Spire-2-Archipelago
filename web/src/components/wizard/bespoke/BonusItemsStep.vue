@@ -5,8 +5,14 @@ import {
   getBonusItemDisplayRow,
   type BonusItemDisplayRow,
 } from "../../../wizard/BonusItemDisplay";
-import type { BonusItemAnswer } from "../../../wizard/WizardAnswers";
+import type {
+  BonusItemAnswer,
+  BonusItemKind,
+} from "../../../wizard/WizardAnswers";
 import type { WizardQuestion as WizardQuestionDefinition } from "../../../wizard/WizardStep";
+import BonusCardsDialog from "./BonusCardsDialog.vue";
+import EnchantmentDialog from "./EnchantmentDialog.vue";
+import MaxHpDialog from "./MaxHpDialog.vue";
 import WaxRelicDialog from "./WaxRelicDialog.vue";
 import WizardQuestion from "../core/WizardQuestion.vue";
 import FillerBudgetNote from "../core/FillerBudgetNote.vue";
@@ -20,8 +26,9 @@ const emit = defineEmits<{
   "update:modelValue": [value: BonusItemAnswer[]];
 }>();
 
-/** Dialog visibility plus the index being edited (`null` means Add mode). */
+/** Dialog visibility, the kind it edits, and the index being edited (`null` means Add mode). */
 const isDialogOpen = ref(false);
+const dialogKind = ref<BonusItemKind>("WAX_RELIC");
 const editIndex = ref<number | null>(null);
 
 /** The item loaded into the dialog when editing, or `null` for a new row. */
@@ -29,19 +36,23 @@ const editItem = computed<BonusItemAnswer | null>(() =>
   editIndex.value === null ? null : (props.modelValue[editIndex.value] ?? null),
 );
 
-/**
- * Add-menu entries. Only Wax Relic exists in this pass; the remaining entries are
- * deliberate disabled affordances for bonus item types arriving in a future pass.
- */
-const addMenuItems: DropdownMenuItem[] = [
-  {
-    label: "Add Wax Relic",
-    icon: "i-glyphs-plus-bold",
-    onSelect() {
-      openAddDialog();
-    },
+/** One Add-menu entry per bonus item type. */
+const addMenuItems: DropdownMenuItem[] = (
+  [
+    ["WAX_RELIC", "Add Wax Relic"],
+    ["RELIC", "Add Relic"],
+    ["ENCHANTMENT", "Add Enchantment"],
+    ["ENCHANTED_CARDS", "Add Enchanted Cards"],
+    ["MAX_HP", "Add Max HP"],
+    ["CARDS", "Add Card Reward"],
+  ] as const
+).map(([kind, label]) => ({
+  label,
+  icon: "i-glyphs-plus-bold",
+  onSelect() {
+    openAddDialog(kind);
   },
-];
+}));
 
 /**
  * Resolves the display row for one answer, tolerating corrupted persisted state.
@@ -59,12 +70,14 @@ function getDisplayRow(item: BonusItemAnswer): BonusItemDisplayRow {
       imageUrl: "",
       name: "Unknown Bonus Item",
       details: "This entry is no longer valid and should be removed.",
+      isWax: false,
     };
   }
 }
 
-/** Opens the dialog with a fresh draft for a new Wax Relic. */
-function openAddDialog(): void {
+/** Opens the dialog with a fresh draft for a new item of this kind. */
+function openAddDialog(kind: BonusItemKind): void {
+  dialogKind.value = kind;
   editIndex.value = null;
   isDialogOpen.value = true;
 }
@@ -74,6 +87,7 @@ function openEditDialog(index: number): void {
   if (index < 0 || index >= props.modelValue.length) {
     return;
   }
+  dialogKind.value = props.modelValue[index]!.kind;
   editIndex.value = index;
   isDialogOpen.value = true;
 }
@@ -140,7 +154,8 @@ function submitBonusItem(item: BonusItemAnswer): void {
   <WizardQuestion :question="question">
     <template #help>
       Bonus Items are placed in the item pool before any filler is generated.
-      Each one takes a filler slot; the count below shows how many are left.
+      Each row is one item and takes a filler slot; the count below shows how many
+      are left. Once found, each item can be claimed once in every run.
     </template>
 
     <WizardMarkdownDocument
@@ -202,7 +217,8 @@ function submitBonusItem(item: BonusItemAnswer): void {
               v-if="getDisplayRow(item).imageUrl"
               :src="getDisplayRow(item).imageUrl"
               :alt="`${getDisplayRow(item).name} image`"
-              class="bonus-item-table__image sepia"
+              class="bonus-item-table__image"
+              :class="{ sepia: getDisplayRow(item).isWax }"
               loading="lazy"
             />
           </span>
@@ -258,6 +274,27 @@ function submitBonusItem(item: BonusItemAnswer): void {
     </div>
 
     <WaxRelicDialog
+      v-if="dialogKind === 'WAX_RELIC' || dialogKind === 'RELIC'"
+      v-model:open="isDialogOpen"
+      :kind="dialogKind"
+      :edit-item="editItem"
+      @submit="submitBonusItem"
+    />
+    <EnchantmentDialog
+      v-else-if="dialogKind === 'ENCHANTMENT' || dialogKind === 'ENCHANTED_CARDS'"
+      v-model:open="isDialogOpen"
+      :kind="dialogKind"
+      :edit-item="editItem"
+      @submit="submitBonusItem"
+    />
+    <BonusCardsDialog
+      v-else-if="dialogKind === 'CARDS'"
+      v-model:open="isDialogOpen"
+      :edit-item="editItem"
+      @submit="submitBonusItem"
+    />
+    <MaxHpDialog
+      v-else
       v-model:open="isDialogOpen"
       :edit-item="editItem"
       @submit="submitBonusItem"

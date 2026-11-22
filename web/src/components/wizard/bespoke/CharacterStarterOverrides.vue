@@ -30,12 +30,12 @@ function update(field: keyof CharacterStarterOverrides, value: unknown): void {
       Per-character starter overrides
     </legend>
     <p class="mt-2 text-sm text-muted">
-      Use global setting follows Checks &amp; Rewards. Enabled or Disabled
-      applies only to this character.
+      Use global setting follows the Checks step. Enabled or Disabled applies
+      only to this character.
     </p>
     <p v-if="disabled" class="mt-2 text-sm text-muted">
-      Enable Floor Checks under Checks &amp; Rewards to use progressive
-      starters. Saved overrides have no effect while Floor Checks are off.
+      Enable Floor Checks on the Checks step to use progressive starters. Saved
+      overrides have no effect while Floor Checks are off.
     </p>
     <div class="mt-3 grid gap-3 sm:grid-cols-2">
       <label

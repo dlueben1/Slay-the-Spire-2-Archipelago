@@ -32,4 +32,4 @@ A generated roster can include all of them. They do not count towards the limit 
 
 Alchemist, Runesmith, Witch, Tailor and Engineer use the IDs from those mods' beta-branch Workshop editions; their main-branch editions are separate Workshop items. The Fae Sorceress's Workshop page was not publicly listed when this list was written.
 
-The matching mod must still be installed when you play. Any other modded character works too, using its internal ID; see [Finding a modded character ID](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/modded-characters.md).
+The matching mod must still be installed when you play. Any other modded character works too, using its internal ID; see [Finding a modded character ID](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/world/spire2/docs/modded_characters_en.md).

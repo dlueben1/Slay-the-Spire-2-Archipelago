@@ -49,7 +49,7 @@ describe("answer persistence", () => {
     answers.characters.individualStarterOverrides = {
       Ironclad: { progressiveStarterCard: "enabled" },
     };
-    answers.checksAndRewards.shop.cardSlots = 4;
+    answers.shops.shop.cardSlots = 4;
 
     saveWizardState(storage, { answers, stepId: "checks" });
     const restored = loadSavedWizardState(storage, createDefaults());
@@ -87,9 +87,7 @@ describe("answer persistence", () => {
 
     expect(restored?.answers.playerName).toBe("Old");
     expect(restored?.answers.run.seeded).toBe(defaults.run.seeded);
-    expect(restored?.answers.checksAndRewards.shop).toEqual(
-      defaults.checksAndRewards.shop,
-    );
+    expect(restored?.answers.shops.shop).toEqual(defaults.shops.shop);
     expect(restored?.answers.deathLink).toEqual(defaults.deathLink);
   });
 

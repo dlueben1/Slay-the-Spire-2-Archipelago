@@ -20,7 +20,8 @@ from .characters import (CharacterConfig, character_list, vanilla_character_ids,
                          needs_generic_block)
 from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET, GENERIC_CHARACTER_BLOCKS
 from .items import (item_table, chars_to_items, bonus_item_table, ItemType, base_event_item_pairs, ItemData,
-                    item_groups)
+                    item_groups, BONUS_ENCHANTMENT_TIERS, BONUS_ENCHANTMENT_VALUES, BONUS_MAX_HP_LIMIT,
+                    normalize_bonus_enchantment, parse_bonus_card_pool, SIGHTS)
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
 from .options import Spire2Options
 
@@ -52,6 +53,41 @@ def sparse_placement_rank(item: 'SlayTheSpire2Item') -> int:
         return 4
     # Unlocks and anything else.
     return 5
+
+
+def validate_bonus_entry(bonus_type: str, selector: dict) -> None:
+    """Rejects bonus entries the client could not honour. Relic and card names are checked by the
+    client, which knows the game's relics and cards; the rest is checked here."""
+    pools = selector.get("Pools")
+    value = selector.get("Value")
+    if bonus_type == "MAX_HP":
+        amount = int(value) if isinstance(value, int) or (isinstance(value, str) and value.isdigit()) else None
+        if pools is not None or amount is None or not 1 <= amount <= BONUS_MAX_HP_LIMIT:
+            raise OptionError(f"A MAX_HP bonus item needs a Value from 1 to {BONUS_MAX_HP_LIMIT}.")
+    elif bonus_type in ("ENCHANTMENT", "ENCHANTED_CARDS"):
+        if pools is not None:
+            unknown = [pool for pool in pools if pool not in BONUS_ENCHANTMENT_TIERS]
+            if unknown:
+                raise OptionError(
+                    f"Unknown {bonus_type} pools {unknown}. "
+                    f"Supported pools: {', '.join(BONUS_ENCHANTMENT_TIERS)}"
+                )
+        elif not isinstance(value, str) or normalize_bonus_enchantment(value) not in BONUS_ENCHANTMENT_VALUES:
+            raise OptionError(
+                f"Unknown {bonus_type} enchantment '{value}'. "
+                f"Supported enchantments: {', '.join(BONUS_ENCHANTMENT_VALUES.values())}"
+            )
+    elif bonus_type == "CARDS":
+        if pools is not None:
+            for pool in pools:
+                try:
+                    parse_bonus_card_pool(pool)
+                except ValueError as reason:
+                    raise OptionError(f"CARDS bonus pool '{pool}' is not valid: {reason}.") from None
+        elif not isinstance(value, str):
+            raise OptionError("A CARDS bonus item's Value must be a card name, not a number.")
+    elif isinstance(value, int):
+        raise OptionError(f"A {bonus_type} bonus item's Value must be a relic name, not a number.")
 
 
 class SlayTheSpire2Item(Item):
@@ -127,6 +163,7 @@ class SlayTheSpire2World(World):
             self.options.hidden_piles.value = 0
             self.options.hidden_map.value = 0
             self.options.hidden_cards.value = 0
+            self.options.hidden_relics.value = 0
         names = {config.official_name for config in self.characters}
         if len(names) != len(self.characters):
             raise OptionError(f"Found duplicate characters: {[c.official_name for c in self.characters]}")
@@ -627,13 +664,11 @@ class SlayTheSpire2World(World):
                     f"Unknown Bonus Items type '{bonus_type}'. "
                     f"Supported types: {', '.join(sorted(bonus_item_table))}"
                 )
+            validate_bonus_entry(bonus_type, bonus_entry[bonus_type])
             bonus_item_names.append(bonus_data.item_name)
         # Challenge items take filler slots the same way Bonus Items do.
-        bonus_item_names += ["Intent Sight"] * self.options.hidden_intents.value
-        bonus_item_names += ["Health Sight"] * self.options.hidden_health.value
-        bonus_item_names += ["Pile Sight"] * self.options.hidden_piles.value
-        bonus_item_names += ["Map Sight"] * self.options.hidden_map.value
-        bonus_item_names += ["Card Sight"] * self.options.hidden_cards.value
+        for sight_item, _, hidden_option in SIGHTS:
+            bonus_item_names += [sight_item] * getattr(self.options, hidden_option).value
 
         available_filler_slots = sum(count for _, count in filler_counts)
         if len(bonus_item_names) > available_filler_slots:
@@ -651,6 +686,20 @@ class SlayTheSpire2World(World):
                 pool.append(self.create_item(self.get_filler_item(character=config.name)))
 
         self.multiworld.itempool += pool
+        self.shuffle_bonus_items()
+
+    def shuffle_bonus_items(self) -> None:
+        """Shuffles the Bonus Items entries within each kind, once per seed. The client gives the
+        Nth copy found of a kind that kind's Nth entry, so a YAML would otherwise hand out its
+        entries in the order they were written, every seed. Each kind keeps its places in the list.
+        Called after the item pool is built, so the extra draw does not move the filler rolls."""
+        entries = self.options.bonus_items.value
+        entries_by_kind: dict[str, list] = {}
+        for entry in entries:
+            entries_by_kind.setdefault(next(iter(entry)), []).append(entry)
+        for kind_entries in entries_by_kind.values():
+            self.random.shuffle(kind_entries)
+        self.options.bonus_items.value = [entries_by_kind[next(iter(entry))].pop() for entry in entries]
 
     def _should_include_location(self, data: Optional[LocationData], config: CharacterConfig) -> bool:
         if data is None:
@@ -730,10 +779,10 @@ class SlayTheSpire2World(World):
             "required_game_features": self.required_game_features(),
         }
         slot_data.update(self.options.as_dict(
-            "use_new_logic",
             "lock_characters",
             "seeded",
             "run_modifiers",
+            "boons",
             "enemy_hp_scaling",
             "enemy_damage_scaling",
             "dread_mode",
@@ -746,12 +795,15 @@ class SlayTheSpire2World(World):
             "hidden_piles",
             "hidden_map",
             "hidden_cards",
+            "hidden_relics",
+            "sight_bonuses",
             "include_floor_checks",
             "neow_sanity",
             "ancient_relic_location",
             "ancient_relic_pool",
             "relic_rewards_available_anytime",
             "remove_op_relics",
+            "events_in_any_act",
             "release_on_victory",
             "shop_sanity",
             "potion_sanity",
@@ -826,12 +878,9 @@ class SlayTheSpire2World(World):
         return slot_data
 
     def _setup_ut(self, slot_data: dict[str, Any]) -> None:
-        self.options.use_new_logic.value = self.options.use_new_logic.from_any(slot_data.get("use_new_logic", True)).value
         # Reconstruct the generated mode; do not rerun fallback selection on tracker input.
         self.effective_logic = slot_data.get("effective_logic", "new")
-        self.logic_fallback_reason = (
-            FALLBACK_REASON if self.options.use_new_logic and self.effective_logic == "old" else None
-        )
+        self.logic_fallback_reason = FALLBACK_REASON if self.effective_logic == "old" else None
         self.options.lock_characters.value = slot_data['lock_characters']
         # Seeded Run changes Act 1 power checks.
         self.options.seeded.value = slot_data['seeded']
@@ -876,11 +925,10 @@ class SlayTheSpire2World(World):
         self.options.progressive_starter_relic.value = slot_data['progressive_starter_relic']
         self.options.bonus_items.value = deepcopy(slot_data.get('bonus_items', []))
         # Sight items take filler slots, so a YAML's values could exceed what the seed generated with.
-        self.options.hidden_intents.value = slot_data.get('hidden_intents', 0)
-        self.options.hidden_health.value = slot_data.get('hidden_health', 0)
-        self.options.hidden_piles.value = slot_data.get('hidden_piles', 0)
-        self.options.hidden_map.value = slot_data.get('hidden_map', 0)
-        self.options.hidden_cards.value = slot_data.get('hidden_cards', 0)
+        for _, _, hidden_option in SIGHTS:
+            getattr(self.options, hidden_option).value = slot_data.get(hidden_option, 0)
+        # Logic counts the Sight Bonuses a slot left on; slots from before the option have none.
+        self.options.sight_bonuses.value = set(slot_data.get('sight_bonuses', []))
         if self.options.include_floor_checks.value == 0:
             self.options.progressive_starter_card.value = 0
             self.options.progressive_starter_relic.value = 0

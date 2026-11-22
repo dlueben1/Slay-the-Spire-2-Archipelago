@@ -1,4 +1,5 @@
 using Godot;
+using MegaCrit.Sts2.Core.Nodes.Screens.ScreenContext;
 using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
 
 namespace StS2AP.Patches
@@ -111,6 +112,11 @@ namespace StS2AP.Patches
                 .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
 
             IsApPageFront = toApPage;
+
+            // The front page is the shop's current screen (see ReportFrontApPageAsCurrentScreen).
+            // Refreshing it turns focus on for the new page and off for the old one, and with
+            // keyboard or controller moves focus onto the new page.
+            ActiveScreenContext.Instance.Update();
         }
 
         private static void KillSlideTween()

@@ -8,9 +8,12 @@ import {
 } from "../../../wizard/BonusRelicData";
 import type {
   BonusItemAnswer,
-  RandomWaxRelicBonusItem,
-  SpecificWaxRelicBonusItem,
+  RandomRelicBonusItem,
+  RelicBonusKind,
+  SpecificRelicBonusItem,
 } from "../../../wizard/WizardAnswers";
+import BonusItemDialogShell from "./BonusItemDialogShell.vue";
+import PickerList, { type PickerOption } from "./PickerList.vue";
 
 type WaxRelicMode = "specific" | "random";
 
@@ -23,6 +26,8 @@ interface WaxRelicDraft {
 
 const props = defineProps<{
   open: boolean;
+  /** Wax Relics melt after a few combats; Relics stay for the whole run. */
+  kind: RelicBonusKind;
   /** The existing item when editing, or `null` when adding a new one. */
   editItem: BonusItemAnswer | null;
 }>();
@@ -47,8 +52,9 @@ const modeItems: RadioGroupItem[] = [
   },
 ];
 
-const eligibleRelics = getEligibleSpecificRelics();
-const poolOptions = getBonusRelicPoolOptions();
+// Wax Relics can't be relics with a pickup effect, so each kind has its own lists.
+const eligibleRelics = computed(() => getEligibleSpecificRelics(props.kind));
+const poolOptions = computed(() => getBonusRelicPoolOptions(props.kind));
 
 const draft = ref<WaxRelicDraft>({
   mode: "specific",
@@ -58,8 +64,14 @@ const draft = ref<WaxRelicDraft>({
 const searchQuery = ref("");
 
 /** Relics matching the current case-insensitive name filter. */
-const filteredRelics = computed(() =>
-  filterRelicsByName(eligibleRelics, searchQuery.value),
+const filteredRelics = computed<PickerOption[]>(() =>
+  filterRelicsByName(eligibleRelics.value, searchQuery.value).map((relic) => ({
+    id: relic.id,
+    name: relic.name,
+    imageUrl: relic.imageUrl,
+    imageAlt: `${relic.name} image`,
+    description: relic.description,
+  })),
 );
 
 /** Whether the draft in the active mode is complete enough to submit. */
@@ -69,11 +81,15 @@ const isSubmittable = computed(() =>
     : draft.value.pools.length > 0,
 );
 
-const dialogTitle = computed(() =>
-  props.editItem ? "Edit Wax Relic" : "Add Wax Relic",
+const kindName = computed(() =>
+  props.kind === "WAX_RELIC" ? "Wax Relic" : "Relic",
 );
 
-const submitLabel = computed(() => (props.editItem ? "Save" : "Add"));
+const dialogDescription = computed(() =>
+  props.kind === "WAX_RELIC"
+    ? "Wax Relics are pulled from the normal relic pool and melt away after enough combats. Relics with a pickup effect can't be wax."
+    : "Relics are pulled from the normal relic pool and stay for the whole run.",
+);
 
 /**
  * Resets the draft from the edited item (or defaults) each time the dialog opens.
@@ -91,14 +107,15 @@ watch(
     searchQuery.value = "";
 
     const item = props.editItem;
-    if (item && item.kind === "WAX_RELIC" && item.mode === "specific") {
+    if (item && item.kind === props.kind && item.mode === "specific") {
       draft.value = { mode: "specific", relicId: item.relicId, pools: [] };
-    } else if (item && item.kind === "WAX_RELIC" && item.mode === "random") {
+    } else if (item && item.kind === props.kind && item.mode === "random") {
       draft.value = { mode: "random", relicId: null, pools: [...item.pools] };
     } else {
       draft.value = { mode: "specific", relicId: null, pools: [] };
     }
   },
+  { immediate: true },
 );
 
 /** Narrows and applies the reward-mode radio selection. */
@@ -127,15 +144,10 @@ function togglePool(poolName: string, checked: unknown): void {
   }
 
   // Emit pools in the source-defined order so YAML output is deterministic.
-  const ordered = poolOptions
+  const ordered = poolOptions.value
     .map((option) => option.name)
     .filter((name) => selected.has(name));
   draft.value = { ...draft.value, pools: ordered };
-}
-
-/** Closes the dialog without committing the draft. */
-function cancel(): void {
-  emit("update:open", false);
 }
 
 /** Commits the draft as a semantic Bonus Item answer and closes the dialog. */
@@ -146,15 +158,15 @@ function submit(): void {
 
   let item: BonusItemAnswer;
   if (draft.value.mode === "specific") {
-    const specific: SpecificWaxRelicBonusItem = {
-      kind: "WAX_RELIC",
+    const specific: SpecificRelicBonusItem = {
+      kind: props.kind,
       mode: "specific",
       relicId: draft.value.relicId!,
     };
     item = specific;
   } else {
-    const random: RandomWaxRelicBonusItem = {
-      kind: "WAX_RELIC",
+    const random: RandomRelicBonusItem = {
+      kind: props.kind,
       mode: "random",
       pools: [...draft.value.pools],
     };
@@ -167,124 +179,72 @@ function submit(): void {
 </script>
 
 <template>
-  <UModal
+  <BonusItemDialogShell
     :open="open"
-    :title="dialogTitle"
-    :description="'Wax Relics are pulled from the normal relic pool and melt away after enough combats.'"
-    scrollable
-    :ui="{ content: 'sm:max-w-2xl', footer: 'justify-end' }"
+    :item-name="kindName"
+    :description="dialogDescription"
+    :editing="editItem !== null"
+    :submittable="isSubmittable"
     @update:open="emit('update:open', $event)"
+    @submit="submit"
   >
-    <template #body>
-      <div class="wax-dialog">
-        <URadioGroup
-          :model-value="draft.mode"
-          :items="modeItems"
-          value-key="value"
-          label-key="label"
-          description-key="description"
+    <div class="wax-dialog">
+      <URadioGroup
+        :model-value="draft.mode"
+        :items="modeItems"
+        value-key="value"
+        label-key="label"
+        description-key="description"
+        color="primary"
+        variant="table"
+        :ui="{ item: 'cursor-pointer' }"
+        @update:model-value="setMode"
+      />
+
+      <div v-if="draft.mode === 'specific'" class="wax-dialog__specific">
+        <UInput
+          v-model="searchQuery"
+          icon="i-glyphs-search-bold"
+          placeholder="Filter by relic name..."
+          aria-label="Filter relics by name"
           color="primary"
-          variant="table"
-          :ui="{ item: 'cursor-pointer' }"
-          @update:model-value="setMode"
+          variant="outline"
+          class="w-full"
         />
 
-        <div v-if="draft.mode === 'specific'" class="wax-dialog__specific">
-          <UInput
-            v-model="searchQuery"
-            icon="i-glyphs-search-bold"
-            placeholder="Filter by relic name..."
-            aria-label="Filter relics by name"
-            color="primary"
-            variant="outline"
-            class="w-full"
-          />
-
-          <div
-            class="wax-relic-list"
-            role="listbox"
-            aria-label="Eligible relics"
-            aria-multiselectable="false"
-          >
-            <p v-if="!filteredRelics.length" class="wax-relic-list__empty">
-              No relics match this filter.
-            </p>
-
-            <button
-              v-for="relic in filteredRelics"
-              :key="relic.id"
-              type="button"
-              role="option"
-              class="wax-relic-option"
-              :class="{
-                'wax-relic-option--selected': draft.relicId === relic.id,
-              }"
-              :aria-selected="draft.relicId === relic.id"
-              @click="selectRelic(relic.id)"
-            >
-              <img
-                :src="relic.imageUrl"
-                :alt="`${relic.name} image`"
-                class="wax-relic-option__image"
-                loading="lazy"
-              />
-              <span class="wax-relic-option__text">
-                <span class="wax-relic-option__name">{{ relic.name }}</span>
-                <span class="wax-relic-option__description">
-                  {{ relic.description }}
-                </span>
-              </span>
-              <UIcon
-                v-if="draft.relicId === relic.id"
-                name="i-glyphs-check-circle-bold"
-                class="wax-relic-option__check"
-              />
-            </button>
-          </div>
-        </div>
-
-        <div v-else class="wizard-toggle-grid">
-          <UCheckbox
-            v-for="option in poolOptions"
-            :key="option.name"
-            :model-value="draft.pools.includes(option.name)"
-            :label="`${option.name} (${option.relicCount})`"
-            :description="option.description"
-            color="primary"
-            variant="card"
-            class="cursor-pointer"
-            :ui="{ label: 'cursor-pointer', description: 'cursor-pointer' }"
-            @update:model-value="togglePool(option.name, $event)"
-          />
-        </div>
-
-        <p v-if="!isSubmittable" class="wizard-error" role="status">
-          {{
-            draft.mode === "specific"
-              ? "Select a relic to continue."
-              : "Select at least one pool to continue."
-          }}
-        </p>
+        <PickerList
+          :options="filteredRelics"
+          :selected-id="draft.relicId"
+          label="Eligible relics"
+          empty-text="No relics match this filter."
+          @select="selectRelic"
+        />
       </div>
-    </template>
 
-    <template #footer>
-      <UButton
-        label="Cancel"
-        color="neutral"
-        variant="outline"
-        class="cursor-pointer"
-        @click="cancel"
-      />
-      <UButton
-        :label="submitLabel"
-        color="primary"
-        class="cursor-pointer"
-        :disabled="!isSubmittable"
-        @click="submit"
-      />
-    </template>
-  </UModal>
+      <div v-else class="wizard-toggle-grid">
+        <UCheckbox
+          v-for="option in poolOptions"
+          :key="option.name"
+          :model-value="draft.pools.includes(option.name)"
+          :label="`${option.name} (${option.relicCount})`"
+          :description="option.description"
+          color="primary"
+          variant="card"
+          class="cursor-pointer"
+          :ui="{ label: 'cursor-pointer', description: 'cursor-pointer' }"
+          @update:model-value="togglePool(option.name, $event)"
+        />
+      </div>
+
+      <p v-if="!isSubmittable" class="wizard-error" role="status">
+        {{
+          draft.mode === "specific"
+            ? "Select a relic to continue."
+            : "Select at least one pool to continue."
+        }}
+      </p>
+    </div>
+  </BonusItemDialogShell>
 </template>
 
 <style scoped src="../core/wizard.css" />
@@ -298,79 +258,5 @@ function submit(): void {
 .wax-dialog__specific {
   display: grid;
   gap: 0.75rem;
-}
-
-.wax-relic-list {
-  display: grid;
-  max-height: 22rem;
-  overflow-y: auto;
-  border: 1px solid var(--ui-border-muted);
-  border-radius: 0.6rem;
-  background: rgba(0, 0, 0, 0.25);
-}
-
-.wax-relic-list__empty {
-  padding: 1.5rem 1rem;
-  color: var(--ui-text-muted);
-  font-size: 0.9rem;
-  text-align: center;
-}
-
-.wax-relic-option {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.85rem;
-  padding: 0.6rem 0.85rem;
-  color: var(--ui-text);
-  text-align: left;
-  border: 0;
-  border-bottom: 1px solid var(--ui-border-muted);
-  background: transparent;
-  cursor: pointer;
-}
-
-.wax-relic-option:last-child {
-  border-bottom: 0;
-}
-
-.wax-relic-option:hover {
-  background: color-mix(in oklab, var(--color-amber-500) 7%, transparent);
-}
-
-.wax-relic-option--selected {
-  background: color-mix(in oklab, var(--color-amber-500) 14%, transparent);
-  box-shadow: inset 0 0 0 1px
-    color-mix(in oklab, var(--color-amber-500) 60%, transparent);
-}
-
-.wax-relic-option__image {
-  width: 2.75rem;
-  height: 2.75rem;
-  object-fit: contain;
-}
-
-.wax-relic-option__text {
-  display: grid;
-  min-width: 0;
-  gap: 0.1rem;
-}
-
-.wax-relic-option__name {
-  color: var(--ui-text-highlighted);
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.wax-relic-option__description {
-  color: var(--ui-text-muted);
-  font-size: 0.8rem;
-  line-height: 1.35;
-}
-
-.wax-relic-option__check {
-  width: 1.25rem;
-  height: 1.25rem;
-  color: var(--color-green-400);
 }
 </style>

@@ -31,5 +31,7 @@ internal static class MapSight
             if (point.IsNodeReady())
                 point.UpdateIcon();
         }
+        // The second copy adds the Scouting list; without this it would wait for the map to reopen.
+        StS2AP.UI.MapScoutingPanel.Refresh(screen);
     }
 }

@@ -5,7 +5,7 @@ import type { AncientAnswers } from "../WizardAnswers";
 import { ANCIENT_OPTION_KEYS } from "../WizardOptionKey";
 import type { CompiledOptions } from "./applyCharacterOptions";
 
-/** Applies the Ancient subsection of Checks & Rewards to compiled options. */
+/** Applies the Ancient questions of Run Settings to compiled options. */
 export function applyAncientOptions(
   target: CompiledOptions,
   answers: AncientAnswers,

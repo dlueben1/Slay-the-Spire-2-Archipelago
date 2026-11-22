@@ -6,6 +6,7 @@ public sealed class ApMenuGoldSpec
     public int SourceAmount { get; set; }
     public int GrantedAmount { get; set; }
     public int RedeemedRawAfter { get; set; }
+    public int GainCount { get; set; }
 
-    public ApGoldClaim ToClaim() => new(SourceAmount, GrantedAmount, RedeemedRawAfter);
+    public ApGoldClaim ToClaim() => new(SourceAmount, GrantedAmount, RedeemedRawAfter, GainCount);
 }

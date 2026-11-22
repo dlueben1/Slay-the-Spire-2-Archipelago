@@ -4,12 +4,14 @@
  * The Run Settings step groups settings that change how an individual climb is offered
  * and rewarded without changing the selected character roster. This compiler owns the
  * immediate Relic availability, overpowered-relic removal, victory release, and seeded-run
- * fields. Generic catalog validation still runs after every section.
+ * fields, and delegates the two Progressive Ancient choices to `applyAncientOptions`.
+ * Generic catalog validation still runs after every section.
  */
 
 import type { OptionCatalog } from "../../generated/optionCatalog";
 import type { OpRelicRemovalAnswers, RunAnswers } from "../WizardAnswers";
 import { OP_RELIC_CATEGORY_KEYS, RUN_OPTION_KEYS } from "../WizardOptionKey";
+import { applyAncientOptions } from "./applyAncientOptions";
 import type { CompiledOptions } from "./applyCharacterOptions";
 
 /**
@@ -47,9 +49,11 @@ function compileOpRelicCategories(
  * Applies player-facing Run Settings answers to a compiler-owned option object.
  *
  * @param target - Fresh complete option object assembled by the root compiler.
- * @param answers - Player-facing Relic availability and removal, victory, and seed choices.
+ * @param answers - Player-facing Relic availability and removal, victory, seed, and
+ * Ancient choices.
  * @param catalog - Generated schema used to detect missing owned options.
- * @returns Nothing; replaces only options declared in `RUN_OPTION_KEYS`.
+ * @returns Nothing; replaces only options declared in `RUN_OPTION_KEYS` and
+ * `ANCIENT_OPTION_KEYS`.
  * @throws When a regenerated catalog no longer contains an owned option.
  */
 export function applyRunOptions(
@@ -72,6 +76,7 @@ export function applyRunOptions(
     catalog,
   );
   target[RUN_OPTION_KEYS.releaseOnVictory] = answers.releaseOnVictory;
+  target[RUN_OPTION_KEYS.eventsInAnyAct] = answers.eventsInAnyAct;
   target[RUN_OPTION_KEYS.seeded] = answers.seeded;
-  target[RUN_OPTION_KEYS.blitzMerchantChance] = answers.blitzMerchantChance;
+  applyAncientOptions(target, answers.ancients, catalog);
 }

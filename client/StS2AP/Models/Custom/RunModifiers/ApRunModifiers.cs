@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Runs;
@@ -6,7 +7,8 @@ using StS2AP.Utils;
 namespace StS2AP.Models;
 
 /// <summary>
-/// Turns the slot's Run Modifiers option into run modifiers on each new AP run.
+/// Turns the slot's Run Modifiers and Boons options into run modifiers on each new AP run. Boons
+/// with uses to track are relics instead, so the relic bar shows their counter and used-up state.
 /// </summary>
 public static class ApRunModifiers
 {
@@ -26,7 +28,30 @@ public static class ApRunModifiers
             ["DangerousUnknowns"] = ModelDb.Modifier<ApDangerousUnknowns>,
         };
 
-    /// <summary>Whether this modifier came from the Run Modifiers option.</summary>
+    /// <summary>
+    /// A Boon is a run modifier, or a relic given to each player when it has uses to track.
+    /// Singleplayer-only Boons hold state or choices that belong to one player, or change the
+    /// shared map, so multiplayer runs leave them out.
+    /// </summary>
+    private sealed record Boon(
+        Func<ModifierModel>? Modifier = null, Func<RelicModel>? Relic = null, bool SingleplayerOnly = false);
+
+    // Keys are the APWorld's Boons option names.
+    private static readonly IReadOnlyDictionary<string, Boon> BoonsByOptionName =
+        new Dictionary<string, Boon>(StringComparer.Ordinal)
+        {
+            ["EmberEnchanting"] = new(Modifier: ModelDb.Modifier<ApEmberEnchanting>, SingleplayerOnly: true),
+            ["CompoundInterest"] = new(Modifier: ModelDb.Modifier<ApCompoundInterest>),
+            ["Gilded"] = new(Modifier: ModelDb.Modifier<ApGilded>),
+            ["SpringCleaning"] = new(Modifier: ModelDb.Modifier<ApSpringCleaning>, SingleplayerOnly: true),
+            ["LoyalCustomer"] = new(Modifier: ModelDb.Modifier<ApLoyalCustomer>),
+            ["CampfireBrewing"] = new(Modifier: ModelDb.Modifier<ApCampfireBrewing>, SingleplayerOnly: true),
+            ["EndlessUpgrades"] = new(Modifier: ModelDb.Modifier<ApEndlessUpgrades>),
+            ["Wayfinder"] = new(Relic: ModelDb.Relic<ApWayfinder>, SingleplayerOnly: true),
+            ["SecondWind"] = new(Relic: ModelDb.Relic<ApSecondWind>, SingleplayerOnly: true),
+        };
+
+    /// <summary>Whether this modifier came from the Run Modifiers or Boons option.</summary>
     public static bool IsArchipelagoModifier(ModifierModel modifier) =>
         modifier.GetType().Assembly == typeof(ApRunModifiers).Assembly;
 
@@ -63,6 +88,17 @@ public static class ApRunModifiers
             else
                 LogUtility.Warn($"Ignoring unknown run modifier '{optionName}' from slot data.");
         }
+        foreach (string boonName in settings.Boons)
+        {
+            if (!BoonsByOptionName.TryGetValue(boonName, out Boon? boon))
+                LogUtility.Warn($"Ignoring unknown boon '{boonName}' from slot data.");
+            else if (runState.Players.Count > 1 && boon.SingleplayerOnly)
+                LogUtility.Info($"Skipped boon '{boonName}': it is singleplayer only.");
+            else if (boon.Relic != null)
+                GiveToEveryPlayer(runState, boon.Relic);
+            else
+                added.Add(boon.Modifier!().ToMutable());
+        }
         if (settings.EnemyHpScaling > 0)
         {
             var hpScaling = (ApEnemyHpScaling)ModelDb.Modifier<ApEnemyHpScaling>().ToMutable();
@@ -88,5 +124,24 @@ public static class ApRunModifiers
         LogUtility.Info(
             $"Added run modifiers: {string.Join(", ", added.Select(modifier => modifier.Id.Entry))}"
         );
+    }
+
+    /// <summary>
+    /// Adds a boon relic after each player's starting relics. The players exist with their
+    /// starting relics at this point, before the run begins, so direct insertion is enough: there
+    /// is no relic bar to update yet and no pickup to record in the run history.
+    /// </summary>
+    private static void GiveToEveryPlayer(RunState runState, Func<RelicModel> canonical)
+    {
+        foreach (Player player in runState.Players)
+        {
+            RelicModel relic = canonical();
+            if (player.Relics.Any(owned => owned.Id == relic.Id))
+                continue;
+            RelicModel mutable = relic.ToMutable();
+            mutable.FloorAddedToDeck = 1;
+            player.AddRelicInternal(mutable, silent: true);
+            LogUtility.Info($"Added boon relic {relic.Id.Entry}");
+        }
     }
 }

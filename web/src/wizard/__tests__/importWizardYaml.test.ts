@@ -167,7 +167,7 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
           starterOverrides: { progressiveStarterRelic: "enabled" },
         },
       ];
-      answers.checksAndRewards.checks.includeFloorChecks = true;
+      answers.checks.types.includeFloorChecks = true;
     },
   ],
   [
@@ -185,27 +185,23 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
       characters.individualStarterOverrides = {
         Silent: { progressiveStarterCard: "disabled" },
       };
-      answers.checksAndRewards.checks.includeFloorChecks = true;
+      answers.checks.types.includeFloorChecks = true;
     },
   ],
   [
     "every check, Shop Sanity, Random Shop Cards and Run Settings changed",
     (answers) => {
-      const rewards = answers.checksAndRewards;
-      const checks = rewards.checks;
+      const checks = answers.checks.types;
       checks.neowSanity = !checks.neowSanity;
       checks.includeFloorChecks = true;
       checks.campfireSanity = !checks.campfireSanity;
       checks.goldSanity = !checks.goldSanity;
       checks.potionSanity = !checks.potionSanity;
       checks.shuffleAllCards = !checks.shuffleAllCards;
-      rewards.startingEquipment.progressiveStarterCard = true;
-      rewards.startingEquipment.progressiveStarterRelic = true;
-      rewards.ancients = {
-        relicLocation: "start_of_act",
-        relicPool: "true_chaos",
-      };
-      rewards.shop = {
+      answers.checks.startingEquipment.progressiveStarterCard = true;
+      answers.checks.startingEquipment.progressiveStarterRelic = true;
+      const shops = answers.shops;
+      shops.shop = {
         enabled: true,
         cardSlots: 5,
         neutralCardSlots: 0,
@@ -214,30 +210,34 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
         removeSlots: true,
         costs: "Tiered",
       };
-      rewards.shopCards.enabled = true;
-      rewards.shopCards.weights.attack = 0;
-      rewards.shopCards.weights.rare = 3;
-      rewards.shopRelics.enabled = true;
-      rewards.shopRelics.weights.ancient = 3;
-      rewards.shopRelics.weights.common = 0;
-      rewards.shopPotions.enabled = true;
-      rewards.shopPotions.weights.otherClass = 1;
+      shops.shopCards.enabled = true;
+      shops.shopCards.weights.attack = 0;
+      shops.shopCards.weights.rare = 3;
+      shops.shopRelics.enabled = true;
+      shops.shopRelics.weights.ancient = 3;
+      shops.shopRelics.weights.common = 0;
+      shops.shopPotions.enabled = true;
+      shops.shopPotions.weights.otherClass = 1;
       answers.run = {
         relicRewardsAvailableAnytime: 7,
         removeOpRelics: { ancient: true, rare: true },
         releaseOnVictory: !answers.run.releaseOnVictory,
+        eventsInAnyAct: !answers.run.eventsInAnyAct,
         seeded: !answers.run.seeded,
-        blitzMerchantChance: 40,
+        ancients: {
+          relicLocation: "start_of_act",
+          relicPool: "true_chaos",
+        },
       };
+      answers.boons.blitzMerchantChance = 40;
     },
   ],
   [
     "Floor Checks off with Shop Sanity off but customised",
     (answers) => {
-      const rewards = answers.checksAndRewards;
-      rewards.checks.includeFloorChecks = false;
-      rewards.shop = {
-        ...rewards.shop,
+      answers.checks.types.includeFloorChecks = false;
+      answers.shops.shop = {
+        ...answers.shops.shop,
         enabled: false,
         cardSlots: 0,
         costs: "Fixed",
@@ -247,12 +247,12 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
   [
     "Bonus Items of both Wax Relic modes, filler weights and traps",
     (answers) => {
-      const rewards = answers.checksAndRewards;
+      const rewards = answers.itemPool;
       rewards.bonusItems = [
         {
           kind: "WAX_RELIC",
           mode: "specific",
-          relicId: getEligibleSpecificRelics()[0]!.id,
+          relicId: getEligibleSpecificRelics("WAX_RELIC")[0]!.id,
         },
         { kind: "WAX_RELIC", mode: "random", pools: ["Uncommon", "Common"] },
       ];
@@ -338,11 +338,20 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
         hiddenIntents: "one",
         hiddenHealth: "two",
         hiddenPiles: "one",
-        hiddenMap: "two",
+        hiddenMap: "three",
         hiddenCards: "one",
+        hiddenRelics: "off",
+        sightBonuses: {
+          intent: false,
+          health: true,
+          pile: true,
+          map: true,
+          card: false,
+          relic: false,
+        },
         strictCardRewards: true,
       };
-      answers.checksAndRewards.checks.includeFloorChecks = true;
+      answers.checks.types.includeFloorChecks = true;
     },
   ],
   [
@@ -353,10 +362,9 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
     },
   ],
   [
-    "disabled progression balancing, minimal accessibility and old logic",
+    "disabled progression balancing and minimal accessibility",
     (answers) => {
       answers.progression = {
-        useNewLogic: !answers.progression.useNewLogic,
         progressionBalancing: 0,
         accessibility: "minimal",
       };
@@ -406,7 +414,7 @@ describe("importWizardYaml reading hand-written values", () => {
     );
 
     expect(warnings).toEqual([]);
-    expect(answers.checksAndRewards.checks.goldSanity).toBe(!goldDefault);
+    expect(answers.checks.types.goldSanity).toBe(!goldDefault);
   });
 
   it("keeps defaults and names the options that are random or weighted", () => {
@@ -422,10 +430,10 @@ describe("importWizardYaml reading hand-written values", () => {
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain(displayName("trap_chance"));
     expect(warnings[0]).toContain(displayName("gold_sanity"));
-    expect(answers.checksAndRewards.traps.chance).toBe(
+    expect(answers.itemPool.traps.chance).toBe(
       optionCatalog.options.trap_chance!.default,
     );
-    expect(answers.checksAndRewards.checks.goldSanity).toBe(
+    expect(answers.checks.types.goldSanity).toBe(
       optionCatalog.options.gold_sanity!.default,
     );
   });
@@ -453,15 +461,15 @@ describe("importWizardYaml reading hand-written values", () => {
     expect(warnings).toEqual([]);
     expect(answers.deathLink.enabled).toBe(true);
     expect(answers.run.seeded).toBe(true);
-    expect(answers.checksAndRewards.checks.neowSanity).toBe(true);
-    expect(answers.checksAndRewards.shop.costs).toBe("Super_Discount_Tiered");
-    expect(answers.checksAndRewards.ancients.relicPool).toBe("chaos");
+    expect(answers.checks.types.neowSanity).toBe(true);
+    expect(answers.shops.shop.costs).toBe("Super_Discount_Tiered");
+    expect(answers.run.ancients.relicPool).toBe("chaos");
     expect(answers.progression.progressionBalancing).toBe(99);
     expect(answers.progression.accessibility).toBe("full");
     expect(answers.run.relicRewardsAvailableAnytime).toBe(
       optionCatalog.options.relic_rewards_available_anytime!.maximum,
     );
-    expect(answers.checksAndRewards.filler.weights.fiveGold).toBe(2);
+    expect(answers.itemPool.filler.weights.fiveGold).toBe(2);
     expect(answers.run.removeOpRelics).toEqual({ ancient: false, rare: true });
     expect(answers.challenges.enabled).toBe(true);
     expect(answers.challenges.runModifiers).toEqual(["SlowStart"]);
@@ -617,7 +625,7 @@ describe("importWizardYaml documents", () => {
       "Silent",
       "Necrobinder",
     ]);
-    expect(answers.checksAndRewards.shop.costs).toBe("Discount_Tiered");
+    expect(answers.shops.shop.costs).toBe("Discount_Tiered");
     expect(() => compileWizardAnswers(answers, optionCatalog)).not.toThrow();
   });
 });

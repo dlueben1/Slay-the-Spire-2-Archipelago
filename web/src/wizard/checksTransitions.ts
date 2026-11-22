@@ -1,5 +1,5 @@
 /**
- * @file Pure cross-field rules for the combined Checks & Rewards answer section.
+ * @file Pure cross-field rules for the Checks step's answer section.
  *
  * Most check toggles are independent booleans, but Floor Checks feeds the filler
  * slots that progressive Starting Equipment items occupy. This transition owns that
@@ -9,24 +9,24 @@
  */
 
 import type { WizardSectionTransition } from "./QuestionControl";
-import type { CheckAnswers, ChecksAndRewardsAnswers } from "./WizardAnswers";
+import type { ChecksAnswers, CheckTypeAnswers } from "./WizardAnswers";
 
 /**
  * Updates one ordinary check or reward toggle.
  *
- * @param section - Current combined Checks & Rewards answers.
+ * @param section - Current Checks answers.
  * @param answerKey - Semantic answer field represented by the changed row.
  * @param value - Narrowed boolean state for that row.
- * @returns A new combined section with the toggle and its dependents updated.
+ * @returns A new section with the toggle and its dependents updated.
  */
 export function setCheckToggle(
-  section: ChecksAndRewardsAnswers,
-  answerKey: keyof CheckAnswers,
+  section: ChecksAnswers,
+  answerKey: keyof CheckTypeAnswers,
   value: boolean,
-): ChecksAndRewardsAnswers {
-  // Clone the nested check answers before replacing them in the combined section.
-  const checks = {
-    ...section.checks,
+): ChecksAnswers {
+  // Clone the nested check answers before replacing them in the section.
+  const types = {
+    ...section.types,
     [answerKey]: value,
   };
 
@@ -34,7 +34,7 @@ export function setCheckToggle(
   if (answerKey === "includeFloorChecks" && !value) {
     return {
       ...section,
-      checks,
+      types,
       startingEquipment: {
         progressiveStarterCard: false,
         progressiveStarterRelic: false,
@@ -42,14 +42,14 @@ export function setCheckToggle(
     };
   }
 
-  return { ...section, checks };
+  return { ...section, types };
 }
 
 /**
  * Transition wrapper for the Floor Checks card in the check-types grid.
  *
  * @remarks The cast is safe because the descriptor lives on a question inside the
- * step that owns the `checksAndRewards` section; descriptor integrity tests
+ * step that owns the `checks` section; descriptor integrity tests
  * exercise the binding. Other check cards write their fields directly because they
  * have no dependents.
  */
@@ -58,7 +58,7 @@ export const includeFloorChecksTransition: WizardSectionTransition = (
   value,
 ) =>
   setCheckToggle(
-    section as ChecksAndRewardsAnswers,
+    section as ChecksAnswers,
     "includeFloorChecks",
     value as boolean,
   );

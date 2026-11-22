@@ -480,7 +480,8 @@ namespace StS2AP.UI
 
         private static Button CreateStyledButton(string text, Color baseColor)
         {
-            var button = new Button();
+            // Enter already submits the form through OnKeyboardInput, so only Space presses here.
+            var button = ApButtonInput.PressOnGameInput(new Button(), confirm: false);
             button.Text = text;
             button.CustomMinimumSize = new Vector2(120, 40);
 

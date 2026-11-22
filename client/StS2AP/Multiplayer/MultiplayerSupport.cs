@@ -306,12 +306,12 @@ public static class MultiplayerSupport
     {
         APItem universalItem = item.GetUniversalItemId();
         if (universalItem is APItem.IntentSight or APItem.HealthSight or APItem.PileSight or APItem.MapSight
-            or APItem.CardSight)
+            or APItem.CardSight or APItem.RelicSight)
             return MultiplayerFeature.ChallengeSight;
 
-        // In multiplayer, Bonus Wax Relics arrive as gold unless the experimental Bonus Items
+        // In multiplayer, bonus items arrive as gold unless the experimental Bonus Items
         // feature is enabled (see BonusRewardUtility.ConvertToGold).
-        if (universalItem == APItem.BonusWaxRelic)
+        if (BonusRewardUtility.IsBonusItem(universalItem))
         {
             return ShouldRunReplicatedConstruction(MultiplayerFeature.BonusItems)
                 ? MultiplayerFeature.BonusItems
@@ -921,12 +921,16 @@ public static class MultiplayerSupport
             HiddenPiles = source.HiddenPiles,
             HiddenMap = source.HiddenMap,
             HiddenCards = source.HiddenCards,
+            HiddenRelics = source.HiddenRelics,
+            SightBonuses = new HashSet<string>(source.SightBonuses),
+            EventsInAnyAct = source.EventsInAnyAct,
             ReleaseOnVictory = source.ReleaseOnVictory,
             RemovedOpRelics = source.RemovedOpRelics,
             CampfireSanity = source.CampfireSanity,
             GoldSanity = source.GoldSanity,
             BonusItems = source.BonusItems.ToArray(),
             RunModifiers = source.RunModifiers.ToList(),
+            Boons = source.Boons.ToList(),
             EnemyHpScaling = source.EnemyHpScaling,
             EnemyDamageScaling = source.EnemyDamageScaling,
             DreadMode = source.DreadMode,
