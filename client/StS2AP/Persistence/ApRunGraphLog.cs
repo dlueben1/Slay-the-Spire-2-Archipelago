@@ -136,8 +136,6 @@ public sealed class ApRunGraphStore(string root)
     public const string ExportAllFormat = "sts2-ap-runs";
     public const int ExportVersion = 1;
 
-    public string RootDirectory => root;
-
     public string PathFor(long startTime) => Path.Combine(root, $"{startTime}.json");
 
     /// <summary>
@@ -321,11 +319,7 @@ public sealed class ApRunGraphArchive(string storageRoot)
         return Find(startTime)?.LoadSnapshot(startTime, out error);
     }
 
-    public void Delete(long startTime)
-    {
-        foreach (var store in Stores.Where(store => store.Exists(startTime) || store.HasSnapshot(startTime)).ToList())
-            store.Delete(startTime);
-    }
+    public void Delete(long startTime) => Find(startTime)?.Delete(startTime);
 
     /// <summary>Writes an export to <see cref="ExportsDirectory"/> and returns its full path.</summary>
     public string WriteExport(string fileName, JsonObject bundle) =>

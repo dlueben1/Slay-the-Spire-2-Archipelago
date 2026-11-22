@@ -14,6 +14,8 @@ namespace StS2AP.Utils
         private static readonly object _stateLock = new();
         private static BoundApSession? _boundSession;
         internal static bool HasAuthenticatedSlot => GetBoundSession() != null;
+        /// <summary>The slot this client is logged in to, kept while a dropped connection retries.</summary>
+        internal static ApSessionIdentity? BoundIdentity => GetBoundSession()?.Identity;
 
         private sealed record BoundApSession(
             ArchipelagoSession Session,

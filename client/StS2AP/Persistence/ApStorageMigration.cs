@@ -103,7 +103,7 @@ internal static class ApStorageMigration
                         }));
                     }
                     NoteSlot(identity.RoomSeed, identity.ApTeamId, identity.ApSlotId, null,
-                        identity.ServerAuthority, File.GetLastWriteTimeUtc(file));
+                        identity.ServerAuthority, new DateTimeOffset(File.GetLastWriteTimeUtc(file), TimeSpan.Zero));
                     File.Delete(file);
                 });
             }
@@ -126,7 +126,7 @@ internal static class ApStorageMigration
                     Attempt(bank, () =>
                     {
                         var (key, lastSaved) = banks.ImportLegacyBank(bank);
-                        NoteSlot(key.Owner.Seed, key.Owner.Team, key.Owner.Slot, null, null, lastSaved?.UtcDateTime);
+                        NoteSlot(key.Owner.Seed, key.Owner.Team, key.Owner.Slot, null, null, lastSaved);
                     });
                 }
                 RemoveIfEmpty(profile);
@@ -177,10 +177,12 @@ internal static class ApStorageMigration
                 }
                 Directory.Delete(destination, recursive: true);
             }
-            MoveDirectory(campaign, destination);
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            // Both folders are in the game's user folder, so this is a rename on one drive.
+            Directory.Move(campaign, destination);
             // "AP Slot N" is the placeholder an imported save got when the real name was unknown.
             bool realName = slotName is { Length: > 0 } && slotName != $"AP Slot {slot}";
-            NoteSlot(seed, team, slot, realName ? slotName : null, null, saved.UtcDateTime);
+            NoteSlot(seed, team, slot, realName ? slotName : null, null, saved);
         }
 
         private static DateTimeOffset LastSaved(JsonElement metadata) =>
@@ -234,27 +236,21 @@ internal static class ApStorageMigration
             if (node["profile_id"] == null && profileId != null)
                 node["profile_id"] = profileId;
 
-            string slotDirectory = FindSlotForRunGraph(seed, slotName, node["team"]?.GetValue<int>(), node["slot"]?.GetValue<int>());
+            string slotDirectory = FindSlotForRunGraph(seed, slotName);
             // The log knows the slot's name and when it was played, which a slot built from
             // pending checks or a checkpoint bank does not.
-            var info = ApStorageLayout.ReadSlotInfo(slotDirectory) ?? new ApStorageLayout.SlotInfo { Seed = seed };
-            info.SlotName ??= string.IsNullOrWhiteSpace(slotName) ? null : slotName;
-            if (node["start_time"]?.GetValue<long>() is long startTime)
-            {
-                var started = DateTimeOffset.FromUnixTimeSeconds(startTime);
-                if (info.LastPlayedUtc == null || started > info.LastPlayedUtc)
-                    info.LastPlayedUtc = started;
-            }
-            ApStorageLayout.WriteSlotInfo(slotDirectory, info);
+            DateTimeOffset? started = node["start_time"]?.GetValue<long>() is long startTime
+                ? DateTimeOffset.FromUnixTimeSeconds(startTime) : null;
+            ApStorageLayout.NoteSlot(slotDirectory, seed, null, null, slotName, null, started);
+
             string directory = ApStorageLayout.RunGraphsDirectory(slotDirectory);
             string destination = Path.Combine(directory, Path.GetFileName(log));
-            string snapshot = Path.ChangeExtension(log, ".last");
             if (!File.Exists(destination))
-            {
                 ApStorageLayout.WriteAtomically(destination, node.ToJsonString(RunGraphJson));
-                if (File.Exists(snapshot))
-                    File.Move(snapshot, Path.Combine(directory, Path.GetFileName(snapshot)), overwrite: true);
-            }
+            string snapshot = Path.ChangeExtension(log, ".last");
+            string snapshotDestination = Path.Combine(directory, Path.GetFileName(snapshot));
+            if (File.Exists(snapshot) && !File.Exists(snapshotDestination))
+                File.Move(snapshot, snapshotDestination);
             if (File.Exists(snapshot))
                 File.Delete(snapshot);
             File.Delete(log);
@@ -264,11 +260,8 @@ internal static class ApStorageMigration
         /// Old logs record the seed and slot name but not the team and slot. They join the one
         /// slot folder with that seed (and name, when there are several), or a folder for the seed.
         /// </summary>
-        private string FindSlotForRunGraph(string seed, string? slotName, int? team, int? slot)
+        private string FindSlotForRunGraph(string seed, string? slotName)
         {
-            if (team is int t && slot is int s)
-                return ApStorageLayout.SlotDirectory(storageRoot, seed, t, s);
-
             var sameSeed = ApStorageLayout.EnumerateSlotDirectories(storageRoot)
                 .Select(directory => (Directory: directory, Info: ApStorageLayout.ReadSlotInfo(directory)))
                 .Where(slotFolder => slotFolder.Info?.Seed == seed && slotFolder.Info.Slot != null)
@@ -293,24 +286,9 @@ internal static class ApStorageMigration
             File.Move(export, destination);
         }
 
-        /// <summary>Gives a migrated slot a slot.json, keeping what an earlier step recorded.</summary>
-        private void NoteSlot(string seed, int team, int slot, string? slotName, string? server, DateTime? lastPlayedUtc)
-        {
-            string directory = ApStorageLayout.SlotDirectory(storageRoot, seed, team, slot);
-            var info = ApStorageLayout.ReadSlotInfo(directory) ?? new ApStorageLayout.SlotInfo();
-            info.Seed = seed;
-            info.Team = team;
-            info.Slot = slot;
-            info.SlotName ??= slotName;
-            info.Server ??= server;
-            if (lastPlayedUtc is DateTime played)
-            {
-                var playedUtc = new DateTimeOffset(DateTime.SpecifyKind(played, DateTimeKind.Utc));
-                if (info.LastPlayedUtc == null || playedUtc > info.LastPlayedUtc)
-                    info.LastPlayedUtc = playedUtc;
-            }
-            ApStorageLayout.WriteSlotInfo(directory, info);
-        }
+        private void NoteSlot(string seed, int team, int slot, string? slotName, string? server, DateTimeOffset? played) =>
+            ApStorageLayout.NoteSlot(ApStorageLayout.SlotDirectory(storageRoot, seed, team, slot),
+                seed, team, slot, slotName, server, played);
 
         private void Attempt(string item, Action move)
         {
@@ -319,37 +297,11 @@ internal static class ApStorageMigration
                 move();
                 Moved++;
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException
-                or InvalidDataException or InvalidOperationException or KeyNotFoundException
-                or FormatException or ArgumentException)
+            catch (Exception ex)
             {
                 Failed++;
                 warn($"[AP storage] Left {item} in place: {ex.Message}");
             }
-        }
-
-        private static void MoveDirectory(string source, string destination)
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            try
-            {
-                Directory.Move(source, destination);
-            }
-            catch (IOException) when (!Directory.Exists(destination))
-            {
-                // Directory.Move cannot cross drives: copy everything, then remove the old folder.
-                CopyDirectory(source, destination);
-                Directory.Delete(source, recursive: true);
-            }
-        }
-
-        private static void CopyDirectory(string source, string destination)
-        {
-            Directory.CreateDirectory(destination);
-            foreach (string file in Directory.EnumerateFiles(source))
-                File.Copy(file, Path.Combine(destination, Path.GetFileName(file)), overwrite: true);
-            foreach (string directory in Directory.EnumerateDirectories(source))
-                CopyDirectory(directory, Path.Combine(destination, Path.GetFileName(directory)));
         }
 
         private static void RemoveIfEmpty(string directory)

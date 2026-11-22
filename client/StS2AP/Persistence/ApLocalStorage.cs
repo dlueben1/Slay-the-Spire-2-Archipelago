@@ -42,14 +42,12 @@ internal static class ApLocalStorage
     internal static string SlotDirectory(string seed, int team, int slot) =>
         ApStorageLayout.SlotDirectory(Root, seed, team, slot);
 
-    internal static string ExportsDirectory => ApStorageLayout.ExportsDirectory(Root);
-
     /// <summary>Marks the slot as just played. A failure only costs the cleanup list a date.</summary>
     internal static void NoteSlotPlayed(string seed, int team, int slot, string? slotName, string? server)
     {
         try
         {
-            ApStorageLayout.NoteSlotPlayed(Root, seed, team, slot, slotName, server, DateTimeOffset.UtcNow);
+            ApStorageLayout.NoteSlot(SlotDirectory(seed, team, slot), seed, team, slot, slotName, server, DateTimeOffset.UtcNow);
         }
         catch (Exception ex)
         {
@@ -58,17 +56,9 @@ internal static class ApLocalStorage
     }
 
     /// <summary>
-    /// The account folder the game saves into, such as <c>default/1</c> for a Steam account.
-    /// Multiplayer test instances each get their own, so they never share AP files.
+    /// The account folder the game saves into, such as <c>steam/&lt;id&gt;</c>, resolved the way the
+    /// game builds its own save store. Multiplayer test instances each get their own.
     /// </summary>
-    private static string ResolveAccountRoot()
-    {
-        ISaveStore saveStore = SaveManager.Instance?._saveStore
-            ?? throw new InvalidOperationException("The game's save manager is not ready yet.");
-        string path = saveStore.GetFullPath(string.Empty).TrimEnd('/', '\\');
-        path = path.Contains("://", StringComparison.Ordinal)
-            ? ProjectSettings.GlobalizePath(path)
-            : Path.GetFullPath(path);
-        return path.TrimEnd('/', '\\');
-    }
+    private static string ResolveAccountRoot() =>
+        ProjectSettings.GlobalizePath(UserDataPathProvider.GetAccountScopedBasePath(null)).TrimEnd('/', '\\');
 }

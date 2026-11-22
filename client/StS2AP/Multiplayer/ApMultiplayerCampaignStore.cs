@@ -124,7 +124,7 @@ public static class ApMultiplayerCampaignStore
 
             try
             {
-                CampaignMetadata metadata = ReadMetadata(campaignId);
+                CampaignMetadata metadata = ReadMetadata(directory, campaignId);
                 string? error = ValidateStoredCampaign(
                     metadata,
                     requirePayload: verifyPayloads && metadata.Status == CampaignStatus.Active
@@ -179,7 +179,7 @@ public static class ApMultiplayerCampaignStore
         if (saveError != null)
             throw new InvalidDataException(saveError);
         CampaignSnapshot snapshot = GetSnapshot(metadata, kind)!;
-        AtomicCopy(GetSnapshotPath(metadata.CampaignId, snapshot), GetActiveSavePath());
+        AtomicCopy(GetSnapshotPath(metadata, snapshot), GetActiveSavePath());
         _selectedCampaignId = metadata.CampaignId;
         IsStartingNewCampaign = false;
         LogUtility.Info(
@@ -196,7 +196,7 @@ public static class ApMultiplayerCampaignStore
             return saveError;
         CampaignSnapshot snapshot = GetSnapshot(metadata, kind)!;
         return ApCampaignCompatibility.GetError(
-            File.ReadAllText(GetSnapshotPath(metadata.CampaignId, snapshot)),
+            File.ReadAllText(GetSnapshotPath(metadata, snapshot)),
             ModEntry.ModId, ApRunData.RunSchemaVersion, metadata.Roster.Select(player => player.NetId));
     }
 
@@ -216,12 +216,12 @@ public static class ApMultiplayerCampaignStore
         }
     }
 
-    internal static void DeleteCampaign(string campaignId)
+    internal static void DeleteCampaign(CampaignMetadata campaign)
     {
-        string directory = GetCampaignDirectory(campaignId);
+        string directory = GetCampaignDirectory(campaign);
         if (Directory.Exists(directory))
             Directory.Delete(directory, recursive: true);
-        if (string.Equals(_selectedCampaignId, campaignId, StringComparison.Ordinal))
+        if (string.Equals(_selectedCampaignId, campaign.CampaignId, StringComparison.Ordinal))
         {
             DeleteCanonicalSaveIfPresent();
             _selectedCampaignId = null;
@@ -229,43 +229,27 @@ public static class ApMultiplayerCampaignStore
     }
 
     /// <summary>
-    /// Called before a slot's local folder is forgotten. Drops the selected campaign if it is that
-    /// slot's, and deletes the game's current multiplayer save when it is that slot's AP run, so
-    /// the next lobby cannot import it back. Returns whether the current save was deleted.
+    /// Called before slot folders are forgotten. Drops the selected campaign if it is in one of
+    /// them, and deletes the game's current multiplayer save when it is one of those slots' AP run,
+    /// so the next lobby cannot import it back. Returns whether that save was deleted.
     /// </summary>
-    internal static bool ReleaseSlot(string roomSeed, int teamId, int slotId)
+    internal static bool ReleaseSlots(IReadOnlyCollection<string> slotDirectories)
     {
         if (GameUtility.IsInRun || MultiplayerSupport.IsMultiplayerScope)
             throw new InvalidOperationException(
                 "Local AP data cannot be forgotten during a run or multiplayer setup."
             );
 
-        bool Matches(string seed, int team, int slot) =>
-            string.Equals(seed, roomSeed, StringComparison.Ordinal) && team == teamId && slot == slotId;
-
-        bool selectedInSlot = false;
-        if (_selectedCampaignId != null)
-        {
-            try
-            {
-                CampaignMetadata selected = ReadMetadata(_selectedCampaignId);
-                selectedInSlot = Matches(selected.ApRoomSeed, selected.ApTeamId, selected.ApSlotId);
-            }
-            catch (Exception ex) when (ex is IOException or JsonException or InvalidDataException)
-            {
-                // Unreadable metadata cannot prove the selection belongs to another slot.
-                selectedInSlot = true;
-            }
-        }
-        bool activeSaveInSlot = TryReadActiveSaveHostSlot(out string activeSeed, out int activeTeam, out int activeSlot)
-            && Matches(activeSeed, activeTeam, activeSlot);
-
-        if (selectedInSlot || activeSaveInSlot)
-            DeleteCanonicalSaveIfPresent();
-        if (selectedInSlot)
+        if (_selectedCampaignId is { } selected && slotDirectories.Any(slot =>
+                Directory.Exists(Path.Combine(ApStorageLayout.CampaignsDirectory(slot), selected))))
             _selectedCampaignId = null;
         IsStartingNewCampaign = false;
-        return activeSaveInSlot;
+
+        bool deleteActiveSave = TryReadActiveSaveHostSlot(out string seed, out int team, out int slot)
+            && slotDirectories.Contains(ApLocalStorage.SlotDirectory(seed, team, slot));
+        if (deleteActiveSave)
+            DeleteCanonicalSaveIfPresent();
+        return deleteActiveSave;
     }
 
     /// <summary>The AP slot the local host played in the game's current multiplayer save, if any.</summary>
@@ -402,8 +386,7 @@ public static class ApMultiplayerCampaignStore
             CompletedFloorCount = read.SaveData.MapPointHistory?.Sum(act => act.Count) ?? 0,
         };
 
-        Directory.CreateDirectory(GetCampaignDirectory(metadata));
-        metadata.ApCheckpoint = StoreSnapshot(campaignId, activeSavePath, now,
+        metadata.ApCheckpoint = StoreSnapshot(metadata, activeSavePath, now,
             metadata.Act, metadata.CompletedFloorCount);
         WriteMetadata(metadata);
         LogUtility.Info($"Imported existing multiplayer host save as AP campaign {campaignId}");
@@ -548,8 +531,9 @@ public static class ApMultiplayerCampaignStore
     private static void SyncSavedSnapshot(CampaignMetadata metadata, bool isApCheckpoint)
     {
         string campaignId = metadata.CampaignId;
-        CampaignMetadata? previous = File.Exists(GetMetadataPath(campaignId))
-            ? ReadMetadata(campaignId) : null;
+        string directory = GetCampaignDirectory(metadata);
+        CampaignMetadata? previous = File.Exists(Path.Combine(directory, MetadataFileName))
+            ? ReadMetadata(directory, campaignId) : null;
         if (previous != null)
         {
             if (previous.RunId != metadata.RunId
@@ -565,8 +549,7 @@ public static class ApMultiplayerCampaignStore
         CampaignSnapshot? previousRecovery = previous?.FloorRecovery;
         CampaignSnapshot? previousCheckpoint = previous?.ApCheckpoint;
 
-        Directory.CreateDirectory(GetCampaignDirectory(metadata));
-        CampaignSnapshot snapshot = StoreSnapshot(campaignId, GetActiveSavePath(), metadata.LastSavedAtUtc,
+        CampaignSnapshot snapshot = StoreSnapshot(metadata, GetActiveSavePath(), metadata.LastSavedAtUtc,
             metadata.Act, metadata.CompletedFloorCount);
         metadata.FloorRecovery = snapshot;
         if (isApCheckpoint)
@@ -709,10 +692,13 @@ public static class ApMultiplayerCampaignStore
         return null;
     }
 
-    private static CampaignMetadata ReadMetadata(string campaignId)
+    private static CampaignMetadata ReadMetadata(string campaignId) =>
+        ReadMetadata(GetCampaignDirectory(campaignId), campaignId);
+
+    private static CampaignMetadata ReadMetadata(string directory, string campaignId)
     {
         ValidateCampaignId(campaignId);
-        string json = File.ReadAllText(GetMetadataPath(campaignId));
+        string json = File.ReadAllText(Path.Combine(directory, MetadataFileName));
         CampaignMetadata metadata = JsonSerializer.Deserialize<CampaignMetadata>(json, JsonOptions)
             ?? throw new InvalidDataException("Campaign metadata was empty.");
         if (!string.Equals(metadata.CampaignId, campaignId, StringComparison.Ordinal))
@@ -725,9 +711,8 @@ public static class ApMultiplayerCampaignStore
     private static void WriteMetadata(CampaignMetadata metadata)
     {
         ValidateCampaignId(metadata.CampaignId);
-        Directory.CreateDirectory(GetCampaignDirectory(metadata));
         AtomicWriteText(
-            GetMetadataPath(metadata.CampaignId),
+            Path.Combine(GetCampaignDirectory(metadata), MetadataFileName),
             JsonSerializer.Serialize(metadata, JsonOptions)
         );
     }
@@ -748,23 +733,14 @@ public static class ApMultiplayerCampaignStore
             .SelectMany(Directory.EnumerateDirectories)
             .ToArray();
 
-    /// <summary>
-    /// An existing campaign's folder, wherever its slot is. A campaign not created yet belongs to
-    /// the connected slot; creation goes through <see cref="GetCampaignDirectory(CampaignMetadata)"/>.
-    /// </summary>
+    /// <summary>An existing campaign's folder, found by ID in whichever slot holds it.</summary>
     private static string GetCampaignDirectory(string campaignId)
     {
         ValidateCampaignId(campaignId);
-        foreach (string slotDirectory in ApStorageLayout.EnumerateSlotDirectories(ApLocalStorage.Root))
-        {
-            string candidate = Path.Combine(ApStorageLayout.CampaignsDirectory(slotDirectory), campaignId);
-            if (Directory.Exists(candidate))
-                return candidate;
-        }
-        if (!TryGetCurrentIdentity(out string roomSeed, out int teamId, out int slotId))
-            throw new InvalidOperationException("The campaign's AP slot is unknown.");
-        return Path.Combine(ApStorageLayout.CampaignsDirectory(
-            ApLocalStorage.SlotDirectory(roomSeed, teamId, slotId)), campaignId);
+        return ApStorageLayout.EnumerateSlotDirectories(ApLocalStorage.Root)
+            .Select(slot => Path.Combine(ApStorageLayout.CampaignsDirectory(slot), campaignId))
+            .FirstOrDefault(Directory.Exists)
+            ?? throw new DirectoryNotFoundException($"AP campaign {campaignId} was not found.");
     }
 
     /// <summary>The campaign's folder inside the AP slot its metadata names.</summary>
@@ -774,9 +750,6 @@ public static class ApMultiplayerCampaignStore
         return Path.Combine(ApStorageLayout.CampaignsDirectory(ApLocalStorage.SlotDirectory(
             metadata.ApRoomSeed, metadata.ApTeamId, metadata.ApSlotId)), metadata.CampaignId);
     }
-
-    private static string GetMetadataPath(string campaignId) =>
-        Path.Combine(GetCampaignDirectory(campaignId), MetadataFileName);
 
     internal static CampaignSnapshot? GetSnapshot(CampaignMetadata metadata, SaveKind kind) =>
         kind == SaveKind.FloorRecovery ? metadata.FloorRecovery : metadata.ApCheckpoint;
@@ -788,7 +761,7 @@ public static class ApMultiplayerCampaignStore
             return "No save has been recorded yet.";
         try
         {
-            return CampaignSaveFiles.Verify(GetCampaignDirectory(metadata.CampaignId),
+            return CampaignSaveFiles.Verify(GetCampaignDirectory(metadata),
                 snapshot.FileName, snapshot.Sha256);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
@@ -805,7 +778,7 @@ public static class ApMultiplayerCampaignStore
             return null;
         try
         {
-            return File.ReadAllText(GetSnapshotPath(metadata.CampaignId, snapshot));
+            return File.ReadAllText(GetSnapshotPath(metadata, snapshot));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
@@ -813,13 +786,13 @@ public static class ApMultiplayerCampaignStore
         }
     }
 
-    private static string GetSnapshotPath(string campaignId, CampaignSnapshot snapshot) =>
-        CampaignSaveFiles.GetPath(GetCampaignDirectory(campaignId), snapshot.FileName, snapshot.Sha256);
+    private static string GetSnapshotPath(CampaignMetadata metadata, CampaignSnapshot snapshot) =>
+        CampaignSaveFiles.GetPath(GetCampaignDirectory(metadata), snapshot.FileName, snapshot.Sha256);
 
     private static CampaignSnapshot StoreSnapshot(
-        string campaignId, string source, DateTimeOffset savedAt, int act, int floors)
+        CampaignMetadata metadata, string source, DateTimeOffset savedAt, int act, int floors)
     {
-        var stored = CampaignSaveFiles.Store(GetCampaignDirectory(campaignId), source);
+        var stored = CampaignSaveFiles.Store(GetCampaignDirectory(metadata), source);
         return new CampaignSnapshot
         {
             FileName = stored.FileName,
@@ -837,7 +810,7 @@ public static class ApMultiplayerCampaignStore
             return;
         try
         {
-            File.Delete(GetSnapshotPath(metadata.CampaignId, old));
+            File.Delete(GetSnapshotPath(metadata, old));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {

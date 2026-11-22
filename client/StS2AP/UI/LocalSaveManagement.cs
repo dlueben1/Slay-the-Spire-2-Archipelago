@@ -74,12 +74,16 @@ internal static class LocalSaveManagement
 
     private static IReadOnlyList<ApStorageLayout.SlotSummary> SelectSlots(bool onlyUnplayed)
     {
-        string? connected = ArchipelagoClient.IsConnected && ArchipelagoClient.Session is { } session
-            ? ApLocalStorage.SlotDirectory(session.RoomState.Seed, session.ConnectionInfo.Team, session.ConnectionInfo.Slot)
-            : null;
+        // The slot stays bound after a dropped connection, while its run continues offline. Its
+        // seed's folder of old run graphs whose slot is unknown is kept with it.
+        ApSessionIdentity? current = PendingCheckUtility.BoundIdentity;
+        bool IsCurrent(ApStorageLayout.SlotSummary slot) => current != null
+            && slot.Info?.Seed == current.RoomSeed
+            && (slot.Info.Slot == null || (slot.Info.Team == current.ApTeamId && slot.Info.Slot == current.ApSlotId));
+
         DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddDays(-UnplayedDays);
         return ApStorageLayout.ListSlots(ApLocalStorage.Root)
-            .Where(slot => slot.Directory != connected)
+            .Where(slot => !IsCurrent(slot))
             .Where(slot => !onlyUnplayed || slot.LastActivityUtc < cutoff)
             .ToArray();
     }
@@ -89,9 +93,7 @@ internal static class LocalSaveManagement
         var lines = slots.Take(ListedSlots).Select(slot =>
         {
             string line = $"{slot.DisplayName}: last played {slot.LastActivityUtc.ToLocalTime():MMM d yyyy}, {FormatSize(slot.Bytes)}";
-            return slot.UnsentChecks > 0
-                ? $"{line}, {slot.UnsentChecks} UNSENT {(slot.UnsentChecks == 1 ? "CHECK" : "CHECKS")}"
-                : line;
+            return slot.HasUnsentChecks ? $"{line}, HAS UNSENT CHECKS" : line;
         }).ToList();
         if (slots.Count > ListedSlots)
             lines.Add($"and {slots.Count - ListedSlots} more");
@@ -110,17 +112,20 @@ internal static class LocalSaveManagement
         }
 
         int forgotten = 0;
-        long bytes = 0;
         try
         {
+            // A multiplayer save of one of these slots would otherwise be imported back as a campaign.
+            if (ApMultiplayerCampaignStore.ReleaseSlots(slots.Select(slot => slot.Directory).ToArray()))
+                LogUtility.Info("Deleted the current multiplayer save, which belonged to a forgotten AP seed.");
             foreach (var slot in slots)
             {
-                Forget(slot);
+                if (Directory.Exists(slot.Directory))
+                    Directory.Delete(slot.Directory, recursive: true);
+                LogUtility.Info($"Forgot local AP data for {slot.DisplayName}: {slot.Directory}");
                 forgotten++;
-                bytes += slot.Bytes;
             }
             NotificationUtility.ShowRawText(
-                $"Forgot {forgotten} AP {(forgotten == 1 ? "seed" : "seeds")} ({FormatSize(bytes)}).");
+                $"Forgot {forgotten} AP {(forgotten == 1 ? "seed" : "seeds")} ({FormatSize(slots.Sum(slot => slot.Bytes))}).");
         }
         catch (Exception ex)
         {
@@ -132,20 +137,6 @@ internal static class LocalSaveManagement
         {
             requestRefresh();
         }
-    }
-
-    private static void Forget(ApStorageLayout.SlotSummary slot)
-    {
-        // A multiplayer save of this slot would otherwise be imported back as a campaign.
-        if (slot.Info is { Seed.Length: > 0, Team: int team, Slot: int apSlot } info)
-        {
-            bool deletedActiveSave = ApMultiplayerCampaignStore.ReleaseSlot(info.Seed, team, apSlot);
-            if (deletedActiveSave)
-                LogUtility.Info($"Deleted the current multiplayer save of AP seed {info.Seed}.");
-        }
-        if (Directory.Exists(slot.Directory))
-            Directory.Delete(slot.Directory, recursive: true);
-        LogUtility.Info($"Forgot local AP data for {slot.DisplayName}: {slot.Directory}");
     }
 
     private static string FormatSize(long bytes) => bytes switch

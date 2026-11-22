@@ -123,31 +123,24 @@ internal static class ApStorageLayout
         }
     }
 
-    internal static void WriteSlotInfo(string slotDirectory, SlotInfo info)
-    {
-        Directory.CreateDirectory(slotDirectory);
-        WriteAtomically(Path.Combine(slotDirectory, SlotInfoFileName),
-            JsonSerializer.Serialize(info, SlotInfoOptions));
-    }
-
     /// <summary>
-    /// Records that a slot was just played, keeping what an earlier write knew. Fields passed as
-    /// null leave the stored value alone.
+    /// Records what is known about a slot in its slot.json, keeping what earlier writes knew:
+    /// null or empty values leave the stored one alone, and the later play date wins.
     /// </summary>
-    internal static void NoteSlotPlayed(string root, string seed, int team, int slot,
-        string? slotName, string? server, DateTimeOffset now)
+    internal static void NoteSlot(string slotDirectory, string seed, int? team, int? slot,
+        string? slotName, string? server, DateTimeOffset? played)
     {
-        string directory = SlotDirectory(root, seed, team, slot);
-        SlotInfo info = ReadSlotInfo(directory) ?? new SlotInfo();
+        SlotInfo info = ReadSlotInfo(slotDirectory) ?? new SlotInfo();
         info.Seed = seed;
-        info.Team = team;
-        info.Slot = slot;
+        info.Team = team ?? info.Team;
+        info.Slot = slot ?? info.Slot;
         if (!string.IsNullOrWhiteSpace(slotName))
             info.SlotName = slotName;
         if (!string.IsNullOrWhiteSpace(server))
             info.Server = server;
-        info.LastPlayedUtc = now;
-        WriteSlotInfo(directory, info);
+        if (played > (info.LastPlayedUtc ?? DateTimeOffset.MinValue))
+            info.LastPlayedUtc = played;
+        WriteAtomically(Path.Combine(slotDirectory, SlotInfoFileName), JsonSerializer.Serialize(info, SlotInfoOptions));
     }
 
     /// <summary>What one slot folder holds, for the cleanup buttons.</summary>
@@ -155,7 +148,7 @@ internal static class ApStorageLayout
         string Directory,
         SlotInfo? Info,
         long Bytes,
-        int UnsentChecks,
+        bool HasUnsentChecks,
         DateTimeOffset LastActivityUtc)
     {
         public string DisplayName
@@ -187,38 +180,16 @@ internal static class ApStorageLayout
             // recorded date says when the slot was last played, so it wins when there is one.
             DateTimeOffset lastActivity = info?.LastPlayedUtc
                 ?? new DateTimeOffset(DateTime.SpecifyKind(newestWrite, DateTimeKind.Utc));
-            result.Add(new SlotSummary(directory, info, bytes, CountUnsentChecks(directory), lastActivity));
+            result.Add(new SlotSummary(directory, info, bytes, HasUnsentChecks(directory), lastActivity));
         }
         return result.OrderByDescending(slot => slot.LastActivityUtc).ToArray();
     }
 
-    internal static int CountUnsentChecks(string slotDirectory)
+    // An outbox file is deleted once the server has every check in it, so any file means unsent checks.
+    private static bool HasUnsentChecks(string slotDirectory)
     {
         string directory = PendingChecksDirectory(slotDirectory);
-        if (!Directory.Exists(directory))
-            return 0;
-        var ids = new HashSet<long>();
-        int unreadable = 0;
-        foreach (string file in Directory.EnumerateFiles(directory, "*.json"))
-        {
-            try
-            {
-                using JsonDocument document = JsonDocument.Parse(File.ReadAllText(file));
-                if (document.RootElement.TryGetProperty("location_ids", out JsonElement list)
-                    && list.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (JsonElement id in list.EnumerateArray())
-                        if (id.TryGetInt64(out long value))
-                            ids.Add(value);
-                }
-            }
-            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
-            {
-                // An unreadable outbox still counts as one: forgetting it might lose checks.
-                unreadable++;
-            }
-        }
-        return ids.Count + unreadable;
+        return Directory.Exists(directory) && Directory.EnumerateFiles(directory, "*.json").Any();
     }
 
     internal static void WriteAtomically(string destination, string contents)

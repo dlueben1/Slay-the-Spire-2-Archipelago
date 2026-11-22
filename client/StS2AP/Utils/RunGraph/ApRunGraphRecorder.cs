@@ -30,11 +30,8 @@ internal static class ApRunGraphRecorder
     internal static ReadSaveResult<RunHistory> LoadRunHistory(ApRunGraphLog log)
     {
         var saves = SaveManager.Instance;
-        string fileName = $"{log.StartTime}.run";
-        if (log.ProfileId is not { } profileId || profileId == saves.CurrentProfileId)
-            return saves.LoadRunHistory(fileName);
-        return new RunHistorySaveManager(profileId, saves._saveStore, saves._migrationManager)
-            .LoadHistory(fileName);
+        return new RunHistorySaveManager(log.ProfileId ?? saves.CurrentProfileId, saves._saveStore, saves._migrationManager)
+            .LoadHistory($"{log.StartTime}.run");
     }
 
     /// <summary>Opens the log for a new or continued run, or stops recording for a non-AP run.</summary>
