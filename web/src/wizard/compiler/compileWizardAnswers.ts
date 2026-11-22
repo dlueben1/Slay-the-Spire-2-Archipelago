@@ -20,6 +20,7 @@ import { applyBoonOptions } from "./applyBoonOptions";
 import { applyChallengeOptions } from "./applyChallengeOptions";
 import { applyChecksOptions } from "./applyChecksOptions";
 import { applyDeathLinkOptions } from "./applyDeathLinkOptions";
+import { applyItemOptions } from "./applyItemOptions";
 import { applyItemPoolOptions } from "./applyItemPoolOptions";
 import { applyProgressionOptions } from "./applyProgressionOptions";
 import { applyRunOptions } from "./applyRunOptions";
@@ -70,6 +71,7 @@ export function compileWizardAnswers(
   applyChallengeOptions(options, answers.challenges, catalog);
   applyDeathLinkOptions(options, answers.deathLink, catalog);
   applyProgressionOptions(options, answers.progression, catalog);
+  applyItemOptions(options, answers.items, answers.characters, catalog);
 
   // Validation is deliberately last: it checks the final product, not player intent.
   validateOptions(options, catalog);

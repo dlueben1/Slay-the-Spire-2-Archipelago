@@ -9,6 +9,7 @@ import ChecksStep from "../components/wizard/steps/ChecksStep.vue";
 import DeathLinkStep from "../components/wizard/steps/DeathLinkStep.vue";
 import ItemPoolStep from "../components/wizard/steps/ItemPoolStep.vue";
 import ProgressionStep from "../components/wizard/steps/ProgressionStep.vue";
+import ItemsStep from "../components/wizard/steps/ItemsStep.vue";
 import ReviewStep from "../components/wizard/steps/ReviewStep.vue";
 import RunSettingsStep from "../components/wizard/steps/RunSettingsStep.vue";
 import ShopsStep from "../components/wizard/steps/ShopsStep.vue";
@@ -48,6 +49,7 @@ const sectionStepComponents: Record<WizardSectionKey, Component> = {
   challenges: ChallengesStep,
   deathLink: DeathLinkStep,
   progression: ProgressionStep,
+  items: ItemsStep,
 };
 
 const availableCharacters = optionCatalog.options.characters?.valid_keys ?? [];
@@ -117,7 +119,7 @@ function getGuidedSettings() {
   const compiledOptions = compileCurrentAnswers();
 
   // Delegate ordered key selection to the registry shared with section compilers.
-  return selectGuidedOptions(compiledOptions);
+  return selectGuidedOptions(compiledOptions, answers.keptOptions);
 }
 
 /** Comments for the generated YAML, pointing back to this copy of the builder. */
