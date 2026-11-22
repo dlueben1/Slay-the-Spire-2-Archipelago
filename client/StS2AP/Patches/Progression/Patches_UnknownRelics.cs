@@ -1,32 +1,36 @@
-// Uncomment to hide relic icons as well. Played 2026-11-22 and turned off: with the art hidden too,
-// there was nothing left to decide, only relics to have.
-// #define UNKNOWN_RELIC_ICONS
-
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Models.Relics;
+using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.Events;
 using MegaCrit.Sts2.Core.Nodes.Relics;
 using MegaCrit.Sts2.Core.Nodes.Screens.InspectScreens;
+using MegaCrit.Sts2.Core.Nodes.Vfx;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Utils.Combat;
 
 namespace StS2AP.Patches;
 
 /// <summary>
-/// Hidden Relics also makes relics unknown until a Relic Sight arrives: their name, text and keyword
-/// tooltips are replaced everywhere, owned or offered, while their icons stay. Every screen reads
-/// these from the relic model, so patching the model's getters covers the top bar, rewards, chests,
-/// shops, events, Ancient options, the inspect screen and teammates' relics at once. The mod's own
-/// relics stay known, because they show AP state such as banked relic rewards.
+/// Hidden Relics makes relics unknown until a Relic Sight arrives: their name, text, keyword
+/// tooltips and icon are replaced everywhere, owned or offered. Every screen reads these from the
+/// relic model, so patching the model's getters covers rewards, chests, shops, events, the inspect
+/// screen and teammates' relics at once; a few nodes that set textures themselves are patched too.
+/// Relics still flash, glow and grey out, so the player can work them out by watching. The mod's
+/// own relics stay known, because they show AP state such as banked relic rewards.
 /// </summary>
 public static class Patches_UnknownRelics
 {
+    private static readonly string UnknownIconPath = ImageHelper.GetImagePath("packed/common_ui/locked_model.png");
+
+    private static Texture2D UnknownIcon => ResourceLoader.Load<Texture2D>(UnknownIconPath, null, ResourceLoader.CacheMode.Reuse);
+
     private static LocString UnknownTitle => new("gameplay_ui", "AP_RELIC_SIGHT_UNKNOWN.title");
     private static LocString UnknownDescription => new("gameplay_ui", "AP_RELIC_SIGHT_UNKNOWN.description");
 
@@ -137,11 +141,6 @@ public static class Patches_UnknownRelics
         }
     }
 
-#if UNKNOWN_RELIC_ICONS
-    private static readonly string UnknownIconPath = ImageHelper.GetImagePath("packed/common_ui/locked_model.png");
-
-    private static Texture2D UnknownIcon => ResourceLoader.Load<Texture2D>(UnknownIconPath, null, ResourceLoader.CacheMode.Reuse);
-
     /// <summary>
     /// Both icon sizes become the Compendium's locked-relic icon. A dark silhouette, the Compendium's
     /// look for unseen relics, would still give a relic away by its shape.
@@ -197,6 +196,48 @@ public static class Patches_UnknownRelics
         }
     }
 
+    /// <summary>
+    /// The burst over the top bar when a relic triggers or is picked up uses the relic's art as its
+    /// particles. Rebuilt with the unknown icon, because the texture is set on a node made inside the
+    /// method. The rest matches the game's DoFlash on both supported versions.
+    /// </summary>
+    [HarmonyPatch(typeof(NRelicInventoryHolder), nameof(NRelicInventoryHolder.DoFlash))]
+    public static class HideTopBarFlashArt
+    {
+        [HarmonyPrefix]
+        public static bool Prefix(NRelicInventoryHolder __instance)
+        {
+            if (!Hides(__instance._relic.Model))
+                return true;
+            if (NRun.Instance is not { } run)
+                return false;
+            Node2D flash = PreloadManager.Cache.GetScene(NRelicInventoryHolder._flashPath)
+                .Instantiate<Node2D>(PackedScene.GenEditState.Disabled);
+            flash.GetNode<GpuParticles2D>("Particles").Texture = UnknownIcon;
+            flash.GlobalPosition = __instance.GlobalPosition + __instance.Size * 0.5f;
+            run.GlobalUi.AboveTopBarVfxContainer.AddChildSafely(flash);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// The flash over a creature shows the relic's art three times. _Ready sets those textures before
+    /// the effect's first await, so they can be replaced right after.
+    /// </summary>
+    [HarmonyPatch(typeof(NRelicFlashVfx), nameof(NRelicFlashVfx._Ready))]
+    public static class HideCreatureFlashArt
+    {
+        [HarmonyPostfix]
+        public static void Postfix(NRelicFlashVfx __instance)
+        {
+            if (__instance._relic is not { } relic || !Hides(relic))
+                return;
+            __instance._sprite.Texture = UnknownIcon;
+            __instance._sprite2.Texture = UnknownIcon;
+            __instance._sprite3.Texture = UnknownIcon;
+        }
+    }
+
     /// <summary>The outline follows the relic's shape, so unknown relics draw none.</summary>
     [HarmonyPatch(typeof(RelicModel), nameof(RelicModel.IconOutline), MethodType.Getter)]
     public static class HideOutline
@@ -208,5 +249,4 @@ public static class Patches_UnknownRelics
                 __result = null;
         }
     }
-#endif
 }
