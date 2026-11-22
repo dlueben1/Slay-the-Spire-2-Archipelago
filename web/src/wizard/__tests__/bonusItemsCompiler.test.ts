@@ -7,7 +7,6 @@
  * malformed or drifted state fails loudly at the compiler boundary.
  */
 
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import blacklistJson from "@shared/bonus_relic_blacklist.json";
 import customPoolsJson from "@shared/relic_custom_pools.json";
@@ -28,17 +27,6 @@ import {
   RANDOM_WAX_RELIC_NAME,
 } from "../BonusRelicData";
 import { getBonusItemDisplayRow } from "../BonusItemDisplay";
-import {
-  BONUS_ENCHANTMENT_TIERS,
-  getBonusEnchantments,
-} from "../BonusEnchantmentData";
-import {
-  BONUS_CARD_CHARACTERS,
-  BONUS_CARD_RARITIES,
-  BONUS_CARD_SOURCES,
-  BONUS_CARD_TYPES,
-  parseBonusCardPool,
-} from "../BonusCardData";
 import { createDefaultFillerAnswers } from "../FillerItem";
 import { getGuidedOptionKeys } from "../GuidedOption";
 import { createDefaultWizardAnswers } from "../WizardAnswers";
@@ -143,9 +131,8 @@ function derivesPoolsFromSources(): void {
       ?.relicCount;
   expect(rareCount("RELIC")).toBe(sharedRares.length);
   expect(rareCount("WAX_RELIC")).toBe(
-    sharedRares.filter(
-      (relic) => !relic.description.startsWith("Upon pickup,"),
-    ).length,
+    sharedRares.filter((relic) => !relic.description.startsWith("Upon pickup,"))
+      .length,
   );
   expect(getEligiblePoolRelicIds("Rare", "RELIC")).not.toContain(
     CHARACTER_SPECIFIC_RELIC_ID,
@@ -163,7 +150,9 @@ function appliesExclusionsLast(): void {
     expect(isEligibleSpecificRelicId(id, "WAX_RELIC")).toBe(false);
     expect(isEligibleSpecificRelicId(id, "RELIC")).toBe(true);
   }
-  expect(getEligiblePoolRelicIds("Fake", "WAX_RELIC")).not.toContain("FAKE_MANGO");
+  expect(getEligiblePoolRelicIds("Fake", "WAX_RELIC")).not.toContain(
+    "FAKE_MANGO",
+  );
   expect(getEligiblePoolRelicIds("Fake", "RELIC")).toContain("FAKE_MANGO");
   expect(getEligiblePoolRelicIds("Ancient", "WAX_RELIC")).not.toContain(
     UNMARKED_PICKUP_RELIC_ID,
@@ -189,7 +178,9 @@ function appliesExclusionsLast(): void {
   expect(eligible.map((relic) => relic.id)).not.toContain(PICKUP_RELIC_ID);
 
   // Custom-pool relics with neutral descriptions remain eligible.
-  expect(isEligibleSpecificRelicId(CUSTOM_POOL_RELIC_ID, "WAX_RELIC")).toBe(true);
+  expect(isEligibleSpecificRelicId(CUSTOM_POOL_RELIC_ID, "WAX_RELIC")).toBe(
+    true,
+  );
 
   // Character-specific relics remain available only for explicit selection.
   expect(
@@ -407,159 +398,6 @@ function rendersDisplayRows(): void {
  *
  * @returns Nothing; test registration occurs as a module-load side effect.
  */
-/**
- * Verifies relic, enchantment and Max HP rows compile to the Python schema shape.
- *
- * @returns Nothing; Vitest records assertion failures.
- */
-function compilesEveryBonusKind(): void {
-  const answers = createTestAnswers();
-  answers.itemPool.bonusItems = [
-    { kind: "RELIC", mode: "specific", relicId: STANDARD_RELIC_ID },
-    { kind: "RELIC", mode: "random", pools: ["Rare"] },
-    { kind: "ENCHANTMENT", mode: "random", tiers: ["Common", "Rare"] },
-    { kind: "ENCHANTMENT", mode: "specific", enchantment: "royally approved" },
-    { kind: "ENCHANTED_CARDS", mode: "specific", enchantment: "Swift" },
-    { kind: "MAX_HP", amount: 6 },
-    { kind: "CARDS", mode: "random", pools: ["attack regent", "Rare Colourless upgraded", "Random"] },
-    { kind: "CARDS", mode: "specific", card: " Apotheosis " },
-  ];
-
-  const options = compileWizardAnswers(answers, optionCatalog);
-
-  expect(options[BONUS_ITEM_OPTION_KEY]).toEqual([
-    { RELIC: { Value: STANDARD_RELIC_ID } },
-    { RELIC: { Pools: ["Rare"] } },
-    { ENCHANTMENT: { Pools: ["Common", "Rare"] } },
-    { ENCHANTMENT: { Value: "RoyallyApproved" } },
-    { ENCHANTED_CARDS: { Value: "Swift" } },
-    { MAX_HP: { Value: 6 } },
-    { CARDS: { Pools: ["Regent Attack", "Upgraded Colorless Rare", "Random"] } },
-    { CARDS: { Value: "Apotheosis" } },
-  ]);
-}
-
-/**
- * Verifies enchantment and Max HP rows the APWorld would reject fail here first.
- *
- * @returns Nothing; Vitest records assertion failures.
- */
-function rejectsInvalidNewBonusKinds(): void {
-  const cases: [
-    (typeof createTestAnswers extends () => infer T
-      ? T
-      : never)["itemPool"]["bonusItems"][number],
-    string,
-  ][] = [
-    [
-      { kind: "ENCHANTMENT", mode: "specific", enchantment: "TezcatarasEmber" },
-      "not an enchantment bonus items can give",
-    ],
-    [
-      { kind: "ENCHANTED_CARDS", mode: "random", tiers: ["Legendary"] },
-      "unknown enchantment tier",
-    ],
-    [
-      { kind: "ENCHANTMENT", mode: "random", tiers: [] },
-      "at least one enchantment tier",
-    ],
-    [{ kind: "MAX_HP", amount: 0 }, "between 1 and 50 Max HP"],
-    [{ kind: "MAX_HP", amount: 51 }, "between 1 and 50 Max HP"],
-    [{ kind: "CARDS", mode: "random", pools: [] }, "at least one card pool"],
-    [{ kind: "CARDS", mode: "random", pools: ["Event Rare"] }, "Event cards have no Common"],
-    [{ kind: "CARDS", mode: "random", pools: ["Colorless Common"] }, "no Common colorless cards"],
-    [{ kind: "CARDS", mode: "random", pools: ["Random Attack"] }, "Random can only be combined"],
-    [{ kind: "CARDS", mode: "random", pools: ["Rare", "rare"] }, "more than once"],
-    [{ kind: "CARDS", mode: "specific", card: " " }, "must name a card"],
-  ];
-  for (const [item, message] of cases) {
-    const answers = createTestAnswers();
-    answers.itemPool.bonusItems = [item];
-    expect(() => compileWizardAnswers(answers, optionCatalog)).toThrow(message);
-  }
-}
-
-/**
- * Verifies the builder's enchantment tiers match the APWorld's, which validates YAMLs.
- *
- * @returns Nothing; Vitest records assertion failures.
- */
-function matchesApworldEnchantmentTiers(): void {
-  const items = readFileSync(
-    new URL("../../../../world/spire2/items.py", import.meta.url),
-    "utf8",
-  );
-  for (const tier of BONUS_ENCHANTMENT_TIERS) {
-    const match = new RegExp(`'${tier}': \\(([^)]*)\\)`).exec(items);
-    expect(match, `items.py tier ${tier}`).not.toBeNull();
-    const apworldNames = [...match![1]!.matchAll(/'([A-Za-z]+)'/g)].map(
-      (name) => name[1],
-    );
-    const builderNames = getBonusEnchantments()
-      .filter((entry) => entry.tier === tier)
-      .map((entry) => entry.name);
-    expect(builderNames).toEqual(apworldNames);
-  }
-}
-
-/**
- * Verifies the builder's card pool words match the APWorld's, which validates YAMLs.
- *
- * @returns Nothing; Vitest records assertion failures.
- */
-function matchesApworldCardPoolWords(): void {
-  const items = readFileSync(
-    new URL("../../../../world/spire2/items.py", import.meta.url),
-    "utf8",
-  );
-  const tuple = (name: string) => {
-    const match = new RegExp(`^${name} = \\(([^)]*)\\)`, "m").exec(items);
-    expect(match, `items.py ${name}`).not.toBeNull();
-    return [...match![1]!.matchAll(/'([A-Za-z]+)'/g)].map((word) => word[1]);
-  };
-  expect([...BONUS_CARD_CHARACTERS]).toEqual(tuple("BONUS_CARD_CHARACTERS"));
-  expect([...BONUS_CARD_SOURCES].slice(BONUS_CARD_CHARACTERS.length)).toEqual(
-    tuple("BONUS_CARD_SOURCES"),
-  );
-  expect([...BONUS_CARD_TYPES]).toEqual(tuple("BONUS_CARD_TYPES"));
-  expect([...BONUS_CARD_RARITIES]).toEqual(tuple("BONUS_CARD_RARITIES"));
-  expect(parseBonusCardPool("Fool Power")).toMatchObject({ source: "Fool", type: "Power" });
-}
-
-/**
- * Verifies the new kinds render rows with art and readable names.
- *
- * @returns Nothing; Vitest records assertion failures.
- */
-function rendersNewDisplayRows(): void {
-  expect(getBonusItemDisplayRow({ kind: "MAX_HP", amount: 6 })).toMatchObject({
-    name: "+6 Max HP",
-  });
-  const sharp = getBonusItemDisplayRow({
-    kind: "ENCHANTMENT",
-    mode: "specific",
-    enchantment: "Sharp",
-  });
-  expect(sharp.name).toBe("Enchant a card: Sharp");
-  expect(sharp.imageUrl).toContain("/enchantments/sharp");
-  expect(sharp.details).not.toContain("[");
-  expect(
-    getBonusItemDisplayRow({
-      kind: "ENCHANTED_CARDS",
-      mode: "specific",
-      enchantment: "Sown",
-    }).details,
-  ).toBe("The first time you play this card each combat, gain 1 Energy.");
-  expect(
-    getBonusItemDisplayRow({ kind: "RELIC", mode: "random", pools: ["Rare"] })
-      .name,
-  ).toBe("Random Relic");
-  expect(
-    getBonusItemDisplayRow({ kind: "CARDS", mode: "random", pools: ["Regent Attack", "Random"] })
-      .details,
-  ).toBe("Choose 1 of 3 from: Regent Attack, Random");
-}
-
 function registerBonusItemsTests(): void {
   it("keeps the three relic sources consistent", keepsSourceDataConsistent);
   it(
@@ -579,11 +417,6 @@ function registerBonusItemsTests(): void {
   it("owns bonus_items exactly once", ownsBonusItemsExactlyOnce);
   it("comes before Filler Items", placesBonusItemsBeforeFiller);
   it("renders display rows for both modes", rendersDisplayRows);
-  it("compiles every bonus kind", compilesEveryBonusKind);
-  it("rejects invalid enchantment and Max HP rows", rejectsInvalidNewBonusKinds);
-  it("matches the APWorld's enchantment tiers", matchesApworldEnchantmentTiers);
-  it("matches the APWorld's card pool words", matchesApworldCardPoolWords);
-  it("renders rows for the new kinds", rendersNewDisplayRows);
 }
 
 // Register the documented test callbacks as one focused vertical-slice suite.

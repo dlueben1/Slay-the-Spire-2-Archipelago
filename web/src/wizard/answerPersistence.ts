@@ -9,7 +9,6 @@
  * value only where its type matches the default's. Anything that does not fit falls
  * back to the default. Values that fit the shape but are no longer valid (a removed
  * choice, say) surface through the normal compiler validation, like any other answer.
- * Answers that only moved to another section are carried over by `moveRelocatedAnswers`.
  */
 
 import type { WizardAnswers } from "./WizardAnswers";
@@ -83,61 +82,6 @@ function mergeSaved(fallback: unknown, saved: unknown): unknown {
 }
 
 /**
- * Moves answers saved under an older section layout to where they live now.
- *
- * @param saved - Parsed saved answers, of unknown shape.
- * @returns The same answers with relocated values moved; anything else is untouched.
- * @remarks Checks & Rewards was one section until it was split into Checks, Shops and
- * Item Pool, with its Ancient choices moving to Run Settings; the Blitz merchant
- * chance moved from Run Settings to Boons. A value already in its new place wins.
- */
-function moveRelocatedAnswers(
-  saved: Record<string, unknown>,
-): Record<string, unknown> {
-  const old = saved.checksAndRewards;
-  const moved: Record<string, unknown> = { ...saved };
-  const run = isPlainObject(saved.run) ? { ...saved.run } : undefined;
-
-  if (isPlainObject(old)) {
-    const sections: Record<string, Record<string, unknown>> = {
-      checks: { startingEquipment: old.startingEquipment, types: old.checks },
-      shops: {
-        shop: old.shop,
-        shopCards: old.shopCards,
-        shopRelics: old.shopRelics,
-        shopPotions: old.shopPotions,
-      },
-      itemPool: {
-        bonusItems: old.bonusItems,
-        filler: old.filler,
-        traps: old.traps,
-      },
-    };
-    for (const [key, section] of Object.entries(sections)) {
-      if (!(key in saved)) {
-        moved[key] = section;
-      }
-    }
-    if (run && !("ancients" in run)) {
-      run.ancients = old.ancients;
-    }
-    delete moved.checksAndRewards;
-  }
-
-  if (run && "blitzMerchantChance" in run) {
-    if (!("boons" in saved)) {
-      moved.boons = { blitzMerchantChance: run.blitzMerchantChance };
-    }
-    delete run.blitzMerchantChance;
-  }
-  if (run) {
-    moved.run = run;
-  }
-
-  return moved;
-}
-
-/**
  * Reads the saved builder state, if there is a usable one.
  *
  * @param storage - Where the state was saved, normally `window.localStorage`.
@@ -172,10 +116,7 @@ export function loadSavedWizardState(
   }
 
   return {
-    answers: mergeSaved(
-      defaults,
-      moveRelocatedAnswers(parsed.answers),
-    ) as WizardAnswers,
+    answers: mergeSaved(defaults, parsed.answers) as WizardAnswers,
     stepId: typeof parsed.stepId === "string" ? parsed.stepId : "",
   };
 }

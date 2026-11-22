@@ -50,12 +50,6 @@ const sectionStepComponents: Record<WizardSectionKey, Component> = {
   progression: ProgressionStep,
 };
 
-/** Steps that were merged into another, so a saved position still lands nearby. */
-const RENAMED_STEP_IDS: Readonly<Record<string, string>> = {
-  "death-link": "multiworld",
-  progression: "multiworld",
-};
-
 const availableCharacters = optionCatalog.options.characters?.valid_keys ?? [];
 const fillerItems = createFillerDisplayItems(optionCatalog);
 const defaultFillerAnswers = createDefaultFillerAnswers(optionCatalog);
@@ -78,8 +72,7 @@ provideWizardAnswers(answers);
 
 /** Index of a step by ID, or -1 when no step has that ID. */
 function findStepIndex(stepId: string): number {
-  const currentId = RENAMED_STEP_IDS[stepId] ?? stepId;
-  return wizardSteps.findIndex((step) => step.id === currentId);
+  return wizardSteps.findIndex((step) => step.id === stepId);
 }
 
 const stepIndex = ref(Math.max(0, findStepIndex(savedState?.stepId ?? "")));

@@ -29,11 +29,15 @@ import type {
   ShopStockAnswers,
   ShopAnswers,
   ShopsAnswers,
-  SightCopies,
   StartingEquipmentAnswers,
   WizardAnswers,
 } from "./WizardAnswers";
-import { SIGHT_COPY_COUNTS } from "./WizardAnswers";
+import {
+  countSightItems,
+  hasSecondSightCopy,
+  SIGHTS,
+  type SightCopies,
+} from "./Sight";
 import {
   getBonusItemDisplayRows,
   type BonusItemDisplayRow,
@@ -470,11 +474,7 @@ export function hasActiveChallenges(answers: ChallengeAnswers): boolean {
       answers.enemyHpScaling > 0 ||
       answers.enemyDamageScaling > 0 ||
       answers.dreadMode ||
-      answers.hiddenIntents !== "off" ||
-      answers.hiddenHealth !== "off" ||
-      answers.hiddenPiles !== "off" ||
-      answers.hiddenMap !== "off" ||
-      answers.hiddenCards !== "off" ||
+      countSightItems(answers) > 0 ||
       answers.strictCardRewards)
   );
 }
@@ -534,20 +534,11 @@ function describeSightItems(
  * @returns A sentence, or an empty string when no Sight has a bonus to give.
  */
 function describeSightBonuses(answers: ChallengeAnswers): string {
-  const sights = [
-    { field: "intent", copies: answers.hiddenIntents, name: "Intent Sight" },
-    { field: "health", copies: answers.hiddenHealth, name: "Health Sight" },
-    { field: "pile", copies: answers.hiddenPiles, name: "Pile Sight" },
-    { field: "map", copies: answers.hiddenMap, name: "Map Sight" },
-    { field: "card", copies: answers.hiddenCards, name: "Card Sight" },
-  ] as const;
-  const names = sights
-    .filter(
-      (sight) =>
-        answers.sightBonuses[sight.field] &&
-        SIGHT_COPY_COUNTS[sight.copies] >= 2,
-    )
-    .map((sight) => sight.name);
+  const names = SIGHTS.filter(
+    (sight) =>
+      answers.sightBonuses[sight.bonusField] &&
+      hasSecondSightCopy(answers, sight),
+  ).map((sight) => sight.itemName);
   if (!names.length) {
     return "";
   }
@@ -594,34 +585,13 @@ export function summarizeChallengeAnswers(answers: ChallengeAnswers): string {
     );
   }
 
-  if (answers.hiddenIntents !== "off") {
-    sentences.push(
-      `Enemy intents are hidden until ${describeSightItems(answers.hiddenIntents, "Intent Sight")} is found.`,
-    );
-  }
-
-  if (answers.hiddenHealth !== "off") {
-    sentences.push(
-      `Health is hidden until ${describeSightItems(answers.hiddenHealth, "Health Sight")} is found.`,
-    );
-  }
-
-  if (answers.hiddenPiles !== "off") {
-    sentences.push(
-      `Combat piles are hidden until ${describeSightItems(answers.hiddenPiles, "Pile Sight")} is found.`,
-    );
-  }
-
-  if (answers.hiddenMap !== "off") {
-    sentences.push(
-      `Rooms beyond your next move are hidden until ${describeSightItems(answers.hiddenMap, "Map Sight")} is found.`,
-    );
-  }
-
-  if (answers.hiddenCards !== "off") {
-    sentences.push(
-      `Cards are unknown until ${describeSightItems(answers.hiddenCards, "Card Sight")} is found.`,
-    );
+  for (const sight of SIGHTS) {
+    const copies = answers[sight.copiesField];
+    if (copies !== "off") {
+      sentences.push(
+        `${sight.hiddenSummary} until ${describeSightItems(copies, sight.itemName)} is found.`,
+      );
+    }
   }
 
   const sightBonuses = describeSightBonuses(answers);

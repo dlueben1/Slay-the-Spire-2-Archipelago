@@ -14,8 +14,16 @@ import {
   getDefaultAscensionLevels,
   type AscensionLevel,
 } from "./AscensionModifier";
-import { getOrderedBoons } from "./Boon";
-import { getOrderedRunModifiers } from "./RunModifier";
+import { BOONS } from "./Boon";
+import { getOrderedOptionNames } from "./ModifierTableRow";
+import { RUN_MODIFIERS } from "./RunModifier";
+import {
+  buildSightCopiesAnswers,
+  findSightCopies,
+  readSightBonusNames,
+  type SightBonusAnswers,
+  type SightCopies,
+} from "./Sight";
 import { createDefaultShopCardWeights } from "./ShopCardKind";
 import {
   createDefaultShopStockWeights,
@@ -207,7 +215,14 @@ export type ShopPotionKindId =
 
 /** Kinds of card a Random Shop Cards slot can hold, in option order. */
 export type ShopCardKindId =
-  "attack" | "skill" | "power" | "common" | "uncommon" | "rare" | "colorless" | "event";
+  | "attack"
+  | "skill"
+  | "power"
+  | "common"
+  | "uncommon"
+  | "rare"
+  | "colorless"
+  | "event";
 
 export interface RunAnswers {
   relicRewardsAvailableAnytime: number;
@@ -226,65 +241,6 @@ export interface BoonAnswers {
   selected: string[];
   /** Percent of shops that are Blitz merchants. Only the game's beta branch has them. */
   blitzMerchantChance: number;
-}
-
-/** How many Sight items a hidden-information challenge adds; `off` leaves it off. */
-export type SightCopies = "off" | "one" | "two" | "three" | "four";
-
-/** Sight item counts written to the `hidden_*` options. */
-export const SIGHT_COPY_COUNTS: Readonly<Record<SightCopies, number>> = {
-  off: 0,
-  one: 1,
-  two: 2,
-  three: 3,
-  four: 4,
-};
-
-/** Which Sight items' second copy adds a bonus, one switch per Sight. */
-export interface SightBonusAnswers {
-  intent: boolean;
-  health: boolean;
-  pile: boolean;
-  map: boolean;
-  card: boolean;
-}
-
-/** Generated `sight_bonuses` names keyed by their answer field, in display order. */
-export const SIGHT_BONUS_NAMES: Readonly<Record<keyof SightBonusAnswers, string>> = {
-  intent: "IntentSight",
-  health: "HealthSight",
-  pile: "PileSight",
-  map: "MapSight",
-  card: "CardSight",
-};
-
-/**
- * Turns `sight_bonuses` names into the bonus switches.
- *
- * @param names - Canonical Sight Bonus names.
- * @returns One switch per Sight, on when its name is listed.
- */
-export function readSightBonusNames(names: Iterable<string>): SightBonusAnswers {
-  const selected = new Set(names);
-  return {
-    intent: selected.has(SIGHT_BONUS_NAMES.intent),
-    health: selected.has(SIGHT_BONUS_NAMES.health),
-    pile: selected.has(SIGHT_BONUS_NAMES.pile),
-    map: selected.has(SIGHT_BONUS_NAMES.map),
-    card: selected.has(SIGHT_BONUS_NAMES.card),
-  };
-}
-
-/**
- * Lists the switched-on Sight Bonuses in display order.
- *
- * @param answers - Sight Bonus switches.
- * @returns Canonical `sight_bonuses` names.
- */
-export function getSightBonusNames(answers: SightBonusAnswers): string[] {
-  return (Object.keys(SIGHT_BONUS_NAMES) as (keyof SightBonusAnswers)[])
-    .filter((field) => answers[field])
-    .map((field) => SIGHT_BONUS_NAMES[field]);
 }
 
 /** Optional difficulty settings that logic does not account for. */
@@ -455,9 +411,7 @@ function getSightCopiesDefault(
   optionKey: string,
 ): SightCopies {
   const count = getNumberDefault(catalog, optionKey);
-  const choice = (Object.keys(SIGHT_COPY_COUNTS) as SightCopies[]).find(
-    (candidate) => SIGHT_COPY_COUNTS[candidate] === count,
-  );
+  const choice = findSightCopies(count);
 
   if (!choice) {
     throw new Error(
@@ -507,7 +461,9 @@ function getStringSetDefault(
     !Array.isArray(value) ||
     !value.every((entry): entry is string => typeof entry === "string")
   ) {
-    throw new Error(`Generated option '${optionKey}' has no text-list default.`);
+    throw new Error(
+      `Generated option '${optionKey}' has no text-list default.`,
+    );
   }
 
   // Copy so answer initialization never aliases generated metadata.
@@ -644,7 +600,8 @@ export function createDefaultWizardAnswers(
     challenges: {
       // Challenges are opt-in regardless of their generated defaults.
       enabled: false,
-      runModifiers: getOrderedRunModifiers(
+      runModifiers: getOrderedOptionNames(
+        RUN_MODIFIERS,
         getStringSetDefault(catalog, CHALLENGE_OPTION_KEYS.runModifiers),
       ),
       enemyHpScaling: getNumberDefault(
@@ -656,25 +613,11 @@ export function createDefaultWizardAnswers(
         CHALLENGE_OPTION_KEYS.enemyDamageScaling,
       ),
       dreadMode: getBooleanDefault(catalog, CHALLENGE_OPTION_KEYS.dreadMode),
-      hiddenIntents: getSightCopiesDefault(
-        catalog,
-        CHALLENGE_OPTION_KEYS.hiddenIntents,
-      ),
-      hiddenHealth: getSightCopiesDefault(
-        catalog,
-        CHALLENGE_OPTION_KEYS.hiddenHealth,
-      ),
-      hiddenPiles: getSightCopiesDefault(
-        catalog,
-        CHALLENGE_OPTION_KEYS.hiddenPiles,
-      ),
-      hiddenMap: getSightCopiesDefault(
-        catalog,
-        CHALLENGE_OPTION_KEYS.hiddenMap,
-      ),
-      hiddenCards: getSightCopiesDefault(
-        catalog,
-        CHALLENGE_OPTION_KEYS.hiddenCards,
+      ...buildSightCopiesAnswers((sight) =>
+        getSightCopiesDefault(
+          catalog,
+          CHALLENGE_OPTION_KEYS[sight.copiesField],
+        ),
       ),
       sightBonuses: readSightBonusNames(
         getStringSetDefault(catalog, CHALLENGE_OPTION_KEYS.sightBonuses),
@@ -760,7 +703,8 @@ export function createDefaultWizardAnswers(
       traps: createDefaultTrapAnswers(catalog),
     },
     boons: {
-      selected: getOrderedBoons(
+      selected: getOrderedOptionNames(
+        BOONS,
         getStringSetDefault(catalog, BOON_OPTION_KEYS.boons),
       ),
       blitzMerchantChance: getNumberDefault(

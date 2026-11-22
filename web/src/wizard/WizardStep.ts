@@ -23,11 +23,8 @@ import type {
   WizardControlChoice,
   WizardControlDescriptor,
 } from "./QuestionControl";
-import {
-  SIGHT_COPY_COUNTS,
-  type SightCopies,
-  type WizardAnswers,
-} from "./WizardAnswers";
+import { hasSecondSightCopy, SIGHTS, type SightCopies } from "./Sight";
+import type { WizardAnswers } from "./WizardAnswers";
 import { CHALLENGE_OPTION_KEYS } from "./WizardOptionKey";
 
 export interface WizardQuestion {
@@ -457,16 +454,9 @@ function usesChallenges(answers: WizardAnswers): boolean {
  * @returns Whether the Sight Bonuses question applies.
  */
 function hasSightBonusCopies(answers: WizardAnswers): boolean {
-  const challenges = answers.challenges;
   return (
     usesChallenges(answers) &&
-    [
-      challenges.hiddenIntents,
-      challenges.hiddenHealth,
-      challenges.hiddenPiles,
-      challenges.hiddenMap,
-      challenges.hiddenCards,
-    ].some((copies) => SIGHT_COPY_COUNTS[copies] >= 2)
+    SIGHTS.some((sight) => hasSecondSightCopy(answers.challenges, sight))
   );
 }
 
@@ -653,38 +643,11 @@ export const challengeSetupStep: WizardStep = {
         "A Sight left unticked stops at undoing its challenge, however many copies there are. The Intent, Health and Card Sight bonuses are singleplayer only.",
       control: {
         kind: "checkbox-grid",
-        items: [
-          {
-            field: "sightBonuses.intent",
-            label: "Intent Sight: Forewarned",
-            description:
-              "Start each combat with Forewarned: for each enemy whose attacks your Block stops completely on its turn, draw 1 more card next turn.",
-          },
-          {
-            field: "sightBonuses.health",
-            label: "Health Sight: Aged Cheese",
-            description:
-              "Gain Aged Cheese: after defeating an Elite or a boss, raise your Max HP by 3.",
-          },
-          {
-            field: "sightBonuses.pile",
-            label: "Pile Sight: Frozen Eye",
-            description:
-              "Gain Frozen Eye: the draw pile shows cards in the order you will draw them.",
-          },
-          {
-            field: "sightBonuses.map",
-            label: "Map Sight: Scouting",
-            description:
-              "The map shows your next 2 fights, your next Elite and what your next 2 ? rooms will be.",
-          },
-          {
-            field: "sightBonuses.card",
-            label: "Card Sight: More Choice",
-            description:
-              "Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.",
-          },
-        ],
+        items: SIGHTS.map((sight) => ({
+          field: `sightBonuses.${sight.bonusField}`,
+          label: sight.bonusLabel,
+          description: sight.bonusEffect,
+        })),
       },
     },
     {
@@ -1090,8 +1053,7 @@ export const deathLinkSetupStep: WizardStep = {
 export const progressionSetupStep: WizardStep = {
   id: "progression",
   title: "Progression",
-  description:
-    "Choose progression balancing and accessibility.",
+  description: "Choose progression balancing and accessibility.",
   sectionKey: "progression",
   questions: [
     {

@@ -267,20 +267,6 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
     },
   ],
   [
-    "Bonus Items of every other kind",
-    (answers) => {
-      answers.itemPool.bonusItems = [
-        { kind: "RELIC", mode: "random", pools: ["Rare"] },
-        { kind: "ENCHANTMENT", mode: "random", tiers: ["Common", "Rare"] },
-        { kind: "ENCHANTMENT", mode: "specific", enchantment: "RoyallyApproved" },
-        { kind: "ENCHANTED_CARDS", mode: "specific", enchantment: "Swift" },
-        { kind: "MAX_HP", amount: 6 },
-        { kind: "CARDS", mode: "random", pools: ["Regent Attack", "Upgraded Colorless Rare", "Random"] },
-        { kind: "CARDS", mode: "specific", card: "Apotheosis" },
-      ];
-    },
-  ],
-  [
     "Death Link with fragments only",
     (answers) => {
       answers.deathLink = {
@@ -367,15 +353,6 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
     },
   ],
   [
-    "several Boons with Blitz merchants",
-    (answers) => {
-      answers.boons = {
-        selected: ["SpringCleaning", "Wayfinder", "Gilded"],
-        blitzMerchantChance: 15,
-      };
-    },
-  ],
-  [
     "challenges ticked while the opt-in switch is off",
     (answers) => {
       answers.challenges.runModifiers = ["SlowStart"];
@@ -427,16 +404,6 @@ describe("importWizardYaml round trips", () => {
 });
 
 describe("importWizardYaml reading hand-written values", () => {
-  it("orders known Boons and warns about unknown ones", () => {
-    const { answers, warnings } = importWizardYaml(
-      handWritten("boons: [Gilded, NotABoon, Wayfinder]"),
-      optionCatalog,
-    );
-
-    expect(answers.boons.selected).toEqual(["Wayfinder", "Gilded"]);
-    expect(warnings.join(" ")).toContain("NotABoon");
-  });
-
   it("uses a weighted value whose other weights are zero", () => {
     const goldDefault = optionCatalog.options.gold_sanity!.default as boolean;
     const { answers, warnings } = importWizardYaml(

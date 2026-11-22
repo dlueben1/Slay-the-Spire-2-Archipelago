@@ -10,14 +10,13 @@
  */
 
 import type { OptionCatalog } from "../../generated/optionCatalog";
-import { getOrderedRunModifiers } from "../RunModifier";
-import {
-  type ChallengeAnswers,
-  getSightBonusNames,
-  SIGHT_COPY_COUNTS,
-} from "../WizardAnswers";
+import { getOrderedOptionNames } from "../ModifierTableRow";
+import { RUN_MODIFIERS } from "../RunModifier";
+import { getSightBonusNames, SIGHT_COPY_COUNTS, SIGHTS } from "../Sight";
+import type { ChallengeAnswers } from "../WizardAnswers";
 import { CHALLENGE_OPTION_KEYS } from "../WizardOptionKey";
 import type { CompiledOptions } from "./applyCharacterOptions";
+import { requireAcceptedNames } from "./requireAcceptedNames";
 
 /**
  * Applies player-facing Challenges answers to a compiler-owned option object.
@@ -46,43 +45,29 @@ export function applyChallengeOptions(
     return;
   }
 
-  // A renamed modifier must fail here rather than in Archipelago's generator.
-  const validModifiers =
-    catalog.options[CHALLENGE_OPTION_KEYS.runModifiers]!.valid_keys ?? [];
-  const runModifiers = getOrderedRunModifiers(answers.runModifiers);
-
-  for (const modifier of runModifiers) {
-    if (!validModifiers.includes(modifier)) {
-      throw new Error(
-        `Generated option '${CHALLENGE_OPTION_KEYS.runModifiers}' no longer accepts '${modifier}'.`,
-      );
-    }
-  }
+  const runModifiers = getOrderedOptionNames(
+    RUN_MODIFIERS,
+    answers.runModifiers,
+  );
+  requireAcceptedNames(
+    catalog,
+    CHALLENGE_OPTION_KEYS.runModifiers,
+    runModifiers,
+  );
+  const sightBonuses = getSightBonusNames(answers.sightBonuses);
+  requireAcceptedNames(
+    catalog,
+    CHALLENGE_OPTION_KEYS.sightBonuses,
+    sightBonuses,
+  );
 
   target[CHALLENGE_OPTION_KEYS.runModifiers] = runModifiers;
   target[CHALLENGE_OPTION_KEYS.enemyHpScaling] = answers.enemyHpScaling;
   target[CHALLENGE_OPTION_KEYS.enemyDamageScaling] = answers.enemyDamageScaling;
   target[CHALLENGE_OPTION_KEYS.dreadMode] = answers.dreadMode;
-  target[CHALLENGE_OPTION_KEYS.hiddenIntents] =
-    SIGHT_COPY_COUNTS[answers.hiddenIntents];
-  target[CHALLENGE_OPTION_KEYS.hiddenHealth] =
-    SIGHT_COPY_COUNTS[answers.hiddenHealth];
-  target[CHALLENGE_OPTION_KEYS.hiddenPiles] =
-    SIGHT_COPY_COUNTS[answers.hiddenPiles];
-  target[CHALLENGE_OPTION_KEYS.hiddenMap] =
-    SIGHT_COPY_COUNTS[answers.hiddenMap];
-  target[CHALLENGE_OPTION_KEYS.hiddenCards] =
-    SIGHT_COPY_COUNTS[answers.hiddenCards];
-
-  const validSightBonuses =
-    catalog.options[CHALLENGE_OPTION_KEYS.sightBonuses]!.valid_keys ?? [];
-  const sightBonuses = getSightBonusNames(answers.sightBonuses);
-  for (const bonus of sightBonuses) {
-    if (!validSightBonuses.includes(bonus)) {
-      throw new Error(
-        `Generated option '${CHALLENGE_OPTION_KEYS.sightBonuses}' no longer accepts '${bonus}'.`,
-      );
-    }
+  for (const sight of SIGHTS) {
+    target[CHALLENGE_OPTION_KEYS[sight.copiesField]] =
+      SIGHT_COPY_COUNTS[answers[sight.copiesField]];
   }
   target[CHALLENGE_OPTION_KEYS.sightBonuses] = sightBonuses;
   target[CHALLENGE_OPTION_KEYS.strictCardRewards] = answers.strictCardRewards;

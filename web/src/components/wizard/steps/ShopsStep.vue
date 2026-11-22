@@ -9,9 +9,6 @@ import {
 } from "../../../wizard/ShopStockKind";
 import type {
   FillerWeightLevel,
-  ShopCardKindId,
-  ShopPotionKindId,
-  ShopRelicKindId,
   ShopsAnswers,
 } from "../../../wizard/WizardAnswers";
 import {
@@ -86,35 +83,20 @@ const shopPotionKinds = createShopStockDisplayItems(
 );
 const SHOP_WEIGHT_LABELS = ["Never", "Low", "Medium", "High"] as const;
 
-/** Replaces one Random Shop Cards kind's weight level. */
-function setShopCardWeight(id: ShopCardKindId, level: number): void {
-  const shopCards = props.modelValue.shopCards;
-  updateAnswers({
-    shopCards: {
-      ...shopCards,
-      weights: { ...shopCards.weights, [id]: level as FillerWeightLevel },
-    },
-  });
-}
+/** Shop stock families whose kinds each have a weight level. */
+type ShopWeightFamily = "shopCards" | "shopRelics" | "shopPotions";
 
-/** Replaces one Random Shop Relics kind's weight level. */
-function setShopRelicWeight(id: ShopRelicKindId, level: number): void {
-  const shopRelics = props.modelValue.shopRelics;
+/** Replaces one kind's weight level in a shop stock table. */
+function setShopWeight(
+  family: ShopWeightFamily,
+  id: string,
+  level: number,
+): void {
+  const current = props.modelValue[family];
   updateAnswers({
-    shopRelics: {
-      ...shopRelics,
-      weights: { ...shopRelics.weights, [id]: level as FillerWeightLevel },
-    },
-  });
-}
-
-/** Replaces one Random Shop Potions kind's weight level. */
-function setShopPotionWeight(id: ShopPotionKindId, level: number): void {
-  const shopPotions = props.modelValue.shopPotions;
-  updateAnswers({
-    shopPotions: {
-      ...shopPotions,
-      weights: { ...shopPotions.weights, [id]: level as FillerWeightLevel },
+    [family]: {
+      ...current,
+      weights: { ...current.weights, [id]: level as FillerWeightLevel },
     },
   });
 }
@@ -203,7 +185,9 @@ function setShopPotionWeight(id: ShopPotionKindId, level: number): void {
             :items="shopCardKinds"
             :weights="modelValue.shopCards.weights"
             :labels="SHOP_WEIGHT_LABELS"
-            @update:weight="setShopCardWeight"
+            @update:weight="
+              (id, level) => setShopWeight('shopCards', id, level)
+            "
           />
         </WizardQuestion>
       </div>
@@ -241,7 +225,9 @@ function setShopPotionWeight(id: ShopPotionKindId, level: number): void {
             :items="shopRelicKinds"
             :weights="modelValue.shopRelics.weights"
             :labels="SHOP_WEIGHT_LABELS"
-            @update:weight="setShopRelicWeight"
+            @update:weight="
+              (id, level) => setShopWeight('shopRelics', id, level)
+            "
           />
         </WizardQuestion>
       </div>
@@ -279,7 +265,9 @@ function setShopPotionWeight(id: ShopPotionKindId, level: number): void {
             :items="shopPotionKinds"
             :weights="modelValue.shopPotions.weights"
             :labels="SHOP_WEIGHT_LABELS"
-            @update:weight="setShopPotionWeight"
+            @update:weight="
+              (id, level) => setShopWeight('shopPotions', id, level)
+            "
           />
         </WizardQuestion>
       </div>

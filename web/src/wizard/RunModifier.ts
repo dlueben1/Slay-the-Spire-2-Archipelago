@@ -121,17 +121,3 @@ export const RUN_MODIFIER_TABLE_ROWS: readonly ModifierTableRow<RunModifierGroup
     badge: `Act ${modifier.startsInAct}+`,
     group: modifier.group,
   }));
-
-/**
- * Orders selected Run Modifiers for stable state, review, and YAML compilation.
- *
- * @param selected - Canonical modifier names in any order.
- * @returns The known names in catalog order, without duplicates.
- */
-export function getOrderedRunModifiers(selected: Iterable<string>): string[] {
-  const selectedNames = new Set(selected);
-
-  return RUN_MODIFIERS.filter((modifier) =>
-    selectedNames.has(modifier.optionName),
-  ).map((modifier) => modifier.optionName);
-}
