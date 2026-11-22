@@ -12,11 +12,11 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "9abac9d2eaf32d1c2ac44bf756879b8c2111a6033363b85b092362cf6d647bb8"
+      "sha256": "e88480905c87f2f1ee44411a50855f81a4ba54c54b43182fe259c96155f823fe"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "1aaf9100caa87c8ccd0a013d2cd017a4f041fbe13e3a7662b20475b9a1db6a1d"
+      "sha256": "9c20b6686466516d3f541d3c798d956a39fa9654a09efaf72856dd3836a606b8"
     }
   },
   "characters": {
@@ -226,6 +226,7 @@
     "hidden_piles",
     "hidden_map",
     "hidden_cards",
+    "hidden_relics",
     "sight_bonuses",
     "strict_card_rewards"
   ],
@@ -414,6 +415,7 @@
         "hidden_piles",
         "hidden_map",
         "hidden_cards",
+        "hidden_relics",
         "sight_bonuses",
         "strict_card_rewards"
       ],
@@ -4481,26 +4483,54 @@
       "supports_weighting": true,
       "group": "Challenges"
     },
+    "hidden_relics": {
+      "key": "hidden_relics",
+      "class_name": "HiddenRelics",
+      "module": "worlds.spire2.options",
+      "kind": "range",
+      "display_name": "Hidden Relics",
+      "description": "Relics keep their effects but no longer show them: counters, flashes, the activation sound, the glow of a\nrelic that is ready and the grey of a used one are all hidden.\nThe value is how many Relic Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows relics again for every character, and a second one adds its Sight Bonus, which logic counts.",
+      "default": 0,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "minimum": 0,
+      "maximum": 4,
+      "supports_weighting": true,
+      "group": "Challenges"
+    },
     "sight_bonuses": {
       "key": "sight_bonuses",
       "class_name": "SightBonuses",
       "module": "worlds.spire2.options",
       "kind": "set",
       "display_name": "Sight Bonuses",
-      "description": "Sight items whose second copy adds a bonus. A Sight left out stops at undoing its Hidden\noption. Names are case-sensitive.\n\n- 'IntentSight': Start each combat with Forewarned: for each enemy whose attacks your Block stops\n  completely on its turn, draw 1 more card next turn.\n- 'HealthSight': Gain Aged Cheese: after defeating an Elite or a boss, raise your Max HP by 3.\n- 'PileSight': Gain Frozen Eye: the draw pile shows cards in the order you will draw them.\n- 'MapSight': The map shows your next 2 fights, your next elite and what your next 2 ? rooms will be.\n- 'CardSight': Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.\n\nLogic counts each bonus as extra power in Act 3. The Intent, Health and Card Sight bonuses are\nsingleplayer only, but logic still counts them.",
+      "description": "Sight items whose second copy adds a bonus. A Sight left out stops at undoing its Hidden\noption. Names are case-sensitive.\n\n- 'IntentSight': Start each combat with Forewarned: for each enemy whose attacks your Block stops\n  completely on its turn, draw 1 more card next turn.\n- 'HealthSight': Gain Aged Cheese: after defeating an Elite or a boss, raise your Max HP by 3.\n- 'PileSight': Gain Frozen Eye: the draw pile shows cards in the order you will draw them.\n- 'MapSight': The map shows your next 2 fights, your next elite and what your next 2 ? rooms will be.\n- 'CardSight': Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.\n- 'RelicSight': Relic rewards offer 2 relics to choose from. The one you leave goes back into the relic pool.\n\nLogic counts each bonus as extra power in Act 3. The Intent, Health, Card and Relic Sight bonuses are\nsingleplayer only, but logic still counts them.",
       "default": [
         "CardSight",
         "HealthSight",
         "IntentSight",
         "MapSight",
-        "PileSight"
+        "PileSight",
+        "RelicSight"
       ],
       "raw_default": [
         "CardSight",
         "HealthSight",
         "IntentSight",
         "MapSight",
-        "PileSight"
+        "PileSight",
+        "RelicSight"
       ],
       "visibility": {
         "name": "all",
@@ -4519,7 +4549,8 @@
         "HealthSight",
         "IntentSight",
         "MapSight",
-        "PileSight"
+        "PileSight",
+        "RelicSight"
       ],
       "valid_keys_casefold": false,
       "allow_custom_values": false,

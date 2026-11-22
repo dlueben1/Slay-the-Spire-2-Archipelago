@@ -28,6 +28,7 @@ export interface SightBonusAnswers {
   pile: boolean;
   map: boolean;
   card: boolean;
+  relic: boolean;
 }
 
 export interface Sight {
@@ -37,7 +38,8 @@ export interface Sight {
     | "hiddenHealth"
     | "hiddenPiles"
     | "hiddenMap"
-    | "hiddenCards";
+    | "hiddenCards"
+    | "hiddenRelics";
   /** Switch in `ChallengeAnswers.sightBonuses` for this Sight's bonus. */
   bonusField: keyof SightBonusAnswers;
   /** Canonical `sight_bonuses` name. */
@@ -100,6 +102,16 @@ export const SIGHTS: readonly Sight[] = [
     bonusLabel: "Card Sight: More Choice",
     bonusEffect:
       "Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.",
+  },
+  {
+    copiesField: "hiddenRelics",
+    bonusField: "relic",
+    bonusName: "RelicSight",
+    itemName: "Relic Sight",
+    hiddenSummary: "Relics hide what they do",
+    bonusLabel: "Relic Sight: Choose Your Relic",
+    bonusEffect:
+      "Relic rewards offer 2 relics to choose from. The one you leave goes back into the relic pool.",
   },
 ];
 

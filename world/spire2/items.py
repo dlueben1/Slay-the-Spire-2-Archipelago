@@ -37,6 +37,7 @@ class ItemType(Enum):
     PILE_SIGHT = auto()
     MAP_SIGHT = auto()
     CARD_SIGHT = auto()
+    RELIC_SIGHT = auto()
     TRAP = auto()
     CAW_CAW = auto()
     BUFF = auto()
@@ -248,6 +249,7 @@ challenge_item_table: Dict[str, ItemData] = {
     "Pile Sight": ItemData(802, ItemType.PILE_SIGHT, ItemClassification.progression_deprioritized_skip_balancing),
     "Map Sight": ItemData(803, ItemType.MAP_SIGHT, ItemClassification.progression_deprioritized_skip_balancing),
     "Card Sight": ItemData(804, ItemType.CARD_SIGHT, ItemClassification.progression_deprioritized_skip_balancing),
+    "Relic Sight": ItemData(805, ItemType.RELIC_SIGHT, ItemClassification.progression_deprioritized_skip_balancing),
 }
 
 # Each Sight item with its key in the Sight Bonuses option and the Hidden option that sets its copies.
@@ -257,6 +259,7 @@ SIGHTS: Tuple[Tuple[str, str, str], ...] = (
     ("Pile Sight", "PileSight", "hidden_piles"),
     ("Map Sight", "MapSight", "hidden_map"),
     ("Card Sight", "CardSight", "hidden_cards"),
+    ("Relic Sight", "RelicSight", "hidden_relics"),
 )
 
 # `universal_bonus_items` is keyed by the actual Archipelago item name (like "Bonus Wax Relic").

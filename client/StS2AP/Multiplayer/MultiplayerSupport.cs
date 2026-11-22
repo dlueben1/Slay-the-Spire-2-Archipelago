@@ -306,7 +306,7 @@ public static class MultiplayerSupport
     {
         APItem universalItem = item.GetUniversalItemId();
         if (universalItem is APItem.IntentSight or APItem.HealthSight or APItem.PileSight or APItem.MapSight
-            or APItem.CardSight)
+            or APItem.CardSight or APItem.RelicSight)
             return MultiplayerFeature.ChallengeSight;
 
         // In multiplayer, bonus items arrive as gold unless the experimental Bonus Items
@@ -921,6 +921,7 @@ public static class MultiplayerSupport
             HiddenPiles = source.HiddenPiles,
             HiddenMap = source.HiddenMap,
             HiddenCards = source.HiddenCards,
+            HiddenRelics = source.HiddenRelics,
             SightBonuses = new HashSet<string>(source.SightBonuses),
             EventsInAnyAct = source.EventsInAnyAct,
             ReleaseOnVictory = source.ReleaseOnVictory,

@@ -258,6 +258,7 @@ export interface ChallengeAnswers {
   hiddenPiles: SightCopies;
   hiddenMap: SightCopies;
   hiddenCards: SightCopies;
+  hiddenRelics: SightCopies;
   /** Which Sights' second copy adds a bonus. */
   sightBonuses: SightBonusAnswers;
   strictCardRewards: boolean;

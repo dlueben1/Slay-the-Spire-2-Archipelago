@@ -340,12 +340,14 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
         hiddenPiles: "one",
         hiddenMap: "three",
         hiddenCards: "one",
+        hiddenRelics: "off",
         sightBonuses: {
           intent: false,
           health: true,
           pile: true,
           map: true,
           card: false,
+          relic: false,
         },
         strictCardRewards: true,
       };

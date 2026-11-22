@@ -423,6 +423,10 @@ namespace StS2AP.Patches
                     ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);
                     CardSight.RefreshVisibleCards();
                     break;
+                case APItem.RelicSight:
+                    ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);
+                    RelicSight.RefreshVisibleRelics();
+                    break;
                 case APItem.WeakTrap:
                 case APItem.FrailTrap:
                 case APItem.VulnerableTrap:

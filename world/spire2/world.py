@@ -163,6 +163,7 @@ class SlayTheSpire2World(World):
             self.options.hidden_piles.value = 0
             self.options.hidden_map.value = 0
             self.options.hidden_cards.value = 0
+            self.options.hidden_relics.value = 0
         names = {config.official_name for config in self.characters}
         if len(names) != len(self.characters):
             raise OptionError(f"Found duplicate characters: {[c.official_name for c in self.characters]}")
@@ -794,6 +795,7 @@ class SlayTheSpire2World(World):
             "hidden_piles",
             "hidden_map",
             "hidden_cards",
+            "hidden_relics",
             "sight_bonuses",
             "include_floor_checks",
             "neow_sanity",
