@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.HoverTips;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
+using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves.Runs;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
@@ -26,7 +27,7 @@ namespace StS2AP.Patches
         /// <summary>
         /// Sets the hover tooltip based on the currently enabled ascensions.
         /// </summary>
-        [HarmonyPatch(typeof(NTopBarPortraitTip), "OnFocus")]
+        [HarmonyPatch(typeof(NTopBarPortraitTip), nameof(NTopBarPortraitTip.OnFocus))]
         public static class ChangeHoverTip
         {
             [HarmonyPrefix]
@@ -37,11 +38,13 @@ namespace StS2AP.Patches
                         MultiplayerFeature.AscensionEffects))
                     return true;
 
-                if(__instance.ShowTip)
-                {
-                    NHoverTipSet.CreateAndShow(__instance, ArchipelagoClient.Progress.Ascensions.HoverTip)
-                        ?.SetGlobalPosition(__instance.GlobalPosition + new Vector2(0f, __instance.Size.Y + 20f));
-                }
+#if !STS2_AT_LEAST_0_113_0
+                // Older versions show no portrait tip at Ascension 0; 0.113 always shows one.
+                if (!__instance.ShowTip)
+                    return false;
+#endif
+                NHoverTipSet.CreateAndShow(__instance, ArchipelagoClient.Progress.Ascensions.HoverTip)
+                    ?.SetGlobalPosition(__instance.GlobalPosition + new Vector2(0f, __instance.Size.Y + 20f));
                 return false;
             }
         }
@@ -71,11 +74,11 @@ namespace StS2AP.Patches
         /// <summary>
         /// Captures the ascension number label, so we can change the number.
         /// </summary>
-        [HarmonyPatch(typeof(NTopBar), "Initialize")]
+        [HarmonyPatch(typeof(NTopBar), nameof(NTopBar.Initialize))]
         public static class CaptureAscensionLabel
         {
             [HarmonyPostfix]
-            public static void PostFix(NTopBar __instance, MegaLabel ____ascensionLabel)
+            public static void PostFix(NTopBar __instance, MegaLabel ____ascensionLabel, IRunState runState)
             {
                 // AP_MP: Ascension UI overrides require a host-authoritative shared set.
                 if (!MultiplayerSupport.ShouldRunReplicatedConstruction(
@@ -85,6 +88,10 @@ namespace StS2AP.Patches
                 _ascensionLabel = ____ascensionLabel;
                 // Initialize is already on the UI thread. Replace the native 10 before drawing.
                 ____ascensionLabel.SetTextAutoSize(AscensionMultiplayer.GetCurrentCount().ToString());
+                // A Dread run hides the label while the base game's Dread streak is zero.
+                ____ascensionLabel.Visible = true;
+                if (DreadRuns.IsDreadRun(runState))
+                    ArchipelagoClient.Progress.Ascensions.InvalidateHoverTip();
                 __instance._ascensionIcon.Visible = true;
             }
         }
@@ -95,7 +102,10 @@ namespace StS2AP.Patches
         /// During a run, everything gets piped to this method.  There are some things that happen outside of runs, but
         /// we mostly don't care.
         /// </summary>
-        [HarmonyPatch(typeof(MegaCrit.Sts2.Core.Entities.Ascension.AscensionManager), "HasLevel")]
+        [HarmonyPatch(
+            typeof(MegaCrit.Sts2.Core.Entities.Ascension.AscensionManager),
+            nameof(MegaCrit.Sts2.Core.Entities.Ascension.AscensionManager.HasLevel)
+        )]
         public static class InGameAscensionOverride
         {
             [HarmonyPostfix]
@@ -139,7 +149,11 @@ namespace StS2AP.Patches
         /// <summary>
         /// Helps disable Double Boss when that ascension was active, but is no longer.
         /// </summary>
-        [HarmonyPatch(typeof(SerializableActMap), nameof(SerializableActMap.SecondBossPoint), MethodType.Getter)]
+        [HarmonyPatch(
+            typeof(SerializableActMap),
+            nameof(SerializableActMap.SecondBossPoint),
+            MethodType.Getter
+        )]
         public static class DisableSecondBossMapPointSerializable
         {
             [HarmonyPostfix]
@@ -230,7 +244,7 @@ namespace StS2AP.Patches
             ArchipelagoSettings? settings = ArchipelagoClient.Settings;
             if (characterButton?.IsLocked == true
                 || settings == null
-                || !settings.Characters.TryGetValue(
+                || !settings.TryGetCharacterConfig(
                     character.Id.Entry,
                     out var config
                 ))
@@ -241,6 +255,13 @@ namespace StS2AP.Patches
 
             var effectiveAscensions = GetEffectiveAscensions(config);
             SetPanelLevels(panel, effectiveAscensions.Select(level => (int)level));
+            // Guests learn the host's mode when the run starts, so only the slot that decides
+            // the mode shows it here.
+            if (DreadRuns.IsSlotSetting
+                && screen.Lobby?.NetService.Type is NetGameType.Singleplayer or NetGameType.Host)
+            {
+                panel._info.Text += "\n[aqua]Dread Mode[/aqua]";
+            }
         }
 
         private static void SetPanelLevels(NAscensionPanel panel, IEnumerable<int> levels)
@@ -261,7 +282,7 @@ namespace StS2AP.Patches
                 if (__instance.Lobby == null)
                     return;
                 UpdateCharacterSelectAscension(__instance, __instance._selectedButton,
-                    BetaMainCompatibility.GetLocalCharacter(__instance.Lobby));
+                    __instance.Lobby.LocalPlayer.character);
             }
         }
 
@@ -320,7 +341,7 @@ namespace StS2AP.Patches
         [HarmonyPatch(typeof(NAscensionPanel))]
         public static class HideAscensionArrows
         {
-            [HarmonyPatch("RefreshArrowVisibility")]
+            [HarmonyPatch(nameof(NAscensionPanel.RefreshArrowVisibility))]
             [HarmonyPostfix]
             public static void Postfix(NAscensionPanel __instance)
             {

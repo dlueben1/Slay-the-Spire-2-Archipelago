@@ -11,5 +11,8 @@ public sealed class ApRewardMenuSpec
     public int ApSlotId { get; set; }
     public ulong OwnerNetId { get; set; }
     public ApMenuGoldSpec? Gold { get; set; }
+    // The owner's Strict Card Rewards setting. Replicas need it so every peer builds the same
+    // picker alternatives, whose indexes are the synchronized choice.
+    public bool StrictCardRewards { get; set; }
     public List<ApMirroredRewardSpec> Rewards { get; set; } = new();
 }

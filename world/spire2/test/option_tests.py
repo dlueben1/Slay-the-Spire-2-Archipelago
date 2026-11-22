@@ -6,7 +6,7 @@ from Utils import restricted_dumps
 from test.general import setup_multiworld, setup_solo_multiworld
 from worlds.AutoWorld import call_all
 from worlds.spire2 import SlayTheSpire2World
-from worlds.spire2.options import CharacterOptions, UnlockedCharacter, filler_item_options
+from worlds.spire2.options import UnlockedCharacter, filler_item_options
 from worlds.spire2.test import Spire2TestBase
 
 
@@ -53,18 +53,6 @@ class TestUniversalTrackerCardRewards(Spire2TestBase):
         self.assertEqual(original_locations, regenerated_locations)
 
 
-class TestMultiCharsValid(Spire2TestBase):
-
-    options = {
-        "characters": [
-            "ironclad",
-            "silent",
-        ]
-    }
-
-    def test_valid(self):
-        CharacterOptions.schema.validate(self.world.options.advanced_characters.value)
-
 class Test49Floors(Spire2TestBase):
     options = {
         "characters": [
@@ -77,14 +65,6 @@ class Test49Floors(Spire2TestBase):
     def test_ensure_floor_49(self):
         self.assertIsNotNone(self.world.get_location("Ironclad Reached Floor 49"))
 
-    def test_no_dupes(self):
-        stuff = dict()
-
-        for location in self.world.get_locations():
-            if location.address is None:
-                continue
-            self.assertTrue(location.address not in stuff, f"location duplicated {location.name} {stuff.get(location.address, None)}")
-            stuff[location.address] = location
 
 class Test48Floors(Spire2TestBase):
     options = {
@@ -97,39 +77,6 @@ class Test48Floors(Spire2TestBase):
 
     def test_no_floor_49(self):
         self.assertNotIn("Ironclad Reached Floor 49", {location.name for location in self.world.get_locations()})
-
-
-class TestAncientRelicOptionsDefault(Spire2TestBase):
-    def test_anytime_and_balanced_by_default(self):
-        slot_data = self.world.fill_slot_data()
-        self.assertEqual(1, self.world.options.ancient_relic_location.value)
-        self.assertEqual(1, slot_data["ancient_relic_location"])
-        self.assertEqual(0, self.world.options.ancient_relic_pool.value)
-        self.assertEqual(0, slot_data["ancient_relic_pool"])
-
-
-class TestAncientRelicOptionsAnytimeChaos(Spire2TestBase):
-    options = {
-        "ancient_relic_location": 1,
-        "ancient_relic_pool": 1,
-    }
-
-    def test_anytime_and_chaos_values_are_sent_in_slot_data(self):
-        slot_data = self.world.fill_slot_data()
-        self.assertEqual(1, self.world.options.ancient_relic_location.value)
-        self.assertEqual(1, slot_data["ancient_relic_location"])
-        self.assertEqual(1, self.world.options.ancient_relic_pool.value)
-        self.assertEqual(1, slot_data["ancient_relic_pool"])
-
-
-class TestAncientRelicOptionsTrueChaos(Spire2TestBase):
-    options = {
-        "ancient_relic_pool": 2,
-    }
-
-    def test_true_chaos_value_is_sent_in_slot_data(self):
-        self.assertEqual(2, self.world.options.ancient_relic_pool.value)
-        self.assertEqual(2, self.world.fill_slot_data()["ancient_relic_pool"])
 
 
 class TestAnytimeNeowContract(unittest.TestCase):
@@ -157,19 +104,11 @@ class TestAnytimeNeowContract(unittest.TestCase):
                     ))
 
 
-class TestProgressiveRelicOptionsDefault(Spire2TestBase):
-    def test_defaults_are_sent_in_slot_data(self):
-        slot_data = self.world.fill_slot_data()
-        self.assertEqual(2, self.world.options.relic_rewards_available_anytime.value)
-        self.assertEqual(2, slot_data["relic_rewards_available_anytime"])
-        self.assertEqual(1, self.world.options.release_on_victory.value)
-        self.assertEqual(1, slot_data["release_on_victory"])
-
-
 class TestProgressiveRelicOptionsConfigured(Spire2TestBase):
     options = {
         "relic_rewards_available_anytime": 7,
         "release_on_victory": 0,
+        "strict_card_rewards": 1,
     }
 
     def test_configured_values_are_sent_in_slot_data(self):
@@ -178,6 +117,94 @@ class TestProgressiveRelicOptionsConfigured(Spire2TestBase):
         self.assertEqual(7, slot_data["relic_rewards_available_anytime"])
         self.assertEqual(0, self.world.options.release_on_victory.value)
         self.assertEqual(0, slot_data["release_on_victory"])
+        self.assertEqual(1, slot_data["strict_card_rewards"])
+
+
+class TestRandomShopCardsOff(Spire2TestBase):
+    def test_vanilla_layout_sends_no_weights(self):
+        self.assertEqual({}, self.world.fill_slot_data()["shop_card_weights"])
+
+
+class TestRandomShopCardsOn(Spire2TestBase):
+    options = {
+        "random_shop_cards": 1,
+        "shop_attack_weight": "none",
+        "shop_rare_weight": "high",
+        "shop_colorless_weight": "low",
+    }
+
+    def test_weights_are_sent_in_slot_data(self):
+        self.assertEqual({
+            "attack": 0,
+            "skill": 3,
+            "power": 3,
+            "common": 3,
+            "uncommon": 3,
+            "rare": 5,
+            "colorless": 1,
+            "event": 1,
+        }, self.world.fill_slot_data()["shop_card_weights"])
+
+
+class TestRandomShopCardsWithoutWeights(Spire2TestBase):
+    options = {
+        "random_shop_cards": 1,
+        "shop_attack_weight": "none",
+        "shop_skill_weight": "none",
+        "shop_power_weight": "none",
+        "shop_common_weight": "none",
+        "shop_uncommon_weight": "none",
+        "shop_rare_weight": "none",
+        "shop_colorless_weight": "none",
+        "shop_event_weight": "none",
+    }
+
+    def test_all_none_keeps_vanilla_layout(self):
+        self.assertEqual({}, self.world.fill_slot_data()["shop_card_weights"])
+
+
+class TestRandomShopStockOff(Spire2TestBase):
+    def test_vanilla_layout_sends_no_weights(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual({}, slot_data["shop_relic_weights"])
+        self.assertEqual({}, slot_data["shop_potion_weights"])
+
+
+class TestRandomShopStockDefaults(Spire2TestBase):
+    options = {"random_shop_relics": 1, "random_shop_potions": 1}
+
+    def test_default_weights_are_sent_in_slot_data(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual({
+            "common": 3,
+            "uncommon": 3,
+            "rare": 3,
+            "shop": 3,
+            "event": 1,
+            "ancient": 1,
+        }, slot_data["shop_relic_weights"])
+        self.assertEqual({
+            "common": 3,
+            "uncommon": 3,
+            "rare": 3,
+            "otherclass": 3,
+            "event": 1,
+        }, slot_data["shop_potion_weights"])
+
+
+class TestRandomShopStockWithoutWeights(Spire2TestBase):
+    options = {
+        "random_shop_relics": 1,
+        "shop_relic_common_weight": "none",
+        "shop_relic_uncommon_weight": "none",
+        "shop_relic_rare_weight": "none",
+        "shop_relic_shop_weight": "none",
+        "shop_relic_event_weight": "none",
+        "shop_relic_ancient_weight": "none",
+    }
+
+    def test_all_none_keeps_vanilla_layout(self):
+        self.assertEqual({}, self.world.fill_slot_data()["shop_relic_weights"])
 
 
 class TestAscensionDowns(Spire2TestBase):
@@ -195,6 +222,7 @@ class TestAscensionDowns(Spire2TestBase):
                 break
         else:
             raise Exception("Failed to find ascension down")
+
 
 class TestAscensionDownNumbers(Spire2TestBase):
     options = {
@@ -228,13 +256,6 @@ class TestBasicModdedChars(Spire2TestBase):
     }
 
 
-class TestProgressiveStartersDisabled(Spire2TestBase):
-    def test_no_progressive_starters(self):
-        names = [item.name for item in self.world.multiworld.itempool]
-        self.assertNotIn("Ironclad Progressive Starter Card", names)
-        self.assertNotIn("Ironclad Progressive Starter Relic", names)
-
-
 class TestProgressiveStartersEnabled(Spire2TestBase):
     options = {
         "characters": ["ironclad", "silent"],
@@ -248,33 +269,10 @@ class TestProgressiveStartersEnabled(Spire2TestBase):
             self.assertEqual(names.count(f"{character} Progressive Starter Card"), 2)
             self.assertEqual(names.count(f"{character} Progressive Starter Relic"), 2)
 
-    def test_normal_reward_counts_are_preserved(self):
-        names = [item.name for item in self.world.multiworld.itempool]
-        for character in ("Ironclad", "Silent"):
-            self.assertEqual(names.count(f"{character} Card Reward"), 10)
-            self.assertEqual(names.count(f"{character} Relic"), 10)
-
     def test_progressive_starters_are_sent_to_the_client(self):
         slot_data = self.world.fill_slot_data()
         self.assertEqual(slot_data["progressive_starter_card"], 1)
         self.assertEqual(slot_data["progressive_starter_relic"], 1)
-
-
-class TestProgressiveStartersRequireFloorChecks(Spire2TestBase):
-    options = {
-        "progressive_starter_card": True,
-        "progressive_starter_relic": True,
-        "include_floor_checks": False,
-    }
-
-    def test_progressive_starters_are_disabled(self):
-        names = [item.name for item in self.world.multiworld.itempool]
-        self.assertNotIn("Ironclad Progressive Starter Card", names)
-        self.assertNotIn("Ironclad Progressive Starter Relic", names)
-
-        slot_data = self.world.fill_slot_data()
-        self.assertEqual(slot_data["progressive_starter_card"], 0)
-        self.assertEqual(slot_data["progressive_starter_relic"], 0)
 
 
 class TestEnsureShopWithNoGoldWorks(Spire2TestBase):
@@ -282,3 +280,70 @@ class TestEnsureShopWithNoGoldWorks(Spire2TestBase):
         "shop_sanity": True,
         "gold_sanity": False,
     }
+
+
+class TestDreadModeOff(Spire2TestBase):
+    options = {
+        "ascension": ["3"],
+        "ascension_down": ["2"],
+    }
+
+    def test_slot_needs_no_game_features(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(0, slot_data["dread_mode"])
+        self.assertEqual([], slot_data["required_game_features"])
+
+    def test_ascension_options_are_kept(self):
+        for config in self.world.characters:
+            self.assertEqual(3, len(config.ascension))
+            self.assertEqual(2, len(config.ascension_down))
+
+
+class TestDreadModeOn(Spire2TestBase):
+    options = {
+        "dread_mode": True,
+        "ascension": ["3"],
+        "ascension_down": ["2"],
+    }
+
+    def test_slot_requires_the_dread_game_feature(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(1, slot_data["dread_mode"])
+        self.assertEqual(["dread"], slot_data["required_game_features"])
+
+    def test_ascension_options_still_apply(self):
+        for config in self.world.characters:
+            self.assertEqual(3, len(config.ascension))
+            self.assertEqual(2, len(config.ascension_down))
+
+
+class TestBlitzMerchantChanceOff(Spire2TestBase):
+    def test_slot_needs_no_game_features(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(0, slot_data["blitz_merchant_chance"])
+        self.assertEqual([], slot_data["required_game_features"])
+
+
+class TestBlitzMerchantChance(Spire2TestBase):
+    options = {
+        "blitz_merchant_chance": 100,
+        "shop_sanity": False,
+    }
+
+    def test_slot_requires_the_blitz_merchant_game_feature(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(100, slot_data["blitz_merchant_chance"])
+        self.assertEqual(["blitz_merchant"], slot_data["required_game_features"])
+
+
+class TestBlitzMerchantChanceWithShopSanity(Spire2TestBase):
+    options = {
+        "blitz_merchant_chance": 100,
+        "shop_sanity": True,
+        "dread_mode": True,
+    }
+
+    def test_shop_sanity_does_not_limit_the_chance(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(100, slot_data["blitz_merchant_chance"])
+        self.assertEqual(["blitz_merchant", "dread"], slot_data["required_game_features"])

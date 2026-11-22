@@ -9,9 +9,13 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Gold;
 using MegaCrit.Sts2.Core.Entities.Merchant;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Entities.Rngs;
 using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
+#if STS2_AT_LEAST_0_113_0
+using MegaCrit.Sts2.Core.Multiplayer.Game;
+#endif
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Potions;
 using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
@@ -226,6 +230,29 @@ namespace StS2AP.Patches
         }
 
         /// <summary>
+        /// Prices an AP slot as the game prices that kind of entry, without drawing from the
+        /// player's shop RNG. The game's CalcCost varies the price with that RNG, but AP pages
+        /// are built only on their own player's machine, so a draw there would leave the other
+        /// players' copies of the RNG behind and their later rolls for this player different:
+        /// shop stock, and the offers of a Blitz merchant. A throwaway RNG seeded with the
+        /// location stands in for it, which also keeps each check's price the same every visit.
+        /// </summary>
+        private static void CalcCostOffShopRng(MerchantEntry entry, long locationId)
+        {
+            Dictionary<PlayerRngType, MegaCrit.Sts2.Core.Random.Rng> rngs = entry._player.PlayerRng._rngs;
+            MegaCrit.Sts2.Core.Random.Rng shopRng = rngs[PlayerRngType.Shops];
+            rngs[PlayerRngType.Shops] = new MegaCrit.Sts2.Core.Random.Rng(unchecked((uint)locationId));
+            try
+            {
+                entry.CalcCost();
+            }
+            finally
+            {
+                rngs[PlayerRngType.Shops] = shopRng;
+            }
+        }
+
+        /// <summary>
         /// Reads whatever CalcCost() just computed (the vanilla-style rarity-tiered
         /// baseline) and reduces it per the ShopSanityCosts option. Values match
         /// options.py exactly: 0=Fixed(15g), 1=Super_Discount_Tiered(20%),
@@ -282,6 +309,28 @@ namespace StS2AP.Patches
 
         internal static bool TryGetApInventory(MerchantInventory vanillaInventory, out MerchantInventory apInventory)
             => ApInventories.TryGetValue(vanillaInventory, out apInventory!);
+
+        /// <summary>
+        /// Gives a merchant inventory with no stock of its own, such as a Blitz merchant's, the
+        /// AP page a normal shop would have on this visit. AP slots are clones of a normal shop's
+        /// rolled stock, so this rolls one just for them; nothing else of it is shown.
+        /// Call it for every player on every peer, whether or not that player has Shop Sanity:
+        /// the roll uses the player's shop RNG and takes relics from the run's shared relic bag,
+        /// so a roll made on only one peer would leave the peers' runs out of step.
+        /// </summary>
+        internal static bool AttachApInventory(Player player, MerchantInventory host)
+        {
+            // PopulateApShopSlots builds the AP inventory in its postfix on this call, for the
+            // local player with Shop Sanity only.
+            MerchantInventory stock = MerchantInventory.CreateForNormalMerchant(player);
+            if (!ApInventories.TryGetValue(stock, out MerchantInventory? apInventory))
+                return false;
+
+            ApInventories.Remove(stock);
+            ApInventories.Remove(host);
+            ApInventories.Add(host, apInventory);
+            return true;
+        }
 
         private static MerchantInventory CreateApInventory(
             Player player,
@@ -366,7 +415,7 @@ namespace StS2AP.Patches
                     );
                     entry.CreationResult = new CardCreationResult(apCard);
                     ApCheckTargets.Add(entry, target);
-                    entry.CalcCost();
+                    CalcCostOffShopRng(entry, target.LocationId);
                     ApplyCostTier(entry, settings);
                 }
                 else
@@ -399,7 +448,7 @@ namespace StS2AP.Patches
                             target.LocationId
                         );
                     ApCheckTargets.Add(entry, target);
-                    entry.CalcCost();
+                    CalcCostOffShopRng(entry, target.LocationId);
                     ApplyCostTier(entry, settings);
                 }
                 else
@@ -432,7 +481,7 @@ namespace StS2AP.Patches
                             target.LocationId
                         );
                     ApCheckTargets.Add(entry, target);
-                    entry.CalcCost();
+                    CalcCostOffShopRng(entry, target.LocationId);
                     ApplyCostTier(entry, settings);
                 }
                 else
@@ -674,7 +723,7 @@ namespace StS2AP.Patches
         /// are redirected into DoApPurchase() (sends the location check instead
         /// of granting a real item) everything else falls through to vanilla
         /// </summary>
-        [HarmonyPatch(typeof(MerchantEntry), nameof(MerchantEntry.OnTryPurchaseWrapper))]
+        [HarmonyPatch(typeof(MerchantEntry), GameApiCompat.MerchantEntryPurchaseMethod)]
         public static class InterceptApPurchase
         {
             [HarmonyPrefix]
@@ -757,12 +806,39 @@ namespace StS2AP.Patches
             }
         }
 
+#if STS2_AT_LEAST_0_113_0
+        /// <summary>
+        /// From 0.113 a clicked slot goes to the MerchantSynchronizer, which sends the entry's ID to
+        /// the other players and buys the entry with that ID from the owner's synchronized
+        /// inventory. The AP page's entries are clones that exist only on their owner's machine
+        /// and share their IDs with the vanilla entries they were cloned from, so that path would
+        /// buy the vanilla item instead, on every machine. Buy AP entries directly;
+        /// InterceptApPurchase sends the check and synchronizes the gold spent.
+        /// </summary>
+        [HarmonyPatch(typeof(MerchantSynchronizer), nameof(MerchantSynchronizer.PurchaseLocalEntry))]
+        public static class KeepApPurchasesLocal
+        {
+            [HarmonyPrefix]
+            public static bool Prefix(MerchantEntry entry, ref Task<bool> __result)
+            {
+                if (!MultiplayerSupport.IsFeatureEnabled(MultiplayerFeature.Shops)
+                    || !IsApSlot(entry))
+                {
+                    return true;
+                }
+
+                __result = entry.OnTryPurchaseUnsynchronized(null);
+                return false;
+            }
+        }
+#endif
+
         #endregion
 
         #region Post-Purchase Visual Fixes
 
         /// <summary>Skips the vanilla fly-to-deck animation for AP card fakes and cleans up the now-orphaned card node</summary>
-        [HarmonyPatch(typeof(NMerchantCard), "OnSuccessfulPurchase")]
+        [HarmonyPatch(typeof(NMerchantCard), nameof(NMerchantCard.OnSuccessfulPurchase))]
         public static class CardVisualFix
         {
             [HarmonyPrefix]
@@ -780,7 +856,7 @@ namespace StS2AP.Patches
         }
 
         /// <summary>Skips the vanilla fly-to-inventory animation for AP relic fakes</summary>
-        [HarmonyPatch(typeof(NMerchantRelic), "OnSuccessfulPurchase")]
+        [HarmonyPatch(typeof(NMerchantRelic), nameof(NMerchantRelic.OnSuccessfulPurchase))]
         public static class RelicVisualFix
         {
             [HarmonyPrefix]
@@ -798,7 +874,7 @@ namespace StS2AP.Patches
         }
 
         /// <summary>Skips the vanilla fly-to-inventory animation for AP potion</summary>
-        [HarmonyPatch(typeof(NMerchantPotion), "OnSuccessfulPurchase")]
+        [HarmonyPatch(typeof(NMerchantPotion), nameof(NMerchantPotion.OnSuccessfulPurchase))]
         public static class PotionVisualFix
         {
             [HarmonyPrefix]
@@ -815,7 +891,7 @@ namespace StS2AP.Patches
             }
         }
 
-        [HarmonyPatch(typeof(RelicModel), "get_Pool")]
+        [HarmonyPatch(typeof(RelicModel), nameof(RelicModel.Pool), MethodType.Getter)]
         public static class ApRelicPoolFix
         {
             [HarmonyPrefix]
@@ -830,7 +906,7 @@ namespace StS2AP.Patches
             }
         }
 
-        [HarmonyPatch(typeof(PotionModel), "get_Pool")]
+        [HarmonyPatch(typeof(PotionModel), nameof(PotionModel.Pool), MethodType.Getter)]
         public static class ApPotionPoolFix
         {
             [HarmonyPrefix]
@@ -846,7 +922,7 @@ namespace StS2AP.Patches
         }
 
         /// <summary>Overwrites the potion icon TextureRect with the AP logo whenever an AP potion fake reloads</summary>
-        [HarmonyPatch(typeof(NPotion), "Reload")]
+        [HarmonyPatch(typeof(NPotion), nameof(NPotion.Reload))]
         public static class PotionIconOverride
         {
             private static Texture2D? _apLogoTexture;
@@ -889,7 +965,7 @@ namespace StS2AP.Patches
         /// <summary>
         /// goober stuff to bypass base game limits :p
         /// </summary>
-        [HarmonyPatch(typeof(RelicModel), "get_Description")]
+        [HarmonyPatch(typeof(RelicModel), nameof(RelicModel.Description), MethodType.Getter)]
         public static class ApRelicDescriptionFix
         {
             [HarmonyPrefix]
@@ -904,7 +980,7 @@ namespace StS2AP.Patches
             }
         }
 
-        [HarmonyPatch(typeof(PotionModel), "get_Title")]
+        [HarmonyPatch(typeof(PotionModel), nameof(PotionModel.Title), MethodType.Getter)]
         public static class ApPotionTitleFix
         {
             [HarmonyPrefix]
@@ -919,7 +995,7 @@ namespace StS2AP.Patches
             }
         }
 
-        [HarmonyPatch(typeof(PotionModel), "get_Description")]
+        [HarmonyPatch(typeof(PotionModel), nameof(PotionModel.Description), MethodType.Getter)]
         public static class ApPotionDescriptionFix
         {
             [HarmonyPrefix]

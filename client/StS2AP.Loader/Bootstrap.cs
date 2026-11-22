@@ -19,10 +19,15 @@ public static class Bootstrap
     private const string VariantEntryType = "StS2AP.ModEntry";
     private const string VariantEntryMethod = "Initialize";
     private const string RitsuLibAssemblyName = "STS2-RitsuLib";
+    // Read by the client to label a build running on a game version line it was not made for.
+    private const string UnverifiedBuildKey = "StS2AP.UnverifiedBuildTarget";
+    private const int MaxReportedReferenceProblems = 5;
     private static string? _modDirectory;
     private static AssemblyLoadContext? _loadContext;
     private static int _initializationStarted;
 
+    // Every failure below throws: the game reports a mod as failing to initialize only when its
+    // initializer throws, and otherwise lists it as loaded with nothing running.
     public static void Initialize()
     {
         // Initializers cannot safely be replayed after partial content registration.
@@ -32,39 +37,40 @@ public static class Bootstrap
             return;
         }
 
-        _modDirectory = Path.GetDirectoryName(typeof(Bootstrap).Assembly.Location);
-        if (string.IsNullOrWhiteSpace(_modDirectory))
-        {
-            Log.Error("[Archipelago.Loader] Could not resolve the mod directory; refusing to load.");
-            return;
-        }
-
-        _loadContext = AssemblyLoadContext.GetLoadContext(typeof(Bootstrap).Assembly)
-            ?? AssemblyLoadContext.Default;
-        _loadContext.Resolving += ResolveDependency;
-
-        string? hostVersionText = NormalizeGameVersion(ReleaseInfoManager.Instance.ReleaseInfo?.Version);
-        if (hostVersionText is null || !Version.TryParse(hostVersionText, out Version? hostVersion))
-        {
-            Log.Error("[Archipelago.Loader] Could not determine the Slay the Spire 2 version; refusing to load.");
-            return;
-        }
-
         try
         {
+            _modDirectory = Path.GetDirectoryName(typeof(Bootstrap).Assembly.Location);
+            if (string.IsNullOrWhiteSpace(_modDirectory))
+                throw new InvalidOperationException("Could not resolve the mod directory.");
+
+            _loadContext = AssemblyLoadContext.GetLoadContext(typeof(Bootstrap).Assembly)
+                ?? AssemblyLoadContext.Default;
+            _loadContext.Resolving += ResolveDependency;
+
+            string? hostVersionText = NormalizeGameVersion(ReleaseInfoManager.Instance.ReleaseInfo?.Version);
+            if (hostVersionText is null || !Version.TryParse(hostVersionText, out Version? hostVersion))
+                throw new InvalidOperationException("Could not determine the Slay the Spire 2 version.");
+
             VariantManifest manifest = ReadManifest(_modDirectory);
             VariantSelection? selection = PickVariant(hostVersion, manifest.Variants);
             if (selection is null)
             {
                 string supported = string.Join(", ", manifest.Variants.Keys.Order());
-                Log.Error(
-                    $"[Archipelago.Loader] STS2 {hostVersionText} has no compatible build on the same major.minor version line. " +
-                    $"Compiled targets: {supported}. Refusing to load."
+                throw new InvalidOperationException(
+                    $"STS2 {hostVersionText} has no compatible build: every build is for a newer game " +
+                    $"version or another major version. Compiled targets: {supported}."
                 );
-                return;
             }
 
-            if (selection.Version != hostVersion)
+            bool exactBuild = selection.Version == hostVersion;
+            if (selection.CrossesVersionLine)
+            {
+                Log.Warn(
+                    $"[Archipelago.Loader] STS2 {hostVersionText} has no Archipelago build on its version line; " +
+                    $"trying the {selection.CompatTarget} build. It has not been verified on this game version."
+                );
+            }
+            else if (!exactBuild)
             {
                 Log.Warn(
                     $"[Archipelago.Loader] STS2 {hostVersionText} has no exact Archipelago build; " +
@@ -78,6 +84,10 @@ public static class Bootstrap
                 selection.Entry
             );
             Assembly variantAssembly = LoadVariantAssembly(variantPath);
+            if (!exactBuild)
+                EnsureReferencesResolve(variantAssembly, selection.CompatTarget, hostVersionText);
+            if (selection.CrossesVersionLine)
+                AppContext.SetData(UnverifiedBuildKey, selection.CompatTarget);
             Patches_VariantTypeDiscovery.Register(variantAssembly);
             InvokeVariantInitializer(variantAssembly);
             Log.Info(
@@ -87,7 +97,8 @@ public static class Bootstrap
         }
         catch (Exception ex)
         {
-            Log.Error($"[Archipelago.Loader] Compatibility load failed; Archipelago will not start: {ex}");
+            Log.Error($"[Archipelago.Loader] Archipelago will not start: {ex}");
+            throw;
         }
     }
 
@@ -178,16 +189,18 @@ public static class Bootstrap
     }
 
     /// <summary>
-    /// Selects the newest build that does not exceed the host patch version, but
-    /// never crosses a major/minor boundary. A new version line requires a build
-    /// against that line before the mod will load.
+    /// Selects the newest build that does not exceed the host version within the host's
+    /// major.minor line. Without one, falls back to the newest older build of the same major
+    /// version; that build is unverified there, and the caller checks its references first.
+    /// A build for a newer game version or another major version is never used.
     /// </summary>
     private static VariantSelection? PickVariant(
         Version hostVersion,
         IReadOnlyDictionary<string, VariantEntry> variants
     )
     {
-        VariantSelection? selected = null;
+        VariantSelection? sameLine = null;
+        VariantSelection? olderLine = null;
         foreach ((string compatTarget, VariantEntry? entry) in variants)
         {
             string? normalizedTarget = NormalizeGameVersion(compatTarget);
@@ -195,14 +208,42 @@ public static class Bootstrap
                 throw new InvalidDataException($"Variant target '{compatTarget}' is not a numeric three-part version.");
             if (entry is null)
                 throw new InvalidDataException($"Variant {compatTarget} has no manifest entry.");
-            if (targetVersion.Major != hostVersion.Major || targetVersion.Minor != hostVersion.Minor)
+            if (targetVersion.Major != hostVersion.Major || targetVersion.CompareTo(hostVersion) > 0)
                 continue;
-            if (targetVersion.CompareTo(hostVersion) > 0)
-                continue;
-            if (selected is null || targetVersion.CompareTo(selected.Version) > 0)
-                selected = new VariantSelection(compatTarget, targetVersion, entry);
+
+            if (targetVersion.Minor == hostVersion.Minor)
+            {
+                if (sameLine is null || targetVersion.CompareTo(sameLine.Version) > 0)
+                    sameLine = new VariantSelection(compatTarget, targetVersion, entry, CrossesVersionLine: false);
+            }
+            else if (olderLine is null || targetVersion.CompareTo(olderLine.Version) > 0)
+            {
+                olderLine = new VariantSelection(compatTarget, targetVersion, entry, CrossesVersionLine: true);
+            }
         }
-        return selected;
+        return sameLine ?? olderLine;
+    }
+
+    /// <summary>
+    /// Fails startup when a build made for another game version references game or library
+    /// members this game lacks, rather than letting the first use of one fail mid-run.
+    /// </summary>
+    private static void EnsureReferencesResolve(Assembly variantAssembly, string compatTarget, string hostVersionText)
+    {
+        IReadOnlyList<string> problems = VariantReferenceCheck.FindMissingReferences(variantAssembly);
+        if (problems.Count == 0)
+        {
+            Log.Info($"[Archipelago.Loader] Every game member the {compatTarget} build uses exists in STS2 {hostVersionText}.");
+            return;
+        }
+
+        foreach (string problem in problems)
+            Log.Error($"[Archipelago.Loader] Missing in STS2 {hostVersionText}: {problem}");
+        throw new InvalidOperationException(
+            $"The {compatTarget} build uses {problems.Count} game or library members that STS2 {hostVersionText} lacks, " +
+            $"so it needs an update for this game version. First: " +
+            string.Join("; ", problems.Take(MaxReportedReferenceProblems))
+        );
     }
 
     private static string ResolveValidatedVariantPath(
@@ -283,6 +324,7 @@ public static class Bootstrap
     private sealed record VariantSelection(
         string CompatTarget,
         Version Version,
-        VariantEntry Entry
+        VariantEntry Entry,
+        bool CrossesVersionLine
     );
 }

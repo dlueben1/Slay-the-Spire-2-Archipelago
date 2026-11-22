@@ -11,7 +11,7 @@
     <RootNamespace>StS2AP.Loader</RootNamespace>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <IsPackable>false</IsPackable>
-    <Sts2ApiCompat>$(Sts2PublicApiCompat)</Sts2ApiCompat>
+    <Sts2ApiCompat>$(Sts2MainApiCompat)</Sts2ApiCompat>
     <UseSts2RefLib Condition="'$(UseSts2RefLib)' == ''">false</UseSts2RefLib>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     <Sts2ApiSignatureDir Condition="'$(Sts2ApiSignatureDir)' == '' and '$(Sts2ApiSignatureRoot)' != ''">$(Sts2ApiSignatureRoot)\$(Sts2ApiCompat)</Sts2ApiSignatureDir>

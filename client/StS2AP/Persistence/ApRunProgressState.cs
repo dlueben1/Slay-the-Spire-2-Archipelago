@@ -50,6 +50,11 @@ public sealed class ApRunProgressState
     public HashSet<long> CheckedCampfireLocationIds { get; set; } = new();
     [JsonPropertyName("card_assignments")]
     public Dictionary<int, ApCardAssignmentState> CardAssignments { get; set; } = new();
+    // Singleplayer Strict Card Rewards chain; see StrictCardChain.
+    [JsonPropertyName("strict_card_reveal_count")]
+    public int StrictCardRevealCount { get; set; }
+    [JsonPropertyName("strict_card_pick_history")]
+    public List<string> StrictCardPickHistory { get; set; } = new();
     [JsonPropertyName("potion_assignments")]
     public Dictionary<int, string> PotionAssignments { get; set; } = new();
     [JsonPropertyName("used_items")]

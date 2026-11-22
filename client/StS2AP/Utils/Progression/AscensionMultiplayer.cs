@@ -74,8 +74,8 @@ public static class AscensionMultiplayer
         currentAscensions = new List<int>();
         handledReceiptIndexes = new List<int>();
 
-        var character = BetaMainCompatibility.GetLocalCharacter(lobby);
-        if (!hostSettings.Characters.TryGetValue(
+        var character = lobby.LocalPlayer.character;
+        if (!hostSettings.TryGetCharacterConfig(
                 character.Id.Entry,
                 out CharacterConfig? config))
         {
@@ -96,7 +96,7 @@ public static class AscensionMultiplayer
         for (int index = 0; index < receivedItems.Count; index++)
         {
             ItemInfo item = receivedItems[index];
-            if (!CoopSlot.Owns(item.ItemId)) continue;
+            if (ArchipelagoIdCodec.IsArchipelagoReservedId(item.ItemId)) continue;
             if (ArchipelagoIdCodec.IsUniversalItemId(item.ItemId)
                 || item.GetAPCharacterNumber() != hostCharacterOffset
                 || !TryGetAscensionLevel(item, out AscensionLevel level))
@@ -232,7 +232,7 @@ public static class AscensionMultiplayer
         {
             int receivedItemIndex = index + 1;
             ItemInfo item = receivedItems[index];
-            if (!CoopSlot.Owns(item.ItemId)) continue;
+            if (ArchipelagoIdCodec.IsArchipelagoReservedId(item.ItemId)) continue;
             if (handled.Contains(receivedItemIndex)
                 || ArchipelagoIdCodec.IsUniversalItemId(item.ItemId)
                 || item.GetAPCharacterNumber() != shared.HostCharacterOffset
@@ -511,7 +511,7 @@ public static class AscensionMultiplayer
             || message.ReceivedItemIndex <= 0
             || message.AscensionLevel is < 1 or > 10
             || RunManager.Instance.DebugOnlyGetState() is not RunState current
-            || !BetaMainCompatibility.TryGetHostNetId(
+            || !MultiplayerSupport.TryGetHostNetId(
                 RunManager.Instance.NetService,
                 out ulong hostNetId)
             || owner.NetId != hostNetId
@@ -572,14 +572,7 @@ public static class AscensionMultiplayer
                 break;
 
             case AscensionLevel.DoubleBoss:
-                foreach (var act in runState.Acts)
-                    act.SetSecondBossEncounter(null);
-                if (runState.Act.Index == 2
-                    && runState.Map.SecondBossMapPoint is { } secondBossPoint)
-                {
-                    runState.Map.BossMapPoint.RemoveChildPoint(secondBossPoint);
-                }
-                StS2AP.Patches.Patches_APBossPresentation.Refresh();
+                AscensionManager.RemoveDoubleBoss(runState);
                 break;
         }
     }

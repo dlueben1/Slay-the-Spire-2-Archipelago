@@ -1,16 +1,29 @@
 <script setup lang="ts">
 import type { TabsItem } from "@nuxt/ui";
-import { computed, reactive, ref, type Component } from "vue";
+import { computed, reactive, ref, watch, type Component } from "vue";
+import { useRouter } from "vue-router";
+import BoonsStep from "../components/wizard/steps/BoonsStep.vue";
+import ChallengesStep from "../components/wizard/steps/ChallengesStep.vue";
 import CharacterSetupStep from "../components/wizard/steps/CharacterSetupStep.vue";
-import CheckSetupStep from "../components/wizard/steps/CheckSetupStep.vue";
+import ChecksStep from "../components/wizard/steps/ChecksStep.vue";
 import DeathLinkStep from "../components/wizard/steps/DeathLinkStep.vue";
+import ItemPoolStep from "../components/wizard/steps/ItemPoolStep.vue";
 import ProgressionStep from "../components/wizard/steps/ProgressionStep.vue";
+import ItemsStep from "../components/wizard/steps/ItemsStep.vue";
 import ReviewStep from "../components/wizard/steps/ReviewStep.vue";
 import RunSettingsStep from "../components/wizard/steps/RunSettingsStep.vue";
+import ShopsStep from "../components/wizard/steps/ShopsStep.vue";
 import { provideWizardAnswers } from "../components/wizard/core/wizardAnswersContext";
 import { optionCatalog } from "../generated/optionCatalog";
 import { buildWizardYaml } from "../services/YamlService";
+import { builderYamlComments } from "../services/YamlTemplateComments";
 import { createDefaultWizardAnswers } from "../wizard/WizardAnswers";
+import {
+  clearSavedWizardState,
+  getBrowserAnswerStorage,
+  loadSavedWizardState,
+  saveWizardState,
+} from "../wizard/answerPersistence";
 import { getConfiguredCharacterNames } from "../wizard/CharacterRoster";
 import {
   createDefaultFillerAnswers,
@@ -19,32 +32,52 @@ import {
 import { selectGuidedOptions } from "../wizard/GuidedOption";
 import { compileWizardAnswers } from "../wizard/compiler/compileWizardAnswers";
 import { buildWizardReviewSections } from "../wizard/review";
-import { wizardSteps, type WizardSectionKey } from "../wizard/WizardStep";
+import {
+  wizardSteps,
+  type WizardSectionKey,
+  type WizardStep,
+} from "../wizard/WizardStep";
 
 /** Component responsible for each answer section declared by `wizardSteps`. */
 const sectionStepComponents: Record<WizardSectionKey, Component> = {
   characters: CharacterSetupStep,
   run: RunSettingsStep,
-  checksAndRewards: CheckSetupStep,
+  checks: ChecksStep,
+  shops: ShopsStep,
+  itemPool: ItemPoolStep,
+  boons: BoonsStep,
+  challenges: ChallengesStep,
   deathLink: DeathLinkStep,
   progression: ProgressionStep,
+  items: ItemsStep,
 };
 
 const availableCharacters = optionCatalog.options.characters?.valid_keys ?? [];
 const fillerItems = createFillerDisplayItems(optionCatalog);
 const defaultFillerAnswers = createDefaultFillerAnswers(optionCatalog);
-const answers = reactive(
-  createDefaultWizardAnswers(
+
+/** Fresh default answers, for first visits and Start over. */
+function createFreshAnswers() {
+  return createDefaultWizardAnswers(
     availableCharacters,
     defaultFillerAnswers,
     optionCatalog,
-  ),
-);
+  );
+}
+
+const answerStorage = getBrowserAnswerStorage();
+const savedState = loadSavedWizardState(answerStorage, createFreshAnswers());
+const answers = reactive(savedState?.answers ?? createFreshAnswers());
 
 // Share the root model read-only so declarative flow logic avoids prop drilling.
 provideWizardAnswers(answers);
 
-const stepIndex = ref(0);
+/** Index of a step by ID, or -1 when no step has that ID. */
+function findStepIndex(stepId: string): number {
+  return wizardSteps.findIndex((step) => step.id === stepId);
+}
+
+const stepIndex = ref(Math.max(0, findStepIndex(savedState?.stepId ?? "")));
 const error = ref("");
 
 /**
@@ -86,8 +119,14 @@ function getGuidedSettings() {
   const compiledOptions = compileCurrentAnswers();
 
   // Delegate ordered key selection to the registry shared with section compilers.
-  return selectGuidedOptions(compiledOptions);
+  return selectGuidedOptions(compiledOptions, answers.keptOptions);
 }
+
+/** Comments for the generated YAML, pointing back to this copy of the builder. */
+const yamlComments = builderYamlComments(
+  new URL(useRouter().resolve({ name: "builder" }).href, window.location.href)
+    .href,
+);
 
 /**
  * Builds the exact complete YAML required to enter Review.
@@ -97,7 +136,7 @@ function getGuidedSettings() {
  */
 function buildCurrentYaml(): string {
   // Use one service result for every delivery path so metadata cannot diverge.
-  return buildWizardYaml(answers.playerName, getGuidedSettings());
+  return buildWizardYaml(answers.playerName, getGuidedSettings(), yamlComments);
 }
 
 interface WizardCompileState {
@@ -128,6 +167,94 @@ function getCompileState(): WizardCompileState {
 const compileState = computed(getCompileState);
 const yamlPreview = computed(() => compileState.value.yaml);
 const canReview = computed(() => compileState.value.ok);
+
+// A restored Review step needs answers that still compile (the options may have
+// changed since the save); otherwise resume on the step before it.
+if (activeStepIsReview() && !canReview.value) {
+  stepIndex.value -= 1;
+}
+
+function activeStepIsReview(): boolean {
+  return wizardSteps[stepIndex.value]?.id === "review";
+}
+
+// Save on every change so a refresh or an accidental Back loses nothing.
+watch(
+  [answers, stepIndex],
+  () => {
+    saveWizardState(answerStorage, {
+      answers,
+      stepId: wizardSteps[stepIndex.value]?.id ?? "",
+    });
+  },
+  { deep: true },
+);
+
+const isStartOverOpen = ref(false);
+
+/** Clears every answer, including the player name, and returns to the first step. */
+function startOver(): void {
+  Object.assign(answers, createFreshAnswers());
+  clearSavedWizardState(answerStorage);
+  stepIndex.value = 0;
+  error.value = "";
+  importWarnings.value = [];
+  isStartOverOpen.value = false;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+const isImportOpen = ref(false);
+const importText = ref("");
+const importError = ref("");
+/** Notes from the last import about settings it changed or left out. */
+const importWarnings = ref<string[]>([]);
+
+/** Opens the import dialog with an empty draft. */
+function openImport(): void {
+  importText.value = "";
+  importError.value = "";
+  isImportOpen.value = true;
+}
+
+/** Reads a chosen file into the import draft. */
+async function readImportFile(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  // Clear the input so choosing the same file again still fires a change.
+  input.value = "";
+  if (!file) return;
+
+  try {
+    importText.value = await file.text();
+    importError.value = "";
+  } catch {
+    importError.value = "The browser couldn't read that file.";
+  }
+}
+
+/**
+ * Replaces every answer with the draft YAML's settings and returns to the first step.
+ * Errors stay in the dialog; warnings show above the builder after it closes.
+ */
+async function loadImport(): Promise<void> {
+  let result;
+  try {
+    // Loaded on demand: the YAML parser is only needed by players who import.
+    const { importWizardYaml } =
+      await import("../wizard/import/importWizardYaml");
+    result = importWizardYaml(importText.value, optionCatalog);
+  } catch (cause) {
+    importError.value = cause instanceof Error ? cause.message : String(cause);
+    return;
+  }
+
+  Object.assign(answers, result.answers);
+  importWarnings.value = result.warnings;
+  stepIndex.value = 0;
+  error.value = "";
+  isImportOpen.value = false;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
 
 /**
  * Builds player-facing review sections for all implemented guided answers.
@@ -182,44 +309,60 @@ const activeStep = computed(
   () => wizardSteps[stepIndex.value] ?? wizardSteps[0]!,
 );
 
-/** Component registered for the active answer section; Review is rendered separately. */
-const activeSectionComponent = computed(() => {
-  const sectionKey = activeStep.value.sectionKey;
-  return sectionKey ? sectionStepComponents[sectionKey] : null;
-});
+/** One answer section shown on the active step, with the component that edits it. */
+interface ActiveSectionPart {
+  sectionKey: WizardSectionKey;
+  component: Component;
+}
 
-/** Reactive answer object owned by the active section step. */
-const activeSectionAnswers = computed(() => {
-  const sectionKey = activeStep.value.sectionKey;
-  return sectionKey ? answers[sectionKey] : null;
-});
+/**
+ * Lists the answer sections shown on a step, in display order.
+ *
+ * @param step - Declarative step; a combined step lists its parts, others their own section.
+ * @returns One entry per section; empty for Review.
+ */
+function getSectionParts(step: WizardStep): ActiveSectionPart[] {
+  const sectionSteps = step.parts ?? [step];
+  const parts: ActiveSectionPart[] = [];
+
+  for (const sectionStep of sectionSteps) {
+    if (sectionStep.sectionKey) {
+      parts.push({
+        sectionKey: sectionStep.sectionKey,
+        component: sectionStepComponents[sectionStep.sectionKey],
+      });
+    }
+  }
+
+  return parts;
+}
+
+/** Sections, and their components, rendered for the active step. */
+const activeSectionParts = computed(() => getSectionParts(activeStep.value));
 
 /** Extra presentation data required by the two bespoke section components. */
-const activeSectionProps = computed<Record<string, unknown>>(() => {
-  if (activeStep.value.sectionKey === "characters") {
+function getSectionProps(
+  sectionKey: WizardSectionKey,
+): Record<string, unknown> {
+  if (sectionKey === "characters") {
     return { availableCharacters };
   }
 
-  if (activeStep.value.sectionKey === "checksAndRewards") {
+  if (sectionKey === "itemPool") {
     return { fillerItems };
   }
 
   return {};
-});
+}
 
 /**
- * Applies a complete section value emitted by the active registered component.
+ * Applies a complete section value emitted by a registered section component.
  *
+ * @param sectionKey - Section the emitting component edits.
  * @param value - Immutable section answer object emitted through component `v-model`.
  * @returns Nothing; mutates only the root reactive model owned by this view.
  */
-function setActiveSectionAnswers(value: object): void {
-  const sectionKey = activeStep.value.sectionKey;
-
-  if (!sectionKey) {
-    return;
-  }
-
+function setSectionAnswers(sectionKey: WizardSectionKey, value: object): void {
   // Preserve the provided section reference while applying the child's immutable value.
   Object.assign(answers[sectionKey], value);
 }
@@ -304,6 +447,125 @@ function next(): void {
         Archipelago.
       </p>
 
+      <div class="mb-3 flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+        <p class="mr-auto text-sm text-muted">
+          Your answers are saved in this browser.
+        </p>
+        <UButton
+          icon="i-glyphs-folder-open-bold"
+          color="neutral"
+          variant="soft"
+          size="sm"
+          class="cursor-pointer"
+          @click="openImport"
+          >Import YAML</UButton
+        >
+        <UButton
+          icon="i-glyphs-arrows-round-bold"
+          color="neutral"
+          variant="soft"
+          size="sm"
+          class="cursor-pointer"
+          @click="isStartOverOpen = true"
+          >Start over</UButton
+        >
+      </div>
+
+      <UModal
+        v-model:open="isStartOverOpen"
+        title="Start over?"
+        description="This clears every answer, including your player name, and goes back to the first step. It can't be undone."
+        :ui="{ footer: 'justify-end' }"
+      >
+        <template #footer>
+          <UButton
+            label="Cancel"
+            color="neutral"
+            variant="outline"
+            class="cursor-pointer"
+            @click="isStartOverOpen = false"
+          />
+          <UButton
+            label="Start over"
+            color="error"
+            class="cursor-pointer"
+            @click="startOver"
+          />
+        </template>
+      </UModal>
+
+      <UModal
+        v-model:open="isImportOpen"
+        title="Import a YAML"
+        description="Load a Slay the Spire II YAML, from this builder or edited by hand, to change it here. This replaces your current answers."
+        :ui="{ content: 'sm:max-w-2xl', footer: 'justify-end' }"
+      >
+        <template #body>
+          <div class="space-y-3">
+            <label
+              class="inline-flex cursor-pointer items-center gap-2 rounded-md bg-elevated px-3 py-1.5 text-sm font-medium ring-1 ring-default hover:bg-accented"
+            >
+              <UIcon name="i-glyphs-folder-open-bold" />
+              Choose a file
+              <input
+                type="file"
+                accept=".yaml,.yml,.txt,text/yaml"
+                class="sr-only"
+                @change="readImportFile"
+              />
+            </label>
+            <UTextarea
+              v-model="importText"
+              placeholder="Or paste the YAML here"
+              :rows="12"
+              autoresize
+              :maxrows="20"
+              class="w-full font-mono"
+              aria-label="YAML to import"
+            />
+            <p v-if="importError" class="text-sm text-error">
+              {{ importError }}
+            </p>
+          </div>
+        </template>
+        <template #footer>
+          <UButton
+            label="Cancel"
+            color="neutral"
+            variant="outline"
+            class="cursor-pointer"
+            @click="isImportOpen = false"
+          />
+          <UButton
+            label="Import"
+            color="primary"
+            class="cursor-pointer"
+            :disabled="!importText.trim()"
+            @click="loadImport"
+          />
+        </template>
+      </UModal>
+
+      <UAlert
+        v-if="importWarnings.length"
+        color="warning"
+        variant="subtle"
+        icon="i-glyphs-exclamation-circle-bold"
+        title="Imported, with some changes"
+        close
+        class="mb-3"
+        :ui="{ title: 'font-bold' }"
+        @update:open="importWarnings = []"
+      >
+        <template #description>
+          <ul class="list-disc space-y-1 pl-4">
+            <li v-for="(warning, index) in importWarnings" :key="index">
+              {{ warning }}
+            </li>
+          </ul>
+        </template>
+      </UAlert>
+
       <UPageCard variant="subtle">
         <UFormField
           label="Player Name"
@@ -344,21 +606,33 @@ function next(): void {
           class="mt-1 text-sm text-muted"
         >
           {{ wizardSteps[stepIndex]!.description }}
-        </p></template
-      >
+        </p>
+        <UAlert
+          v-if="wizardSteps[stepIndex]!.warning"
+          color="warning"
+          variant="subtle"
+          icon="i-glyphs-exclamation-circle-bold"
+          :title="wizardSteps[stepIndex]!.warning!.title"
+          :description="wizardSteps[stepIndex]!.warning!.description"
+          class="mt-4"
+          :ui="{ title: 'font-bold' }"
+      /></template>
       <ReviewStep
         v-if="activeStepId === 'review'"
         :sections="reviewSections"
         :yaml="yamlPreview"
         :player-name="answers.playerName"
       />
-      <component
-        :is="activeSectionComponent"
-        v-else-if="activeSectionComponent && activeSectionAnswers"
-        :model-value="activeSectionAnswers"
-        v-bind="activeSectionProps"
-        @update:model-value="setActiveSectionAnswers"
-      />
+      <div v-else class="space-y-10">
+        <component
+          :is="part.component"
+          v-for="part in activeSectionParts"
+          :key="part.sectionKey"
+          :model-value="answers[part.sectionKey]"
+          v-bind="getSectionProps(part.sectionKey)"
+          @update:model-value="setSectionAnswers(part.sectionKey, $event)"
+        />
+      </div>
       <template #footer
         ><div class="flex items-center justify-between gap-4">
           <p class="text-sm text-error">{{ error }}</p>
@@ -375,7 +649,7 @@ function next(): void {
               class="cursor-pointer"
               @click="next"
               >{{
-                activeStepId === "progression"
+                wizardSteps[stepIndex + 1]?.id === "review"
                   ? "Review & Download"
                   : "Continue"
               }}</UButton

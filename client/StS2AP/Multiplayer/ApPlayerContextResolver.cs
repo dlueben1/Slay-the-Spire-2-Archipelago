@@ -56,7 +56,7 @@ public static class ApPlayerContextResolver
     {
         config = null!;
         if (!TryGetRewardSettings(player, out ArchipelagoSettings settings)
-            || !settings.Characters.TryGetValue(
+            || !settings.TryGetCharacterConfig(
                 player.Character.Id.Entry,
                 out CharacterConfig? resolved
             )

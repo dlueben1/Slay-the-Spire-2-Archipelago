@@ -1,6 +1,6 @@
 from BaseClasses import ItemClassification
 import typing
-from typing import Dict
+from typing import Dict, Tuple
 from collections import defaultdict
 from enum import auto, Enum
 
@@ -27,6 +27,17 @@ class ItemType(Enum):
     PROGRESSIVE_STARTER_CARD = auto()
     PROGRESSIVE_STARTER_RELIC = auto()
     BONUS_WAX_RELIC = auto()
+    BONUS_RELIC = auto()
+    BONUS_ENCHANTMENT = auto()
+    BONUS_ENCHANTED_CARDS = auto()
+    BONUS_MAX_HP = auto()
+    BONUS_CARDS = auto()
+    INTENT_SIGHT = auto()
+    HEALTH_SIGHT = auto()
+    PILE_SIGHT = auto()
+    MAP_SIGHT = auto()
+    CARD_SIGHT = auto()
+    RELIC_SIGHT = auto()
     TRAP = auto()
     CAW_CAW = auto()
     BUFF = auto()
@@ -64,10 +75,10 @@ base_item_table: Dict[str, ItemData] = {
     'Boss Gold': ItemData(17, ItemType.GOLD, ItemClassification.progression),
     'Progressive Rest': ItemData(7, ItemType.CAMPFIRE, ItemClassification.progression),
     'Progressive Smith': ItemData(8, ItemType.CAMPFIRE, ItemClassification.progression),
-    'Shop Card Slot': ItemData(9, ItemType.SHOP_CARD, ItemClassification.progression_deprioritized),
-    'Neutral Shop Card Slot': ItemData(10, ItemType.SHOP_NEUTRAL, ItemClassification.progression_deprioritized),
-    'Shop Relic Slot': ItemData(11, ItemType.SHOP_RELIC, ItemClassification.progression_deprioritized),
-    'Shop Potion Slot': ItemData(12, ItemType.SHOP_POTION, ItemClassification.progression_deprioritized),
+    'Shop Card Slot': ItemData(9, ItemType.SHOP_CARD, ItemClassification.progression_deprioritized_skip_balancing),
+    'Shop Colorless Card Slot': ItemData(10, ItemType.SHOP_NEUTRAL, ItemClassification.progression_deprioritized_skip_balancing),
+    'Shop Relic Slot': ItemData(11, ItemType.SHOP_RELIC, ItemClassification.progression_deprioritized_skip_balancing),
+    'Shop Potion Slot': ItemData(12, ItemType.SHOP_POTION, ItemClassification.progression_deprioritized_skip_balancing),
     'Progressive Shop Remove': ItemData(13, ItemType.SHOP_REMOVE, ItemClassification.progression_deprioritized),
     'Unlock': ItemData(14, ItemType.CHAR_UNLOCK, ItemClassification.progression),
     'Potion': ItemData(18, ItemType.POTION, ItemClassification.useful),
@@ -85,6 +96,7 @@ base_item_table.update({
 })
 
 # Items in this table are character-agnostic, and can be claimed by any of them
+# 500-599 is Filler Items - Buffs
 universal_items: Dict[str, ItemData] = {
     # Filler / Junk
     'Free Attack': ItemData(500, ItemType.BUFF, ItemClassification.filler),
@@ -104,6 +116,110 @@ universal_items: Dict[str, ItemData] = {
     #'Single Colorless Card': ItemData(508, ItemType.FILLER_CARD_REWARD, ItemClassification.filler),
 }
 
+# `bonus_item_table` is keyed by the configuration selector, such as "WAX_RELIC". This is what the
+# YAML option uses. Bonus items take IDs 600-699; the client's ItemTable uses the same IDs.
+bonus_item_table: Dict[str, BonusItemData] = {
+    'WAX_RELIC': BonusItemData(
+        'Bonus Wax Relic',
+        ItemData(600, ItemType.BONUS_WAX_RELIC, ItemClassification.useful),
+    ),
+    'RELIC': BonusItemData(
+        'Bonus Relic',
+        ItemData(601, ItemType.BONUS_RELIC, ItemClassification.useful),
+    ),
+    'ENCHANTMENT': BonusItemData(
+        'Bonus Enchantment',
+        ItemData(602, ItemType.BONUS_ENCHANTMENT, ItemClassification.useful),
+    ),
+    'ENCHANTED_CARDS': BonusItemData(
+        'Bonus Enchanted Cards',
+        ItemData(603, ItemType.BONUS_ENCHANTED_CARDS, ItemClassification.useful),
+    ),
+    'MAX_HP': BonusItemData(
+        'Bonus Max HP',
+        ItemData(604, ItemType.BONUS_MAX_HP, ItemClassification.useful),
+    ),
+    'CARDS': BonusItemData(
+        'Bonus Cards',
+        ItemData(605, ItemType.BONUS_CARDS, ItemClassification.useful),
+    ),
+}
+
+# Enchantments that ENCHANTMENT and ENCHANTED_CARDS bonus items can give, by the tier a YAML `Pools`
+# entry names. Eager, Exposing and Checkbound are the mod's own enchantments. Random rolls draw only from these tiers. The client has the same table with each
+# enchantment's amount (`BonusEnchantmentCatalog`), and the web builder has a copy for its picker.
+BONUS_ENCHANTMENT_TIERS: Dict[str, tuple] = {
+    'Common': ('Sharp', 'Nimble', 'Adroit', 'Steady', 'Swift', 'Vigorous'),
+    'Uncommon': ('Inky', 'Momentum', 'RoyallyApproved', 'Goopy', 'Eager', 'Exposing'),
+    'Rare': ('Sown', 'Glam', 'Imbued', 'SoulsPower', 'Instinct', 'Spiral', 'Checkbound'),
+}
+# Allowed only when a YAML entry names them as its `Value`: they have a drawback or need a rest site.
+BONUS_ENCHANTMENTS_BY_VALUE_ONLY = ('Corrupted', 'Slither', 'SlumberingEssence', 'PerfectFit', 'Clone')
+
+BONUS_MAX_HP_LIMIT = 50
+
+# The words a CARDS bonus `Pools` entry is built from: at most one source, one card type and one
+# rarity, plus Upgraded. With no source, the cards come from the run's own character. The client
+# has the same words in `BonusCardPools`, and the web builder has a copy for its picker.
+BONUS_CARD_CHARACTERS = ('Ironclad', 'Silent', 'Defect', 'Necrobinder', 'Regent', 'Fool')
+BONUS_CARD_SOURCES = (*BONUS_CARD_CHARACTERS, 'Other', 'Colorless', 'Event', 'Ancient')
+BONUS_CARD_TYPES = ('Attack', 'Skill', 'Power')
+BONUS_CARD_RARITIES = ('Common', 'Uncommon', 'Rare')
+BONUS_CARD_RANDOM = 'Random'
+BONUS_CARD_UPGRADED = 'Upgraded'
+# British spelling accepted for the source.
+BONUS_CARD_ALIASES = {'colourless': 'Colorless'}
+
+
+def parse_bonus_card_pool(entry: str) -> Dict[str, str]:
+    """Splits a CARDS pool such as 'Regent Attack' or 'Colorless Rare Upgraded' into its parts.
+    Raises ValueError with a player-facing reason when the entry can't be honoured."""
+    categories = (
+        ('source', BONUS_CARD_SOURCES),
+        ('type', BONUS_CARD_TYPES),
+        ('rarity', BONUS_CARD_RARITIES),
+        ('random', (BONUS_CARD_RANDOM,)),
+        ('upgraded', (BONUS_CARD_UPGRADED,)),
+    )
+    parts: Dict[str, str] = {}
+    words = entry.split()
+    if not words:
+        raise ValueError("a pool can't be empty")
+    for word in words:
+        key = word.lower()
+        name = BONUS_CARD_ALIASES.get(key)
+        category = 'source' if name else None
+        for candidate_category, names in categories:
+            if category:
+                break
+            name = next((known for known in names if known.lower() == key), None)
+            if name:
+                category = candidate_category
+        if not category:
+            raise ValueError(f"'{word}' is not a card source, type, rarity, Random or Upgraded")
+        if category in parts:
+            raise ValueError(f"it names more than one {category}")
+        parts[category] = name
+    if 'random' in parts and set(parts) - {'random', 'upgraded'}:
+        raise ValueError("Random can only be combined with Upgraded")
+    if parts.get('source') in ('Event', 'Ancient') and 'rarity' in parts:
+        raise ValueError(f"{parts['source']} cards have no Common, Uncommon or Rare")
+    if parts.get('source') == 'Colorless' and parts.get('rarity') == 'Common':
+        raise ValueError("there are no Common colorless cards")
+    return parts
+
+
+def normalize_bonus_enchantment(name: str) -> str:
+    """Matches 'RoyallyApproved', 'royally approved' and 'ROYALLY_APPROVED' alike."""
+    return "".join(ch for ch in name if ch.isalnum()).lower()
+
+
+BONUS_ENCHANTMENT_VALUES: Dict[str, str] = {
+    normalize_bonus_enchantment(name): name
+    for name in (*[name for tier in BONUS_ENCHANTMENT_TIERS.values() for name in tier],
+                 *BONUS_ENCHANTMENTS_BY_VALUE_ONLY)
+}
+
 # Universal trap IDs are shared with the client and never receive character offsets.
 trap_item_table: Dict[str, ItemData] = {
     "Weak Trap": ItemData(700, ItemType.TRAP, ItemClassification.trap),
@@ -117,13 +233,34 @@ trap_item_table: Dict[str, ItemData] = {
     "Dazed Trap": ItemData(708, ItemType.TRAP, ItemClassification.trap),
 }
 
-# `bonus_item_table` is keyed by the configuration selector: "WAX_RELIC". This is what the YAML option uses.
-bonus_item_table: Dict[str, BonusItemData] = {
-    'WAX_RELIC': BonusItemData(
-        'Bonus Wax Relic',
-        ItemData(600, ItemType.BONUS_WAX_RELIC, ItemClassification.useful),
-    ),
+
+# Universal items that undo a challenge option, one ID range for all of them: 800-899.
+# Each is added to the pool only when its option is on. Logic counts only a second copy's Sight
+# Bonus, and only in Act 3 (SIGHT_BONUS_POWER). Sights are progression so players see them as worth
+# buying in other games' shops; deprioritized and skip_balancing keep generation placing them
+# almost like useful items, so finding them stays a surprise.
+# Each Hidden option sets how many copies of its Sight item are added.
+# Any copy undoes the whole challenge. The client keeps a one-step-per-copy rule commented out in
+# ChallengeSightItems.UnlockedSteps: the first Intent Sight showed intents without numbers, the
+# first Health Sight showed only your own side's health.
+challenge_item_table: Dict[str, ItemData] = {
+    "Intent Sight": ItemData(800, ItemType.INTENT_SIGHT, ItemClassification.progression_deprioritized_skip_balancing),
+    "Health Sight": ItemData(801, ItemType.HEALTH_SIGHT, ItemClassification.progression_deprioritized_skip_balancing),
+    "Pile Sight": ItemData(802, ItemType.PILE_SIGHT, ItemClassification.progression_deprioritized_skip_balancing),
+    "Map Sight": ItemData(803, ItemType.MAP_SIGHT, ItemClassification.progression_deprioritized_skip_balancing),
+    "Card Sight": ItemData(804, ItemType.CARD_SIGHT, ItemClassification.progression_deprioritized_skip_balancing),
+    "Relic Sight": ItemData(805, ItemType.RELIC_SIGHT, ItemClassification.progression_deprioritized_skip_balancing),
 }
+
+# Each Sight item with its key in the Sight Bonuses option and the Hidden option that sets its copies.
+SIGHTS: Tuple[Tuple[str, str, str], ...] = (
+    ("Intent Sight", "IntentSight", "hidden_intents"),
+    ("Health Sight", "HealthSight", "hidden_health"),
+    ("Pile Sight", "PileSight", "hidden_piles"),
+    ("Map Sight", "MapSight", "hidden_map"),
+    ("Card Sight", "CardSight", "hidden_cards"),
+    ("Relic Sight", "RelicSight", "hidden_relics"),
+)
 
 # `universal_bonus_items` is keyed by the actual Archipelago item name (like "Bonus Wax Relic").
 # This matches item_table and create_item() lookups.
@@ -139,7 +276,7 @@ base_event_item_pairs: Dict[str, str] = {
 
 def create_item_tables(registry: dict[int, CharacterDefinition]) -> tuple[
         dict[str, ItemData], dict[str, dict[str, ItemData]], dict[str, str]]:
-    item_name_to_data = universal_items | universal_bonus_items | trap_item_table
+    item_name_to_data = universal_items | universal_bonus_items | trap_item_table | challenge_item_table
     characters_to_items: dict[str, dict[str, ItemData]] = defaultdict(dict)
     character_event_pairs: dict[str, str] = {}
     for block, definition in registry.items():
@@ -156,10 +293,9 @@ def create_item_tables(registry: dict[int, CharacterDefinition]) -> tuple[
 item_table, chars_to_items, event_item_pairs = create_item_tables(character_registry)
 
 
-def create_item_groups(
-        items: dict[str, ItemData],
-        characters_to_items: dict[str, dict[str, ItemData]],
-) -> dict[str, typing.Set[str]]:
+# Groups span every character on purpose. Each character block adds to the data package that servers keep in
+# memory, and per-character groups would add another copy of that character's names to it.
+def create_item_groups(items: dict[str, ItemData]) -> dict[str, typing.Set[str]]:
     groups: dict[str, typing.Set[str]] = {
         "Gold": set(),
         "Campfire Upgrades": set(),
@@ -175,6 +311,7 @@ def create_item_groups(
         "Buffs": set(),
         "Traps": set(),
         "Bonus Items": set(),
+        "Sights": set(),
     }
 
     for item_name, item_data in items.items():
@@ -182,7 +319,9 @@ def create_item_groups(
             continue
 
         if item_data.type == ItemType.GOLD:
-            groups["Gold"].add(item_name)
+            # One and Five Gold are filler: a "!hint Gold" should not spend a hint on them.
+            if not item_name.endswith((" One Gold", " Five Gold")):
+                groups["Gold"].add(item_name)
         elif item_data.type == ItemType.CAMPFIRE:
             groups["Campfire Upgrades"].add(item_name)
         elif item_data.type in {
@@ -215,33 +354,10 @@ def create_item_groups(
             groups["Buffs"].add(item_name)
         elif item_name in universal_bonus_items:
             groups["Bonus Items"].add(item_name)
-
-    for character_name, character_items in characters_to_items.items():
-        character_groups = {
-            ItemType.GOLD: groups.setdefault(f"{character_name} Gold", set()),
-            ItemType.CAMPFIRE: groups.setdefault(f"{character_name} Campfire Upgrades", set()),
-        }
-        character_shop_group = groups.setdefault(f"{character_name} Shop Slots", set())
-        character_starter_group = groups.setdefault(f"{character_name} Starter", set())
-
-        for item_name, item_data in character_items.items():
-            if item_data.type in character_groups:
-                character_groups[item_data.type].add(item_name)
-            elif item_data.type in {
-                ItemType.SHOP_CARD,
-                ItemType.SHOP_NEUTRAL,
-                ItemType.SHOP_RELIC,
-                ItemType.SHOP_POTION,
-                ItemType.SHOP_REMOVE,
-            }:
-                character_shop_group.add(item_name)
-            elif item_data.type in {
-                ItemType.PROGRESSIVE_STARTER_CARD,
-                ItemType.PROGRESSIVE_STARTER_RELIC
-            }:
-                character_starter_group.add(item_name)
+        elif item_name in challenge_item_table:
+            groups["Sights"].add(item_name)
 
     return groups
 
 
-item_groups = create_item_groups(item_table, chars_to_items)
+item_groups = create_item_groups(item_table)

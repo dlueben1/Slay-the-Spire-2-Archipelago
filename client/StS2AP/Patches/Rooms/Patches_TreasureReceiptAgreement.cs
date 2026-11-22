@@ -30,7 +30,7 @@ public static class Patches_TreasureReceiptAgreement
         }
     }
 
-    [HarmonyPatch(typeof(NTreasureRoom), "OnChestButtonReleased")]
+    [HarmonyPatch(typeof(NTreasureRoom), nameof(NTreasureRoom.OnChestButtonReleased))]
     private static class WaitForPicker
     {
         [HarmonyPrefix]
@@ -45,7 +45,7 @@ public static class Patches_TreasureReceiptAgreement
         }
     }
 
-    [HarmonyPatch(typeof(NTreasureRoom), "OpenChest")]
+    [HarmonyPatch(typeof(NTreasureRoom), nameof(NTreasureRoom.OpenChest))]
     private static class PublishProceedReadiness
     {
         [HarmonyPostfix]

@@ -14,13 +14,35 @@ import {
   getDefaultAscensionLevels,
   type AscensionLevel,
 } from "./AscensionModifier";
+import { BOONS } from "./Boon";
+import { getOrderedOptionNames } from "./ModifierTableRow";
+import { RUN_MODIFIERS } from "./RunModifier";
 import {
+  buildSightCopiesAnswers,
+  findSightCopies,
+  readSightBonusNames,
+  type SightBonusAnswers,
+  type SightCopies,
+} from "./Sight";
+import { createDefaultShopCardWeights } from "./ShopCardKind";
+import {
+  createDefaultShopStockWeights,
+  SHOP_POTION_KIND_DEFINITIONS,
+  SHOP_RELIC_KIND_DEFINITIONS,
+} from "./ShopStockKind";
+import {
+  BOON_OPTION_KEYS,
+  CHALLENGE_OPTION_KEYS,
   CHECK_OPTION_KEYS,
   DEATH_LINK_OPTION_KEYS,
   ANCIENT_OPTION_KEYS,
+  OP_RELIC_CATEGORY_KEYS,
   PROGRESSION_OPTION_KEYS,
   RUN_OPTION_KEYS,
+  SHOP_CARD_OPTION_KEY,
   SHOP_OPTION_KEYS,
+  SHOP_POTION_OPTION_KEY,
+  SHOP_RELIC_OPTION_KEY,
   STARTING_EQUIPMENT_OPTION_KEYS,
 } from "./WizardOptionKey";
 
@@ -29,26 +51,85 @@ export type CharacterAvailability = "all" | "random" | "fixed";
 export type CharacterGoal = "all" | number;
 export type CharacterAscensionMode = "shared" | "individual";
 
-/** Bonus item types currently supported by the wizard. More arrive in later passes. */
-export type BonusItemKind = "WAX_RELIC";
+/** Bonus item types the builder supports, as the YAML names them. */
+export type BonusItemKind =
+  | "WAX_RELIC"
+  | "RELIC"
+  | "ENCHANTMENT"
+  | "ENCHANTED_CARDS"
+  | "MAX_HP"
+  | "CARDS";
 
-/** A Wax Relic that always grants one chosen relic. */
-export interface SpecificWaxRelicBonusItem {
-  kind: "WAX_RELIC";
+/** Bonus item types that grant a relic: a Wax Relic melts, a Relic stays all run. */
+export type RelicBonusKind = "WAX_RELIC" | "RELIC";
+
+/** Bonus item types that give an enchantment: enchant a card, or an enchanted card reward. */
+export type EnchantmentBonusKind = "ENCHANTMENT" | "ENCHANTED_CARDS";
+
+/** A relic bonus that always grants one chosen relic. */
+export interface SpecificRelicBonusItem {
+  kind: RelicBonusKind;
   mode: "specific";
   relicId: string;
 }
 
-/** A Wax Relic randomized from one or more selected pools. */
-export interface RandomWaxRelicBonusItem {
-  kind: "WAX_RELIC";
+/** A relic bonus randomized from one or more selected pools. */
+export interface RandomRelicBonusItem {
+  kind: RelicBonusKind;
+  mode: "random";
+  pools: string[];
+}
+
+/** An enchantment bonus that always gives one named enchantment. */
+export interface SpecificEnchantmentBonusItem {
+  kind: EnchantmentBonusKind;
+  mode: "specific";
+  enchantment: string;
+}
+
+/** An enchantment bonus rolled from one or more enchantment tiers. */
+export interface RandomEnchantmentBonusItem {
+  kind: EnchantmentBonusKind;
+  mode: "random";
+  tiers: string[];
+}
+
+/** Gain a fixed amount of max HP. */
+export interface MaxHpBonusItem {
+  kind: "MAX_HP";
+  amount: number;
+}
+
+/** A card reward that always offers one named card. */
+export interface SpecificCardsBonusItem {
+  kind: "CARDS";
+  mode: "specific";
+  card: string;
+}
+
+/** A card reward rolled from pools such as "Regent Attack", written as the YAML has them. */
+export interface PoolCardsBonusItem {
+  kind: "CARDS";
   mode: "random";
   pools: string[];
 }
 
 /** Discriminated union of every supported Bonus Item configuration. */
 export type BonusItemAnswer =
-  SpecificWaxRelicBonusItem | RandomWaxRelicBonusItem;
+  | SpecificRelicBonusItem
+  | RandomRelicBonusItem
+  | SpecificEnchantmentBonusItem
+  | RandomEnchantmentBonusItem
+  | MaxHpBonusItem
+  | SpecificCardsBonusItem
+  | PoolCardsBonusItem;
+
+/** Whether a row gives an enchantment (enchant a card, or enchanted cards). */
+export function isEnchantmentBonusItem(
+  item: BonusItemAnswer,
+): item is SpecificEnchantmentBonusItem | RandomEnchantmentBonusItem {
+  return item.kind === "ENCHANTMENT" || item.kind === "ENCHANTED_CARDS";
+}
 
 export type AncientRelicLocation = "start_of_act" | "anytime";
 export type AncientRelicPool = "balanced" | "chaos" | "true_chaos";
@@ -118,13 +199,72 @@ export interface FillerAnswers {
   weights: Record<FillerItemId, FillerWeightLevel>;
 }
 
-export interface RunAnswers {
-  relicRewardsAvailableAnytime: number;
-  releaseOnVictory: boolean;
-  seeded: boolean;
+/** Which categories of overpowered relics are removed from every run. */
+export interface OpRelicRemovalAnswers {
+  ancient: boolean;
+  rare: boolean;
 }
 
-/** Progressive starting card and relic choices presented under Checks & Rewards. */
+/** Kinds of relic a Random Shop Relics slot can hold, in option order. */
+export type ShopRelicKindId =
+  "common" | "uncommon" | "rare" | "shop" | "event" | "ancient";
+
+/** Kinds of potion a Random Shop Potions slot can hold, in option order. */
+export type ShopPotionKindId =
+  "common" | "uncommon" | "rare" | "otherClass" | "event";
+
+/** Kinds of card a Random Shop Cards slot can hold, in option order. */
+export type ShopCardKindId =
+  | "attack"
+  | "skill"
+  | "power"
+  | "common"
+  | "uncommon"
+  | "rare"
+  | "colorless"
+  | "event";
+
+export interface RunAnswers {
+  relicRewardsAvailableAnytime: number;
+  removeOpRelics: OpRelicRemovalAnswers;
+  releaseOnVictory: boolean;
+  /** Whether singleplayer runs can meet any event in any act. */
+  eventsInAnyAct: boolean;
+  seeded: boolean;
+  /** When and from which pool Progressive Ancient rewards are offered. */
+  ancients: AncientAnswers;
+}
+
+/** Helpful run modifiers that logic does not account for. */
+export interface BoonAnswers {
+  /** Canonical Boon names in `BOONS` order. */
+  selected: string[];
+  /** Percent of shops that are Blitz merchants. Only the game's beta branch has them. */
+  blitzMerchantChance: number;
+}
+
+/** Optional difficulty settings that logic does not account for. */
+export interface ChallengeAnswers {
+  /** Opt-in switch; while off, every challenge compiles to its default. */
+  enabled: boolean;
+  /** Canonical Run Modifier names in `RUN_MODIFIERS` order. */
+  runModifiers: string[];
+  enemyHpScaling: number;
+  enemyDamageScaling: number;
+  /** Runs use the game's Dread mode, which only its beta branch has. */
+  dreadMode: boolean;
+  hiddenIntents: SightCopies;
+  hiddenHealth: SightCopies;
+  hiddenPiles: SightCopies;
+  hiddenMap: SightCopies;
+  hiddenCards: SightCopies;
+  hiddenRelics: SightCopies;
+  /** Which Sights' second copy adds a bonus. */
+  sightBonuses: SightBonusAnswers;
+  strictCardRewards: boolean;
+}
+
+/** Progressive starting card and relic choices presented on the Checks step. */
 export interface StartingEquipmentAnswers {
   progressiveStarterCard: boolean;
   progressiveStarterRelic: boolean;
@@ -136,12 +276,12 @@ export interface AncientAnswers {
 }
 
 export interface ProgressionAnswers {
-  useNewLogic: boolean;
   progressionBalancing: number;
   accessibility: AccessibilityMode;
 }
 
-export interface CheckAnswers {
+/** The additional check and reward categories in the Checks step's grid. */
+export interface CheckTypeAnswers {
   neowSanity: boolean;
   includeFloorChecks: boolean;
   campfireSanity: boolean;
@@ -160,14 +300,60 @@ export interface ShopAnswers {
   costs: ShopCostMode;
 }
 
-export interface ChecksAndRewardsAnswers {
+/** Random Shop Cards, which works with or without Shop Sanity. */
+export interface ShopCardAnswers {
+  enabled: boolean;
+  /** Same four levels as filler weights: none, low, medium, high. */
+  weights: Record<ShopCardKindId, FillerWeightLevel>;
+}
+
+/** Random Shop Relics or Potions, which work with or without Shop Sanity. */
+export interface ShopStockAnswers<KindId extends string> {
+  enabled: boolean;
+  /** Same four levels as filler weights: none, low, medium, high. */
+  weights: Record<KindId, FillerWeightLevel>;
+}
+
+/** Checks step: which locations exist, plus the starter items Floor Checks make room for. */
+export interface ChecksAnswers {
   startingEquipment: StartingEquipmentAnswers;
-  ancients: AncientAnswers;
-  checks: CheckAnswers;
+  types: CheckTypeAnswers;
+}
+
+/** Shops step: Shop Sanity and what shops sell, which work independently. */
+export interface ShopsAnswers {
   shop: ShopAnswers;
+  shopCards: ShopCardAnswers;
+  shopRelics: ShopStockAnswers<ShopRelicKindId>;
+  shopPotions: ShopStockAnswers<ShopPotionKindId>;
+}
+
+/** Item Pool step: what fills the item pool besides progression. */
+export interface ItemPoolAnswers {
   bonusItems: BonusItemAnswer[];
   filler: FillerAnswers;
   traps: TrapAnswers;
+}
+
+/** One stack of items the player starts with. */
+export interface StartingItemAnswer {
+  /** The owning character, or null for an item no character owns. */
+  character: string | null;
+  /** Item name as the catalog lists it, without the character. */
+  item: string;
+  count: number;
+}
+
+/**
+ * Items & Hints step: Archipelago's starting inventory, starting hints, and where items
+ * may be placed. Hints and placement take item group names, plus any item names a
+ * hand-written YAML listed.
+ */
+export interface ItemAnswers {
+  startingInventory: StartingItemAnswer[];
+  startHints: string[];
+  localItems: string[];
+  nonLocalItems: string[];
 }
 
 export interface DeathLinkAnswers {
@@ -182,9 +368,20 @@ export interface WizardAnswers {
   playerName: string;
   characters: CharacterAnswers;
   run: RunAnswers;
-  checksAndRewards: ChecksAndRewardsAnswers;
+  checks: ChecksAnswers;
+  shops: ShopsAnswers;
+  itemPool: ItemPoolAnswers;
+  boons: BoonAnswers;
+  challenges: ChallengeAnswers;
   deathLink: DeathLinkAnswers;
   progression: ProgressionAnswers;
+  items: ItemAnswers;
+  /**
+   * Settings from an imported YAML that the builder does not ask about, such as item
+   * links or plando, keyed by option name and kept as written so the builder's YAML
+   * still has them.
+   */
+  keptOptions: Record<string, unknown>;
 }
 
 /**
@@ -231,6 +428,30 @@ function getBooleanDefault(catalog: OptionCatalog, optionKey: string): boolean {
 }
 
 /**
+ * Reads a Sight item count default as its player-facing choice.
+ *
+ * @param catalog - Generated catalog containing the hidden-information range.
+ * @param optionKey - Generated `hidden_*` key.
+ * @returns The choice whose count matches the schema default.
+ * @throws When the generated default is not a supported Sight item count.
+ */
+function getSightCopiesDefault(
+  catalog: OptionCatalog,
+  optionKey: string,
+): SightCopies {
+  const count = getNumberDefault(catalog, optionKey);
+  const choice = findSightCopies(count);
+
+  if (!choice) {
+    throw new Error(
+      `Generated option '${optionKey}' has an unsupported default of ${count}.`,
+    );
+  }
+
+  return choice;
+}
+
+/**
  * Reads a numeric default for a guided range.
  *
  * @param catalog - Generated catalog containing the range definition.
@@ -248,6 +469,34 @@ function getNumberDefault(catalog: OptionCatalog, optionKey: string): number {
 
   // Preserve the exact generated range default.
   return value;
+}
+
+/**
+ * Reads a text-list default for a guided option set.
+ *
+ * @param catalog - Generated catalog containing the option-set definition.
+ * @param optionKey - Generated option set whose default is required.
+ * @returns The schema-provided entries in generated order.
+ * @throws When the generated default is not a list of strings.
+ */
+function getStringSetDefault(
+  catalog: OptionCatalog,
+  optionKey: string,
+): string[] {
+  // Read through the shared presence check before validating the list shape.
+  const value = getGeneratedDefault(catalog, optionKey);
+
+  if (
+    !Array.isArray(value) ||
+    !value.every((entry): entry is string => typeof entry === "string")
+  ) {
+    throw new Error(
+      `Generated option '${optionKey}' has no text-list default.`,
+    );
+  }
+
+  // Copy so answer initialization never aliases generated metadata.
+  return [...value];
 }
 
 /**
@@ -324,6 +573,12 @@ export function createDefaultWizardAnswers(
     DEATH_LINK_OPTION_KEYS.damagePercent,
   );
 
+  // Present the generated category list as one checkbox per category.
+  const removedOpRelics = getStringSetDefault(
+    catalog,
+    RUN_OPTION_KEYS.removeOpRelics,
+  );
+
   // Initialize every field explicitly to keep this the single setup entry point.
   return {
     playerName: "",
@@ -345,23 +600,19 @@ export function createDefaultWizardAnswers(
         catalog,
         RUN_OPTION_KEYS.relicRewardsAvailableAnytime,
       ),
+      removeOpRelics: {
+        ancient: removedOpRelics.includes(OP_RELIC_CATEGORY_KEYS.ancient),
+        rare: removedOpRelics.includes(OP_RELIC_CATEGORY_KEYS.rare),
+      },
       releaseOnVictory: getBooleanDefault(
         catalog,
         RUN_OPTION_KEYS.releaseOnVictory,
       ),
+      eventsInAnyAct: getBooleanDefault(
+        catalog,
+        RUN_OPTION_KEYS.eventsInAnyAct,
+      ),
       seeded: getBooleanDefault(catalog, RUN_OPTION_KEYS.seeded),
-    },
-    checksAndRewards: {
-      startingEquipment: {
-        progressiveStarterCard: getBooleanDefault(
-          catalog,
-          STARTING_EQUIPMENT_OPTION_KEYS.progressiveStarterCard,
-        ),
-        progressiveStarterRelic: getBooleanDefault(
-          catalog,
-          STARTING_EQUIPMENT_OPTION_KEYS.progressiveStarterRelic,
-        ),
-      },
       ancients: {
         relicLocation: getChoiceDefault(
           catalog,
@@ -374,7 +625,49 @@ export function createDefaultWizardAnswers(
           "true_chaos",
         ]),
       },
-      checks: {
+    },
+    challenges: {
+      // Challenges are opt-in regardless of their generated defaults.
+      enabled: false,
+      runModifiers: getOrderedOptionNames(
+        RUN_MODIFIERS,
+        getStringSetDefault(catalog, CHALLENGE_OPTION_KEYS.runModifiers),
+      ),
+      enemyHpScaling: getNumberDefault(
+        catalog,
+        CHALLENGE_OPTION_KEYS.enemyHpScaling,
+      ),
+      enemyDamageScaling: getNumberDefault(
+        catalog,
+        CHALLENGE_OPTION_KEYS.enemyDamageScaling,
+      ),
+      dreadMode: getBooleanDefault(catalog, CHALLENGE_OPTION_KEYS.dreadMode),
+      ...buildSightCopiesAnswers((sight) =>
+        getSightCopiesDefault(
+          catalog,
+          CHALLENGE_OPTION_KEYS[sight.copiesField],
+        ),
+      ),
+      sightBonuses: readSightBonusNames(
+        getStringSetDefault(catalog, CHALLENGE_OPTION_KEYS.sightBonuses),
+      ),
+      strictCardRewards: getBooleanDefault(
+        catalog,
+        CHALLENGE_OPTION_KEYS.strictCardRewards,
+      ),
+    },
+    checks: {
+      startingEquipment: {
+        progressiveStarterCard: getBooleanDefault(
+          catalog,
+          STARTING_EQUIPMENT_OPTION_KEYS.progressiveStarterCard,
+        ),
+        progressiveStarterRelic: getBooleanDefault(
+          catalog,
+          STARTING_EQUIPMENT_OPTION_KEYS.progressiveStarterRelic,
+        ),
+      },
+      types: {
         neowSanity: getBooleanDefault(catalog, CHECK_OPTION_KEYS.neowSanity),
         includeFloorChecks: getBooleanDefault(
           catalog,
@@ -394,6 +687,8 @@ export function createDefaultWizardAnswers(
           CHECK_OPTION_KEYS.shuffleAllCards,
         ),
       },
+    },
+    shops: {
       shop: {
         enabled: getBooleanDefault(catalog, SHOP_OPTION_KEYS.enabled),
         cardSlots: getNumberDefault(catalog, SHOP_OPTION_KEYS.cardSlots),
@@ -411,16 +706,42 @@ export function createDefaultWizardAnswers(
           "Tiered",
         ]),
       },
+      shopCards: {
+        enabled: getBooleanDefault(catalog, SHOP_CARD_OPTION_KEY),
+        weights: createDefaultShopCardWeights(catalog),
+      },
+      shopRelics: {
+        enabled: getBooleanDefault(catalog, SHOP_RELIC_OPTION_KEY),
+        weights: createDefaultShopStockWeights(
+          SHOP_RELIC_KIND_DEFINITIONS,
+          catalog,
+        ),
+      },
+      shopPotions: {
+        enabled: getBooleanDefault(catalog, SHOP_POTION_OPTION_KEY),
+        weights: createDefaultShopStockWeights(
+          SHOP_POTION_KIND_DEFINITIONS,
+          catalog,
+        ),
+      },
+    },
+    itemPool: {
       // Bonus Items start empty; each one is added deliberately through the table UI.
       bonusItems: [],
       filler,
       traps: createDefaultTrapAnswers(catalog),
     },
-    progression: {
-      useNewLogic: getBooleanDefault(
-        catalog,
-        PROGRESSION_OPTION_KEYS.useNewLogic,
+    boons: {
+      selected: getOrderedOptionNames(
+        BOONS,
+        getStringSetDefault(catalog, BOON_OPTION_KEYS.boons),
       ),
+      blitzMerchantChance: getNumberDefault(
+        catalog,
+        BOON_OPTION_KEYS.blitzMerchantChance,
+      ),
+    },
+    progression: {
       progressionBalancing: getNumberDefault(
         catalog,
         PROGRESSION_OPTION_KEYS.progressionBalancing,
@@ -431,6 +752,13 @@ export function createDefaultWizardAnswers(
         ["full", "minimal"],
       ),
     },
+    items: {
+      startingInventory: [],
+      startHints: [],
+      localItems: [],
+      nonLocalItems: [],
+    },
+    keptOptions: {},
     deathLink: {
       enabled: getBooleanDefault(catalog, DEATH_LINK_OPTION_KEYS.enabled),
       receiveFragment: getBooleanDefault(

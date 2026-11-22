@@ -13,7 +13,7 @@ namespace StS2AP.Extensions
         {
             ArchipelagoSettings? settings = ArchipelagoClient.Settings;
             if (settings != null
-                && settings.Characters.TryGetValue(character.Id.Entry, out var config))
+                && settings.TryGetCharacterConfig(character.Id.Entry, out var config))
             {
                 return config.Name;
             }
@@ -25,7 +25,7 @@ namespace StS2AP.Extensions
         {
             ArchipelagoSettings? settings = ArchipelagoClient.Settings;
             if (settings != null
-                && settings.Characters.TryGetValue(character.Id.Entry, out var config))
+                && settings.TryGetCharacterConfig(character.Id.Entry, out var config))
             {
                 return config.CharOffset;
             }
@@ -42,7 +42,13 @@ namespace StS2AP.Extensions
         /// </summary>
         public static bool HasCleared(this CharacterModel character)
         {
-            return GameUtility.HasCharacterGoaled(character.Id.Entry);
+            // A Defect borrowing a missing character's slot has cleared once the missing characters have.
+            ArchipelagoSettings? settings = ArchipelagoClient.Settings;
+            if (settings == null)
+                return GameUtility.HasCharacterGoaled(character.Id.Entry);
+            return MissingCharacterFallback.GetPlan(settings)
+                .RepresentedCharacterIds(character.Id.Entry)
+                .All(GameUtility.HasCharacterGoaled);
         }
     }
 }

@@ -19,7 +19,7 @@ namespace StS2AP.Patches
         /// Allows us to control which characters are registered as unlocked, using local state (derived from Archipelago Options)
         /// instead of in-game data/saves
         /// </summary>
-        [HarmonyPatch(typeof(UnlockState), "get_Characters", [])]
+        [HarmonyPatch(typeof(UnlockState), nameof(UnlockState.Characters), MethodType.Getter)]
         public static class OverrideUnlockedCharacterData
         {
             [HarmonyPostfix]
@@ -38,8 +38,9 @@ namespace StS2AP.Patches
                 if (MultiplayerSupport.IsRealMultiplayerRun)
                     return;
 
-                LogUtility.Debug($"OverrideUnlockedCharacterData: Overriding unlocked characters. UnlockedCharacters count: {ArchipelagoClient.Progress.UnlockedCharacters.Count}");
-                __result = ArchipelagoClient.Progress.UnlockedCharacters;
+                IReadOnlyList<CharacterModel> unlocked = ArchipelagoClient.UnlockedCharactersWithFallback;
+                LogUtility.Debug($"OverrideUnlockedCharacterData: Overriding unlocked characters. UnlockedCharacters count: {unlocked.Count}");
+                __result = unlocked;
             }
         }
 
@@ -102,15 +103,19 @@ namespace StS2AP.Patches
                 {
                     if (IntoTheSpireverseSelection.RefreshButton(button, __instance))
                         continue;
+                    if (button.IsRandom)
+                    {
+                        // AP runs pick a character from the slot. From 0.113 Init also refuses
+                        // the random button, which has its own InitAsRandom.
+                        button.Visible = false;
+                        continue;
+                    }
                     var charModel = button.Character;
-                    LogUtility.Info($"Character Model id: {charModel.Id.Entry}");
                     var name = charModel.Id.Entry;
-                    LogUtility.Info($"OverrideCharacterSelectMenuOptions: Checking button with character '{name}'");
 
                     // Hide any character that isn't in the available characters list for this Archipelago slot
-                    bool isVisible = ArchipelagoClient.Settings.Characters.ContainsKey(name);
-                    LogUtility.Info($"OverrideCharacterSelectMenuOptions: '{name}' isVisible={isVisible}");
-                    LogUtility.Info($"Current Configured Characters: {string.Join(",", ArchipelagoClient.Settings.Characters.Keys)}");
+                    bool isVisible = ArchipelagoClient.Settings.TryGetCharacterConfig(name, out _);
+                    LogUtility.Debug($"OverrideCharacterSelectMenuOptions: '{name}' isVisible={isVisible}");
 
                     button.Visible = isVisible;
 
@@ -315,7 +320,10 @@ namespace StS2AP.Patches
             }
         }
 
-        [HarmonyPatch(typeof(NCharacterSelectScreen), "UpdateRandomCharacterVisibility")]
+        [HarmonyPatch(
+            typeof(NCharacterSelectScreen),
+            nameof(NCharacterSelectScreen.UpdateRandomCharacterVisibility)
+        )]
         public static class DisableRitsuStuff
         {
             [HarmonyPrefix]

@@ -30,10 +30,13 @@ public sealed class CharacterRegistryCompatibilityTests
             var configurations = new[]
             {
                 // An old generated seed called Watcher Custom Character 1 and assigned block 6.
-                // A newer client must retain that seed's supplied values, not remap it to block 51.
+                // A newer client must retain that seed's supplied values, not remap it to block 211.
                 (Name: "Custom Character 1", InternalId: "WATCHER-WATCHER", Block: 6, ModNum: 1),
-                // A new seed selects Watcher first: its predefined block is independent of position.
+                // Seeds from before predefined characters moved to block 200 placed Watcher at 51.
                 (Name: "Watcher", InternalId: "WATCHER-WATCHER", Block: 51, ModNum: 1),
+                // A new seed selects Watcher first: its predefined block is independent of position.
+                // Its IDs exceed 1,000,000, which the removed shared-slot partition misread.
+                (Name: "Watcher", InternalId: "WATCHER-WATCHER", Block: 211, ModNum: 1),
                 // After a predefined character, the second mod is the first unknown character.
                 // It therefore uses generic block 11 and display number 1, while ModNum is 2.
                 (Name: "Custom Character 1", InternalId: "UNKNOWN-MOD", Block: 11, ModNum: 2),

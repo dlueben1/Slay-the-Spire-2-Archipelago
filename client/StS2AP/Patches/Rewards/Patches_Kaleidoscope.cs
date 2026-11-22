@@ -22,12 +22,10 @@ public static class Patches_Kaleidoscope
         Type? stateMachine = AccessTools.Method(typeof(Kaleidoscope), nameof(Kaleidoscope.AfterObtained))
             ?.GetCustomAttribute<AsyncStateMachineAttribute>()?.StateMachineType;
         MethodInfo? moveNext = stateMachine == null ? null : AccessTools.Method(stateMachine, "MoveNext");
-        if (moveNext == null)
-        {
-            LogUtility.Warn("Could not locate Kaleidoscope reward generation; leaving native behavior unchanged");
-            yield break;
-        }
-        yield return moveNext;
+        // A game update changed Kaleidoscope; fail the mod's startup rather than keep AP's
+        // character locks on its choices without telling anyone.
+        yield return moveNext
+            ?? throw new MissingMethodException("Could not locate Kaleidoscope's async AfterObtained body to patch.");
     }
 
     [HarmonyTranspiler]
@@ -40,8 +38,8 @@ public static class Patches_Kaleidoscope
         FieldInfo? relicField = AccessTools.Field(__originalMethod.DeclaringType, "<>4__this");
         if (lookups.Count != 1 || relicField == null)
         {
-            LogUtility.Warn($"Could not safely replace Kaleidoscope card pools (lookups={lookups.Count}, ownerField={relicField != null}); leaving native behavior unchanged");
-            return code;
+            throw new InvalidOperationException(
+                $"Could not safely replace Kaleidoscope card pools (lookups={lookups.Count}, ownerField={relicField != null}).");
         }
 
         // Pass the relic itself so replicas resolve its owner, even if players share an

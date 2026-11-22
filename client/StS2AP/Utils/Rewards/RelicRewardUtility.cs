@@ -1,6 +1,7 @@
 using MegaCrit.Sts2.Core.Entities.Players;
 using StS2AP.Extensions;
 using static StS2AP.Data.ItemTable;
+using StS2AP.Utils.RunGraph;
 
 namespace StS2AP.Utils
 {
@@ -160,6 +161,7 @@ namespace StS2AP.Utils
             {
                 ArchipelagoClient.Progress.Items.MarkUsed(receiptIndex.Value);
                 ArchipelagoClient.Progress.BankedRelicRewards--;
+                ApRunGraphRecorder.RecordItemClaim(receiptIndex.Value);
             }
             else
             {
@@ -228,9 +230,9 @@ namespace StS2AP.Utils
                 var choices = progress.GetOrAssignRelicChoices(
                     receipt.Index,
                     player,
-                    choiceCount: 1
+                    RelicSightChoices.AssignmentChoiceCount
                 );
-                if (choices.Count != 1)
+                if (choices.Count == 0)
                 {
                     LogUtility.Error(
                         $"Could not pair banked relic reward with AP item w/ index {receipt.Index} " +
@@ -361,15 +363,37 @@ namespace StS2AP.Utils
                 .Any(candidate => candidate.Index == receipt.Index);
         }
 
-        private static IEnumerable<IndexedItemInfo> GetRelicReceipts(Player player)
+        private sealed record RelicReceiptCache(
+            ApReceivedItemLedger Ledger,
+            long Revision,
+            long? CharacterOffset,
+            IReadOnlyList<IndexedItemInfo> Receipts);
+
+        // Menu and badge checks look up the receipts once per Relic receipt, so keep the
+        // filtered list until the ledger changes instead of rescanning all AP history each time.
+        private static RelicReceiptCache? _relicReceipts;
+
+        private static IReadOnlyList<IndexedItemInfo> GetRelicReceipts(Player player)
         {
+            var ledger = ArchipelagoClient.Progress.Items;
             var characterOffset = player.GetAPCharacterNumber();
-            return ArchipelagoClient.Progress.AllReceivedItems
+            if (_relicReceipts is { } cached
+                && ReferenceEquals(cached.Ledger, ledger)
+                && cached.Revision == ledger.Revision
+                && cached.CharacterOffset == characterOffset)
+            {
+                return cached.Receipts;
+            }
+
+            // The ledger already lists receipts in AP item index order.
+            IndexedItemInfo[] receipts = ledger.Received
                 .Where(receipt =>
                     receipt.Item.GetAPCharacterNumber() == characterOffset
                     && receipt.Item.GetCharacterItemType() == APItem.Relic
                 )
-                .OrderBy(receipt => receipt.Index);
+                .ToArray();
+            _relicReceipts = new RelicReceiptCache(ledger, ledger.Revision, characterOffset, receipts);
+            return receipts;
         }
 
         private static int GetAvailableAnytimeForRun()

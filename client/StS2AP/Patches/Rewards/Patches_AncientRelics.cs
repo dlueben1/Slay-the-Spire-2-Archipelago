@@ -85,7 +85,7 @@ namespace StS2AP.Patches
     /// are blocked or unavailable, the third choice comes from the remaining first two pools.
     /// A future advanced-Ancient pool implementation must apply the same exclusions to its pool.
     /// </summary>
-    [HarmonyPatch(typeof(Orobas), "GenerateInitialOptions")]
+    [HarmonyPatch(typeof(Orobas), nameof(Orobas.GenerateInitialOptions))]
     internal static class Patches_OrobasProgressiveStarters
     {
         [HarmonyPrefix]
@@ -224,7 +224,7 @@ namespace StS2AP.Patches
 
     }
 
-    [HarmonyPatch(typeof(AncientEventModel), "GenerateInitialOptionsWrapper")]
+    [HarmonyPatch(typeof(AncientEventModel), nameof(AncientEventModel.GenerateInitialOptionsWrapper))]
     public static class Patches_AncientRelics
     {
         [HarmonyPostfix]

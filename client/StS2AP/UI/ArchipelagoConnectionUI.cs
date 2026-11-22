@@ -1,3 +1,4 @@
+using StS2AP.Persistence;
 using Godot;
 using Newtonsoft.Json;
 using StS2AP.Utils;
@@ -17,6 +18,9 @@ namespace StS2AP.UI
         private static Button? _connectButton;
         private static Button? _closeButton;
         private static Label? _statusLabel;
+        // True while the label shows the progress of an attempt started from this form,
+        // rather than a result or an error.
+        private static bool _statusShowsProgress;
 
         /// <summary>
         /// Whether the UI is currently visible
@@ -157,10 +161,21 @@ namespace StS2AP.UI
         /// </summary>
         public static void SetStatus(string status)
         {
+            _statusShowsProgress = false;
             if (_statusLabel != null && IsInstanceValid(_statusLabel))
             {
                 _statusLabel.Text = status;
             }
+        }
+
+        /// <summary>
+        /// Shows the current step of a connection attempt started from this form. Does nothing
+        /// once the form shows a result or an error, or for automatic reconnects.
+        /// </summary>
+        internal static void ShowConnectProgress(string status)
+        {
+            if (_statusShowsProgress && _statusLabel != null && IsInstanceValid(_statusLabel))
+                _statusLabel.Text = status;
         }
 
         /// <summary>
@@ -296,6 +311,7 @@ namespace StS2AP.UI
             _statusLabel = new Label();
             _statusLabel.Name = "StatusLabel";
             _statusLabel.Text = "";
+            _statusShowsProgress = false;
             _statusLabel.HorizontalAlignment = HorizontalAlignment.Center;
             _statusLabel.AddThemeFontSizeOverride("font_size", 14);
             _statusLabel.AddThemeColorOverride("font_color", new Color(0.7f, 0.7f, 0.7f));
@@ -465,7 +481,8 @@ namespace StS2AP.UI
 
         private static Button CreateStyledButton(string text, Color baseColor)
         {
-            var button = new Button();
+            // Enter already submits the form through OnKeyboardInput, so only Space presses here.
+            var button = ApButtonInput.PressOnGameInput(new Button(), confirm: false);
             button.Text = text;
             button.CustomMinimumSize = new Vector2(120, 40);
 
@@ -550,6 +567,7 @@ namespace StS2AP.UI
             // Begin Connecting
             LogUtility.Info($"Connect pressed - Slot: {slotName}, URL: {url}");
             SetStatus("Connecting...");
+            _statusShowsProgress = true;
             SetConnectButtonEnabled(false);
             SetCloseButtonEnabled(ArchipelagoClient.CanLeaveSlot);
             ArchipelagoClient.ServerAddress = url;
@@ -606,8 +624,7 @@ namespace StS2AP.UI
             // We failed to connect
             else if (state == ConnectionState.Disconnected)
             {
-                if (_statusLabel == null || !IsInstanceValid(_statusLabel)
-                    || _statusLabel.Text == "Connecting...")
+                if (_statusLabel == null || !IsInstanceValid(_statusLabel) || _statusShowsProgress)
                     SetStatus("Failed to connect. Please check your details and try again.");
                 SetConnectButtonEnabled(true);
                 SetCloseButtonEnabled(true);
@@ -629,7 +646,7 @@ namespace StS2AP.UI
 
         private class ConnectionData
         {
-            private static readonly string CONNECTION_FILE = "user://ap.connection";
+            private static string ConnectionFile => ApStorageLayout.ConnectionFile(ApLocalStorage.Root);
             public string SlotName { get; set; } = "Player1";
             public string Connection { get; set; } = "archipelago.gg:38281";
             public string Password { get; set; } = "";
@@ -637,17 +654,12 @@ namespace StS2AP.UI
 
             public static ConnectionData Load()
             {
-                if (!Godot.FileAccess.FileExists(CONNECTION_FILE))
-                {
-                    return new ConnectionData();
-                }
-
                 try
                 {
-                    using var data = Godot.FileAccess.Open(CONNECTION_FILE, Godot.FileAccess.ModeFlags.Read);
-
-                    var rawJson = data.GetAsText();
-                    var connectionData = JsonConvert.DeserializeObject<ConnectionData>(rawJson);
+                    string path = ConnectionFile;
+                    if (!File.Exists(path))
+                        return new ConnectionData();
+                    var connectionData = JsonConvert.DeserializeObject<ConnectionData>(File.ReadAllText(path));
                     return connectionData ?? new ConnectionData();
                 }
                 catch(Exception ex)
@@ -661,10 +673,7 @@ namespace StS2AP.UI
             {
                 try
                 {
-                    using var handle = Godot.FileAccess.Open(CONNECTION_FILE, Godot.FileAccess.ModeFlags.Write);
-
-                    var connectionData = JsonConvert.SerializeObject(this);
-                    handle.StoreLine(connectionData);
+                    ApStorageLayout.WriteAtomically(ConnectionFile, JsonConvert.SerializeObject(this));
                 }
                 catch(Exception ex)
                 {

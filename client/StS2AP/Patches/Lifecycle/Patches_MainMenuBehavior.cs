@@ -16,6 +16,7 @@ using MegaCrit.Sts2.Core.Saves;
 using MegaCrit.Sts2.addons.mega_text;
 using StS2AP.UI;
 using StS2AP.Utils;
+using StS2AP.UI.RunGraph;
 
 namespace StS2AP.Patches
 {
@@ -129,10 +130,9 @@ namespace StS2AP.Patches
         private const string ArchipelagoSettingsButtonPath =
             MainMenuButtonsPath + "/" + ArchipelagoSettingsButtonName;
 
-        // The new name & path of our injected "Install APWorld" button, which is a clone of the vanilla Settings button
-        private const string InstallWorldButtonName = "InstallAPWorldButton";
-        private const string InstallWorldButtonPath =
-            MainMenuButtonsPath + "/" + InstallWorldButtonName;
+        // The new name & path of our injected "Past AP Runs" button, which is a clone of the vanilla Settings button
+        private const string PastRunsButtonName = "PastApRunsButton";
+        private const string PastRunsButtonPath = MainMenuButtonsPath + "/" + PastRunsButtonName;
 
         // The new name & path of our injected "Visit Website" button, which is a clone of the vanilla Settings button
         private const string WebsiteButtonName = "VisitWebsiteButton";
@@ -144,7 +144,7 @@ namespace StS2AP.Patches
 
         // Backing out of Host/Join or a lobby must release the pending multiplayer intent.
         // Otherwise settings still see a multiplayer scope after the player returns home.
-        [HarmonyPatch(typeof(NMainMenu), "OnSubmenuStackChanged")]
+        [HarmonyPatch(typeof(NMainMenu), nameof(NMainMenu.OnSubmenuStackChanged))]
         private static class ClearPendingPlaySelectionAtHome
         {
             [HarmonyPostfix]
@@ -164,7 +164,7 @@ namespace StS2AP.Patches
         /// Delays beta StS2's developer fast-multiplayer action until this process's
         /// AP slot has connected and prepared. Ordinary fastmp invocations remain native.
         /// </summary>
-        [HarmonyPatch(typeof(NMainMenu), "CheckCommandLineArgs")]
+        [HarmonyPatch(typeof(NMainMenu), nameof(NMainMenu.CheckCommandLineArgs))]
         public static class DelayApFastMultiplayerUntilReady
         {
             [HarmonyPrefix]
@@ -219,10 +219,8 @@ namespace StS2AP.Patches
                     ArchipelagoSettingsButtonPath
                 );
 
-                // Grab the custom Install APWorld button
-                var installWorldButton = __instance.GetNodeOrNull<NMainMenuTextButton>(
-                    InstallWorldButtonPath
-                );
+                // Grab the custom Past AP Runs button
+                var pastRunsButton = __instance.GetNodeOrNull<NMainMenuTextButton>(PastRunsButtonPath);
 
                 // Grab the custom Visit Website button
                 var visitWebsiteButton = __instance.GetNodeOrNull<NMainMenuTextButton>(
@@ -290,13 +288,13 @@ namespace StS2AP.Patches
                     archipelagoSettingsButton.label.Text = "Archipelago Settings";
                 }
 
-                /// Configure the injected Install APWorld button after its label
+                /// Configure the injected Past AP Runs button after its label
                 /// reference has been initialized by the vanilla _Ready method.
-                if (installWorldButton?.label != null)
+                if (pastRunsButton?.label != null)
                 {
-                    installWorldButton.Visible = true;
-                    installWorldButton.Enable();
-                    installWorldButton.label.Text = "Install APWorld";
+                    pastRunsButton.Visible = true;
+                    pastRunsButton.Enable();
+                    pastRunsButton.label.Text = "Past AP Runs";
                 }
 
                 /// Configure the injected Visit Website button after its label
@@ -352,7 +350,7 @@ namespace StS2AP.Patches
                 NClickableControl.SignalName.Released,
                 Callable.From<NButton>(_ =>
                 {
-                    // clear state so people can change their player number
+                    // Forget the pending play destination; settings may change before the next one.
                     MultiplayerSupport.ClearPendingPlaySelection();
                     MenuUtility.OpenArchipelagoSettings();
                 })
@@ -363,50 +361,15 @@ namespace StS2AP.Patches
                 archipelagoSettingsButton.CustomMinimumSize.Y
             );
 
-            // Create an "Install APWorld" button
-            var installButton = (NMainMenuTextButton)settingsButton.Duplicate();
-            installButton.Name = InstallWorldButtonName;
-            installButton.Connect(
+            // Create a "Past AP Runs" button. The vanilla Compendium, which holds Run History, is
+            // hidden here, so this is how players reach the run graphs of earlier AP runs.
+            var pastRunsButton = (NMainMenuTextButton)settingsButton.Duplicate();
+            pastRunsButton.Name = PastRunsButtonName;
+            pastRunsButton.Connect(
                 NClickableControl.SignalName.Released,
-                Callable.From<NButton>(_ =>
-                {
-                    // Show a dialog that speedbumps the user and ensures they want to install this
-                    var popup = new ConfirmPopup();
-                    popup.Header = new LocString("main_menu_ui", "INSTALL_APWORLD.header");
-                    popup.Body = new LocString("main_menu_ui", "INSTALL_APWORLD.body");
-                    popup.ButtonPressed = (yesPressed) =>
-                    {
-                        if (yesPressed)
-                        {
-                            try
-                            {
-                                // Shared bundle files live at the registered mod root, even
-                                // when this assembly was loaded from lib/<game-version>.
-                                var mod = ModManager.GetLoadedMods()
-                                    .Single(mod => mod.manifest?.id == ModEntry.ModId);
-                                var apWorldPath = Path.Combine(mod.path, "spire2.apworld");
-                                LogUtility.Info($"Launching APWorld installer: {apWorldPath}");
-                                Process.Start(
-                                    new ProcessStartInfo
-                                    {
-                                        FileName = apWorldPath,
-                                        UseShellExecute = true,
-                                    }
-                                );
-                            }
-                            catch (Exception ex)
-                            {
-                                LogUtility.Error(
-                                    $"Failed to launch APWorld installer: {ex.Message}\n{ex.StackTrace}"
-                                );
-                            }
-                        }
-                    };
-                    popup.Show();
-                })
+                Callable.From<NButton>(_ => ApPastRunsOverlay.Show(mainMenu))
             );
-            settingsButton.AddSibling(installButton);
-            settingsButton.CustomMinimumSize = new Vector2(300f, installButton.CustomMinimumSize.Y);
+            archipelagoSettingsButton.AddSibling(pastRunsButton);
 
             // Create a "Website & YAML Builder" button
             var websiteButton = (NMainMenuTextButton)settingsButton.Duplicate();
@@ -415,13 +378,14 @@ namespace StS2AP.Patches
                 NClickableControl.SignalName.Released,
                 Callable.From<NButton>(_ =>
                 {
-                    // Go to the website
-                    var url = "https://sts2ap.net";
+                    // The beta site has the builder for options that sts2ap.net has not published
+                    // yet. Point this back at https://sts2ap.net/#/builder once it catches up.
+                    var url = "https://sts2ap.terairk.dev/#/builder";
                     Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
                 })
             );
-            installButton.AddSibling(websiteButton);
-            installButton.CustomMinimumSize = new Vector2(300f, websiteButton.CustomMinimumSize.Y);
+            settingsButton.AddSibling(websiteButton);
+            settingsButton.CustomMinimumSize = new Vector2(300f, websiteButton.CustomMinimumSize.Y);
 
             // Adjust button focusing
             var selfNodePath = new NodePath(".");
@@ -429,8 +393,10 @@ namespace StS2AP.Patches
             connectButton.FocusNeighborRight = selfNodePath;
             archipelagoSettingsButton.FocusNeighborLeft = selfNodePath;
             archipelagoSettingsButton.FocusNeighborRight = selfNodePath;
-            installButton.FocusNeighborLeft = selfNodePath;
-            installButton.FocusNeighborRight = selfNodePath;
+            pastRunsButton.FocusNeighborLeft = selfNodePath;
+            pastRunsButton.FocusNeighborRight = selfNodePath;
+            websiteButton.FocusNeighborLeft = selfNodePath;
+            websiteButton.FocusNeighborRight = selfNodePath;
 
             var connectionStatus = new Label
             {
@@ -461,16 +427,10 @@ namespace StS2AP.Patches
                 MultiplayerSupport.SelectDestination(ApPlayDestination.Singleplayer);
                 Patches_ItemProcessor.ProcessDeferredItemsForSingleplayer();
 
-                // Hide the actual sub-menu options
-                var standardButton = __result.GetNode<NSubmenuButton>("StandardButton");
-                var dailyButton = __result.GetNode<NSubmenuButton>("DailyButton");
-                var customButton = __result.GetNode<NSubmenuButton>("CustomRunButton");
-                var backButton = __result.GetNode<NBackButton>("BackButton");
-
-                standardButton.Visible = false;
-                dailyButton.Visible = false;
-                customButton.Visible = false;
-                backButton.Visible = false;
+                // Hide the actual sub-menu options. The mode buttons are found by type, not by
+                // path: 0.113 moved them into a container and added Blitz and Dread.
+                HideModeButtons(__result);
+                __result.GetNode<NBackButton>("BackButton").Visible = false;
 
                 // If we are connected, dive directly into the game
                 if (ArchipelagoClient.IsConnected)
@@ -483,6 +443,17 @@ namespace StS2AP.Patches
                         "Connect to Archipelago from the main menu before starting AP Singleplayer."
                     );
                 }
+            }
+        }
+
+        private static void HideModeButtons(Node node)
+        {
+            foreach (Node child in node.GetChildren())
+            {
+                if (child is NSubmenuButton button)
+                    button.Visible = false;
+                else
+                    HideModeButtons(child);
             }
         }
 
@@ -548,27 +519,44 @@ namespace StS2AP.Patches
         public static class ConnectBeforeMultiplayer
         {
             [HarmonyPrefix]
-            public static bool Prefix()
+            public static bool Prefix() => TryBeginMultiplayerEntry();
+        }
+
+        /// <summary>
+        /// Steam overlay joins and invites (including a launch with +connect_lobby) close every
+        /// submenu, then call JoinGame, which opens the multiplayer submenu through the
+        /// parameterless overload and so bypasses <see cref="ConnectBeforeMultiplayer"/>.
+        /// Without this, the lobby opens with no multiplayer destination and Embark is handled
+        /// as an AP singleplayer start.
+        /// </summary>
+        [HarmonyPatch(typeof(NMainMenu), nameof(NMainMenu.JoinGame))]
+        public static class ConnectBeforeSteamJoin
+        {
+            [HarmonyPrefix]
+            public static bool Prefix(ref Task __result)
             {
-                MultiplayerSupport.BeginMultiplayerEntry();
-                if (ArchipelagoClient.IsConnected)
-                {
-                    if (!MultiplayerSupport.CanEnterMultiplayerLobby(out _)
-                        && !ArchipelagoClient.TryPrepareCurrentMultiplayerSession(
-                            out string preparationError))
-                    {
-                        LogUtility.Warn(
-                            $"Cannot open AP multiplayer lobby: {preparationError}"
-                        );
-                        NotificationUtility.ShowRawText(preparationError);
-                        return false;
-                    }
+                if (TryBeginMultiplayerEntry())
+                    return true;
 
-                    return MultiplayerSupport.CanEnterMultiplayerLobby(out _);
-                }
-
-                return MultiplayerSupport.CanEnterMultiplayerLobby(out _);
+                __result = Task.CompletedTask;
+                return false;
             }
+        }
+
+        private static bool TryBeginMultiplayerEntry()
+        {
+            MultiplayerSupport.BeginMultiplayerEntry();
+            if (ArchipelagoClient.IsConnected
+                && !MultiplayerSupport.CanEnterMultiplayerLobby(out _)
+                && !ArchipelagoClient.TryPrepareCurrentMultiplayerSession(
+                    out string preparationError))
+            {
+                LogUtility.Warn($"Cannot open AP multiplayer lobby: {preparationError}");
+                NotificationUtility.ShowRawText(preparationError);
+                return false;
+            }
+
+            return MultiplayerSupport.CanEnterMultiplayerLobby(out _);
         }
 
         /// <summary>
@@ -585,7 +573,11 @@ namespace StS2AP.Patches
             return false;
         }
 
-        [HarmonyPatch(typeof(NMultiplayerSubmenu), "OnHostPressed", new[] { typeof(NButton) })]
+        [HarmonyPatch(
+            typeof(NMultiplayerSubmenu),
+            nameof(NMultiplayerSubmenu.OnHostPressed),
+            new[] { typeof(NButton) }
+        )]
         private static class RequireApSlotForHostButton
         {
             [HarmonyPrefix]
@@ -613,7 +605,11 @@ namespace StS2AP.Patches
         [HarmonyPatch(
             typeof(NMultiplayerSubmenu),
             nameof(NMultiplayerSubmenu.FastHost),
+#if STS2_AT_LEAST_0_113_0
+            new[] { typeof(GameMode), typeof(bool) }
+#else
             new[] { typeof(GameMode) }
+#endif
         )]
         private static class RequireApSlotForFastHost
         {
@@ -635,23 +631,46 @@ namespace StS2AP.Patches
         [HarmonyPatch(
             typeof(NMultiplayerHostSubmenu),
             nameof(NMultiplayerHostSubmenu.StartHost),
+#if STS2_AT_LEAST_0_113_0
+            new[] { typeof(GameMode), typeof(bool) }
+#else
             new[] { typeof(GameMode) }
+#endif
         )]
         private static class RequireApSlotForHostMode
         {
             [HarmonyPrefix]
+#if STS2_AT_LEAST_0_113_0
+            private static bool Prefix(
+                NMultiplayerHostSubmenu __instance,
+                GameMode gameMode,
+                bool isCustom)
+            {
+#else
             private static bool Prefix(
                 NMultiplayerHostSubmenu __instance,
                 GameMode gameMode)
             {
+                // A custom run is its own game mode on these versions.
+                const bool isCustom = false;
+#endif
                 if (!AllowHostCreation())
                     return false;
+#if STS2_AT_LEAST_0_113_0
+                if (gameMode is GameMode.Blitz or GameMode.Dread)
+                {
+                    // Both modes replace maps, shops and rewards that AP checks are placed on.
+                    LogUtility.Warn($"Blocked multiplayer host creation: {gameMode} is not supported in AP runs.");
+                    NotificationUtility.ShowRawText($"{gameMode} is not supported in Archipelago runs yet.");
+                    return false;
+                }
+#endif
                 if (ApMultiplayerCampaignFlow.IsResumingNativeStart)
                     return true;
 
                 try
                 {
-                    ApMultiplayerCampaignFlow.OpenPicker(__instance, gameMode);
+                    ApMultiplayerCampaignFlow.OpenPicker(__instance, gameMode, isCustom);
                 }
                 catch (Exception ex)
                 {
@@ -664,11 +683,25 @@ namespace StS2AP.Patches
             }
         }
 
+#if STS2_AT_LEAST_0_113_0
+        /// <summary>Hides the modes RequireApSlotForHostMode refuses. Every host is an AP host.</summary>
+        [HarmonyPatch(typeof(NMultiplayerHostSubmenu), nameof(NMultiplayerHostSubmenu.OnSubmenuOpened))]
+        private static class HideUnsupportedHostModes
+        {
+            [HarmonyPostfix]
+            private static void Postfix(NMultiplayerHostSubmenu __instance)
+            {
+                __instance._blitzButton.Visible = false;
+                __instance._dreadButton.Visible = false;
+            }
+        }
+#endif
+
         /// <summary>
         /// AP owns multiplayer save selection. Keep Host available and remove the native
         /// single-save Load/Abandon bypasses from the AP multiplayer submenu.
         /// </summary>
-        [HarmonyPatch(typeof(NMultiplayerSubmenu), "UpdateButtons")]
+        [HarmonyPatch(typeof(NMultiplayerSubmenu), nameof(NMultiplayerSubmenu.UpdateButtons))]
         private static class UseUnifiedApCampaignButton
         {
             [HarmonyPostfix]
@@ -686,7 +719,11 @@ namespace StS2AP.Patches
             }
         }
 
-        [HarmonyPatch(typeof(NMultiplayerSubmenu), "get_InitialFocusedControl")]
+        [HarmonyPatch(
+            typeof(NMultiplayerSubmenu),
+            nameof(NMultiplayerSubmenu.InitialFocusedControl),
+            MethodType.Getter
+        )]
         private static class FocusUnifiedApCampaignButton
         {
             [HarmonyPostfix]
@@ -703,7 +740,7 @@ namespace StS2AP.Patches
         }
 
         /// <summary>Prevents a local ready signal unless this process's AP owner is prepared.</summary>
-        [HarmonyPatch(typeof(NCharacterSelectScreen), "OnEmbarkPressed")]
+        [HarmonyPatch(typeof(NCharacterSelectScreen), nameof(NCharacterSelectScreen.OnEmbarkPressed))]
         public static class RequireApReadyToEmbark
         {
             [HarmonyPrefix]
@@ -713,7 +750,7 @@ namespace StS2AP.Patches
                     return true;
 
                 ApRunData.StageLocalPlayer(__instance.Lobby);
-                CharacterModel character = BetaMainCompatibility.GetLocalCharacter(__instance.Lobby);
+                CharacterModel character = __instance.Lobby.LocalPlayer.character;
                 if (!MultiplayerSupport.CanEmbark(character, out string blockedReason))
                     return BlockReady(__instance, blockedReason);
 
@@ -737,7 +774,7 @@ namespace StS2AP.Patches
                 NCharacterSelectScreen screen,
                 string blockedReason)
             {
-                if (BetaMainCompatibility.IsLocalPlayerReady(screen.Lobby))
+                if (screen.Lobby.LocalPlayer.isReady)
                     screen.Lobby.SetReady(ready: false);
                 NotificationUtility.ShowRawText(blockedReason);
                 LogUtility.Warn($"Blocked AP multiplayer embark: {blockedReason}");
@@ -749,7 +786,10 @@ namespace StS2AP.Patches
         /// The native load lobby permits continuing with missing players. Preserve that, but
         /// reject unsupported beta save contracts and identities outside the frozen roster.
         /// </summary>
-        [HarmonyPatch(typeof(NMultiplayerLoadGameScreen), "ShouldAllowRunToBegin")]
+        [HarmonyPatch(
+            typeof(NMultiplayerLoadGameScreen),
+            nameof(NMultiplayerLoadGameScreen.ShouldAllowRunToBegin)
+        )]
         private static class RequireCompatibleSavedCampaign
         {
             [HarmonyPostfix]
@@ -784,7 +824,7 @@ namespace StS2AP.Patches
         /// readies or a client is the last player to ready. The host recomputes readiness from
         /// current RitsuLib staging; no saved validation flag is consulted.
         /// </summary>
-        [HarmonyPatch(typeof(StartRunLobby), "BeginRunForAllPlayersIfAllReady")]
+        [HarmonyPatch(typeof(StartRunLobby), nameof(StartRunLobby.BeginRunForAllPlayersIfAllReady))]
         public static class RequireCompleteApLobbyBeforeLaunch
         {
             [HarmonyPrefix]
@@ -844,7 +884,7 @@ namespace StS2AP.Patches
         [HarmonyPatch(typeof(NCharacterSelectScreen))]
         public static class NCharacterSelectScreenPatches
         {
-            [HarmonyPatch("_Ready")]
+            [HarmonyPatch(nameof(NCharacterSelectScreen._Ready))]
             [HarmonyPostfix]
             private static void HideBackButtonOnCharSelectScreen(NCharacterSelectScreen __instance)
             {

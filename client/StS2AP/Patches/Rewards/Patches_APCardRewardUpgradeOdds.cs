@@ -12,6 +12,7 @@ using MegaCrit.Sts2.Core.Random;
 using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Utils;
+using StS2AP.Utils.Combat;
 
 namespace StS2AP.Patches;
 
@@ -50,6 +51,9 @@ public static class Patches_APCardRewardUpgradeOdds
         s_apRewardRng = rng;
         return new ApRewardRngScope(previous);
     }
+
+    /// <summary>True only while the first reveal of an AP card reward generates its cards.</summary>
+    internal static bool IsGeneratingApReward => s_apRewardRng != null;
 
     internal static IDisposable EnterRewardAct(int? actIndex)
     {
@@ -150,9 +154,24 @@ public static class Patches_APCardRewardUpgradeOdds
     /// AP regular rewards use fixed independent 57/37/6 rarity rolls. Scarcity halves the
     /// Rare chance to use a 60/37/3 table, and rare AP rewards remain guaranteed Rare.
     /// </summary>
+#if STS2_AT_LEAST_0_113_0
     [HarmonyPatch(
         typeof(CardFactory),
-        "RollForRarity",
+        nameof(CardFactory.RollForRarity),
+        [typeof(Player), typeof(CardCreationOptions), typeof(HashSet<CardRarity>)]
+    )]
+    private static class RollApCardRarity
+    {
+        [HarmonyPrefix]
+        private static bool Prefix(
+            CardCreationOptions options,
+            HashSet<CardRarity> allowedRarities,
+            ref CardRarity __result) =>
+            !TryRollApRarity(options.RarityOdds, allowedRarities, ref __result);
+#else
+    [HarmonyPatch(
+        typeof(CardFactory),
+        nameof(CardFactory.RollForRarity),
         [
             typeof(Player),
             typeof(CardRarityOddsType),
@@ -167,10 +186,17 @@ public static class Patches_APCardRewardUpgradeOdds
         private static bool Prefix(
             CardRarityOddsType rollMethod,
             HashSet<CardRarity> allowedRarities,
-            ref CardRarity __result)
+            ref CardRarity __result) =>
+            !TryRollApRarity(rollMethod, allowedRarities, ref __result);
+#endif
+
+        private static bool TryRollApRarity(
+            CardRarityOddsType rollMethod,
+            HashSet<CardRarity> allowedRarities,
+            ref CardRarity result)
         {
             if (s_apRewardRng == null)
-                return true;
+                return false;
             CardRarity rarity;
             if (rollMethod == CardRarityOddsType.BossEncounter)
             {
@@ -203,8 +229,8 @@ public static class Patches_APCardRewardUpgradeOdds
                 }
                 rarity = rarity.GetNextHighestRarityWithWrapping();
             }
-            __result = rarity;
-            return false;
+            result = rarity;
+            return true;
         }
     }
 
@@ -252,30 +278,43 @@ public static class Patches_APCardRewardUpgradeOdds
     /// <summary>
     /// CardFactory calculates the current act's base odds before calling this public hook.
     /// Replace those incoming odds with the AP reward's assigned act, then let the original
-    /// hook apply every normal relic and model modifier.
+    /// hook apply every normal relic and model modifier. The Card Sight bonus gives Act 1 reward
+    /// cards, which normally never upgrade, half of the per-act chance.
     /// </summary>
     [HarmonyPatch(typeof(Hook), nameof(Hook.ModifyCardRewardUpgradeOdds))]
     private static class OverrideAssignedActUpgradeOdds
     {
         [HarmonyPrefix]
         private static bool Prefix(
+            Player player,
             CardModel card,
             ref decimal originalOdds)
         {
-            if (!s_rewardActIndex.HasValue || card.Rarity == CardRarity.Rare)
+            if (card.Rarity == CardRarity.Rare)
+                return true;
+            bool cardSightBonus = CardSight.IsGeneratingReward && CardSight.HasBonus;
+            if (!s_rewardActIndex.HasValue && !cardSightBonus)
                 return true;
 
+            decimal scaling = UpgradeOddsPerAct();
+            int actIndex = s_rewardActIndex ?? player.RunState.CurrentActIndex;
+            if (s_rewardActIndex.HasValue)
+                originalOdds = actIndex * scaling;
+            if (cardSightBonus && actIndex == 0)
+                originalOdds += scaling / 2;
+            return true;
+        }
+
+        /// <summary>The game's upgrade chance per act for non-Rare reward cards.</summary>
+        private static decimal UpgradeOddsPerAct()
+        {
             bool scarcity = AscensionMultiplayer.TryHasLevel(
                 AscensionLevel.Scarcity,
                 out bool multiplayerScarcity
             )
                 ? multiplayerScarcity
                 : ArchipelagoClient.Progress.Ascensions.HasLevel(AscensionLevel.Scarcity);
-            var scaling = scarcity
-                ? 0.125m
-                : 0.25m;
-            originalOdds = s_rewardActIndex.Value * scaling;
-            return true;
+            return scarcity ? 0.125m : 0.25m;
         }
     }
 

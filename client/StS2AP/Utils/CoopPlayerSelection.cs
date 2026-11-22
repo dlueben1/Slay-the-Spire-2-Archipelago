@@ -1,19 +1,15 @@
 namespace StS2AP.Utils;
 
-/// <summary>Number bounds and consent for sharing a numbered AP progression track.</summary>
+/// <summary>Consent for several lobby members connecting to the same AP slot.</summary>
 public sealed class CoopPlayerSelection
 {
-    public sealed record Member(
-        ulong NetId, string? RoomSeed, int? Team, int? Slot, int PlayerCount, int PlayerNumber);
+    public sealed record Member(ulong NetId, string? RoomSeed, int? Team, int? Slot);
 
     private Member[]? _approvedRoster;
 
-    public static bool IsValid(int playerCount, int playerNumber) =>
-        playerCount is >= 1 and <= 4 && playerNumber >= 1 && playerNumber <= playerCount;
-
     public static Member[] GetDuplicates(IEnumerable<Member> roster) => roster
         .Where(member => member.RoomSeed != null && member.Team.HasValue && member.Slot.HasValue)
-        .GroupBy(member => (member.RoomSeed, member.Team, member.Slot, member.PlayerNumber))
+        .GroupBy(member => (member.RoomSeed, member.Team, member.Slot))
         .Where(group => group.Count() > 1)
         .Select(group => group.First())
         .ToArray();

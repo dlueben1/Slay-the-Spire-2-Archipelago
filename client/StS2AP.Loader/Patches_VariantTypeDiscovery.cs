@@ -39,7 +39,7 @@ internal static class Patches_VariantTypeDiscovery
         AssociateWithHost(assembly);
         _variantTypes = types;
 
-        // Public 0.107.1 scans only Mod.assembly. Keep this small merge on beta too:
+        // Main 0.107.1 scans only Mod.assembly. Keep this small merge on beta too:
         // a previously cached ModTypes array may predate native assembly association.
         // Never clear or replace the host's cache, or scan other mods' dependencies.
         new Harmony("archipelago.loader.type-discovery").PatchAll(typeof(Patches_VariantTypeDiscovery).Assembly);

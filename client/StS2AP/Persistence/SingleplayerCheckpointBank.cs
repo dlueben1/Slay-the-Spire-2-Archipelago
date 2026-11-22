@@ -5,10 +5,11 @@ using System.Text.Json;
 namespace StS2AP.Persistence;
 
 /// <summary>One checkpoint bank per AP slot and character, shared across all attempts.</summary>
+/// <param name="root">The local storage root; each bank lives in its slot's folder (see <see cref="ApStorageLayout"/>).</param>
 internal sealed class SingleplayerCheckpointBank(string root)
 {
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
-    internal sealed record Identity(string Seed, int Team, int Slot, int PlayerNumber = 1);
+    internal sealed record Identity(string Seed, int Team, int Slot);
     internal sealed record BankKey(Identity Owner, string Character);
     internal sealed record Snapshot(string Key, string FileName, string Hash, DateTimeOffset SavedAt,
         int Floor, bool StartOfAct);
@@ -25,23 +26,16 @@ internal sealed class SingleplayerCheckpointBank(string root)
     internal static bool IsAllowed(string key, bool startOfAct, int unlockedAct) =>
         Milestones.Contains(key) && (!startOfAct || key[0] - '0' <= Math.Max(1, unlockedAct));
 
-    // Hash the full identity rather than sanitizing names: different slots/characters must
-    // never alias, and AP-provided names must never become filesystem paths.
-    private string DirectoryFor(BankKey key)
-    {
-        // Preserve existing Player 1 bank paths and metadata from before shared slots.
-        object identity = key.Owner.PlayerNumber == 1
-            ? new { Owner = new { key.Owner.Seed, key.Owner.Team, key.Owner.Slot }, key.Character }
-            : key;
-        return Path.Combine(root,
-            Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(identity))));
-    }
+    // The manifest's identity is still checked on every read, so a folder name can never hand
+    // one slot's or character's checkpoints to another.
+    internal string DirectoryFor(BankKey key) => ApStorageLayout.CheckpointDirectory(
+        ApStorageLayout.SlotDirectory(root, key.Owner.Seed, key.Owner.Team, key.Owner.Slot), key.Character);
     private string Manifest(BankKey key) => Path.Combine(DirectoryFor(key), "metadata.json");
 
     public Bank Read(BankKey key)
     {
         if (key.Owner == null || string.IsNullOrWhiteSpace(key.Owner.Seed)
-            || key.Owner.Team < 0 || key.Owner.Slot < 0 || key.Owner.PlayerNumber is < 1 or > 4
+            || key.Owner.Team < 0 || key.Owner.Slot < 0
             || string.IsNullOrWhiteSpace(key.Character))
             throw new InvalidDataException("Invalid AP checkpoint bank identity.");
         if (!File.Exists(Manifest(key))) return new() { Identity = key };
@@ -82,6 +76,45 @@ internal sealed class SingleplayerCheckpointBank(string root)
             snapshot.Hash, StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("The checkpoint checksum does not match.");
         return (Encoding.UTF8.GetString(bytes), snapshot);
+    }
+
+    /// <summary>
+    /// Moves a bank from the old per-profile layout into this root, then deletes the old folder.
+    /// When two profiles banked the same slot and character, each milestone keeps the newer save.
+    /// A damaged old save is skipped rather than allowed to replace a good one. Returns the bank's
+    /// identity and when its newest checkpoint was saved.
+    /// </summary>
+    internal (BankKey Key, DateTimeOffset? LastSaved) ImportLegacyBank(string legacyDirectory)
+    {
+        string legacyManifest = Path.Combine(legacyDirectory, "metadata.json");
+        Bank legacy = JsonSerializer.Deserialize<Bank>(File.ReadAllText(legacyManifest), Options)
+            ?? throw new InvalidDataException("Empty AP checkpoint metadata.");
+        if (legacy.Version != 1 || legacy.Checkpoints == null)
+            throw new InvalidDataException("Invalid or unsupported AP checkpoint metadata.");
+
+        Bank target = Read(legacy.Identity);
+        string destination = DirectoryFor(legacy.Identity);
+        foreach (var (key, snapshot) in legacy.Checkpoints)
+        {
+            if (snapshot == null || snapshot.Key != key || !Milestones.Contains(key))
+                continue;
+            if (target.Checkpoints.TryGetValue(key, out Snapshot? existing) && existing.SavedAt >= snapshot.SavedAt)
+                continue;
+            if (CampaignSaveFiles.Verify(legacyDirectory, snapshot.FileName, snapshot.Hash) != null)
+                continue;
+            CampaignSaveFiles.StoreBytes(destination, File.ReadAllBytes(
+                CampaignSaveFiles.GetPath(legacyDirectory, snapshot.FileName, snapshot.Hash)));
+            target.Checkpoints[key] = snapshot;
+        }
+        Write(target);
+
+        // Payloads replaced by a newer profile's save are no longer referenced.
+        var kept = target.Checkpoints.Values.Select(s => s.FileName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (string file in Directory.EnumerateFiles(destination, "run-*.save"))
+            if (!kept.Contains(Path.GetFileName(file)))
+                File.Delete(file);
+        Directory.Delete(legacyDirectory, recursive: true);
+        return (target.Identity, target.Checkpoints.Values.Select(s => (DateTimeOffset?)s.SavedAt).Max());
     }
 
     private void Write(Bank bank)

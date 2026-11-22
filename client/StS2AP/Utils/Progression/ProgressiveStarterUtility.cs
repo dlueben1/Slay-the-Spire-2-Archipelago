@@ -257,7 +257,11 @@ namespace StS2AP.Utils
                     // The native Ancient owns transformations and BaseLib/RitsuLib compatibility.
                     var tooth = (ArchaicTooth)ModelDb.Relic<ArchaicTooth>().ToMutable();
                     if (!tooth.SetupForPlayer(player))
-                        throw new InvalidOperationException("Archaic Tooth could not configure itself for the current starter card.");
+                    {
+                        // The player can remove the starter card (shop, Empty Cage) before this tier arrives.
+                        LogUtility.Warn("Archaic Tooth found no starter card to transform in the deck; leaving the starter card at its current tier.");
+                        return false;
+                    }
                     await RelicCmd.Obtain(tooth, player);
                     if (FindOwnedRelic(player, tooth.Id.ToString()) == null)
                         throw new InvalidOperationException("The game did not add Archaic Tooth after receiving the upgraded starter-card tier.");

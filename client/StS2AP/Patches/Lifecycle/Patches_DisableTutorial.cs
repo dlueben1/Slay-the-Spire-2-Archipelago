@@ -28,7 +28,7 @@ namespace StS2AP.Patches
         /// <summary>
         /// Disables the tutorial rewards - when the game is first played, the rewards you get are fixed rather than dynamic.
         /// </summary>
-        [HarmonyPatch(typeof(RewardsSet), "TryGenerateTutorialRewards")]
+        [HarmonyPatch(typeof(RewardsSet), nameof(RewardsSet.TryGenerateTutorialRewards))]
         public class TurnOffTutorialRewardsDuringArchipelagoPatch
         {
             /// <summary>

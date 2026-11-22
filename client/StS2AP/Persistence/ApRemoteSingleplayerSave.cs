@@ -5,7 +5,7 @@ using StS2AP.Utils;
 namespace StS2AP.Persistence;
 
 /// <summary>
-/// Stores one opaque latest checkpoint per AP slot participant and character in DataStorage.
+/// Stores one opaque latest checkpoint per AP slot and character in DataStorage.
 /// Local checkpoint-bank persistence remains independent from this best-effort remote copy.
 /// </summary>
 internal static class ApRemoteSingleplayerSave
@@ -28,11 +28,10 @@ internal static class ApRemoteSingleplayerSave
                 return;
             }
 
-            string storageKey = RemoteSingleplayerSaveKey.For(character, CoopSlot.PlayerNumber);
+            string storageKey = RemoteSingleplayerSaveKey.For(character);
             session.DataStorage[Scope.Slot, storageKey] = payload;
             LogUtility.Info(
-                $"Queued remote AP checkpoint upload: character={character}, "
-                    + $"player={CoopSlot.PlayerNumber}, compressedBytes={payload.Length}"
+                $"Queued remote AP checkpoint upload: character={character}, compressedBytes={payload.Length}"
             );
         }
         catch (Exception ex)
@@ -51,21 +50,18 @@ internal static class ApRemoteSingleplayerSave
         if (!ArchipelagoClient.IsConnected)
             throw new InvalidOperationException("The AP slot is not connected.");
 
-        int playerNumber = CoopSlot.PlayerNumber;
-        string storageKey = RemoteSingleplayerSaveKey.For(character, playerNumber);
+        string storageKey = RemoteSingleplayerSaveKey.For(character);
         var storage = session.DataStorage[Scope.Slot, storageKey];
         storage.Initialize(new JValue(string.Empty));
         string? payload = await storage.GetAsync<string>();
 
-        if (!ReferenceEquals(session, ArchipelagoClient.Session) || !ArchipelagoClient.IsConnected
-            || CoopSlot.PlayerNumber != playerNumber)
+        if (!ReferenceEquals(session, ArchipelagoClient.Session) || !ArchipelagoClient.IsConnected)
             throw new InvalidOperationException("The connected AP slot changed while downloading the remote save.");
         if (string.IsNullOrWhiteSpace(payload))
-            throw new InvalidDataException("No remote save exists for this character and player.");
+            throw new InvalidDataException("No remote save exists for this character.");
 
         LogUtility.Info(
-            $"Downloaded remote AP checkpoint: character={character}, player={playerNumber}, "
-                + $"compressedBytes={payload.Length}"
+            $"Downloaded remote AP checkpoint: character={character}, compressedBytes={payload.Length}"
         );
         return payload;
     }

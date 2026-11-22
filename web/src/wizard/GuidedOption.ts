@@ -10,15 +10,26 @@
 import type { OptionValue } from "../generated/optionCatalog";
 import { TRAP_ITEM_DEFINITIONS } from "./TrapItem";
 import { FILLER_ITEM_DEFINITIONS } from "./FillerItem";
+import { SHOP_CARD_KIND_DEFINITIONS } from "./ShopCardKind";
 import {
+  SHOP_POTION_KIND_DEFINITIONS,
+  SHOP_RELIC_KIND_DEFINITIONS,
+} from "./ShopStockKind";
+import {
+  BOON_OPTION_KEYS,
+  CHALLENGE_OPTION_KEYS,
   CHARACTER_OPTION_KEYS,
   ANCIENT_OPTION_KEYS,
   BONUS_ITEM_OPTION_KEY,
   CHECK_OPTION_KEYS,
   DEATH_LINK_OPTION_KEYS,
+  ITEM_OPTION_KEYS,
   PROGRESSION_OPTION_KEYS,
   RUN_OPTION_KEYS,
+  SHOP_CARD_OPTION_KEY,
   SHOP_OPTION_KEYS,
+  SHOP_POTION_OPTION_KEY,
+  SHOP_RELIC_OPTION_KEY,
   STARTING_EQUIPMENT_OPTION_KEYS,
   TRAP_CHANCE_OPTION_KEY,
 } from "./WizardOptionKey";
@@ -46,10 +57,16 @@ export function getGuidedOptionKeys(): string[] {
   const optionKeys: string[] = [
     ...Object.values(CHARACTER_OPTION_KEYS),
     ...Object.values(RUN_OPTION_KEYS),
-    ...Object.values(STARTING_EQUIPMENT_OPTION_KEYS),
     ...Object.values(ANCIENT_OPTION_KEYS),
+    ...Object.values(STARTING_EQUIPMENT_OPTION_KEYS),
     ...Object.values(CHECK_OPTION_KEYS),
     ...Object.values(SHOP_OPTION_KEYS),
+    SHOP_CARD_OPTION_KEY,
+    ...SHOP_CARD_KIND_DEFINITIONS.map((definition) => definition.optionKey),
+    SHOP_RELIC_OPTION_KEY,
+    ...SHOP_RELIC_KIND_DEFINITIONS.map((definition) => definition.optionKey),
+    SHOP_POTION_OPTION_KEY,
+    ...SHOP_POTION_KIND_DEFINITIONS.map((definition) => definition.optionKey),
     BONUS_ITEM_OPTION_KEY,
   ];
 
@@ -63,11 +80,14 @@ export function getGuidedOptionKeys(): string[] {
     ...TRAP_ITEM_DEFINITIONS.map((item) => item.optionKey),
   );
 
-  // Death Link follows the combined Checks & Rewards ownership group.
-  optionKeys.push(...Object.values(DEATH_LINK_OPTION_KEYS));
+  // Boons and Challenges follow the Item Pool, as their steps do.
+  optionKeys.push(...Object.values(BOON_OPTION_KEYS));
+  optionKeys.push(...Object.values(CHALLENGE_OPTION_KEYS));
 
-  // Common Archipelago settings close the dedicated Progression step.
+  // The Multiworld step closes with Death Link and the common Archipelago settings.
+  optionKeys.push(...Object.values(DEATH_LINK_OPTION_KEYS));
   optionKeys.push(...Object.values(PROGRESSION_OPTION_KEYS));
+  optionKeys.push(...Object.values(ITEM_OPTION_KEYS));
 
   // Return the complete ordered ownership snapshot.
   return optionKeys;
@@ -100,23 +120,71 @@ function isActiveGuidedOption(
   return true;
 }
 
+/** Items & Hints options, which the YAML leaves out while they are empty. */
+const ITEM_OPTION_KEY_SET: ReadonlySet<string> = new Set(
+  Object.values(ITEM_OPTION_KEYS),
+);
+
+/**
+ * Checks whether a value is an empty list or mapping.
+ *
+ * @param value - A compiled option value.
+ * @returns Whether it holds nothing.
+ */
+function isEmptyCollection(value: OptionValue): boolean {
+  if (Array.isArray(value)) {
+    return !value.length;
+  }
+  return typeof value === "object" && !Object.keys(value).length;
+}
+
 /**
  * Selects guided values from a complete compiled option object.
  *
  * @param compiled - Complete validated output from the root wizard compiler.
+ * @param keptOptions - Settings an imported YAML had that the builder does not ask
+ * about; they follow the guided settings unchanged.
  * @returns An ordered record suitable for guided YAML review.
  * @throws When a registered guided option is unexpectedly absent.
  */
 export function selectGuidedOptions(
   compiled: Record<string, OptionValue>,
+  keptOptions: Readonly<Record<string, unknown>> = {},
 ): Record<string, OptionValue> {
   // Preserve step order by collecting entries from the central ownership registry.
   const guidedEntries: [string, OptionValue][] = [];
   const usesAdvancedCharacters = compiled.use_advanced_characters === true;
+  const shopCardWeightKeys = new Set(
+    SHOP_CARD_KIND_DEFINITIONS.map((definition) => definition.optionKey),
+  );
+  const shopRelicWeightKeys = new Set(
+    SHOP_RELIC_KIND_DEFINITIONS.map((definition) => definition.optionKey),
+  );
+  const shopPotionWeightKeys = new Set(
+    SHOP_POTION_KIND_DEFINITIONS.map((definition) => definition.optionKey),
+  );
 
   for (const optionKey of getGuidedOptionKeys()) {
     // Omit technical character fields that the selected YAML mode ignores.
     if (!isActiveGuidedOption(optionKey, usesAdvancedCharacters)) {
+      continue;
+    }
+
+    // Shop card weights do nothing while Random Shop Cards is off.
+    if (
+      shopCardWeightKeys.has(optionKey) &&
+      compiled[SHOP_CARD_OPTION_KEY] !== true
+    ) {
+      continue;
+    }
+
+    // So do the relic and potion weights while their switches are off.
+    if (
+      (shopRelicWeightKeys.has(optionKey) &&
+        compiled[SHOP_RELIC_OPTION_KEY] !== true) ||
+      (shopPotionWeightKeys.has(optionKey) &&
+        compiled[SHOP_POTION_OPTION_KEY] !== true)
+    ) {
       continue;
     }
 
@@ -128,7 +196,21 @@ export function selectGuidedOptions(
       );
     }
 
+    // Empty item lists are Archipelago's defaults and only add noise to the YAML.
+    if (ITEM_OPTION_KEY_SET.has(optionKey) && isEmptyCollection(value)) {
+      continue;
+    }
+
     guidedEntries.push([optionKey, value]);
+  }
+
+  // A kept setting the builder now asks about itself is left to its question.
+  const guidedKeys = new Set(getGuidedOptionKeys());
+  for (const [optionKey, value] of Object.entries(keptOptions)) {
+    if (!(optionKey in compiled) || guidedKeys.has(optionKey)) {
+      continue;
+    }
+    guidedEntries.push([optionKey, value as OptionValue]);
   }
 
   // Convert ordered entries to the serializer's expected mapping shape.

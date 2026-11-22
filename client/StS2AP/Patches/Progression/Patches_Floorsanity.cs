@@ -94,7 +94,7 @@ namespace StS2AP.Patches
                 .Select(number => LocationData.GetFloorLocation(player, number));
             LocationCheckSendResult result = GameUtility.QueueChecks(ids);
             if (result.AcceptedCount > 0)
-                LogUtility.Info($"Recorded {result.AcceptedCount} floor check(s) through floor {floor}");
+                LogUtility.Debug($"Recorded {result.AcceptedCount} floor check(s) through floor {floor}");
         }
 
         private static void ApplyMultiplayerBossCompensation(

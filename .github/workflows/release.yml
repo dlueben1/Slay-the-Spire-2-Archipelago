@@ -219,7 +219,7 @@ jobs:
     with:
       source_ref: ${{ needs.prepare.outputs.release_sha }}
       build_mode: Package
-      sts2_api_compat: ${{ needs.versions.outputs.public_api }}
+      sts2_api_compat: ${{ needs.versions.outputs.main_api }}
       apworld_artifact: sts2-apworld
       upload_artifact: true
 
@@ -248,7 +248,7 @@ jobs:
       - name: Download release package
         uses: actions/download-artifact@v6
         with:
-          name: sts2-package-${{ needs.versions.outputs.public_api }}
+          name: sts2-package-${{ needs.versions.outputs.main_api }}
           path: release-input
 
       - name: Stage and verify release assets
@@ -290,7 +290,7 @@ jobs:
             --output release-assets/release-notes.md \
             --client-version "${{ needs.prepare.outputs.new_client_version }}" \
             --world-version "${{ needs.prepare.outputs.new_world_version }}" \
-            --sts2-public-version "${{ needs.versions.outputs.public_api }}" \
+            --sts2-main-version "${{ needs.versions.outputs.main_api }}" \
             --sts2-beta-version "${{ needs.versions.outputs.beta_api }}"
 
       - name: Fail if the release tag or draft already exists
@@ -377,7 +377,7 @@ jobs:
           OLD_WORLD_VERSION: ${{ needs.prepare.outputs.old_world_version }}
           WORLD_VERSION: ${{ needs.prepare.outputs.new_world_version }}
           WORLD_CHANGED: ${{ needs.prepare.outputs.world_changed }}
-          PUBLIC_VERSION: ${{ needs.versions.outputs.public_api }}
+          MAIN_VERSION: ${{ needs.versions.outputs.main_api }}
           BETA_VERSION: ${{ needs.versions.outputs.beta_api }}
           RELEASE_SHA: ${{ needs.prepare.outputs.release_sha }}
           GH_TOKEN: ${{ github.token }}
@@ -399,7 +399,7 @@ jobs:
             echo "- Release commit: \`$RELEASE_SHA\`"
             echo "- Client: $OLD_CLIENT_VERSION -> $CLIENT_VERSION"
             echo "- APWorld: $world_summary"
-            echo "- StS2 Public: $PUBLIC_VERSION"
+            echo "- StS2 Main: $MAIN_VERSION"
             echo "- StS2 Beta: $BETA_VERSION"
             echo "- Tag: $CLIENT_VERSION"
             echo "- Release status: Draft"

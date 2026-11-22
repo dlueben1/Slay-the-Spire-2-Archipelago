@@ -17,10 +17,12 @@ namespace StS2AP.Patches
         [HarmonyPatch(typeof(NCharacterSelectScreen))]
         public static class UpdateCharTrackerUI
         {
-            [HarmonyPatch("SelectCharacter")]
+            [HarmonyPatch(nameof(NCharacterSelectScreen.SelectCharacter))]
             [HarmonyPostfix]
-            public static void Postfix(NCharacterSelectScreen __instance, NCharacterSelectButton charSelectButton, CharacterModel characterModel)
+            public static void Postfix(NCharacterSelectScreen __instance, NCharacterSelectButton charSelectButton)
             {
+                // Older versions pass the button's character as a second argument; 0.113 dropped it.
+                CharacterModel characterModel = charSelectButton.Character;
                 Patches_AscensionOverride.UpdateCharacterSelectAscension(
                     __instance,
                     charSelectButton,
@@ -54,7 +56,7 @@ namespace StS2AP.Patches
                     LogUtility.Error("Cannot update checked-location UI without AP slot settings.");
                     return;
                 }
-                if(!settings.Characters.ContainsKey(character.Id.Entry))
+                if(!settings.TryGetCharacterConfig(character.Id.Entry, out _))
                 {
                     return;
                 }
@@ -97,7 +99,11 @@ namespace StS2AP.Patches
                 if (settings.GoldSanity)
                 {
                     var goldLocations = LocationData.GetGoldsanityLocations(character);
-                    SetCheckedLocation(ArchipelagoCharTrackerUI.GoldsanityChecks, goldLocations, ArchipelagoProgress._maxGoldRewards);
+                    SetCheckedLocation(
+                        ArchipelagoCharTrackerUI.GoldsanityChecks,
+                        goldLocations,
+                        ArchipelagoProgress._maxGoldRewards + ArchipelagoProgress._maxBossGoldRewards
+                    );
                 }
 
                 // Update Potionsanity Locations
@@ -156,7 +162,7 @@ namespace StS2AP.Patches
                     LogUtility.Error("Cannot update received-item UI without AP slot settings.");
                     return;
                 }
-                if(!settings.Characters.ContainsKey(characterModel.Id.Entry))
+                if(!settings.TryGetCharacterConfig(characterModel.Id.Entry, out _))
                 {
                     // Not sure how this is getting called with something that doesn't belong, but just in case.
                     return;
@@ -170,9 +176,8 @@ namespace StS2AP.Patches
 
                 long offset = (long) checkMe;
                 // Update Gold Rewards
-                LogUtility.Info($"Checking for gold rewards for character ID {offset}");
                 ArchipelagoClient.Progress.GoldReceived.TryGetValue(offset, out int gold);
-                LogUtility.Info($"Gold rewards received for character ID {offset}: {gold}");
+                LogUtility.Debug($"Gold rewards received for character ID {offset}: {gold}");
                 ArchipelagoCharTrackerUI.GoldRewards?.SetText(gold.ToString());
 
                 if(settings.CampfireSanity)

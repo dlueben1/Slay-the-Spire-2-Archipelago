@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Entities.Multiplayer;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Multiplayer;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Multiplayer.Game.Lobby;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
@@ -50,14 +51,37 @@ public static class MultiplayerSupport
         MultiplayerFeature.CombatEffects,
         MultiplayerFeature.DeathLink,
         MultiplayerFeature.SaveAndReconnect,
+        MultiplayerFeature.ChallengeSight,
     };
 
     internal static bool IsSynchronizedCombatActive =>
         CombatManager.Instance.IsStarting
-        || !BetaMainCompatibility.IsActionSynchronizerCombatState(
-            RunManager.Instance.ActionQueueSynchronizer.CombatState,
-            ActionSynchronizerCombatState.NotInCombat
-        );
+        || RunManager.Instance.ActionQueueSynchronizer.CombatState
+            != ActionSynchronizerCombatState.NotInCombat;
+
+    internal static bool TryGetHostNetId(INetGameService netService, out ulong hostNetId)
+    {
+        hostNetId = default;
+        if (netService.Type == NetGameType.Singleplayer)
+        {
+            hostNetId = netService.NetId;
+            return true;
+        }
+        if (!netService.IsConnected)
+            return false;
+
+        switch (netService.Type)
+        {
+            case NetGameType.Host:
+                hostNetId = netService.NetId;
+                return true;
+            case NetGameType.Client when netService is NetClientGameService client:
+                hostNetId = client.HostNetId;
+                return true;
+            default:
+                return false;
+        }
+    }
 
     private static readonly Dictionary<int, IndexedItemInfo> DeferredItems = new();
 
@@ -253,13 +277,7 @@ public static class MultiplayerSupport
     {
         var item = indexedItem.Item;
         if (ArchipelagoIdCodec.IsUniversalItemId(item.ItemId))
-            return item.GetUniversalItemId() == APItem.BonusWaxRelic
-                ? (ShouldRunReplicatedConstruction(MultiplayerFeature.BonusItems)
-                    ? MultiplayerFeature.BonusItems : MultiplayerFeature.GoldRewards)
-                : (IsUniversalCombatBuff(item.ItemId) || IsUniversalTrap(item.ItemId))
-                ? (IsMultiplayerBuffGoldFallback(item.ItemId)
-                    ? MultiplayerFeature.GoldRewards : MultiplayerFeature.CombatEffects)
-                : MultiplayerFeature.UnknownReceivedItems;
+            return GetFeatureForUniversalItem(item);
 
         return item.GetCharacterItemType() switch
         {
@@ -282,6 +300,32 @@ public static class MultiplayerSupport
                 or APItem.DoubleBoss => MultiplayerFeature.AscensionEffects,
             _ => MultiplayerFeature.UnknownReceivedItems,
         };
+    }
+
+    private static MultiplayerFeature GetFeatureForUniversalItem(ItemInfo item)
+    {
+        APItem universalItem = item.GetUniversalItemId();
+        if (universalItem is APItem.IntentSight or APItem.HealthSight or APItem.PileSight or APItem.MapSight
+            or APItem.CardSight or APItem.RelicSight)
+            return MultiplayerFeature.ChallengeSight;
+
+        // In multiplayer, bonus items arrive as gold unless the experimental Bonus Items
+        // feature is enabled (see BonusRewardUtility.ConvertToGold).
+        if (BonusRewardUtility.IsBonusItem(universalItem))
+        {
+            return ShouldRunReplicatedConstruction(MultiplayerFeature.BonusItems)
+                ? MultiplayerFeature.BonusItems
+                : MultiplayerFeature.GoldRewards;
+        }
+
+        if (IsUniversalCombatBuff(item.ItemId) || IsUniversalTrap(item.ItemId))
+        {
+            return IsMultiplayerBuffGoldFallback(item.ItemId)
+                ? MultiplayerFeature.GoldRewards
+                : MultiplayerFeature.CombatEffects;
+        }
+
+        return MultiplayerFeature.UnknownReceivedItems;
     }
 
     // AP_MP: Unsupported receipt types are held here instead of mutating replicated state.
@@ -308,8 +352,7 @@ public static class MultiplayerSupport
     {
         reason = string.Empty;
         var candidate = ApSessionIdentity.Create(
-            ArchipelagoClient.ServerAddress, roomSeed, apTeamId, apSlotId,
-            CoopSlot.PlayerNumber);
+            ArchipelagoClient.ServerAddress, roomSeed, apTeamId, apSlotId);
         if (_preparedSessionIdentity is { } expected
             && expected != candidate)
         {
@@ -324,7 +367,7 @@ public static class MultiplayerSupport
     public static void NoteApSessionConnected(string roomSeed, int apTeamId, int apSlotId)
     {
         var identity = ApSessionIdentity.Create(
-            ArchipelagoClient.ServerAddress, roomSeed, apTeamId, apSlotId, CoopSlot.PlayerNumber);
+            ArchipelagoClient.ServerAddress, roomSeed, apTeamId, apSlotId);
         if (_deferredSessionIdentity != null && _deferredSessionIdentity != identity)
         {
             LogUtility.Info(
@@ -360,15 +403,9 @@ public static class MultiplayerSupport
             reason = "The AP slot did not provide any usable character settings.";
             return false;
         }
-        if (!ArchipelagoClient.TryValidateConfiguredCharacters(
-                ArchipelagoClient.Settings,
-                out reason))
-        {
-            return false;
-        }
 
         var identity = ApSessionIdentity.Create(
-            ArchipelagoClient.ServerAddress, roomSeed, apTeamId, apSlotId, CoopSlot.PlayerNumber);
+            ArchipelagoClient.ServerAddress, roomSeed, apTeamId, apSlotId);
 
         DeferredItems.Clear();
         var receipts = new List<IndexedItemInfo>();
@@ -394,7 +431,7 @@ public static class MultiplayerSupport
         for (int index = 0; index < receivedItems.Count; index++)
         {
             ItemInfo item = receivedItems[index];
-            if (!CoopSlot.Owns(item.ItemId))
+            if (ArchipelagoIdCodec.IsArchipelagoReservedId(item.ItemId))
                 continue;
             var indexedItem = new IndexedItemInfo(item, index + 1);
             MultiplayerFeature feature = GetFeatureForItem(indexedItem);
@@ -656,7 +693,7 @@ public static class MultiplayerSupport
                     screen.Lobby,
                     out string hostBlockedReason))
             {
-                bool wasReady = BetaMainCompatibility.IsLocalPlayerReady(screen.Lobby);
+                bool wasReady = screen.Lobby.LocalPlayer.isReady;
                 EnsureLocalPlayerUnready(screen);
                 embarkButton.Disable();
                 if (wasReady)
@@ -668,10 +705,10 @@ public static class MultiplayerSupport
                 return;
             }
 
-            if (BetaMainCompatibility.IsLocalPlayerReady(screen.Lobby))
+            if (screen.Lobby.LocalPlayer.isReady)
                 return;
 
-            if (CanEmbark(BetaMainCompatibility.GetLocalCharacter(screen.Lobby), out _))
+            if (CanEmbark(screen.Lobby.LocalPlayer.character, out _))
                 embarkButton.Enable();
             else
                 embarkButton.Disable();
@@ -684,7 +721,7 @@ public static class MultiplayerSupport
 
     private static void EnsureLocalPlayerUnready(NCharacterSelectScreen screen)
     {
-        if (!BetaMainCompatibility.IsLocalPlayerReady(screen.Lobby))
+        if (!screen.Lobby.LocalPlayer.isReady)
             return;
 
         // Use the native UI transition so auto-unready restores character buttons and the
@@ -773,12 +810,7 @@ public static class MultiplayerSupport
             && ApRunData.TryGetSharedState(runState, out ApRunSharedState hostShared)
             && hostShared.HostSettings != null)
         {
-            if (!ArchipelagoClient.TryUseMultiplayerHostSettings(
-                    hostShared.HostSettings,
-                    out string settingsReason))
-            {
-                InvalidateRunClaims(settingsReason);
-            }
+            ArchipelagoClient.UseMultiplayerHostSettings(hostShared.HostSettings);
         }
 
         LogUtility.Info(
@@ -869,8 +901,6 @@ public static class MultiplayerSupport
         // TODO: is there seriously no automatic setter for this? where snapshot = source and then do slight modifications after
         var snapshot = new ArchipelagoSettings
         {
-            PlayerCount = source.PlayerCount,
-            PlayerNumber = source.PlayerNumber,
             AscensionLevel = source.AscensionLevel,
             ShouldShuffleAllCards = source.ShouldShuffleAllCards,
             IsSeeded = source.IsSeeded,
@@ -883,10 +913,28 @@ public static class MultiplayerSupport
             RelicRewardsAvailableAnytime = local.OverrideRelicRewardsAvailableAnytime
                 ? local.RelicRewardsAvailableAnytime
                 : source.RelicRewardsAvailableAnytime,
+            StrictCardRewards = local.OverrideStrictCardRewards
+                ? local.StrictCardRewards
+                : source.StrictCardRewards,
+            HiddenIntents = source.HiddenIntents,
+            HiddenHealth = source.HiddenHealth,
+            HiddenPiles = source.HiddenPiles,
+            HiddenMap = source.HiddenMap,
+            HiddenCards = source.HiddenCards,
+            HiddenRelics = source.HiddenRelics,
+            SightBonuses = new HashSet<string>(source.SightBonuses),
+            EventsInAnyAct = source.EventsInAnyAct,
             ReleaseOnVictory = source.ReleaseOnVictory,
+            RemovedOpRelics = source.RemovedOpRelics,
             CampfireSanity = source.CampfireSanity,
             GoldSanity = source.GoldSanity,
             BonusItems = source.BonusItems.ToArray(),
+            RunModifiers = source.RunModifiers.ToList(),
+            Boons = source.Boons.ToList(),
+            EnemyHpScaling = source.EnemyHpScaling,
+            EnemyDamageScaling = source.EnemyDamageScaling,
+            DreadMode = source.DreadMode,
+            BlitzMerchantChance = source.BlitzMerchantChance,
             PotionSanity = source.PotionSanity,
             Floorsanity = source.Floorsanity,
             ProgressiveStarterCard = source.ProgressiveStarterCard,
@@ -898,6 +946,9 @@ public static class MultiplayerSupport
             ShopPotionSlots = source.ShopPotionSlots,
             ShopRemoveSlots = source.ShopRemoveSlots,
             ShopSanityCosts = source.ShopSanityCosts,
+            ShopCardWeights = new Dictionary<string, int>(source.ShopCardWeights),
+            ShopRelicWeights = new Dictionary<string, int>(source.ShopRelicWeights),
+            ShopPotionWeights = new Dictionary<string, int>(source.ShopPotionWeights),
             IsDeathLinkEnabled = local.OverrideDeathLinkOptions
                 ? local.EnableDeathLink
                 : source.IsDeathLinkEnabled,
@@ -911,7 +962,7 @@ public static class MultiplayerSupport
         };
 
         foreach ((string key, CharacterConfig config) in source.Characters)
-            snapshot.Characters[key] = CloneCharacterConfig(config);
+            snapshot.Characters[key] = config.Clone();
         return snapshot;
     }
 
@@ -925,27 +976,8 @@ public static class MultiplayerSupport
         {
             return;
         }
-        if (!ArchipelagoClient.TryUseMultiplayerHostSettings(
-                shared.HostSettings,
-                out string settingsReason))
-        {
-            InvalidateRunClaims(settingsReason);
-        }
+        ArchipelagoClient.UseMultiplayerHostSettings(shared.HostSettings);
     }
-
-    private static CharacterConfig CloneCharacterConfig(CharacterConfig source) => new()
-    {
-        Name = source.Name,
-        OptionName = source.OptionName,
-        CharOffset = source.CharOffset,
-        OfficialName = source.OfficialName,
-        Seed = source.Seed,
-        Locked = source.Locked,
-        ModNum = source.ModNum,
-        ProgressiveStarterCard = source.ProgressiveStarterCard,
-        ProgressiveStarterRelic = source.ProgressiveStarterRelic,
-        Ascension = new HashSet<string>(source.Ascension, StringComparer.Ordinal),
-    };
 
     public static void EndRun()
     {

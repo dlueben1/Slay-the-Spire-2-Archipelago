@@ -28,4 +28,7 @@ public enum MultiplayerFeature
     DeathFragments,
     SaveAndReconnect,
     UnknownReceivedItems,
+
+    // Display-only: each client shows what its own slot's Sight receipts reveal.
+    ChallengeSight,
 }

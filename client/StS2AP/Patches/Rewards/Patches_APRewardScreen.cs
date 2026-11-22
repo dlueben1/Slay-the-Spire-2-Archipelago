@@ -59,6 +59,8 @@ namespace StS2AP.Patches
             {
                 background.SelfModulate = AncientBackgroundTint;
             }
+
+            ArchipelagoRewardUI.ApplyCardRewardLock(__instance);
         }
     }
 
@@ -80,7 +82,7 @@ namespace StS2AP.Patches
     /// Rejects an AP-owned native row before MegaCrit emits RewardSelectedMessage. This keeps
     /// multiplayer combat and other expected claim gates as true non-selections.
     /// </summary>
-    [HarmonyPatch(typeof(NRewardButton), "OnRelease")]
+    [HarmonyPatch(typeof(NRewardButton), nameof(NRewardButton.OnRelease))]
     public static class GateNativeApRewardSelection
     {
         [HarmonyPrefix]
@@ -92,7 +94,7 @@ namespace StS2AP.Patches
     /// Vanilla removes an empty nonterminal reward screen immediately. AP intentionally exposes
     /// an empty persistent inventory, so retain only AP-owned screens that started empty.
     /// </summary>
-    [HarmonyPatch(typeof(NRewardsScreen), "UpdateScreenState")]
+    [HarmonyPatch(typeof(NRewardsScreen), nameof(NRewardsScreen.UpdateScreenState))]
     public static class KeepEmptyApRewardScreenOpen
     {
         [HarmonyPrefix]
@@ -109,8 +111,9 @@ namespace StS2AP.Patches
 
     /// <summary>
     /// NLinkedRewardSet connects the one-argument NRewardButton.RewardClaimed signal to a
-    /// zero-argument callback. Replace that callback only for AP-owned linked rewards with an
-    /// argument-compatible equivalent.
+    /// zero-argument callback, so a claimed child never unlinks the others. Replace that callback
+    /// only for AP-owned linked rewards (see ApLinkedRewardSets) with an argument-compatible
+    /// equivalent.
     /// </summary>
     [HarmonyPatch(typeof(NLinkedRewardSet), nameof(NLinkedRewardSet._Ready))]
     public static class FixApLinkedRewardClaimCallback
@@ -167,7 +170,7 @@ namespace StS2AP.Patches
     /// Linked Ancient choices are grandchildren, so extend focus-following behavior to those
     /// AP-owned child buttons.
     /// </summary>
-    [HarmonyPatch(typeof(NRewardsScreen), "ProcessGuiFocus")]
+    [HarmonyPatch(typeof(NRewardsScreen), nameof(NRewardsScreen.ProcessGuiFocus))]
     public static class ScrollToFocusedApLinkedRewardChild
     {
         [HarmonyPostfix]
@@ -334,9 +337,12 @@ namespace StS2AP.Patches
             if (container == null)
                 return new List<NRewardButton>();
 
+            // Sets the mod builds from mixed rewards (Spring Cleaning's card removal, for one) are
+            // AP-owned as a whole; other sets only through their AP mirrored children.
+            bool wholeSetIsOwned = ApLinkedRewardSets.IsOwned(linkedSet.LinkedRewardSet);
             return container.GetChildren()
                 .OfType<NRewardButton>()
-                .Where(button => button.Reward is ApMirroredRewardDispatcher.IApNativeReward)
+                .Where(button => wholeSetIsOwned || button.Reward is ApMirroredRewardDispatcher.IApNativeReward)
                 .ToList();
         }
 
@@ -405,7 +411,7 @@ namespace StS2AP.Patches
     /// Empty and vanilla-guest AP screens have no live synchronized set to skip. Their native
     /// proceed button is presentation-only and simply closes the overlay.
     /// </summary>
-    [HarmonyPatch(typeof(NRewardsScreen), "OnProceedButtonPressed")]
+    [HarmonyPatch(typeof(NRewardsScreen), nameof(NRewardsScreen.OnProceedButtonPressed))]
     public static class CloseUnsynchronizedApRewardScreen
     {
         [HarmonyPrefix]

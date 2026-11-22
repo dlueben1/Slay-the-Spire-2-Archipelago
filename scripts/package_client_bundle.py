@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Assemble the loader and both client variants after exporting the PCK."""
+"""Assemble the loader and every client variant after exporting the PCK."""
 
 from __future__ import annotations
 
@@ -11,9 +11,10 @@ import subprocess
 from pathlib import Path
 
 
-def assemble(repo: Path, output: Path, configuration: str, public: str, beta: str,
-             *, local: bool = False) -> None:
+def assemble(repo: Path, output: Path, configuration: str, main: str, beta: str,
+             *, extra: tuple[str, ...] = (), local: bool = False) -> None:
     output = output.resolve()
+    versions = (main, *extra, beta)
     required_files = ["Archipelago.pck", "Archipelago.json"]
     if not local:
         required_files.append("spire2.apworld")
@@ -23,7 +24,7 @@ def assemble(repo: Path, output: Path, configuration: str, public: str, beta: st
     # Local builds use the same reference settings as the IDE via local.props.
     reference_properties = [] if local else ["-p:UseSts2RefLib=true"]
     project = repo / "client/StS2AP/StS2AP.csproj"
-    for version in (public, beta):
+    for version in versions:
         subprocess.run([
             "dotnet", "build", str(project), "-c", configuration,
             "-p:BuildMode=CompileOnly", *reference_properties,
@@ -31,7 +32,7 @@ def assemble(repo: Path, output: Path, configuration: str, public: str, beta: st
         ], check=True)
     subprocess.run([
         "dotnet", "build", str(repo / "client/StS2AP.Loader/StS2AP.Loader.csproj"),
-        "-c", configuration, *reference_properties, f"-p:Sts2ApiCompat={public}",
+        "-c", configuration, *reference_properties, f"-p:Sts2ApiCompat={main}",
     ], check=True)
 
     manifest = {
@@ -39,7 +40,7 @@ def assemble(repo: Path, output: Path, configuration: str, public: str, beta: st
         "modVersion": json.loads((output / "Archipelago.json").read_text(encoding="utf-8-sig"))["version"],
         "variants": {},
     }
-    for version in (public, beta):
+    for version in versions:
         source = repo / "client/StS2AP/bin" / version / configuration / "net9.0"
         destination = output / "lib" / version
         destination.mkdir(parents=True, exist_ok=True)
@@ -72,10 +73,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--configuration", default="Release")
-    parser.add_argument("--public", required=True)
+    parser.add_argument("--main", required=True)
     parser.add_argument("--beta", required=True)
+    parser.add_argument("--extra", default="",
+                        help="Other game versions to build, separated by semicolons.")
     parser.add_argument("--local", action="store_true",
                         help="Use local reference settings and allow a missing APWorld.")
     args = parser.parse_args()
     assemble(Path(__file__).resolve().parents[1], args.output,
-             args.configuration, args.public, args.beta, local=args.local)
+             args.configuration, args.main, args.beta,
+             extra=tuple(version.strip() for version in args.extra.split(";") if version.strip()),
+             local=args.local)

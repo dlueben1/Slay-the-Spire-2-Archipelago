@@ -10,6 +10,7 @@ using StS2AP.Data;
 using StS2AP.Utils;
 using System.Collections.Concurrent;
 using StS2AP.Extensions;
+using StS2AP.Utils.Combat;
 using static StS2AP.Data.ItemTable;
 
 namespace StS2AP.Patches 
@@ -36,11 +37,11 @@ namespace StS2AP.Patches
         /// <param name="info"> The item to process</param>
         public static void AddToQueue(IndexedItemInfo info)
         {
-            LogUtility.Info($"Enqueuing {info.Item.ItemName}");
+            LogUtility.Debug($"Enqueuing {info.Item.ItemName}");
             ProcessQueue.Enqueue(info);
             if(!RunManager.Instance.IsInProgress) 
             {
-                LogUtility.Info($"Processing {info.Item.ItemName}, since not in game");
+                LogUtility.Debug($"Processing {info.Item.ItemName}, since not in game");
                 // We're not in a run, so the NRun._Process function won't fire.
                 // As such, send a task to the main thread to do stuff
                 Callable.From(ProcessItemInQueue).CallDeferred();
@@ -99,8 +100,8 @@ namespace StS2AP.Patches
         /// <param name="liveDelivery">Whether to dispatch live effects rather than only rebuild history.</param>
         private static void ProcessItem(IndexedItemInfo indexedInfo, bool liveDelivery = true)
         {
-            // Keep the original SDK index, including gaps occupied by the other players.
-            if (!CoopSlot.Owns(indexedInfo.Item.ItemId))
+            // Skip Archipelago's own "Nothing" item but keep the original SDK index.
+            if (ArchipelagoIdCodec.IsArchipelagoReservedId(indexedInfo.Item.ItemId))
                 return;
             // AP_MP: This is the receipt-level fail-closed gate for unconverted features.
             if (MultiplayerSupport.ShouldDeferItem(indexedInfo))
@@ -119,10 +120,14 @@ namespace StS2AP.Patches
             }
             var item = indexedInfo.Item;
             var index = indexedInfo.Index;
-            // Log the item
-            LogUtility.Success(
-                $"Received: {item.ItemName} from {item.Player.Name} (ID: {item.ItemId} / LocID: {item.LocationId} / Index: {index})"
-            );
+            // Checkpoint loads replay the whole AP history, which was already logged as it
+            // arrived, so those repeats go to the debug log only.
+            string receivedMessage =
+                $"Received: {item.ItemName} from {item.Player.Name} (ID: {item.ItemId} / LocID: {item.LocationId} / Index: {index})";
+            if (liveDelivery)
+                LogUtility.Success(receivedMessage);
+            else
+                LogUtility.Debug(receivedMessage);
 
             /// Universal items (IDs < 10000) are character-agnostic and handled separately.
             /// The 10k ID gap ensures universal IDs never collide with character-specific IDs,
@@ -139,25 +144,20 @@ namespace StS2AP.Patches
                 // Character Unlocks
                 case APItem.Unlock:
                 {
-                    LogUtility.Info("Before GameUtility Unlock");
                     GameUtility.UnlockCharacter(item);
-                    LogUtility.Info("After GameUtility Unlock");
 
                     /// Fire the CharacterUnlocked event on the Godot main thread.
                     /// This allows the character select screen (if open) to immediately
                     /// refresh the appropriate button without waiting for OnSubmenuOpened.
                     var offset = item.GetAPCharacterNumber();
-                    LogUtility.Info("After offset acquisition");
                     var config = Settings.Characters.Values.FirstOrDefault(
                         config => config.CharOffset == offset
                     );
-                    LogUtility.Info("After Settings check");
                     if (config == null)
                     {
                         LogUtility.Warn($"Got Unlock for character not configured {item.ItemId}");
                         break;
                     }
-                    LogUtility.Info("after config null check");
                     CharacterUnlocked?.Invoke(config);
 
                     break;
@@ -268,18 +268,13 @@ namespace StS2AP.Patches
                     // Add the Gold to the amount we've received
                     try
                     {
-                        var haveKey = Progress.GoldReceived.TryGetValue(charOffset, out int gold);
-                        if (!haveKey)
-                            gold = 0;
-                        Progress.GoldReceived[charOffset] =
-                            gold + ItemTable.GoldItemAmounts[itemId];
-                    }
-                    catch (KeyNotFoundException e)
-                    {
-                        LogUtility.Error(
-                            $"GoldItemAmounts does not have a value for this item! "
-                                + $"({item.ItemDisplayName} from {item.Player.Name}): {e}"
-                        );
+                        if (!ApGrantDispatcher.AddGoldItem(charOffset, itemId))
+                        {
+                            LogUtility.Error(
+                                $"GoldItemAmounts does not have a value for this item! "
+                                    + $"({item.ItemDisplayName} from {item.Player.Name})"
+                            );
+                        }
                     }
                     catch
                     {
@@ -317,7 +312,7 @@ namespace StS2AP.Patches
                             var haveKey = source.TryGetValue(playerId, out int amount);
                             if (!haveKey) amount = 0;
                             source[playerId] = amount + 1;
-                            LogUtility.Success($"New Value for {itemId} is {source[playerId]}");
+                            LogUtility.Debug($"New Value for {itemId} is {source[playerId]}");
                         }
                         catch (KeyNotFoundException e)
                         {
@@ -398,7 +393,39 @@ namespace StS2AP.Patches
             switch (universalId)
             {
                 case APItem.BonusWaxRelic:
+                case APItem.BonusRelic:
+                case APItem.BonusEnchantment:
+                case APItem.BonusEnchantedCards:
+                case APItem.BonusMaxHp:
+                case APItem.BonusCards:
                     ArchipelagoClient.Progress.Items.RegisterReceived(receipt);
+                    break;
+                case APItem.IntentSight:
+                    // A permanent unlock with nothing to claim. The ledger keeps the copy count.
+                    ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);
+                    IntentSight.RefreshVisibleIntents();
+                    break;
+                case APItem.HealthSight:
+                    ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);
+                    HealthSight.RefreshVisibleHealth();
+                    AgedCheese.EnsureOwnedIfEarned(GameUtility.CurrentPlayer);
+                    break;
+                case APItem.PileSight:
+                    ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);
+                    PileSight.RefreshVisiblePiles();
+                    ApFrozenEye.EnsureOwnedIfEarned(GameUtility.CurrentPlayer);
+                    break;
+                case APItem.MapSight:
+                    ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);
+                    MapSight.RefreshVisibleMap();
+                    break;
+                case APItem.CardSight:
+                    ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);
+                    CardSight.RefreshVisibleCards();
+                    break;
+                case APItem.RelicSight:
+                    ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);
+                    RelicSight.RefreshVisibleRelics();
                     break;
                 case APItem.WeakTrap:
                 case APItem.FrailTrap:
@@ -455,7 +482,7 @@ namespace StS2AP.Patches
                 if (!haveKey)
                     amount = 0;
                 source[offset] = amount + 1;
-                LogUtility.Success($"New Value for {name} is {source[offset]}");
+                LogUtility.Debug($"New Value for {name} is {source[offset]}");
             }
             catch (KeyNotFoundException e)
             {
@@ -533,6 +560,7 @@ namespace StS2AP.Patches
                     ProcessItem(new IndexedItemInfo(info, i + 1), false);
                     LastIndexHandled = i + 1;
                 }
+                LogUtility.Info($"Rebuilt AP progress from {LastIndexHandled} received item(s)");
             }
             finally
             {

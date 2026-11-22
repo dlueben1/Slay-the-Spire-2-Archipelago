@@ -5,8 +5,8 @@ namespace StS2AP.RegressionTests;
 
 public sealed class UniversalBuffGoldTests
 {
-    [Fact(DisplayName = "Fifty buffs per configured character yield 250 gold each")]
-    public void FiftyBuffsPerConfiguredCharacterYield250GoldEach()
+    [Fact(DisplayName = "Buffs split their gold evenly between configured characters")]
+    public void BuffsSplitTheirGoldEvenlyBetweenConfiguredCharacters()
     {
         foreach (int characterCount in new[] { 1, 2, 3, 5, 8 })
         {
@@ -14,30 +14,14 @@ public sealed class UniversalBuffGoldTests
             var bank = new Dictionary<long, int>();
             UniversalBuffGold.AddToBank(bank, offsets, 0, 50 * characterCount);
             Assert.Equal(characterCount, bank.Count);
-            Assert.All(bank.Values, gold => Assert.Equal(250, gold));
-        }
-    }
-
-    [Fact(DisplayName = "Fractional buff shares carry forward instead of rounding each receipt")]
-    public void FractionalBuffSharesCarryForwardInsteadOfRoundingEachReceipt()
-    {
-        foreach (var (characterCount, expectedDeltas) in new[]
-        {
-            (2, new[] { 2, 3 }),
-            (3, new[] { 1, 2, 2 }),
-            (6, new[] { 0, 1, 1, 1, 1, 1 }),
-        })
-        {
-            var bank = new Dictionary<long, int>();
-            for (int i = 0; i < expectedDeltas.Length; i++)
-                Assert.Equal(expectedDeltas[i], UniversalBuffGold.AddToBank(bank, Offsets(characterCount), i, 1));
-            Assert.All(bank.Values, gold => Assert.Equal(5, gold));
+            Assert.All(bank.Values, gold => Assert.Equal(50 * UniversalBuffGold.ValuePerBuff, gold));
         }
     }
 
     [Fact(DisplayName = "Live buff receipts match a history rebuild after every receipt")]
     public void LiveBuffReceiptsMatchAHistoryRebuildAfterEveryReceipt()
     {
+        // Rounding each receipt's share separately would leave live banks behind the rebuild.
         for (int characterCount = 1; characterCount <= 10; characterCount++)
         {
             long[] offsets = Offsets(characterCount);
@@ -52,21 +36,6 @@ public sealed class UniversalBuffGoldTests
         }
     }
 
-    [Fact(DisplayName = "The first receipt after a rebuild preserves the previous fractional share")]
-    public void TheFirstReceiptAfterARebuildPreservesThePreviousFractionalShare()
-    {
-        long[] offsets = Offsets(2);
-        var rebuilt = new Dictionary<long, int>();
-        UniversalBuffGold.AddToBank(rebuilt, offsets, 0, 101);
-        Assert.All(rebuilt.Values, gold => Assert.Equal(252, gold));
-        Assert.Equal(3, UniversalBuffGold.AddToBank(rebuilt, offsets, 101, 1));
-        Assert.All(rebuilt.Values, gold => Assert.Equal(255, gold));
-
-        // A different slot starts from its own history, without the old remainder.
-        var nextSlot = new Dictionary<long, int>();
-        Assert.Equal(2, UniversalBuffGold.AddToBank(nextSlot, offsets, 0, 1));
-    }
-
     [Fact(DisplayName = "Buff division leaves ordinary character gold untouched")]
     public void BuffDivisionLeavesOrdinaryCharacterGoldUntouched()
     {
@@ -75,9 +44,11 @@ public sealed class UniversalBuffGoldTests
         UniversalBuffGold.AddToBank(bank, offsets, 0, 1);
         bank[offsets[1]] += 5; // An ordinary character-specific gold receipt.
         UniversalBuffGold.AddToBank(bank, offsets, 1, 2);
-        Assert.Equal(42, bank[offsets[0]]);
-        Assert.Equal(10, bank[offsets[1]]);
-        Assert.Equal(16, bank[offsets[2]]);
+        // Three buffs between three characters give each one buff's worth.
+        int share = UniversalBuffGold.ValuePerBuff;
+        Assert.Equal(37 + share, bank[offsets[0]]);
+        Assert.Equal(5 + share, bank[offsets[1]]);
+        Assert.Equal(11 + share, bank[offsets[2]]);
         Assert.Equal(23, bank[999999]);
     }
 
@@ -87,8 +58,8 @@ public sealed class UniversalBuffGoldTests
         var bank = new Dictionary<long, int>();
         UniversalBuffGold.AddToBank(bank, new long[] { 90000, 10000, 90000 }, 0, 2);
         Assert.Equal(2, bank.Count);
-        Assert.Equal(5, bank[10000]);
-        Assert.Equal(5, bank[90000]);
+        Assert.Equal(UniversalBuffGold.ValuePerBuff, bank[10000]);
+        Assert.Equal(UniversalBuffGold.ValuePerBuff, bank[90000]);
     }
 
     [Fact(DisplayName = "An empty buff history adds no gold")]

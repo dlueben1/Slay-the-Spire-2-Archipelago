@@ -1,25 +1,16 @@
 import typing
 from dataclasses import dataclass
 
-from Options import OptionSet, OptionList, Range, Toggle, DefaultOnToggle, Visibility, Choice, TextChoice, OptionDict, \
+from Options import OptionSet, OptionList, Range, Toggle, Visibility, Choice, TextChoice, OptionDict, \
     PerGameCommonOptions, OptionGroup, DeathLink as ArchipelagoDeathLink
 
-from schema import Schema, Optional, And
+from schema import Schema, Optional, And, Or
 
-from .characters import character_list, unique_character_ids
+from .characters import PREDEFINED_CHARACTERS, character_list, unique_character_ids
 from .constants import NUM_CUSTOM, ASCENSIONS
 
-
-class UseNewLogic(DefaultOnToggle):
-    """Use the new logic. Disable to use the previous 1.1.X and below logic.
-    New logic allows more random item order—for example, Extra relics and cards can help supplement missing ancients or rests.
-    One example is that old logic required your progressive starter card+relic to beat your 1st elite but new logic
-    no longer requires this as 'Power' can be made up with extra cards/relics. Similar cases for ancients/smiths/rests.
-
-    Old logic is used automatically (regardless of this option) when floor, gold, and potion checks
-     are all disabled to reduce failed generations.
-    """
-    display_name = "Use New Logic"
+# Vanilla and predefined characters, plus every registered generic Custom Character block.
+MAX_ROSTER_SIZE = len(character_list) + len(PREDEFINED_CHARACTERS) + NUM_CUSTOM
 
 
 class Characters(OptionSet):
@@ -28,7 +19,8 @@ class Characters(OptionSet):
         'Silent'
         'Defect'
         'Regent'
-        'Necrobinder'"""
+        'Necrobinder'
+        'Fool' (game beta branch only)"""
     display_name = "Characters"
     valid_keys = character_list
     default = ["Ironclad"]
@@ -37,8 +29,10 @@ class Characters(OptionSet):
 class ModdedCharacters(OptionList):
     """Modded characters to include when Advanced Characters is disabled. Enter each character's
     internal ID or a predefined display name, such as Watcher, Guardian, or Tectonic.
-    The list of predefined display names will probably be pinned somewhere on Discord.
-    At most 20 modded characters can be present in the generated character set.
+    Predefined characters, with their internal IDs and mods, are listed at
+    https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/predefined-characters.md
+    Any number of predefined characters can be present in the generated character set, but at
+    most 20 characters without a predefined name.
     Duplicate aliases and IDs are removed, keeping the first occurrence. Predefined characters use their
     display names; other selected characters are numbered consecutively in YAML order.
     A larger candidate list is allowed when Pick Number of Characters selects a subset.
@@ -60,16 +54,16 @@ class ModdedCharacters(OptionList):
         super().__init__(unique_character_ids(list(value)))
 
 class GoalNumChar(Range):
-    """How many characters you need to complete a run with before you goal. 0 means all characters"""
+    """How many characters you need to complete a run with before you goal. 0, or a number larger than the
+    generated set of characters, means all characters."""
     display_name = "Number of Characters to Goal"
     range_start = 0
-    range_end = len(character_list) + NUM_CUSTOM
+    range_end = MAX_ROSTER_SIZE
     default = 0
 
 class PickNumberCharacters(Range):
-    """Randomly select from the configured characters this many characters for each player to generate for.
-    Each player's selection is rolled independently, and selections may overlap.
-    0 gives every player all configured characters.
+    """Randomly select this many of the configured characters to generate for.
+    0, or a number at least as large as the configured list, uses every configured character.
     For example, if "character" is configured to be:
         characters:
             - Ironclad
@@ -79,7 +73,7 @@ class PickNumberCharacters(Range):
     """
     display_name = "Pick Number of Characters"
     range_start = 0
-    range_end = len(character_list) + NUM_CUSTOM
+    range_end = MAX_ROSTER_SIZE
     default = 0
 
 class LockCharacters(Choice):
@@ -96,9 +90,12 @@ class LockCharacters(Choice):
 class UnlockedCharacter(TextChoice):
     """Which character you start with when lock_characters is set to locked_fixed.
     It must be one of your configured characters, and is always kept when Pick Number of
-    Characters selects a subset. Leave it empty ("") to start with a random character.
+    Characters selects a subset. Defaults to Ironclad, so generation fails if you use locked_fixed
+    without Ironclad and leave this unset. Enter "" to start with a random character.
     Can also enter a predefined display name or full internal ID for modded characters.
-    The list of predefined display names will probably be pinned somewhere on Discord."""
+    Predefined characters, with their internal IDs and mods, are listed at
+    https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/predefined-characters.md"""
+    display_name = "Unlocked Character"
     default = 0
     # Choice's metaclass reads these attributes; keep UI indices separate from AP ID blocks.
     for _index, _name in enumerate(character_list):
@@ -184,6 +181,29 @@ class RelicRewardsAvailableAnytime(Range):
     default = 2
 
 
+class EventsInAnyAct(Toggle):
+    """Events can appear in any act instead of only their usual acts. Event fights and rewards
+    are not adjusted for the act you meet them in. Singleplayer only: multiplayer runs keep the
+    usual events."""
+    display_name = "Events in Any Act"
+    default = 0
+
+class RemoveOPRelics(OptionSet):
+    """Removes relics that are much stronger in Archipelago than in a normal run.
+    Each category removes only the relics that the Archipelago mod lists for it, so the exact
+    relics can change between mod versions. Leave this empty to keep every relic.
+
+    - 'Ancient': Removes Pael's Growth and Glitter from Anytime Ancient rewards. Ancient rewards
+      offered at the start of an act are unaffected.
+    - 'Rare': Removes Prayer Wheel and White Star from every relic source. In multiplayer, one player
+      choosing this removes them from the whole run.
+    """
+    display_name = "Remove Overpowered Relics"
+    valid_keys = {"Ancient", "Rare"}
+    valid_keys_casefold = False
+    default = frozenset()
+
+
 class ReleaseOnVictory(Toggle):
     """Release the winning character's remaining checks when their goal is recorded."""
     display_name = "Release Checks On Victory"
@@ -200,9 +220,7 @@ class ProgressiveStarterCard(Toggle):
     The first item restores the normal card; the second applies its Archaic Tooth transformation.
 
     Characters without an Archaic Tooth transformation are left unchanged, although their two
-    Progressive Starter Card items are still present in the multiworld.
-
-    WARNING: This can make the early game significantly harder for some characters."""
+    Progressive Starter Card items are still present in the multiworld."""
     display_name = "Progressive Starter Card"
     default = 0
 
@@ -219,17 +237,14 @@ class ProgressiveStarterRelic(Toggle):
     The first item restores the normal relic; the second applies its Touch of Orobas refinement.
 
     Characters without a Touch of Orobas refinement are left unchanged, although their two
-    Progressive Starter Relic items are still present in the multiworld.
-
-    WARNING: This can make the early game significantly harder for characters whose starting relic
-    is central to their early power."""
+    Progressive Starter Relic items are still present in the multiworld."""
     display_name = "Progressive Starter Relic"
     default = 0
 
 
 class IncludeFloorChecks(Toggle):
     """Add locations for reaching new floors and fill the corresponding item-pool space with
-    configurable filler. Ascension Down and Progressive Starter options require these locations."""
+    configurable filler. Ascension Down, Progressive Starter and Hidden options require these locations."""
     display_name = "Include Floor Checks"
     default = 1
 
@@ -237,15 +252,16 @@ class CampfireSanity(Toggle):
     """Whether to shuffle being able to rest and smith at each campsite per act.  Also adds
     new locations at campsites per act."""
     display_name = "Campfire Sanity"
-    default = 0
+    default = 1
 
 class ShopSanity(Toggle):
     """Move the configured shop slots to a separate AP shop page as purchasable location checks and
-    shuffle items that progressively restore the corresponding slots on the normal shop page."""
+    shuffle items that progressively restore the corresponding slots on the normal shop page.
+    Shop Sanity is turned off if every slot count below is 0 and Shop Remove Slots is off."""
     display_name = "Shop Sanity"
     option_true = 1
     option_false = 0
-    default = 0
+    default = 1
 
 class ShopCardSlots(Range):
     """When shop_sanity is enabled, the number of colored card slots to shuffle."""
@@ -291,7 +307,7 @@ class ShopSanityCosts(Choice):
     Discount Tiered: 50 percent of the calculated baseline.
     Tiered: the full calculated baseline.
 
-    Generation logic does not account for these prices."""
+    Somewhat accounted for in logic."""
     display_name = "Shop Sanity Costs"
     option_Fixed = 0
     option_Super_Discount_Tiered = 1
@@ -299,15 +315,120 @@ class ShopSanityCosts(Choice):
     option_Tiered = 3
     default = 2
 
-class GoldSanity(Toggle):
-    """Whether to replace combat, elite, and boss gold rewards with AP locations. Adds 22 locations per character."""
-    display_name = "Gold Sanity"
+class RandomShopCards(Toggle):
+    """Each of the shop's 7 card slots holds a random kind of card, picked with the weights below,
+    instead of 2 Attacks, 2 Skills, a Power and 2 colorless cards.
+    If every weight is none, the shop keeps its usual cards."""
+    display_name = "Custom Shop Cards"
     default = 0
+
+class ShopCardWeight(Choice):
+    option_none = 0
+    option_low = 1
+    option_medium = 3
+    option_high = 5
+    default = option_medium
+
+class ShopAttackWeight(ShopCardWeight):
+    """How often a random shop card slot holds an Attack."""
+    display_name = "Shop Attack Weight"
+
+class ShopSkillWeight(ShopCardWeight):
+    """How often a random shop card slot holds a Skill."""
+    display_name = "Shop Skill Weight"
+
+class ShopPowerWeight(ShopCardWeight):
+    """How often a random shop card slot holds a Power."""
+    display_name = "Shop Power Weight"
+
+class ShopCommonWeight(ShopCardWeight):
+    """How often a random shop card slot holds a Common card."""
+    display_name = "Shop Common Weight"
+
+class ShopUncommonWeight(ShopCardWeight):
+    """How often a random shop card slot holds an Uncommon card."""
+    display_name = "Shop Uncommon Weight"
+
+class ShopRareWeight(ShopCardWeight):
+    """How often a random shop card slot holds a Rare card."""
+    display_name = "Shop Rare Weight"
+
+class ShopColorlessWeight(ShopCardWeight):
+    """How often a random shop card slot holds a colorless card, Uncommon or Rare."""
+    display_name = "Shop Colorless Weight"
+
+class ShopEventWeight(ShopCardWeight):
+    """How often a random shop card slot holds an Event card."""
+    display_name = "Shop Event Weight"
+    default = ShopCardWeight.option_low
+
+class RandomShopRelics(Toggle):
+    """If enabled, allows you to override the default shop relics randomness."""
+    display_name = "Custom Shop Relics"
+    default = 0
+
+class ShopRelicCommonWeight(ShopCardWeight):
+    """How often a random shop relic slot holds a Common relic."""
+    display_name = "Shop Relic Common Weight"
+
+class ShopRelicUncommonWeight(ShopCardWeight):
+    """How often a random shop relic slot holds an Uncommon relic."""
+    display_name = "Shop Relic Uncommon Weight"
+
+class ShopRelicRareWeight(ShopCardWeight):
+    """How often a random shop relic slot holds a Rare relic."""
+    display_name = "Shop Relic Rare Weight"
+
+class ShopRelicShopWeight(ShopCardWeight):
+    """How often a random shop relic slot holds a Shop relic."""
+    display_name = "Shop Relic Shop Weight"
+
+class ShopRelicEventWeight(ShopCardWeight):
+    """How often a random shop relic slot holds an Event relic."""
+    display_name = "Shop Relic Event Weight"
+    default = ShopCardWeight.option_low
+
+class ShopRelicAncientWeight(ShopCardWeight):
+    """How often a random shop relic slot holds an Ancient relic."""
+    display_name = "Shop Relic Ancient Weight"
+    default = ShopCardWeight.option_low
+
+class RandomShopPotions(Toggle):
+    """If enabled, allows you to override the default shop potions randomness."""
+    display_name = "Custom Shop Potions"
+    default = 0
+
+class ShopPotionCommonWeight(ShopCardWeight):
+    """How often a random shop potion slot holds a Common potion."""
+    display_name = "Shop Potion Common Weight"
+
+class ShopPotionUncommonWeight(ShopCardWeight):
+    """How often a random shop potion slot holds an Uncommon potion."""
+    display_name = "Shop Potion Uncommon Weight"
+
+class ShopPotionRareWeight(ShopCardWeight):
+    """How often a random shop potion slot holds a Rare potion."""
+    display_name = "Shop Potion Rare Weight"
+
+class ShopPotionOtherClassWeight(ShopCardWeight):
+    """How often a random shop potion slot holds a potion from another class."""
+    display_name = "Shop Potion Other Class Weight"
+
+class ShopPotionEventWeight(ShopCardWeight):
+    """How often a random shop potion slot holds an Event potion."""
+    display_name = "Shop Potion Event Weight"
+    default = ShopCardWeight.option_low
+
+class GoldSanity(Toggle):
+    """Whether to replace combat, elite, and boss gold rewards with AP locations. Adds 22 locations per character.
+    """
+    display_name = "Gold Sanity"
+    default = 1
 
 class PotionSanity(Toggle):
     """Whether to replace potion rewards with AP locations. Adds 9 locations per character."""
     display_name = "Potion Sanity"
-    default = 0
+    default = 1
 
 class CardReward(Toggle):
     """Whether every card reward is shuffled.  If false, then every other card reward is shuffled
@@ -315,14 +436,121 @@ class CardReward(Toggle):
     display_name = "Shuffle All Card Rewards"
     default = False
 
+class StrictCardRewards(Toggle):
+    """You can no longer look through every Card Reward in the AP Menu before picking.
+    Opening one reveals its cards and locks the other Card Rewards until you take a card or Discard it,
+    like a card reward after a fight. Skip, the map, the deck and closing the menu keep the revealed
+    reward for later. With Pael's Wing, its Sacrifice replaces Discard.
+    In singleplayer, a Card Reward you have not opened yet depends on what you took from the ones before it,
+    so loading a checkpoint and picking differently changes it.
+    Does not change logic. The mod's settings can override this.
+    """
+    display_name = "Strict Card Rewards"
+    default = 0
+
+class HiddenIntents(Range):
+    """Enemy intents are hidden, like Runic Dome in the first game, and so is the Intent Graph 
+    mod's overlay.
+    The value is how many Intent Sight items are added to the item pool, and 0 turns it off. Finding
+    any one of them shows intents again for every character, with their numbers and the Intent Graph overlay, and
+    a second one adds its Sight Bonus, which logic counts.
+    """
+    display_name = "Hidden Intents"
+    range_start = 0
+    range_end = 4
+    default = 0
+
+class HiddenHealth(Range):
+    """Health is hidden. Health bars stay full and show no numbers, the top bar shows no HP, and the
+    poison and doom previews on health bars are hidden. Block is still shown. The value is how many Health Sight
+    items are added to the item pool, and 0 turns it off. Finding any one of them shows everyone's health again
+    for every character, and a second one adds its Sight Bonus, which logic counts.
+    """
+    display_name = "Hidden Health"
+    range_start = 0
+    range_end = 4
+    default = 0
+
+class HiddenPiles(Range):
+    """The draw, discard and exhaust piles show "?" instead of a card count
+    and can't be opened. The value is how many Pile Sight items are added to the item pool, and 0 turns it off.
+    Finding any one of them shows the piles again for every character, and a second one adds its Sight Bonus,
+    which logic counts.
+    """
+    display_name = "Hidden Piles"
+    range_start = 0
+    range_end = 4
+    default = 0
+
+class HiddenMap(Range):
+    """The map only shows the rooms you can move to next. Rooms further ahead show a closed eye 
+    until you can reach them.
+    The value is how many Map Sight items are added to the item pool, and 0 turns it off. Finding any one of them
+    shows the whole map again for every character, and a second one adds its Sight Bonus, which logic counts.
+    """
+    display_name = "Hidden Map"
+    range_start = 0
+    range_end = 4
+    default = 0
+
+class HiddenCards(Range):
+    """Cards are unknown: their name, text and energy cost are hidden, their art is blurred and they
+    show no tooltips.
+    The value is how many Card Sight items are added to the item pool, and 0 turns it off. Finding any one of them
+    shows cards again for every character, and a second one adds its Sight Bonus, which logic counts.
+    """
+    display_name = "Hidden Cards"
+    range_start = 0
+    range_end = 4
+    default = 0
+
+class HiddenRelics(Range):
+    """Relics are unknown: their name and text are hidden, wherever they are offered or owned. They keep their
+    effects but no longer show them: counters, flashes, the activation sound, the glow of a relic that is ready
+    and the grey of a used one are all hidden.
+    The value is how many Relic Sight items are added to the item pool, and 0 turns it off. Finding any one of them
+    shows relics again for every character, and a second one adds its Sight Bonus, which logic counts.
+    """
+    display_name = "Hidden Relics"
+    range_start = 0
+    range_end = 4
+    default = 0
+
+class SightBonuses(OptionSet):
+    """Sight items whose second copy adds a bonus. A Sight left out stops at undoing its Hidden
+    option. Names are case-sensitive.
+
+    - 'IntentSight': Start each combat with Forewarned: for each enemy whose attacks your Block stops
+      completely on its turn, draw 1 more card next turn.
+    - 'HealthSight': Gain Aged Cheese: after defeating an Elite or a boss, raise your Max HP by 3.
+    - 'PileSight': Gain Frozen Eye: the draw pile shows cards in the order you will draw them.
+    - 'MapSight': The map shows your next 2 fights, your next elite and what your next 2 ? rooms will be.
+    - 'CardSight': Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.
+    - 'RelicSight': Relic rewards offer 2 relics to choose from. The one you leave goes back into the relic pool.
+
+    Logic counts each bonus as extra power in Act 3. The Intent, Health, Card and Relic Sight bonuses are
+    singleplayer only, but logic still counts them."""
+    display_name = "Sight Bonuses"
+    valid_keys_casefold = False
+    valid_keys = {
+        "IntentSight",
+        "HealthSight",
+        "PileSight",
+        "MapSight",
+        "CardSight",
+        "RelicSight",
+    }
+    default = frozenset(valid_keys)
+
 class SeededRun(Toggle):
     """Whether each character should have a fixed seed to climb the spire with or not."""
     display_name = "Seeded Run"
     default = 0
 
 class AdvancedChar(Toggle):
-    """Whether to use the advanced characters feature. The normal options for character, ascension, etc. are ignored.
-    Global progressive starter options remain defaults unless overridden for a character.
+    """Whether to use the advanced characters feature. Characters, Modded Characters, Ascension and Ascension Down
+    are ignored; Pick Number of Characters, Lock Characters, Unlocked Character and Number of Characters to Goal
+    still apply. Global progressive starter options remain defaults unless overridden for a character.
     See the "advanced_characters" option.
     """
     visibility = Visibility.template
@@ -343,12 +571,16 @@ class CharacterOptions(OptionDict):
             progressive_starter_card: <true or false>
             progressive_starter_relic: <true or false>
 
+    Ascension names are not validated here either: a misspelled name is ignored, so check them
+    against the list in the Ascension option.
+
     Omitted progressive starter options inherit their global settings. Explicit true/false
     values override them for that character. Both still require Include Floor Checks.
 
     If using a modded character:
     Enter its full internal ID or a predefined display name, such as Watcher.
-    The list of predefined display names will probably be pinned somewhere on Discord.
+    Predefined characters, with their internal IDs and mods, are listed at
+    https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/predefined-characters.md
     Do not include both an alias and its full ID as separate entries.
 
     If you don't know the exact ID to enter with the mod installed go to
@@ -382,20 +614,45 @@ class CharacterOptions(OptionDict):
 class BonusItems(OptionList):
     """Add a number of Bonus Items to the item pool.
     These items make the game easier to complete, and are not accounted for in logic.
+    Once found, each one can be claimed once in every run, from the Archipelago reward menu.
 
-    Each ordered entry creates one character-agnostic bonus item and must provide either
-    a non-empty list of value Pools or one specific Value. For example:
+    Each entry creates one bonus item and gives either a list of Pools to roll from or
+    one specific Value. Entries of the same kind are handed out in a random order.
+
+    - WAX_RELIC: a relic that melts after a few combats. Pools are relic pools such as Common
+      or Ancient. Relics with an "Upon pickup" effect can't be wax.
+    - RELIC: a relic that stays for the whole run, from the same Pools or Value. These can
+      have an "Upon pickup" effect.
+    - ENCHANTMENT: choose a card to enchant. Pools: Common, Uncommon, Rare; or name an
+      enchantment as the Value.
+    - ENCHANTED_CARDS: a card reward whose cards are all enchanted, from the same Pools or Value.
+    - MAX_HP: gain this much max HP. Value only.
+    - CARDS: choose 1 of 3 cards. Each Pool can name a source (a character, Other, Colorless, Event
+      or Ancient; your own character if left out), a type (Attack, Skill, Power) and a rarity
+      (Common, Uncommon, Rare), such as 'Regent Attack' or 'Colorless Rare'. Add 'Upgraded' for
+      upgraded cards; 'Random' mixes sources card by card. Fool pools need game version 0.113 and
+      are skipped on older ones. Or name one card as the Value.
+
+    For example:
 
         bonus_items:
             - WAX_RELIC:
                 Pools: [Common, Uncommon]
-            - WAX_RELIC:
+            - RELIC:
                 Value: Orichalcum
+            - ENCHANTMENT:
+                Pools: [Common]
+            - ENCHANTED_CARDS:
+                Value: Swift
+            - MAX_HP:
+                Value: 6
+            - CARDS:
+                Pools: [Regent Attack, Colorless Rare]
 
 
     Generation fails if more bonus items are configured than there are filler slots.
 
-    It's HIGHLY recommended to use the YAML Builder on our website to easily generate this option, which you can find at https://sts2ap.net
+    It's HIGHLY recommended to use the YAML Builder on our website to easily generate this option, which you can find at https://sts2ap.terairk.dev/#/builder (or https://sts2ap.net)
     """
     display_name = "Bonus Items"
     visibility = Visibility.template
@@ -418,7 +675,8 @@ class BonusItems(OptionList):
             Schema({
                 str: {
                     Optional("Pools"): [And(str, len)],
-                    Optional("Value"): And(str, len),
+                    # MAX_HP takes a number; the other types take a name.
+                    Optional("Value"): Or(And(str, len), And(int, lambda value: value > 0)),
                 }
             }),
             _has_exactly_one_selector,
@@ -454,6 +712,132 @@ class AscensionDown(OptionSet):
     valid_keys_casefold = False
     valid_keys = { *[str(i) for i in range(1,11)], *ASCENSIONS.keys() }
     default = list()
+
+
+class RunModifiers(OptionSet):
+    """Extra difficulty modifiers for every run, on top of Ascension. Logic does not account for them.
+    Most leave Act 1 as it is and grow harder in Acts 2 and 3. Names are case-sensitive. In
+    multiplayer, the host's modifiers apply to the whole run.
+
+    - 'RisingStrength': Elites and bosses start each combat with 1 Strength in Act 2 and 2 in Act 3.
+    - 'EscalatingBuffs': Enemies start combat with one random buff in Act 2 and two different ones in
+      Act 3, from 1 Strength, 4 Plating, 2 Thorns, 1 Artifact, 3 Regen, 4 Curl Up, 4 Vigor and
+      1 Slippery.
+    - 'ShrinkingRests': Resting heals 25% of max HP in Act 2 and 20% in Act 3, instead of 30%.
+    - 'MountingCurses': Gain a random curse at the start of Act 2 and of Act 3.
+    - 'MountingBanes': Gain an Ascender's Bane, which cannot be removed, at the start of Act 2 and
+      of Act 3.
+    - 'CursedRun': Gain a random curse at the start of every act, including Act 1 (the base game's
+      Cursed Run). Stacks with 'MountingCurses'.
+    - 'ExtraAscendersBane': Start each run with an extra Ascender's Bane. Stacks with
+      'MountingBanes'.
+    - 'SlowStart': Draw 1 fewer card on the first turn of each combat, in every act.
+    - 'FrailStart': Start each run with 10% less max HP.
+    - 'DangerousUnknowns': ? rooms lean towards fights. Combat starts at 20% and rises 15% each
+      time a ? room is not a fight; elites start at 0% and rise 4%; chests start and rise at 1%.
+      Shops are unchanged. The chances reset each act, with no cap. Juzu Bracelet never appears.
+      The extra fights and elites reach combat and relic checks sooner than logic expects.
+
+    Easiest to set up in the YAML Builder: https://sts2ap.terairk.dev/#/builder"""
+    display_name = "Run Modifiers"
+    valid_keys_casefold = False
+    valid_keys = {
+        "RisingStrength",
+        "EscalatingBuffs",
+        "ShrinkingRests",
+        "MountingCurses",
+        "MountingBanes",
+        "CursedRun",
+        "ExtraAscendersBane",
+        "SlowStart",
+        "FrailStart",
+        "DangerousUnknowns",
+    }
+    default = frozenset()
+
+
+class Boons(OptionSet):
+    """Helpful modifiers for every run. Logic does not account for them. Names are case-sensitive.
+    Only Compound Interest, Gilded, Loyal Customer and Endless Upgrades work in multiplayer, where
+    the host's choice applies to the whole run; multiplayer runs leave out the others.
+
+    - 'Wayfinder': Three times per act, travel to any room in the next row, ignoring the paths.
+    - 'SecondWind': Once per act, survive a killing blow and heal 25% of your max HP.
+    - 'EmberEnchanting': Campfires let you enchant a card with a random enchantment. This uses up
+      the campfire and needs the same Progressive Smith as upgrading.
+    - 'CompoundInterest': At the start of Act 2 and of Act 3, gain 20% of the gold you hold, up to
+      100.
+    - 'Gilded': Gain 30% more gold, including gold from Archipelago items.
+    - 'SpringCleaning': After the Act 1 and Act 2 bosses, choose one: remove a card, transform a
+      card, or upgrade 2 random cards.
+    - 'LoyalCustomer': Each purchase makes the rest of that shop 15% cheaper, up to 45%.
+      Archipelago checks in the shop count and get the discount too.
+    - 'CampfireBrewing': Once per campfire, brew a random potion. You can still rest or upgrade
+      afterwards.
+    - 'EndlessUpgrades': Cards can be upgraded any number of times. Each upgrade adds the card's
+      upgrade bonus again; upgrades that only add or remove a keyword do nothing after the first."""
+    display_name = "Boons"
+    valid_keys_casefold = False
+    valid_keys = {
+        "Wayfinder",
+        "SecondWind",
+        "EmberEnchanting",
+        "CompoundInterest",
+        "Gilded",
+        "SpringCleaning",
+        "LoyalCustomer",
+        "CampfireBrewing",
+        "EndlessUpgrades",
+    }
+    default = frozenset()
+
+
+class EnemyHpScaling(Range):
+    """Extra max HP for every enemy in Acts 2 and 3, as a percentage. Act 1 is unchanged. Stacks with
+    Ascension. Logic does not account for it. In multiplayer, the host's value applies to the whole
+    run. Easiest to set up in the YAML Builder: https://sts2ap.terairk.dev/#/builder"""
+    display_name = "Enemy HP Scaling"
+    range_start = 0
+    range_end = 15
+    default = 0
+
+
+class EnemyDamageScaling(Range):
+    """Extra damage from every enemy in Acts 2 and 3, as a percentage. Act 1 is unchanged. Stacks with
+    Ascension. Logic does not account for it. In multiplayer, the host's value applies to the whole
+    run. Easiest to set up in the YAML Builder: https://sts2ap.terairk.dev/#/builder"""
+    display_name = "Enemy Damage Scaling"
+    range_start = 0
+    range_end = 15
+    default = 0
+
+class DreadMode(Toggle):
+    """Every run is a Dread run, the game's Dread mode. Each act has a Dominion, an extra combat rule
+    set by that act's boss. Bosses are stronger, and you gain an Ascender's Bane at the start of Act 2
+    and of Act 3. Your Ascension and Ascension Down settings apply as usual; the base game plays
+    Dread at Ascension 10. Needs the game's beta branch; on the main branch runs are standard runs.
+    Logic does not account for it. In multiplayer, the host's setting applies to the whole run.
+    """
+    display_name = "Dread Mode"
+    default = 0
+    # Only some supported game versions have Dread. A set option sends this name in the slot's
+    # required_game_features. A client without the feature plays without the setting and says
+    # so when connecting, and the builder labels the option.
+    required_game_feature = "dread"
+
+class BlitzMerchantChance(Range):
+    """Chance, in percent, for each shop to be a Blitz merchant instead: six offers and three free
+    picks in place of a shop's stock. Shop Sanity checks are still sold there. Very strong, and
+    logic ignores it entirely; at high values gold has little use. Pair it with harder Challenges.
+    In multiplayer, the host's chance applies. Needs the game's beta branch; on the main branch
+    every shop is normal.
+    """
+    display_name = "Blitz Merchant Chance"
+    range_start = 0
+    range_end = 100
+    default = 0
+    # Needed whenever the option is above 0; see DreadMode.required_game_feature.
+    required_game_feature = "blitz_merchant"
 
 # Death Link Options
 
@@ -720,10 +1104,11 @@ class Spire2Options(PerGameCommonOptions):
     ascension_down: AscensionDown
 
     # Main game flow
-    use_new_logic: UseNewLogic
     ancient_relic_location: AncientRelicLocation
     ancient_relic_pool: AncientRelicPool
     relic_rewards_available_anytime: RelicRewardsAvailableAnytime
+    remove_op_relics: RemoveOPRelics
+    events_in_any_act: EventsInAnyAct
     progressive_starter_card: ProgressiveStarterCard
     progressive_starter_relic: ProgressiveStarterRelic
     shuffle_all_cards: CardReward
@@ -744,6 +1129,34 @@ class Spire2Options(PerGameCommonOptions):
     shop_potion_slots: ShopPotionSlots
     shop_remove_slots: ShopRemoveSlots
     shop_sanity_costs: ShopSanityCosts
+
+    # Shop cards
+    random_shop_cards: RandomShopCards
+    shop_attack_weight: ShopAttackWeight
+    shop_skill_weight: ShopSkillWeight
+    shop_power_weight: ShopPowerWeight
+    shop_common_weight: ShopCommonWeight
+    shop_uncommon_weight: ShopUncommonWeight
+    shop_rare_weight: ShopRareWeight
+    shop_colorless_weight: ShopColorlessWeight
+    shop_event_weight: ShopEventWeight
+
+    # Shop relics
+    random_shop_relics: RandomShopRelics
+    shop_relic_common_weight: ShopRelicCommonWeight
+    shop_relic_uncommon_weight: ShopRelicUncommonWeight
+    shop_relic_rare_weight: ShopRelicRareWeight
+    shop_relic_shop_weight: ShopRelicShopWeight
+    shop_relic_event_weight: ShopRelicEventWeight
+    shop_relic_ancient_weight: ShopRelicAncientWeight
+
+    # Shop potions
+    random_shop_potions: RandomShopPotions
+    shop_potion_common_weight: ShopPotionCommonWeight
+    shop_potion_uncommon_weight: ShopPotionUncommonWeight
+    shop_potion_rare_weight: ShopPotionRareWeight
+    shop_potion_other_class_weight: ShopPotionOtherClassWeight
+    shop_potion_event_weight: ShopPotionEventWeight
 
     # Death Link
     death_link: DeathLink
@@ -785,3 +1198,20 @@ class Spire2Options(PerGameCommonOptions):
     confused_trap_weight: ConfusedTrapWeight
     sloth_trap_weight: SlothTrapWeight
     dazed_trap_weight: DazedTrapWeight
+
+    boons: Boons
+
+    # Challenges
+    run_modifiers: RunModifiers
+    enemy_hp_scaling: EnemyHpScaling
+    enemy_damage_scaling: EnemyDamageScaling
+    dread_mode: DreadMode
+    blitz_merchant_chance: BlitzMerchantChance
+    hidden_intents: HiddenIntents
+    hidden_health: HiddenHealth
+    hidden_piles: HiddenPiles
+    hidden_map: HiddenMap
+    hidden_cards: HiddenCards
+    hidden_relics: HiddenRelics
+    sight_bonuses: SightBonuses
+    strict_card_rewards: StrictCardRewards

@@ -1,10 +1,12 @@
 using Godot;
 using HarmonyLib;
+using MegaCrit.Sts2.Core.ControllerInput;
 using MegaCrit.Sts2.Core.Entities.Merchant;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
+using MegaCrit.Sts2.Core.Nodes.Screens.ScreenContext;
 using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
 
 namespace StS2AP.Patches
@@ -330,6 +332,28 @@ namespace StS2AP.Patches
                         LogUtility.Error($"ShopPages: couldn't find '{childName}' on the AP-checks button to flip, it may render pointing the wrong way.");
                     }
                 }
+
+                // The keyboard/controller hotkey icon lives inside the mirrored artwork, which
+                // would show its key label backwards. Mirror it back around its own centre.
+                if (FindDescendant<NHotkeyIcon>(button) is NHotkeyIcon hotkeyIcon && IsMirroredWithin(hotkeyIcon, button))
+                {
+                    hotkeyIcon.PivotOffset = hotkeyIcon.Size / 2f;
+                    hotkeyIcon.Resized += () => hotkeyIcon.PivotOffset = hotkeyIcon.Size / 2f;
+                    hotkeyIcon.Scale = new Vector2(-hotkeyIcon.Scale.X, hotkeyIcon.Scale.Y);
+                }
+            }
+
+            private static bool IsMirroredWithin(Control control, Control root)
+            {
+                bool mirrored = false;
+                for (Node? node = control.GetParent(); node != null && !ReferenceEquals(node, root); node = node.GetParent())
+                {
+                    if (node is Control ancestor && ancestor.Scale.X < 0f)
+                    {
+                        mirrored = !mirrored;
+                    }
+                }
+                return mirrored;
             }
 
             /// <summary>
@@ -426,28 +450,48 @@ namespace StS2AP.Patches
 
         #region Open with vanilla
 
+        // 0.113 split the room into a standard and a Blitz one, each with its own OpenInventory.
+#if STS2_AT_LEAST_0_113_0
+        [HarmonyPatch(typeof(NStandardMerchantRoom), nameof(NStandardMerchantRoom.OpenInventory))]
+#else
         [HarmonyPatch(typeof(NMerchantRoom), nameof(NMerchantRoom.OpenInventory))]
+#endif
         public static class OpenApPageAlongsideVanilla
         {
             [HarmonyPostfix]
-            public static void Postfix()
-            {
-                // AP_MP: AP shop presentation follows the synchronized purchase gate.
-                if (!MultiplayerSupport.IsFeatureEnabled(MultiplayerFeature.Shops))
-                    return;
+            public static void Postfix() => OpenApPage();
+        }
 
-                NMerchantInventory? apPage = ShopPageUtility.ApPageInstance;
-                if (ShopPageUtility.HasPages && apPage != null && GodotObject.IsInstanceValid(apPage) && !apPage.IsOpen)
-                {
-                    apPage.Open();
-                }
+#if STS2_AT_LEAST_0_113_0
+        /// <summary>
+        /// A Blitz merchant in a standard run (Blitz Merchant Chance) sells Shop Sanity checks on
+        /// the same AP page, beside its offers.
+        /// </summary>
+        [HarmonyPatch(typeof(NBlitzMerchantRoom), nameof(NBlitzMerchantRoom.OpenInventory))]
+        public static class OpenApPageAlongsideBlitzOffers
+        {
+            [HarmonyPostfix]
+            public static void Postfix() => OpenApPage();
+        }
+#endif
+
+        private static void OpenApPage()
+        {
+            // AP_MP: AP shop presentation follows the synchronized purchase gate.
+            if (!MultiplayerSupport.IsFeatureEnabled(MultiplayerFeature.Shops))
+                return;
+
+            NMerchantInventory? apPage = ShopPageUtility.ApPageInstance;
+            if (ShopPageUtility.HasPages && apPage != null && GodotObject.IsInstanceValid(apPage) && !apPage.IsOpen)
+            {
+                apPage.Open();
             }
         }
 
         /// <summary>
         /// Prevents NBackButton's OnWindowChange from resetting show/hide positions back to bottom-left
         /// </summary>
-        [HarmonyPatch(typeof(NBackButton), "OnWindowChange")]
+        [HarmonyPatch(typeof(NBackButton), nameof(NBackButton.OnWindowChange))]
         public static class SuppressBackButtonWindowChange
         {
             [HarmonyPrefix]
@@ -461,19 +505,140 @@ namespace StS2AP.Patches
             }
         }
 
-        /// <summary>
-        /// fixing esc button softlock
-        /// </summary>
-        [HarmonyPatch(typeof(NBackButton), "get_Hotkeys")]
-        public static class SuppressHotkeysForCustomNavButtons
+        // The page buttons are copies of the back button, whose Esc hotkey would close the
+        // shop (and once soft-locked it). They use the game's tab keys instead, as Settings
+        // and Run History do: Q/F in keyboard-only mode, LB/RB on a controller.
+        private static readonly string[] ToApPageHotkeys = [MegaInput.viewExhaustPileAndTabRight];
+        private static readonly string[] ToVanillaPageHotkeys = [MegaInput.viewDeckAndTabLeft];
+
+        private static string[]? PageSwitchHotkeys(NBackButton button)
+        {
+            if (ReferenceEquals(button, _toApPageButton))
+            {
+                return ToApPageHotkeys;
+            }
+            if (ReferenceEquals(button, _toVanillaButton))
+            {
+                return ToVanillaPageHotkeys;
+            }
+            return null;
+        }
+
+        [HarmonyPatch(typeof(NBackButton), nameof(NBackButton.Hotkeys), MethodType.Getter)]
+        public static class UsePageSwitchHotkeys
         {
             [HarmonyPostfix]
             public static void Postfix(NBackButton __instance, ref string[] __result)
             {
-                if (ReferenceEquals(__instance, _toApPageButton) || ReferenceEquals(__instance, _toVanillaButton))
+                if (PageSwitchHotkeys(__instance) is string[] hotkeys)
                 {
-                    __result = System.Array.Empty<string>();
+                    __result = hotkeys;
                 }
+            }
+        }
+
+        /// <summary>
+        /// The back button always shows the Esc icon, whatever its hotkeys are, so the page
+        /// buttons would advertise a key that closes the shop.
+        /// </summary>
+        [HarmonyPatch(typeof(NBackButton), nameof(NBackButton.ControllerIconHotkey), MethodType.Getter)]
+        public static class ShowPageSwitchHotkeyIcon
+        {
+            [HarmonyPostfix]
+            public static void Postfix(NBackButton __instance, ref string __result)
+            {
+                if (PageSwitchHotkeys(__instance) is string[] hotkeys)
+                {
+                    __result = hotkeys[0];
+                }
+            }
+        }
+
+        /// <summary>
+        /// The game reports the shop's own inventory as the current screen whenever the shop
+        /// is open, and every inventory that is not current turns off focus for its slots. The
+        /// AP page is a second inventory, so with keyboard or controller its checks could never
+        /// be selected, and focus resets landed on vanilla slots slid off screen. Report the AP
+        /// page while it is in front.
+        /// </summary>
+        [HarmonyPatch(typeof(ActiveScreenContext), nameof(ActiveScreenContext.GetCurrentScreen))]
+        public static class ReportFrontApPageAsCurrentScreen
+        {
+            [HarmonyPostfix]
+            public static void Postfix(ref IScreenContext? __result)
+            {
+                if (!ShopPageUtility.IsApPageFront || !ReferenceEquals(__result, ShopPageUtility.VanillaPageInstance))
+                {
+                    return;
+                }
+
+                NMerchantInventory? apPage = ShopPageUtility.ApPageInstance;
+                if (apPage != null && GodotObject.IsInstanceValid(apPage) && apPage.IsOpen)
+                {
+                    __result = apPage;
+                }
+            }
+        }
+
+        // Each page turns its exit button on when it becomes the current screen and off when it
+        // stops being current. Both buttons sit at the same spot and either one closes both pages,
+        // so keep only the vanilla one, which then stays put while the pages slide.
+        [HarmonyPatch(typeof(NMerchantInventory), nameof(NMerchantInventory.OnActiveScreenUpdated))]
+        public static class KeepExitButtonOnScreenChange
+        {
+            [HarmonyPostfix]
+            public static void Postfix(NMerchantInventory __instance) => KeepSingleExitButton(__instance);
+        }
+
+        [HarmonyPatch(typeof(NMerchantInventory), nameof(NMerchantInventory.BlockInput))]
+        public static class KeepExitButtonOnInputBlock
+        {
+            [HarmonyPostfix]
+            public static void Postfix(NMerchantInventory __instance) => KeepSingleExitButton(__instance);
+        }
+
+        [HarmonyPatch(typeof(NMerchantInventory), nameof(NMerchantInventory.UnblockInput))]
+        public static class KeepExitButtonOnInputUnblock
+        {
+            [HarmonyPostfix]
+            public static void Postfix(NMerchantInventory __instance) => KeepSingleExitButton(__instance);
+        }
+
+        private static void KeepSingleExitButton(NMerchantInventory page)
+        {
+            if (!ShopPageUtility.HasPages)
+            {
+                return;
+            }
+
+            NMerchantInventory? vanillaPage = ShopPageUtility.VanillaPageInstance;
+            NMerchantInventory? apPage = ShopPageUtility.ApPageInstance;
+            if (vanillaPage == null
+                || apPage == null
+                || !GodotObject.IsInstanceValid(vanillaPage)
+                || !GodotObject.IsInstanceValid(apPage)
+                || (!ReferenceEquals(page, vanillaPage) && !ReferenceEquals(page, apPage)))
+            {
+                return;
+            }
+
+            if (apPage._backButton.IsEnabled)
+            {
+                apPage._backButton.Disable();
+            }
+
+            // While either page blocks input for a purchase, its blocker sits on top of every
+            // hotkey; enabling the button then would push Esc above it.
+            ActiveScreenContext screens = ActiveScreenContext.Instance;
+            bool shopIsCurrent = vanillaPage.IsOpen && (screens.IsCurrent(vanillaPage) || screens.IsCurrent(apPage));
+            bool exitAvailable = shopIsCurrent && !vanillaPage._isInputBlocked && !apPage._isInputBlocked;
+            if (exitAvailable && !vanillaPage._backButton.IsEnabled)
+            {
+                vanillaPage._backButton.Enable();
+            }
+            else if (!exitAvailable && vanillaPage._backButton.IsEnabled)
+            {
+                vanillaPage._backButton.Disable();
             }
         }
 
@@ -610,7 +775,7 @@ namespace StS2AP.Patches
         /// Treats the two inventory nodes as one screen. Closing either page closes its
         /// still-open peer, then restores the canonical vanilla-front positions.
         /// </summary>
-        [HarmonyPatch(typeof(NMerchantInventory), "Close")]
+        [HarmonyPatch(typeof(NMerchantInventory), nameof(NMerchantInventory.Close))]
         public static class CoordinatePageClose
         {
             [HarmonyPostfix]
@@ -671,7 +836,7 @@ namespace StS2AP.Patches
         /// can deliver both signals before an unfocus, and the base method then tries to
         /// add the same owner to NHoverTipSet's active dictionary twice.
         /// </summary>
-        [HarmonyPatch(typeof(NMerchantSlot), "OnFocus")]
+        [HarmonyPatch(typeof(NMerchantSlot), nameof(NMerchantSlot.OnFocus))]
         public static class SuppressDuplicateSlotFocus
         {
             [HarmonyPrefix]
@@ -712,21 +877,21 @@ namespace StS2AP.Patches
             slot.MouseFilter = belongsOnThisPage ? Control.MouseFilterEnum.Stop : Control.MouseFilterEnum.Ignore;
         }
 
-        [HarmonyPatch(typeof(NMerchantCard), "UpdateVisual")]
+        [HarmonyPatch(typeof(NMerchantCard), nameof(NMerchantCard.UpdateVisual))]
         public static class CardPageFilter
         {
             [HarmonyPostfix]
             public static void Postfix(NMerchantCard __instance) => ApplyPageFilter(__instance);
         }
 
-        [HarmonyPatch(typeof(NMerchantRelic), "UpdateVisual")]
+        [HarmonyPatch(typeof(NMerchantRelic), nameof(NMerchantRelic.UpdateVisual))]
         public static class RelicPageFilter
         {
             [HarmonyPostfix]
             public static void Postfix(NMerchantRelic __instance) => ApplyPageFilter(__instance);
         }
 
-        [HarmonyPatch(typeof(NMerchantPotion), "UpdateVisual")]
+        [HarmonyPatch(typeof(NMerchantPotion), nameof(NMerchantPotion.UpdateVisual))]
         public static class PotionPageFilter
         {
             [HarmonyPostfix]
@@ -737,7 +902,7 @@ namespace StS2AP.Patches
 
         #region Duplicate-Reaction Guard
 
-        [HarmonyPatch(typeof(NMerchantInventory), "OnPurchaseCompleted")]
+        [HarmonyPatch(typeof(NMerchantInventory), nameof(NMerchantInventory.OnPurchaseCompleted))]
         public static class SuppressInactivePageReaction
         {
             [HarmonyPrefix]

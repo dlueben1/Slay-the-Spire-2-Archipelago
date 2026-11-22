@@ -20,6 +20,7 @@ using StS2AP.Utils;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
+using StS2AP.Utils.RunGraph;
 
 namespace StS2AP.Patches
 {
@@ -50,20 +51,28 @@ namespace StS2AP.Patches
                         // also advances the separate checkpoint; carry that decision across await.
                         bool isApCheckpoint = TryGetCheckpointEligibility(preFinishedRoom, out _, out _);
                         SerializableRun snapshot = RunManager.Instance.ToSave(preFinishedRoom);
+                        ApRunGraphRecorder.CaptureSnapshot(snapshot);
                         __result = ApMultiplayerCampaignStore.SaveHostSnapshot(__instance, snapshot, isApCheckpoint);
                         return false;
                     }
 
+                    // A client saves nothing, but its player still gets a recap of an unfinished run.
+                    ApRunGraphRecorder.CaptureSnapshot(preFinishedRoom);
                     __result = Task.CompletedTask;
                     return false;
                 }
 
                 if (!ApSingleplayerSaves.IsHandlingSingleplayerRun) return true;
 
-                LogUtility.Info($"Game attempted to save in room of type '{preFinishedRoom?.RoomType}'");
-                LogUtility.Info($"Current room type {RunManager.Instance.DebugOnlyGetState()?.CurrentRoom?.RoomType}");
-                LogUtility.Info($"Current Map node type {RunManager.Instance.DebugOnlyGetState()?.CurrentMapPoint?.PointType}");
-                LogUtility.Info($"Game thinks we should save: {RunManager.Instance.ShouldSave}");
+                // Every room save refreshes the recap snapshot, checkpoint or not.
+                SerializableRun? recapSnapshot = ApRunGraphRecorder.CaptureSnapshot(preFinishedRoom);
+
+                LogUtility.Debug(
+                    $"Game attempted to save: room type '{preFinishedRoom?.RoomType}', "
+                        + $"current room type '{RunManager.Instance.DebugOnlyGetState()?.CurrentRoom?.RoomType}', "
+                        + $"map node type '{RunManager.Instance.DebugOnlyGetState()?.CurrentMapPoint?.PointType}', "
+                        + $"should save {RunManager.Instance.ShouldSave}"
+                );
 
                 // Save at room-entry checkpoints, after boss kills, and after ancient selections.
                 bool isEligibleCheckpoint = TryGetCheckpointEligibility(
@@ -74,7 +83,7 @@ namespace StS2AP.Patches
                 if ((RunManager.Instance.NetService.Type != MegaCrit.Sts2.Core.Multiplayer.Game.NetGameType.Singleplayer && RunManager.Instance.NetService.Type != MegaCrit.Sts2.Core.Multiplayer.Game.NetGameType.Host)
                     || !isEligibleCheckpoint)
                 {
-                    LogUtility.Info(
+                    LogUtility.Debug(
                         $"Skipping save {preFinishedRoom?.RoomType}: {checkpointReason}"
                     );
                     __result = Task.CompletedTask;
@@ -82,7 +91,7 @@ namespace StS2AP.Patches
                 }
 
                 LogUtility.Info("Preparing AP checkpoint save");
-                SerializableRun saveMe = RunManager.Instance.ToSave(preFinishedRoom);
+                SerializableRun saveMe = recapSnapshot ?? RunManager.Instance.ToSave(preFinishedRoom);
                 ApSingleplayerSaves.Save(saveMe, checkpointKind);
                 __result = Task.CompletedTask;
                 return false;
@@ -131,7 +140,7 @@ namespace StS2AP.Patches
                     && currentAct > 1
                     && maxSaveAct < currentAct;
 
-                LogUtility.Info(
+                LogUtility.Debug(
                     $"Max Act: {maxSaveAct} Current Act: {currentAct} "
                         + $"AncientRelicLocation: {ancientRelicLocation}"
                 );
@@ -154,28 +163,23 @@ namespace StS2AP.Patches
             public static string SerializeAndCompress(SerializableRun vanillaSave)
             {
                 var save = ArchipelagoClient.Progress.ToSerializable(vanillaSave);
-                var json = JsonSerializer.Serialize(
+                save.RunGraphEventCount = ApRunGraphRecorder.EventCountFor(vanillaSave.StartTime);
+                byte[] json = JsonSerializer.SerializeToUtf8Bytes(
                     save,
                     SerializationUtility.CombinedOptions.GetTypeInfo(typeof(SerializableAP))
                 );
                 return Zip(json);
             }
 
-            public static string Zip(string str)
+            public static string Zip(byte[] utf8Json)
             {
-                // https://stackoverflow.com/a/7343623
-                var bytes = Encoding.UTF8.GetBytes(str);
-
-                using (var msi = new MemoryStream(bytes))
-                using (var mso = new MemoryStream())
+                using var mso = new MemoryStream();
+                using (var gs = new GZipStream(mso, CompressionMode.Compress))
                 {
-                    using (var gs = new GZipStream(mso, CompressionMode.Compress))
-                    { 
-                        msi.CopyTo(gs);
-                    }
-
-                    return Convert.ToBase64String(mso.ToArray());
+                    gs.Write(utf8Json);
                 }
+
+                return Convert.ToBase64String(mso.ToArray());
             }
 
             public static string Unzip(string base64Str)
@@ -210,7 +214,6 @@ namespace StS2AP.Patches
             JsonElement? saveData = apSave?.SaveData;
             if (
                 apSave == null
-                || apSave.PlayerNumber != CoopSlot.PlayerNumber
                 || apSave.Progress is not { Initialized: true }
                 || saveData == null
                 || saveData.Value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined
@@ -235,6 +238,11 @@ namespace StS2AP.Patches
             if (serializableRun.Players.Count != 1
                 || serializableRun.Players[0].CharacterId?.Entry != expectedCharacter)
                 throw new InvalidDataException("The checkpoint character does not match the selected AP run.");
+            ApRunGraphRecorder.OnCheckpointRestored(
+                serializableRun.StartTime,
+                serializableRun.MapPointHistory?.Sum(act => act.Count) ?? 0,
+                apSave.RunGraphEventCount
+            );
             RunState runState = RunState.FromSerializable(serializableRun);
             NAudioManager.Instance?.StopMusic();
             await RunManager.Instance.SetUpSavedSingleplayer(runState, serializableRun);
@@ -250,7 +258,7 @@ namespace StS2AP.Patches
                 ?? throw new InvalidOperationException(
                     "Cannot continue the AP run because slot settings are unavailable"
                 );
-            if (!settings.Characters.TryGetValue(
+            if (!settings.TryGetCharacterConfig(
                     currentPlayer.getInternalName(),
                     out CharacterConfig? currentConfig))
             {
@@ -265,6 +273,8 @@ namespace StS2AP.Patches
                 currentPlayer
             );
             RelicCoupons.EnsureOwnedBy(currentPlayer, silent: true);
+            AgedCheese.EnsureOwnedIfEarned(currentPlayer, silent: true);
+            ApFrozenEye.EnsureOwnedIfEarned(currentPlayer, silent: true);
             // Rebuild these counts from AP history.
             ArchipelagoClient.Progress.ProgressiveAncients.Clear();
             ArchipelagoClient.Progress.ProgressiveRests.Clear();
@@ -290,7 +300,7 @@ namespace StS2AP.Patches
             await transition.FadeIn();
         }
 
-        [HarmonyPatch(typeof(NCharacterSelectScreen), "OnEmbarkPressed")]
+        [HarmonyPatch(typeof(NCharacterSelectScreen), nameof(NCharacterSelectScreen.OnEmbarkPressed))]
         public static class MaybeLoadAP
         {
 
@@ -300,7 +310,7 @@ namespace StS2AP.Patches
                 if (MultiplayerSupport.PendingDestination == ApPlayDestination.Multiplayer)
                     return true;
 
-                var character = BetaMainCompatibility.GetLocalCharacter(__instance.Lobby);
+                var character = __instance.Lobby.LocalPlayer.character;
                 if (!ArchipelagoClient.CanSelectCharacter(character, out string blockedReason))
                 {
                     __instance.Lobby.SetReady(ready: false);

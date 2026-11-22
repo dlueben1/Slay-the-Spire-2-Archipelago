@@ -49,20 +49,31 @@ namespace StS2AP
             BuffUtility.Initialize();
 
             // Apply all Harmony Patches
+            var harmony = new Harmony("archipelago.patch");
             try
             {
-                var harmony = new Harmony("archipelago.patch");
-
                 /// VERY IMPORTANT: For `PatchAll()` to work, we need to use nested classes like we're using in the `Patches` directory.
                 /// The syntax is somewhat ugly, but it's easier to maintain this way since we don't have to patch by category/individually.
                 harmony.PatchAll(assembly);
-                LogUtility.Success("Harmony patches applied successfully.");
-                LogUtility.Info("Archipelago mod initialized.");
             }
             catch (Exception ex)
             {
-                LogUtility.Error($"Failed to apply Harmony patches: {ex.Message}");
+                // PatchAll stops at the first failing patch class and keeps the ones before it.
+                // A partly patched client is worse than none: undo every Archipelago patch, then
+                // rethrow so the game reports the mod as failing to initialize.
+                LogUtility.Error($"Failed to apply Harmony patches; Archipelago is disabled: {ex}");
+                try
+                {
+                    harmony.UnpatchAll(harmony.Id);
+                }
+                catch (Exception unpatchEx)
+                {
+                    LogUtility.Error($"Could not undo the applied Harmony patches: {unpatchEx}");
+                }
+                throw;
             }
+            LogUtility.Success("Harmony patches applied successfully.");
+            LogUtility.Info("Archipelago mod initialized.");
         }
 
         /// <summary>

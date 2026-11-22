@@ -213,6 +213,11 @@ function setModdedCharacterName(index: number, value: unknown): void {
       fallback-title="Finding a modded character ID"
       startsOpen
     />
+
+    <WizardMarkdownDocument
+      source="/docs/predefined-characters.md"
+      fallback-title="Predefined modded characters"
+    />
   </div>
 </template>
 

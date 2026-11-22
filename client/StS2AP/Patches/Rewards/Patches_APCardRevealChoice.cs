@@ -5,7 +5,7 @@ using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 namespace StS2AP.Patches;
 
 /// <summary>
-/// Bind the first native picker choice to the ID reserved before an AP reveal awaits network data.
+/// Bind the first native picker choice to the ID reserved before an AP reveal awaits native callbacks.
 /// Otherwise a later reward click could reserve IDs ahead of the delayed picker's first choice.
 /// </summary>
 internal static class Patches_APCardRevealChoice

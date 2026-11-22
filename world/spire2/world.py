@@ -10,19 +10,84 @@ from BaseClasses import CollectionState, Item, Location, Region, MultiWorld, Ite
 from Options import OptionError
 from worlds.AutoWorld import World
 from .regions import create_regions
-from .rules import FALLBACK_REASON, MID_ACT_1_POWER, select_logic, set_rules
+from .rules import FALLBACK_REASON, is_sparse, select_logic, set_rules
 from . import rules_old
+from .logic_table import (COMBAT_GOLD_ITEMS, PATH_RELIC_REWARDS, REGIONS, RELIC_POWER, SMITH_POWER_BY_TIER,
+                          card_reward_strength, card_reward_table, card_rewards_needed)
 from .web_world import SlayTheSpire2Web
 from .characters import (CharacterConfig, character_list, vanilla_character_ids, character_registry,
-                         registered_character_blocks, unique_character_ids, character_identity)
+                         registered_character_blocks, unique_character_ids, character_identity,
+                         needs_generic_block)
 from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET, GENERIC_CHARACTER_BLOCKS
-from .items import item_table, chars_to_items, bonus_item_table, ItemType, base_event_item_pairs, ItemData, item_groups
-from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType, location_groups
+from .items import (item_table, chars_to_items, bonus_item_table, ItemType, base_event_item_pairs, ItemData,
+                    item_groups, BONUS_ENCHANTMENT_TIERS, BONUS_ENCHANTMENT_VALUES, BONUS_MAX_HP_LIMIT,
+                    normalize_bonus_enchantment, parse_bonus_card_pool, SIGHTS)
+from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
 from .options import Spire2Options
 
-COMBAT_GOLD_ITEM_COUNT = 13
+COMBAT_GOLD_ITEM_COUNT = COMBAT_GOLD_ITEMS
 ELITE_GOLD_ITEM_COUNT = 7
 BOSS_GOLD_ITEM_COUNT = 2
+
+SPARSE_SHOP_ITEM_TYPES = {ItemType.SHOP_CARD, ItemType.SHOP_NEUTRAL, ItemType.SHOP_RELIC, ItemType.SHOP_POTION,
+                          ItemType.SHOP_REMOVE}
+
+
+def sparse_placement_rank(item: 'SlayTheSpire2Item') -> int:
+    """When fill should place this progression item in a sparse world; lower ranks go first.
+
+    Items placed first are placed while nearly every other item is still held, so they can take
+    the late checks. Card Rewards, which matter least one at a time, should take those. Support
+    that early gates need goes last, when only early checks are still reachable.
+    """
+    item_type = item.item_data.type
+    if item_type == ItemType.CARD_REWARD:
+        return 0
+    if item_type in (ItemType.RELIC, ItemType.RARE_CARD_REWARD) or item_type in SPARSE_SHOP_ITEM_TYPES:
+        return 1
+    if item.name.endswith(" Progressive Smith"):
+        return 2
+    if item_type == ItemType.PROGRESSIVE_ANCIENT:
+        return 3
+    if item.name.endswith(" Progressive Rest"):
+        return 4
+    # Unlocks and anything else.
+    return 5
+
+
+def validate_bonus_entry(bonus_type: str, selector: dict) -> None:
+    """Rejects bonus entries the client could not honour. Relic and card names are checked by the
+    client, which knows the game's relics and cards; the rest is checked here."""
+    pools = selector.get("Pools")
+    value = selector.get("Value")
+    if bonus_type == "MAX_HP":
+        amount = int(value) if isinstance(value, int) or (isinstance(value, str) and value.isdigit()) else None
+        if pools is not None or amount is None or not 1 <= amount <= BONUS_MAX_HP_LIMIT:
+            raise OptionError(f"A MAX_HP bonus item needs a Value from 1 to {BONUS_MAX_HP_LIMIT}.")
+    elif bonus_type in ("ENCHANTMENT", "ENCHANTED_CARDS"):
+        if pools is not None:
+            unknown = [pool for pool in pools if pool not in BONUS_ENCHANTMENT_TIERS]
+            if unknown:
+                raise OptionError(
+                    f"Unknown {bonus_type} pools {unknown}. "
+                    f"Supported pools: {', '.join(BONUS_ENCHANTMENT_TIERS)}"
+                )
+        elif not isinstance(value, str) or normalize_bonus_enchantment(value) not in BONUS_ENCHANTMENT_VALUES:
+            raise OptionError(
+                f"Unknown {bonus_type} enchantment '{value}'. "
+                f"Supported enchantments: {', '.join(BONUS_ENCHANTMENT_VALUES.values())}"
+            )
+    elif bonus_type == "CARDS":
+        if pools is not None:
+            for pool in pools:
+                try:
+                    parse_bonus_card_pool(pool)
+                except ValueError as reason:
+                    raise OptionError(f"CARDS bonus pool '{pool}' is not valid: {reason}.") from None
+        elif not isinstance(value, str):
+            raise OptionError("A CARDS bonus item's Value must be a card name, not a number.")
+    elif isinstance(value, int):
+        raise OptionError(f"A {bonus_type} bonus item's Value must be a relic name, not a number.")
 
 
 class SlayTheSpire2Item(Item):
@@ -42,8 +107,8 @@ class SlayTheSpire2World(World):
     web = SlayTheSpire2Web()
     options_dataclass = Spire2Options
     options: Spire2Options
-    # Named modded characters use independent ID blocks and APWorld-supplied names.
-    compat_flag = 2
+    # Named modded characters use ID blocks from 200, so IDs can reach 1,000,000 and above.
+    compat_flag = 3
     origin_region_name = "Neow's Room"
 
     # Build the final Item Table
@@ -55,7 +120,8 @@ class SlayTheSpire2World(World):
     ut_can_gen_without_yaml = True
 
     location_name_to_id = location_table
-    location_name_groups = location_groups
+    # No location groups beyond Archipelago's built-in "Everywhere". Act groups had to leave out numbered card
+    # rewards, whose act depends on options, yet they still made up most of the data package.
 
     filler_universal: dict[str, int]
     filler_characters: dict[str, dict[str, int]]
@@ -90,15 +156,24 @@ class SlayTheSpire2World(World):
             for config in self.characters:
                 config.progressive_starter_card = False
                 config.progressive_starter_relic = False
+            # Sight items take the same filler budget. Turn the challenges off rather than only
+            # leaving the items out, because slot data would otherwise hide things for good.
+            self.options.hidden_intents.value = 0
+            self.options.hidden_health.value = 0
+            self.options.hidden_piles.value = 0
+            self.options.hidden_map.value = 0
+            self.options.hidden_cards.value = 0
+            self.options.hidden_relics.value = 0
         names = {config.official_name for config in self.characters}
         if len(names) != len(self.characters):
             raise OptionError(f"Found duplicate characters: {[c.official_name for c in self.characters]}")
         if not any(not config.locked for config in self.characters):
             raise OptionError("No character started unlocked!")
-        if len(self.modded_chars) > NUM_CUSTOM:
+        generic_chars = [config for config in self.characters if config.char_offset in GENERIC_CHARACTER_BLOCKS]
+        if len(generic_chars) > NUM_CUSTOM:
             raise OptionError(
-                f"StS 2 only supports {NUM_CUSTOM} modded characters; "
-                f"got {len(self.modded_chars)}: {[c.option_name for c in self.modded_chars]}"
+                f"StS 2 only supports {NUM_CUSTOM} characters without a predefined name; "
+                f"got {len(generic_chars)}: {[c.option_name for c in generic_chars]}"
             )
         self.total_shop_items = (self.options.shop_card_slots.value + self.options.shop_neutral_card_slots.value +
                                  self.options.shop_relic_slots.value + self.options.shop_potion_slots.value)
@@ -116,13 +191,26 @@ class SlayTheSpire2World(World):
             # Mixing cards and relics meets the power/card floor within the available checks;
             # ordinary cards alone can fill every opening slot and still fall short.
             early_items = self.multiworld.early_items[self.player]
-            cards = 1 if self.options.shuffle_all_cards else 0
-            vanilla_cards = 0 if self.options.shuffle_all_cards else 1.5
-            relics = ceil((MID_ACT_1_POWER - cards - vanilla_cards) / 1.5)
-            if self.effective_logic == "old" and not self.options.shuffle_all_cards:
-                # Old logic values a half-shuffled Card Reward at 2 power. Pair it with
-                # one Relic for 3.5 power using the same two early slots as two Relics.
-                cards, relics = 1, 1
+            if self.effective_logic == "old":
+                # Old logic's Mid Act 1 needs 3 power. It values a half-shuffled Card Reward at 2,
+                # so one Card Reward and one Relic use the same two early slots as two Relics.
+                cards, relics = (1, 2) if self.options.shuffle_all_cards else (1, 1)
+            else:
+                mid_act_1 = REGIONS["Mid Act 1"]
+                power = mid_act_1.power_for(bool(self.options.seeded))
+                if self.options.campfire_sanity:
+                    # The opening holds a Rest but no Smith, so Mid Act 1 charges its smith share.
+                    power += SMITH_POWER_BY_TIER[0] * mid_act_1.smith
+                vanilla_cards = 0 if self.options.shuffle_all_cards else mid_act_1.vanilla_card_strength
+                table = card_reward_table(bool(self.options.shuffle_all_cards))
+                cards = card_rewards_needed(table, mid_act_1.minimum_cards - vanilla_cards)
+                card_strength = card_reward_strength(table, cards) + vanilla_cards
+                # Relics past those a run can claim in Mid Act 1 do not help; Card Rewards make up
+                # the rest.
+                claimable = self.options.relic_rewards_available_anytime.value + PATH_RELIC_REWARDS["Mid Act 1"]
+                relics = min(max(0, ceil((power - card_strength) / RELIC_POWER)), claimable)
+                cards = card_rewards_needed(table, max(mid_act_1.minimum_cards, power - relics * RELIC_POWER)
+                                            - vanilla_cards)
             for config in self.characters:
                 if config.locked:
                     continue
@@ -177,17 +265,18 @@ class SlayTheSpire2World(World):
             else:
                 selected_chars = self.random.sample(remaining, k=num_rand_chars)
 
-        modded_chars = [char for char in selected_chars if char.casefold() not in vanilla_character_ids]
-        excess = len(modded_chars) - NUM_CUSTOM
+        # Only characters without a vanilla or predefined block use the limited generic blocks.
+        generic_chars = [char for char in selected_chars if needs_generic_block(char)]
+        excess = len(generic_chars) - NUM_CUSTOM
         if excess > 0:
             supported_chars = [char for char in char_options
-                               if char.casefold() in vanilla_character_ids and char not in selected_chars]
-            # A random subset may substitute unselected vanilla characters to meet the cap.
+                               if not needs_generic_block(char) and char not in selected_chars]
+            # A random subset may substitute unselected vanilla or predefined characters to meet the cap.
             # Never silently reduce the requested roster or remove its fixed unlocked character.
             if num_rand_chars == 0 or len(supported_chars) < excess:
-                raise OptionError(f"StS 2 supports at most {NUM_CUSTOM} selected modded characters; "
-                                  "reduce the roster or Pick Number of Characters")
-            candidates = [char for char in modded_chars if char != unlocked_char]
+                raise OptionError(f"StS 2 supports at most {NUM_CUSTOM} selected characters without a "
+                                  "predefined name; reduce the roster or Pick Number of Characters")
+            candidates = [char for char in generic_chars if char != unlocked_char]
             for char in self.random.sample(candidates, k=excess):
                 selected_chars.remove(char)
             selected_chars.extend(self.random.sample(supported_chars, k=excess))
@@ -383,10 +472,15 @@ class SlayTheSpire2World(World):
         data = item_table[name]
         item_id = data.code
         classification = data.classification
-        if (self.effective_logic == 'new' and not self.options.shop_sanity
-                and name.endswith((' Elite Gold', ' Boss Gold'))):
-            # Only shops require gold in new logic; legacy boss gates still need it.
+        if self.effective_logic == 'new' and name.endswith((' Elite Gold', ' Boss Gold')) and not self.options.gold_sanity:
+            # New logic counts Elite and Boss Gold only with Gold Sanity, for shop choices and each
+            # act's shop gold; legacy boss gates still need it.
             classification = ItemClassification.useful
+        elif (self.effective_logic == 'new' and name.endswith(' Combat Gold')
+              and self.options.gold_sanity and self.options.shop_sanity):
+            # Each act's shop gold counts Combat Gold too. Many small items can meet it, so none
+            # needs balancing or a priority location.
+            classification = ItemClassification.progression_deprioritized_skip_balancing
         return SlayTheSpire2Item(data, name, classification, item_id, self.player)
 
     def build_filler_pools(self) -> None:
@@ -407,8 +501,8 @@ class SlayTheSpire2World(World):
         }
         self.trap_weights = {name: weight for name, weight in trap_weights.items() if weight > 0}
         if self.options.trap_chance.value > 0 and not self.trap_weights:
-            raise ValueError("Trap Chance is greater than 0, but all trap weights are None. "
-                             "Enable a trap weight or set Trap Chance to 0.")
+            raise OptionError("Trap Chance is greater than 0, but all trap weights are None. "
+                              "Enable a trap weight or set Trap Chance to 0.")
 
         # --- Universal (buff) item pools ---
         # Map each universal item name to its configured option weight value.
@@ -570,12 +664,16 @@ class SlayTheSpire2World(World):
                     f"Unknown Bonus Items type '{bonus_type}'. "
                     f"Supported types: {', '.join(sorted(bonus_item_table))}"
                 )
+            validate_bonus_entry(bonus_type, bonus_entry[bonus_type])
             bonus_item_names.append(bonus_data.item_name)
+        # Challenge items take filler slots the same way Bonus Items do.
+        for sight_item, _, hidden_option in SIGHTS:
+            bonus_item_names += [sight_item] * getattr(self.options, hidden_option).value
 
         available_filler_slots = sum(count for _, count in filler_counts)
         if len(bonus_item_names) > available_filler_slots:
             raise OptionError(
-                f"Configured {len(bonus_item_names)} Bonus Items, but only "
+                f"Configured {len(bonus_item_names)} Bonus Items and challenge items, but only "
                 f"{available_filler_slots} filler slots are available."
             )
 
@@ -588,6 +686,20 @@ class SlayTheSpire2World(World):
                 pool.append(self.create_item(self.get_filler_item(character=config.name)))
 
         self.multiworld.itempool += pool
+        self.shuffle_bonus_items()
+
+    def shuffle_bonus_items(self) -> None:
+        """Shuffles the Bonus Items entries within each kind, once per seed. The client gives the
+        Nth copy found of a kind that kind's Nth entry, so a YAML would otherwise hand out its
+        entries in the order they were written, every seed. Each kind keeps its places in the list.
+        Called after the item pool is built, so the extra draw does not move the filler rolls."""
+        entries = self.options.bonus_items.value
+        entries_by_kind: dict[str, list] = {}
+        for entry in entries:
+            entries_by_kind.setdefault(next(iter(entry)), []).append(entry)
+        for kind_entries in entries_by_kind.values():
+            self.random.shuffle(kind_entries)
+        self.options.bonus_items.value = [entries_by_kind[next(iter(entry))].pop() for entry in entries]
 
     def _should_include_location(self, data: Optional[LocationData], config: CharacterConfig) -> bool:
         if data is None:
@@ -631,6 +743,19 @@ class SlayTheSpire2World(World):
     def set_rules(self) -> None:
         set_rules(self)
 
+    def fill_hook(self, progitempool: List[Item], usefulitempool: List[Item], filleritempool: List[Item],
+                  fill_locations: List[Location]) -> None:
+        # A sparse world on new logic has about one location per item. Fill takes each player's
+        # items from the end of this pool, so order this world's own items by placement rank,
+        # within the positions they already hold. Other players' items do not move.
+        if self.effective_logic != "new" or not is_sparse(self.options):
+            return
+        positions = [index for index, item in enumerate(progitempool) if item.player == self.player]
+        # Python's sort is stable, so items of one rank keep their shuffled order.
+        ordered = sorted((progitempool[index] for index in positions), key=sparse_placement_rank, reverse=True)
+        for index, item in zip(positions, ordered):
+            progitempool[index] = item
+
     def fill_slot_data(self) -> dict:
         slot_data = {
             "effective_logic": self.effective_logic,
@@ -645,22 +770,40 @@ class SlayTheSpire2World(World):
                 "card_remove": self.options.shop_remove_slots != 0,
                 "costs": self.options.shop_sanity_costs.value,
             },
+            "shop_card_weights": self.shop_card_weights(),
+            "shop_relic_weights": self.shop_relic_weights(),
+            "shop_potion_weights": self.shop_potion_weights(),
             # Keep the wire key for clients; Archipelago loads world_version from archipelago.json.
             "mod_compat_version": self.world_version.as_simple_string(),
             "CompatFlag": self.compat_flag,
+            "required_game_features": self.required_game_features(),
         }
         slot_data.update(self.options.as_dict(
-            "use_new_logic",
             "lock_characters",
             "seeded",
-            "ascension",
+            "run_modifiers",
+            "boons",
+            "enemy_hp_scaling",
+            "enemy_damage_scaling",
+            "dread_mode",
+            "blitz_merchant_chance",
             "num_chars_goal",
             "shuffle_all_cards",
+            "strict_card_rewards",
+            "hidden_intents",
+            "hidden_health",
+            "hidden_piles",
+            "hidden_map",
+            "hidden_cards",
+            "hidden_relics",
+            "sight_bonuses",
             "include_floor_checks",
             "neow_sanity",
             "ancient_relic_location",
             "ancient_relic_pool",
             "relic_rewards_available_anytime",
+            "remove_op_relics",
+            "events_in_any_act",
             "release_on_victory",
             "shop_sanity",
             "potion_sanity",
@@ -675,18 +818,72 @@ class SlayTheSpire2World(World):
         ))
         return slot_data
 
+    def required_game_features(self) -> list[str]:
+        """Game features this slot's settings need that only some supported game versions have.
+
+        A client whose game build lacks one still connects, plays without that setting and
+        tells the player. An option names its
+        feature in a required_game_feature attribute, and counts while its value is set.
+        """
+        features = set()
+        for option_name in self.options_dataclass.type_hints:
+            option = getattr(self.options, option_name)
+            feature = getattr(option, "required_game_feature", None)
+            if feature and option.value:
+                features.add(feature)
+        return sorted(features)
+
+    def shop_card_weights(self) -> dict[str, int]:
+        """Weights for the kinds of card a random shop slot can hold."""
+        return self.active_shop_weights(self.options.random_shop_cards, {
+            "attack": self.options.shop_attack_weight.value,
+            "skill": self.options.shop_skill_weight.value,
+            "power": self.options.shop_power_weight.value,
+            "common": self.options.shop_common_weight.value,
+            "uncommon": self.options.shop_uncommon_weight.value,
+            "rare": self.options.shop_rare_weight.value,
+            "colorless": self.options.shop_colorless_weight.value,
+            "event": self.options.shop_event_weight.value,
+        })
+
+    def shop_relic_weights(self) -> dict[str, int]:
+        """Weights for the kinds of relic a random shop slot can hold."""
+        return self.active_shop_weights(self.options.random_shop_relics, {
+            "common": self.options.shop_relic_common_weight.value,
+            "uncommon": self.options.shop_relic_uncommon_weight.value,
+            "rare": self.options.shop_relic_rare_weight.value,
+            "shop": self.options.shop_relic_shop_weight.value,
+            "event": self.options.shop_relic_event_weight.value,
+            "ancient": self.options.shop_relic_ancient_weight.value,
+        })
+
+    def shop_potion_weights(self) -> dict[str, int]:
+        """Weights for the kinds of potion a random shop slot can hold."""
+        return self.active_shop_weights(self.options.random_shop_potions, {
+            "common": self.options.shop_potion_common_weight.value,
+            "uncommon": self.options.shop_potion_uncommon_weight.value,
+            "rare": self.options.shop_potion_rare_weight.value,
+            "otherclass": self.options.shop_potion_other_class_weight.value,
+            "event": self.options.shop_potion_event_weight.value,
+        })
+
+    @staticmethod
+    def active_shop_weights(enabled: Any, weights: dict[str, int]) -> dict[str, int]:
+        """Empty keeps the vanilla shop layout, including when the option is on but every
+        weight is none."""
+        return weights if enabled and any(weights.values()) else {}
+
     @staticmethod
     def interpret_slot_data(slot_data: dict[str, Any]) -> Any:
         return slot_data
 
     def _setup_ut(self, slot_data: dict[str, Any]) -> None:
-        self.options.use_new_logic.value = self.options.use_new_logic.from_any(slot_data.get("use_new_logic", True)).value
         # Reconstruct the generated mode; do not rerun fallback selection on tracker input.
         self.effective_logic = slot_data.get("effective_logic", "new")
-        self.logic_fallback_reason = (
-            FALLBACK_REASON if self.options.use_new_logic and self.effective_logic == "old" else None
-        )
+        self.logic_fallback_reason = FALLBACK_REASON if self.effective_logic == "old" else None
         self.options.lock_characters.value = slot_data['lock_characters']
+        # Seeded Run changes Act 1 power checks.
+        self.options.seeded.value = slot_data['seeded']
         self.options.shop_card_slots.value = slot_data["shop_sanity_options"]["card_slots"]
         self.options.shop_remove_slots.value = slot_data["shop_sanity_options"]["card_remove"]
         self.options.shop_neutral_card_slots.value = slot_data["shop_sanity_options"]["neutral_slots"]
@@ -727,6 +924,11 @@ class SlayTheSpire2World(World):
         self.options.progressive_starter_card.value = slot_data['progressive_starter_card']
         self.options.progressive_starter_relic.value = slot_data['progressive_starter_relic']
         self.options.bonus_items.value = deepcopy(slot_data.get('bonus_items', []))
+        # Sight items take filler slots, so a YAML's values could exceed what the seed generated with.
+        for _, _, hidden_option in SIGHTS:
+            getattr(self.options, hidden_option).value = slot_data.get(hidden_option, 0)
+        # Logic counts the Sight Bonuses a slot left on; slots from before the option have none.
+        self.options.sight_bonuses.value = set(slot_data.get('sight_bonuses', []))
         if self.options.include_floor_checks.value == 0:
             self.options.progressive_starter_card.value = 0
             self.options.progressive_starter_relic.value = 0

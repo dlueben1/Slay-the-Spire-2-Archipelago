@@ -24,20 +24,50 @@ export const CHARACTER_OPTION_KEYS = {
   ascensionDown: "ascension_down",
 } as const;
 
-/** Generated option keys owned by the Gameplay Modifiers compiler. */
+/** Generated option keys owned by the Run Settings compiler. */
 export const RUN_OPTION_KEYS = {
   relicRewardsAvailableAnytime: "relic_rewards_available_anytime",
+  removeOpRelics: "remove_op_relics",
   releaseOnVictory: "release_on_victory",
+  eventsInAnyAct: "events_in_any_act",
   seeded: "seeded",
 } as const;
 
-/** Generated option keys owned by Checks & Rewards' Starting Equipment subsection. */
+/** Generated option keys owned by the Boons compiler. */
+export const BOON_OPTION_KEYS = {
+  boons: "boons",
+  blitzMerchantChance: "blitz_merchant_chance",
+} as const;
+
+/** Generated `remove_op_relics` category names keyed by their Run Settings answer field. */
+export const OP_RELIC_CATEGORY_KEYS = {
+  ancient: "Ancient",
+  rare: "Rare",
+} as const;
+
+/** Generated option keys owned by the Challenges compiler. */
+export const CHALLENGE_OPTION_KEYS = {
+  runModifiers: "run_modifiers",
+  enemyHpScaling: "enemy_hp_scaling",
+  enemyDamageScaling: "enemy_damage_scaling",
+  dreadMode: "dread_mode",
+  hiddenIntents: "hidden_intents",
+  hiddenHealth: "hidden_health",
+  hiddenPiles: "hidden_piles",
+  hiddenMap: "hidden_map",
+  hiddenCards: "hidden_cards",
+  hiddenRelics: "hidden_relics",
+  sightBonuses: "sight_bonuses",
+  strictCardRewards: "strict_card_rewards",
+} as const;
+
+/** Generated option keys owned by the Checks step's Starting Equipment subsection. */
 export const STARTING_EQUIPMENT_OPTION_KEYS = {
   progressiveStarterCard: "progressive_starter_card",
   progressiveStarterRelic: "progressive_starter_relic",
 } as const;
 
-/** Generated option keys owned by the Ancient subsection of Checks & Rewards. */
+/** Generated option keys owned by the Ancient questions of Run Settings. */
 export const ANCIENT_OPTION_KEYS = {
   relicLocation: "ancient_relic_location",
   relicPool: "ancient_relic_pool",
@@ -45,12 +75,11 @@ export const ANCIENT_OPTION_KEYS = {
 
 /** Generated option keys owned by the Progression compiler. */
 export const PROGRESSION_OPTION_KEYS = {
-  useNewLogic: "use_new_logic",
   progressionBalancing: "progression_balancing",
   accessibility: "accessibility",
 } as const;
 
-/** Generated option keys owned by the Checks & Rewards compiler. */
+/** Generated option keys owned by the Checks step's check-types grid. */
 export const CHECK_OPTION_KEYS = {
   neowSanity: "neow_sanity",
   includeFloorChecks: "include_floor_checks",
@@ -71,10 +100,27 @@ export const SHOP_OPTION_KEYS = {
   costs: "shop_sanity_costs",
 } as const;
 
+/** Generated switch owned by the Shop Cards compiler; its weights live in `ShopCardKind.ts`. */
+export const SHOP_CARD_OPTION_KEY = "random_shop_cards" as const;
+
+/** Generated switch owned by the Shop Stock compiler; its weights live in `ShopStockKind.ts`. */
+export const SHOP_RELIC_OPTION_KEY = "random_shop_relics" as const;
+
+/** Generated switch owned by the Shop Stock compiler; its weights live in `ShopStockKind.ts`. */
+export const SHOP_POTION_OPTION_KEY = "random_shop_potions" as const;
+
 /** Generated option key owned by the Bonus Items compiler. */
 export const BONUS_ITEM_OPTION_KEY = "bonus_items" as const;
 
 /** Generated option keys owned by the Death Link compiler. */
+/** Common Archipelago options owned by the Items & Hints step. */
+export const ITEM_OPTION_KEYS = {
+  startInventory: "start_inventory",
+  startHints: "start_hints",
+  localItems: "local_items",
+  nonLocalItems: "non_local_items",
+} as const;
+
 export const DEATH_LINK_OPTION_KEYS = {
   enabled: "death_link",
   enableFragments: "enable_death_fragments",

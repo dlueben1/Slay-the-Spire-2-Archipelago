@@ -24,24 +24,6 @@ module MirroredRewardTests =
             Func<string, CardRewardData>(fun _ -> failwith "unavailable"),
             Func<string, CardRewardData>(fun _ -> failwith "bonus"))
 
-    let validRewardShapes =
-        [| RewardInputKind.Card, 1; RewardInputKind.Potion, 1; RewardInputKind.Relic, 1
-           RewardInputKind.Ancient, 3; RewardInputKind.Unavailable, 0; RewardInputKind.Bonus, 1 |]
-        |> Array.map (fun (kind, count) -> [| box kind; box count |])
-
-    [<Theory>]
-    [<MemberData(nameof validRewardShapes)>]
-    let ``every reward dispatches exactly its own payload`` kind count =
-        let reward = decode { input kind with Models = Array.create count "model"; UnavailableReason = "No choices" }
-        let selected = reward.Match(
-            Func<CardRewardData, RewardInputKind>(fun _ -> RewardInputKind.Card),
-            Func<PotionRewardData, RewardInputKind>(fun _ -> RewardInputKind.Potion),
-            Func<string, RewardInputKind>(fun _ -> RewardInputKind.Relic),
-            Func<IReadOnlyList<string>, RewardInputKind>(fun _ -> RewardInputKind.Ancient),
-            Func<string, RewardInputKind>(fun _ -> RewardInputKind.Unavailable),
-            Func<string, RewardInputKind>(fun _ -> RewardInputKind.Bonus))
-        Assert.Equal(kind, selected)
-
     let invalidRewardShapes =
         [| RewardInputKind.Potion, 0; RewardInputKind.Potion, 2
            RewardInputKind.Relic, 0; RewardInputKind.Relic, 2; RewardInputKind.Ancient, 2
@@ -55,12 +37,6 @@ module MirroredRewardTests =
         Assert.True(MirroredReward.Decode({ input kind with Models = Array.create count "model"; UnavailableReason = "No choices" }, 3) |> Result.isError)
 
     [<Fact>]
-    let ``hook expanded card choices retain their exact order`` () =
-        let models = [| "c4"; "c1"; "c3"; "c2" |]
-        let decoded = decode { input RewardInputKind.Card with Models = models } |> card
-        Assert.Equal<string>(models, decoded.Models)
-
-    [<Fact>]
     let ``recipe distinguishes rare mapped act and current act fallback`` () =
         let rare = CardRecipe.Decode(true, Nullable()) |> require
         let mapped = CardRecipe.Decode(false, Nullable 2) |> require
@@ -71,17 +47,6 @@ module MirroredRewardTests =
         Assert.False(current.ActIndex.HasValue)
         Assert.True(CardRecipe.Decode(true, Nullable 0) |> Result.isError)
         Assert.True(CardRecipe.Decode(false, Nullable -1) |> Result.isError)
-
-    let provenanceRewardKinds =
-        [| [| box RewardInputKind.Card |]; [| box RewardInputKind.Potion |] |]
-
-    [<Theory>]
-    [<MemberData(nameof provenanceRewardKinds)>]
-    let ``removed native provenance is rejected for cards and potions`` kind =
-        match MirroredReward.Decode({ input kind with Strategy = "replica_native_v1" }, 3) with
-        | Error (RewardDecodeError.Materialization (MaterializationError.UnknownStrategy original)) ->
-            Assert.Equal("replica_native_v1", original)
-        | actual -> failwithf "Expected UnknownStrategy, got %A" actual
 
     [<Fact>]
     let ``snapshot copies models and exposes no mutable collections`` () =

@@ -318,9 +318,7 @@ public static class DeathLinkMultiplayer
 
         ActionSynchronizerCombatState synchronizerState =
             RunManager.Instance.ActionQueueSynchronizer.CombatState;
-        if (BetaMainCompatibility.IsActionSynchronizerCombatState(
-                synchronizerState,
-                ActionSynchronizerCombatState.PlayPhase))
+        if (synchronizerState == ActionSynchronizerCombatState.PlayPhase)
         {
             // PlayPhase is the native synchronizer's authoritative indication that it is safe to
             // enqueue a CombatPlayPhaseOnly action. A DeathLink received anywhere else stays at

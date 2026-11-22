@@ -1,6 +1,8 @@
 using Godot;
 using MegaCrit.Sts2.Core.ControllerInput;
+using MegaCrit.Sts2.Core.Entities.CardRewardAlternatives;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Entities.Rewards;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
@@ -43,6 +45,9 @@ public static class ArchipelagoRewardUI
         Guid MenuId,
         bool Synchronized,
         bool InitiallyEmpty);
+
+    // Locked card rows stay clickable so they can explain why they will not open.
+    private static readonly Color LockedCardRewardModulate = new(1f, 1f, 1f, 0.4f);
 
     private static readonly Dictionary<RewardsSet, NativeMenuSession> Sessions = new();
     private static readonly ApRewardTravelGuard Travel = new();
@@ -316,8 +321,32 @@ public static class ArchipelagoRewardUI
             : reason;
         bool blockedByCombat = MultiplayerSupport.IsSynchronizedCombatActive
             && message.Contains("outside combat", StringComparison.OrdinalIgnoreCase);
-        ShowBlockedMessage(message, blockedByCombat);
+        // Strict Card Rewards' lock is a rule players run into, not a rare failure, so make it
+        // stand out over other AP notifications.
+        bool lockedByStrictCardRewards = reward is ApMirroredRewardDispatcher.ApNativeCardReward card
+            && card.IsLockedByAnotherReveal();
+        ShowBlockedMessage(message, blockedByCombat, emphasized: lockedByStrictCardRewards);
         return false;
+    }
+
+    /// <summary>
+    /// Ghosts the card rows that Strict Card Rewards locks behind a revealed card reward, so
+    /// the revealed one is the only card row at full colour.
+    /// </summary>
+    internal static void RefreshCardRewardLocks()
+    {
+        if (_screen == null || !GodotObject.IsInstanceValid(_screen))
+            return;
+        if (_screen.GetNodeOrNull<Control>("%RewardsContainer") is not { } container)
+            return;
+        foreach (NRewardButton button in container.GetChildren().OfType<NRewardButton>())
+            ApplyCardRewardLock(button);
+    }
+
+    internal static void ApplyCardRewardLock(NRewardButton button)
+    {
+        if (button.Reward is ApMirroredRewardDispatcher.ApNativeCardReward card)
+            button.Modulate = card.IsLockedByAnotherReveal() ? LockedCardRewardModulate : Colors.White;
     }
 
     private static bool TryBlockMultiplayerCombatOpen()
@@ -467,9 +496,38 @@ public static class ArchipelagoRewardUI
 
         // Match the exact screen held by an AP card reward, not just an arbitrary top overlay.
         foreach (CardReward reward in _set.Rewards.OfType<CardReward>())
-            if (BetaMainCompatibility.TrySkipCardRewardSelection(reward, picker))
+            if (TrySkipCardRewardSelection(reward, picker))
                 return true;
         return false;
+    }
+
+    private static bool TrySkipCardRewardSelection(CardReward reward, NCardRewardSelectionScreen picker)
+    {
+        try
+        {
+            if (!ReferenceEquals(reward._currentlyShownScreen, picker))
+                return false;
+            if (picker._completionSource == null || picker._completionSource.Task.IsCompleted)
+                return false;
+
+            for (int i = 0; i < picker._extraOptions.Count; i++)
+            {
+                CardRewardAlternative alternative = picker._extraOptions[i];
+                if (!string.Equals(alternative.OptionId, "Skip", StringComparison.OrdinalIgnoreCase)
+                    || alternative.AfterSelected != PostAlternateCardRewardAction.EndSelectionAndDoNotCompleteReward)
+                    continue;
+
+                picker.OnAlternateRewardSelected(i);
+                LogUtility.Info($"Skipped AP card selection through native Skip for player {reward.Player.NetId}.");
+                return true;
+            }
+            return false;
+        }
+        catch (Exception ex)
+        {
+            LogUtility.Error($"Could not skip AP card selection for player {reward.Player.NetId}: {ex}");
+            return false;
+        }
     }
 
     private static void PrepareForOpen()

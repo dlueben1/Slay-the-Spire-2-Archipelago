@@ -44,12 +44,16 @@ namespace StS2AP.Models
         public const int _maxGoldRewards = 20;
 
         /// <summary>
+        /// Boss Gold locations, one each for the Act 1 and Act 2 bosses. GoldSanity adds these
+        /// alongside the Combat Gold locations.
+        /// </summary>
+        public const int _maxBossGoldRewards = 2;
+
+        /// <summary>
         /// The maximum possible number of Potion Rewards that a player could have replaced with AP locations.
         /// Only used if PotionSanity is on. Matches the APWorld's 9 locations per character.
         /// </summary>
         public const int _maxPotionRewards = 9;
-
-        public const int _maxBossRewards = 3;
 
         /// <summary>
         /// The maximum Progressive Shop Card Removal level a player could receive (one per Act).
@@ -156,6 +160,18 @@ namespace StS2AP.Models
         public Dictionary<int, CardReward> CardAssignments { get; set; } = new Dictionary<int, CardReward>();
 
         /// <summary>
+        /// Strict Card Rewards opened this run (singleplayer). Each one's position in this count
+        /// seeds its cards; see <see cref="StrictCardChain"/>.
+        /// </summary>
+        public int StrictCardRevealCount { get; set; }
+
+        /// <summary>
+        /// How each Strict Card Reward was resolved this run, in order (singleplayer). Saved with
+        /// the run, so loading a checkpoint rolls it back with the deck.
+        /// </summary>
+        public List<string> StrictCardPickHistory { get; set; } = new List<string>();
+
+        /// <summary>
         /// Maps an Archipelago item's index to the PotionModel that was pre-pulled from the PotionFactory for it.
         /// This ensures that opening/closing the reward screen always shows the same potion for each potion reward.
         /// Cleared on each new run via <see cref="ResetTrackers"/>.
@@ -203,7 +219,7 @@ namespace StS2AP.Models
                 else
                 {
                     choices = Enumerable.Range(0, choiceCount)
-                        .Select(_ => RelicFactory.PullNextRelicFromFront(player))
+                        .Select(_ => GameApiCompat.PullNextRewardRelic(player))
                         .ToList();
                 }
                 RelicChoiceAssignments[index] = choices;
@@ -374,6 +390,8 @@ namespace StS2AP.Models
             RelicChoiceAssignments.Clear();
             AncientRelicChoiceAssignments.Clear();
             CardAssignments.Clear();
+            StrictCardRevealCount = 0;
+            StrictCardPickHistory.Clear();
             PotionAssignments.Clear();
             Ascensions.Reset();
             GoldRedeemed = 0;
@@ -438,7 +456,7 @@ namespace StS2AP.Models
         public bool IsAvailableInRewardMenu(IndexedItemInfo item, Player player)
         {
             if (ArchipelagoIdCodec.IsUniversalItemId(item.Item.ItemId))
-                return item.Item.GetUniversalItemId() == APItem.BonusWaxRelic
+                return BonusRewardUtility.IsBonusItem(item.Item.GetUniversalItemId())
                     && !Items.IsUsed(item.Index)
                     && !BonusRewardUtility.ConvertToGold(item.Item.ItemId);
             var itemId = item.Item.GetCharacterItemType();
@@ -465,6 +483,13 @@ namespace StS2AP.Models
         /// item separately. Rebuilt with GoldReceived from AP history, not saved or reset per run.
         /// </summary>
         internal int UniversalBuffsConvertedToGold { get; set; }
+
+        /// <summary>
+        /// Per character, the raw GoldReceived totals at which each Combat, Elite and Boss Gold
+        /// item ends, in receipt order. A claim counts each one as a separate gold gain. Built
+        /// alongside GoldReceived; not saved.
+        /// </summary>
+        internal Dictionary<long, List<int>> GoldGainItemEnds { get; set; } = new();
 
         /// <summary>
         /// The Gold you've redeemed so far this run
@@ -723,6 +748,8 @@ namespace StS2AP.Models
                             : string.Empty,
                     }
                 ),
+                StrictCardRevealCount = StrictCardRevealCount,
+                StrictCardPickHistory = new List<string>(StrictCardPickHistory),
                 PotionAssignments = PotionAssignments.ToDictionary(
                     kv => kv.Key,
                     kv => SerializeAssignment(
@@ -751,21 +778,19 @@ namespace StS2AP.Models
 
         public SerializableAP ToSerializable(SerializableRun run)
         {
-            using var runJson = JsonDocument.Parse(JsonSerializationUtility.ToJson(run));
             return new SerializableAP
             {
-                PlayerNumber = CoopSlot.PlayerNumber,
                 Progress = ToRunProgressState(),
-                SaveData = runJson.RootElement.Clone(),
+                // Same type info as JsonSerializationUtility.ToJson, without a string to reparse.
+                SaveData = JsonSerializer.SerializeToElement(
+                    run,
+                    JsonSerializationUtility.GetTypeInfo<SerializableRun>()
+                ),
             };
         }
 
-        public static ArchipelagoProgress FromSerializable(SerializableAP saveData, Player player)
-        {
-            if (saveData.PlayerNumber != CoopSlot.PlayerNumber)
-                throw new InvalidDataException($"This save belongs to Player {saveData.PlayerNumber}, not Player {CoopSlot.PlayerNumber}.");
-            return FromRunProgressState(saveData.Progress, player);
-        }
+        public static ArchipelagoProgress FromSerializable(SerializableAP saveData, Player player) =>
+            FromRunProgressState(saveData.Progress, player);
 
         public static ArchipelagoProgress FromRunProgressState(
             ApRunProgressState saveData,
@@ -818,6 +843,8 @@ namespace StS2AP.Models
                 ProgressiveStarterRelicBaseId = saveData.ProgressiveStarterRelicBaseId,
                 ProgressiveStarterRelicUpgradedId = saveData.ProgressiveStarterRelicUpgradedId,
                 ProgressiveStarterRelicTier = saveData.ProgressiveStarterRelicTier,
+                StrictCardRevealCount = saveData.StrictCardRevealCount,
+                StrictCardPickHistory = new List<string>(saveData.StrictCardPickHistory ?? new List<string>()),
                 PotionAssignments = saveData.PotionAssignments.ToDictionary(
                     kv => kv.Key,
                     kv => PotionModel.FromSerializable(

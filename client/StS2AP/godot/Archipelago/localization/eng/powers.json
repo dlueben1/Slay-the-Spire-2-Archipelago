@@ -1,4 +1,6 @@
 {
   "ARCHIPELAGO_POWER_VAKUU_TRAP_POWER.title": "Vakuu Trap",
-  "ARCHIPELAGO_POWER_VAKUU_TRAP_POWER.description": "Vakuu will play your hand next turn (no earlier than turn 2). Each stack grants one autoplay turn. Expires when combat ends."
+  "ARCHIPELAGO_POWER_VAKUU_TRAP_POWER.description": "Vakuu will play your hand next turn (no earlier than turn 2). Each stack grants one autoplay turn. Expires when combat ends.",
+  "ARCHIPELAGO_POWER_FOREWARNED_POWER.title": "Forewarned",
+  "ARCHIPELAGO_POWER_FOREWARNED_POWER.description": "For each enemy whose attacks your Block stops completely on its turn, draw 1 more card next turn."
 }

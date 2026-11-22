@@ -31,14 +31,14 @@ def main() -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--client-version", required=True)
     parser.add_argument("--world-version", required=True)
-    parser.add_argument("--sts2-public-version", required=True)
+    parser.add_argument("--sts2-main-version", required=True)
     parser.add_argument("--sts2-beta-version", required=True)
     args = parser.parse_args()
 
     values = {
         "CLIENT_VERSION": args.client_version,
         "WORLD_VERSION": args.world_version,
-        "STS2_PUBLIC_VERSION": args.sts2_public_version,
+        "STS2_MAIN_VERSION": args.sts2_main_version,
         "STS2_BETA_VERSION": args.sts2_beta_version,
     }
 

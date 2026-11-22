@@ -325,7 +325,7 @@ public static class ApRunData
 
         ulong fixedHostNetId = lobby.NetService.NetId;
         ParticipantIdentity? hostIdentity = null;
-        foreach (ulong netId in BetaMainCompatibility.GetLobbyPlayerNetIds(lobby))
+        foreach (ulong netId in lobby.Players.Select(player => player.id).ToArray())
         {
             bool contributed = TryGetLobbyPlayerState(lobby, netId, out ApPlayerRunState state);
             ContributionReadiness readiness = ParticipantAdapter.Evaluate(contributed ? state : null);
@@ -708,7 +708,7 @@ public static class ApRunData
     }
 
     private static bool IsMessageFromHost(ulong senderNetId) =>
-        BetaMainCompatibility.TryGetHostNetId(
+        MultiplayerSupport.TryGetHostNetId(
             RunManager.Instance.NetService,
             out ulong hostNetId
         ) && senderNetId == hostNetId;
@@ -800,6 +800,13 @@ public static class ApRunData
                 : existing.HostSettings == null)
             && existing.HostSettings?.AncientRelicLocation == hostSettings?.AncientRelicLocation
             && existing.HostSettings?.AncientRelicPool == hostSettings?.AncientRelicPool
+            && (existing.HostSettings?.RunModifiers ?? []).SequenceEqual(
+                hostSettings?.RunModifiers ?? [])
+            && (existing.HostSettings?.Boons ?? []).SequenceEqual(hostSettings?.Boons ?? [])
+            && existing.HostSettings?.EnemyHpScaling == hostSettings?.EnemyHpScaling
+            && existing.HostSettings?.EnemyDamageScaling == hostSettings?.EnemyDamageScaling
+            && existing.HostSettings?.DreadMode == hostSettings?.DreadMode
+            && existing.HostSettings?.BlitzMerchantChance == hostSettings?.BlitzMerchantChance
             && existing.AscensionStateInitialized == ascensionStateInitialized
             && existing.HostCharacterOffset == (ascensionStateInitialized
                 ? hostCharacterOffset
@@ -837,8 +844,6 @@ public static class ApRunData
         && (left.SlotSettings == null) == (right.SlotSettings == null)
         && left.SlotSettings?.AncientRelicLocation == right.SlotSettings?.AncientRelicLocation
         && left.SlotSettings?.AncientRelicPool == right.SlotSettings?.AncientRelicPool
-        && left.SlotSettings?.PlayerNumber == right.SlotSettings?.PlayerNumber
-        && left.SlotSettings?.PlayerCount == right.SlotSettings?.PlayerCount
         && RelicReceiptMapsEqual(
             left.InitialRelicReceiptIndexesByCharacter,
             right.InitialRelicReceiptIndexesByCharacter)
@@ -906,6 +911,21 @@ public static class ApRunData
                     state.RunId = Guid.NewGuid();
             });
         }
+
+        // This event fires before the base game initializes the run's modifiers. Multiplayer
+        // peers all read the host's frozen settings so they build the same run.
+        ArchipelagoSettings? modifierSettings = ArchipelagoClient.Settings;
+        if (evt.IsMultiplayer)
+        {
+            modifierSettings = _sharedRun.TryGet(evt.RunState, out ApRunSharedState shared)
+                ? shared.HostSettings
+                : null;
+        }
+        // The lobby is a standard one, so the host's Dread Mode is applied here, the first point
+        // where guests know the host's settings.
+        if (evt.IsMultiplayer)
+            DreadRuns.ApplyHostSetting(evt.RunState, modifierSettings);
+        ApRunModifiers.AddToNewRun(evt.RunState, modifierSettings);
 
         if (evt.IsMultiplayer
             && !AscensionMultiplayer.PrepareRunConstruction(

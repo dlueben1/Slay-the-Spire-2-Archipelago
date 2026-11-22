@@ -1,11 +1,11 @@
 /**
  * @file Translates the Starting Equipment subsection into progressive item toggles.
  *
- * Starting Equipment lives inside the combined Checks & Rewards step because both
+ * Starting Equipment lives on the Checks step because both
  * progressive options consume Floor Check filler slots. This compiler preserves that
  * Python-world dependency explicitly: when Floor Checks are disabled, both generated
  * toggles are normalized to false even if stale UI state reaches the compiler. The
- * root compiler invokes this module before the other Checks & Rewards families, while
+ * Checks compiler invokes this module before the check-types grid, while
  * generated-schema validation remains responsible for primitive option validity.
  */
 
@@ -23,7 +23,7 @@ import type { CompiledOptions } from "./applyCharacterOptions";
  * @param catalog - Generated schema used to detect missing owned options.
  * @returns Nothing; replaces only options in `STARTING_EQUIPMENT_OPTION_KEYS`.
  * @throws When a regenerated catalog no longer contains an owned option.
- * @remarks Call only from the combined Checks & Rewards compiler so the Floor Checks
+ * @remarks Call only from the Checks compiler so the Floor Checks
  * dependency is supplied from the same immutable answer snapshot.
  */
 export function applyStartingEquipmentOptions(

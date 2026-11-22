@@ -46,11 +46,13 @@ namespace StS2AP.Patches
             // The native reward already exists. A receipt decides whether it survives beside the check.
             if (!RelicRewardUtility.TryConsumeWaitingReceiptForNaturalReward(player))
                 rewards.Remove(relicReward);
+            else
+                RelicSightChoices.OfferNativeChoice(rewards, relicReward, player);
         }
         /// <summary>
         /// Patches RewardsSet.GenerateRewardsFor to replace or inject Archipelago Location rewards.
         /// </summary>
-        [HarmonyPatch(typeof(RewardsSet), "GenerateRewardsFor")]
+        [HarmonyPatch(typeof(RewardsSet), nameof(RewardsSet.GenerateRewardsFor))]
         public class GenerateRewardsForPatch
         {
             /// <summary>
@@ -304,6 +306,11 @@ namespace StS2AP.Patches
                     // Note the logic is only sound because of the GateTreasureRelicPicker prefix
                     RelicRewardUtility.ReconcileBankedRewards(player);
                 }
+                else
+                {
+                    // The chest's relic is paired with an AP Relic.
+                    RelicSightChoices.OfferChestChoice(relicPicker, player);
+                }
             }
         }
 
@@ -456,7 +463,7 @@ namespace StS2AP.Patches
         /// <summary>
         /// When an AP Location reward has already been claimed, make it semi-transparent in the rewards screen to indicate that it's been claimed.
         /// </summary>
-        [HarmonyPatch(typeof(NRewardsScreen), "ShowScreen")]
+        [HarmonyPatch(typeof(NRewardsScreen), nameof(NRewardsScreen.ShowScreen))]
         public static class ClaimedAPRewardsAreSemiTransparentPatch
         {
             private const float _claimedAlpha = 0.5f;
@@ -480,14 +487,15 @@ namespace StS2AP.Patches
                 // Iterate created reward buttons and set their opacity based on reward type.
                 foreach (NRewardButton btn in rewardsContainer.GetChildren().OfType<NRewardButton>())
                 {
-                    Reward? reward = btn.Reward;
-                    if (reward == null)
+                    // Leave other rows alone: their _Ready already ran, and AP menu card rows
+                    // may be ghosted there by Strict Card Rewards.
+                    if (btn.Reward is not ArchipelagoReward apReward)
                     {
                         continue;
                     }
 
                     // Make Claimed Archipelago Rewards semi-transparent
-                    float targetAlpha = (reward is ArchipelagoReward && ((ArchipelagoReward)reward).IsChecked) ? _claimedAlpha : _normalAlpha;
+                    float targetAlpha = apReward.IsChecked ? _claimedAlpha : _normalAlpha;
 
                     // Immediate change:
                     btn.Modulate = new Color(1f, 1f, 1f, targetAlpha);

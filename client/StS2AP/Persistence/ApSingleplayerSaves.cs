@@ -14,21 +14,7 @@ internal static class ApSingleplayerSaves
     // Set before native setup, whose reload counter writes through the native save manager.
     internal static bool IsHandlingSingleplayerRun => _selected != null;
 
-    private static string CurrentProfileRoot => ProjectSettings.GlobalizePath(
-        $"user://ArchipelagoSingleplayerCheckpoints/profile-{SaveManager.Instance.CurrentProfileId}");
-
-    internal static SingleplayerCheckpointBank Bank => new(CurrentProfileRoot);
-
-    internal static bool DeleteAllLocalCheckpointsForCurrentProfile()
-    {
-        if (IsHandlingSingleplayerRun)
-            throw new InvalidOperationException("Local AP checkpoints cannot be deleted during a run.");
-        if (!Directory.Exists(CurrentProfileRoot))
-            return false;
-
-        Directory.Delete(CurrentProfileRoot, recursive: true);
-        return true;
-    }
+    internal static SingleplayerCheckpointBank Bank => new(ApLocalStorage.Root);
 
     internal static SingleplayerCheckpointBank.Identity CurrentIdentity()
     {
@@ -36,8 +22,7 @@ internal static class ApSingleplayerSaves
             ?? throw new InvalidOperationException("Connect to the AP slot before selecting a checkpoint.");
         if (!ArchipelagoClient.IsConnected || string.IsNullOrWhiteSpace(session.RoomState.Seed))
             throw new InvalidOperationException("The AP slot is not connected.");
-        return new(session.RoomState.Seed, session.ConnectionInfo.Team, session.ConnectionInfo.Slot,
-            CoopSlot.PlayerNumber);
+        return new(session.RoomState.Seed, session.ConnectionInfo.Team, session.ConnectionInfo.Slot);
     }
 
     internal static void BeginNew(string character)
@@ -50,7 +35,7 @@ internal static class ApSingleplayerSaves
     internal static bool CanLoad(string key, string character, bool startOfAct)
     {
         var settings = ArchipelagoClient.Settings;
-        if (settings == null || !settings.Characters.TryGetValue(character, out CharacterConfig? config))
+        if (settings == null || !settings.TryGetCharacterConfig(character, out CharacterConfig? config))
             return false;
         return SingleplayerCheckpointBank.IsAllowed(key,
             startOfAct && settings.APWorldVersion > Constants.VERSION_0_5_3,

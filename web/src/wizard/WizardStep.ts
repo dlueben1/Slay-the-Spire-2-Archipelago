@@ -9,7 +9,8 @@
  * translation, and numeric bounds arrive through semantic names in `optionRanges.ts`.
  */
 
-import { MAX_MODDED_CHARACTERS } from "./CharacterRoster";
+import { isBetaOnlyOption } from "./betaOnlyOptions";
+import { MAX_GENERIC_CHARACTERS } from "./CharacterRoster";
 import { includeFloorChecksTransition } from "./checksTransitions";
 import {
   beKilledTransition,
@@ -18,8 +19,13 @@ import {
   receiveFragmentTransition,
 } from "./deathLinkTransitions";
 import { generatedRange } from "./optionRanges";
-import type { WizardControlDescriptor } from "./QuestionControl";
+import type {
+  WizardControlChoice,
+  WizardControlDescriptor,
+} from "./QuestionControl";
+import { hasSecondSightCopy, SIGHTS, type SightCopies } from "./Sight";
 import type { WizardAnswers } from "./WizardAnswers";
+import { CHALLENGE_OPTION_KEYS } from "./WizardOptionKey";
 
 export interface WizardQuestion {
   id: string;
@@ -35,15 +41,30 @@ export interface WizardQuestion {
 }
 
 /** Answer sections addressable by wizard steps; the player name is document metadata. */
-export type WizardSectionKey = Exclude<keyof WizardAnswers, "playerName">;
+export type WizardSectionKey = Exclude<
+  keyof WizardAnswers,
+  "playerName" | "keptOptions"
+>;
+
+/** Prominent caution shown above a step's questions. */
+export interface WizardStepWarning {
+  title: string;
+  description: string;
+}
 
 export interface WizardStep {
   id: string;
   title: string;
   description?: string;
-  /** Answer section owned by this step's questions; absent for Review. */
+  warning?: WizardStepWarning;
+  /** Answer section owned by this step's questions; absent for Review and combined steps. */
   sectionKey?: WizardSectionKey;
   questions: WizardQuestion[];
+  /**
+   * Smaller steps shown together on this one, each with its own section and component.
+   * The combined step's own `questions` stay empty.
+   */
+  parts?: WizardStep[];
 }
 
 /**
@@ -98,7 +119,7 @@ function usesSharedAscensions(answers: WizardAnswers): boolean {
  */
 function usesShopSanity(answers: WizardAnswers): boolean {
   // Slot counts and pricing have no effect while Shop Sanity is disabled.
-  return answers.checksAndRewards.shop.enabled;
+  return answers.shops.shop.enabled;
 }
 
 /**
@@ -109,7 +130,7 @@ function usesShopSanity(answers: WizardAnswers): boolean {
  */
 function usesFloorChecks(answers: WizardAnswers): boolean {
   // Progressive starter items occupy filler slots that only Floor Checks create.
-  return answers.checksAndRewards.checks.includeFloorChecks;
+  return answers.checks.types.includeFloorChecks;
 }
 
 /**
@@ -123,7 +144,7 @@ function startingEquipmentHelp(answers: WizardAnswers): string | null {
     return null;
   }
 
-  return "Enable Floor Checks in the additional checks section below to use progressive Starting Equipment.";
+  return "Enable Floor Checks above to use progressive Starting Equipment.";
 }
 
 /**
@@ -168,7 +189,7 @@ export const characterSetupStep: WizardStep = {
     {
       id: "modded-characters",
       title: "Setup Modded Characters",
-      description: `Enter each modded character's unique ID so that the Archipelago mod can find them and use them properly in-game. Each generated roster can include up to ${MAX_MODDED_CHARACTERS} modded characters. Larger candidate lists require random selection. Recognised characters use their display names; other selected characters are numbered in table order.`,
+      description: `Enter each modded character's unique ID so that the Archipelago mod can find them and use them properly in-game. Each generated roster can include every predefined character, listed below, and up to ${MAX_GENERIC_CHARACTERS} other modded characters. Larger candidate lists require random selection. Predefined characters use their display names; other selected characters are numbered in table order.`,
       isVisible: hasModdedCharacters,
     },
     {
@@ -202,7 +223,7 @@ export const characterSetupStep: WizardStep = {
       id: "individual-ascensions",
       title: "Per-character settings",
       description:
-        "Configure progressive starter overrides for each character here, alongside individual Ascensions when selected. Global starter settings are under Checks & Rewards.",
+        "Configure progressive starter overrides for each character here, alongside individual Ascensions when selected. Global starter settings are on the Checks step.",
     },
     {
       id: "selection",
@@ -271,10 +292,10 @@ export const characterSetupStep: WizardStep = {
   ],
 };
 
-/** Gameplay Modifiers definition consumed by its component and wizard navigation. */
+/** Run Settings definition consumed by its component and wizard navigation. */
 export const runSetupStep: WizardStep = {
   id: "run",
-  title: "Gameplay Modifiers",
+  title: "Run Settings",
   description:
     "Configure your experience, how Archipelago Rewards are handled, and what gets randomized.",
   sectionKey: "run",
@@ -316,40 +337,42 @@ export const runSetupStep: WizardStep = {
         range: generatedRange("relicRewardsAvailableAnytime"),
       },
     },
-  ],
-};
-
-/** Checks & Rewards definition consumed by its component and navigation. */
-export const checkSetupStep: WizardStep = {
-  id: "checks",
-  title: "Checks & Rewards",
-  description:
-    "Select what locations (checks) and items are enabled and available in your world.",
-  sectionKey: "checksAndRewards",
-  questions: [
     {
-      id: "starting-equipment",
-      title: "Which starting equipment should be progressive?",
+      id: "remove-op-relics",
+      title: "Should overpowered relics be removed?",
       description:
-        "These global defaults require Floor Checks and add two progressive items per enabled character. Override them for individual characters in Character Setup.",
-      help: startingEquipmentHelp,
-      isEnabled: usesFloorChecks,
+        "Some relics are much stronger in Archipelago than in a normal run. Leave both unchecked to keep every relic.",
+      help: "The Archipelago mod decides the exact relics in each category, so the list can change between mod versions.",
       control: {
         kind: "checkbox-grid",
         items: [
           {
-            field: "startingEquipment.progressiveStarterCard",
-            label: "Progressive Starter Card",
+            field: "removeOpRelics.ancient",
+            label: "Ancient Relics",
             description:
-              "Add two items per character that restore, then transform, their compatible special starter card(s). For example, the Ironclad would first unlock Bash, then transform it into Break.",
+              "Remove Pael's Growth and Glitter from Ancient rewards claimed Anytime. Ancient rewards at the start of an act still offer them.",
           },
           {
-            field: "startingEquipment.progressiveStarterRelic",
-            label: "Progressive Starter Relic",
+            field: "removeOpRelics.rare",
+            label: "Rare Relics",
             description:
-              "Add two items per character that restore, then upgrade, their compatible starter relic. For example, the Ironclad would first unlock Burning Blood, then upgrade it to Black Blood.",
+              "Remove Prayer Wheel and White Star from every relic source.",
           },
         ],
+      },
+    },
+    {
+      id: "events-in-any-act",
+      title: "Should events appear in any act?",
+      description:
+        "Normally each event appears only in certain acts. Event fights and rewards are not adjusted for the act you meet them in.",
+      help: "Singleplayer only: multiplayer runs keep the usual events.",
+      control: {
+        kind: "checkbox",
+        field: "eventsInAnyAct",
+        label: "Events in any act",
+        description:
+          "Any event can appear in any act, as long as its other conditions are met.",
       },
     },
     {
@@ -402,6 +425,272 @@ export const checkSetupStep: WizardStep = {
         ],
       },
     },
+  ],
+};
+
+/**
+ * Explains Dread Mode's game-branch requirement while the APWorld still marks it beta-only.
+ *
+ * @returns The note for the question's help area, or nothing once every branch has Dread.
+ */
+function describeDreadModeRequirements(): string | null {
+  return isBetaOnlyOption(CHALLENGE_OPTION_KEYS.dreadMode)
+    ? "Beta branch only. On the game's main branch the mod says so when connecting, and runs are standard runs."
+    : null;
+}
+
+/**
+ * Checks whether the player opted in to challenges.
+ *
+ * @param answers - Current player-facing wizard answers.
+ * @returns Whether the challenge questions should be shown.
+ */
+function usesChallenges(answers: WizardAnswers): boolean {
+  // While the switch is off, the questions are hidden and compile to defaults.
+  return answers.challenges.enabled;
+}
+
+/**
+ * Checks whether any hidden-information challenge has a second Sight item for its bonus.
+ *
+ * @param answers - Current player-facing wizard answers.
+ * @returns Whether the Sight Bonuses question applies.
+ */
+function hasSightBonusCopies(answers: WizardAnswers): boolean {
+  return (
+    usesChallenges(answers) &&
+    SIGHTS.some((sight) => hasSecondSightCopy(answers.challenges, sight))
+  );
+}
+
+/**
+ * Builds the Off / one to four choices of a hidden-information challenge.
+ *
+ * @param itemName - Display name of the challenge's Sight item.
+ * @param offDescription - What the player sees with the challenge off.
+ * @returns Radio choices whose values are `SightCopies`.
+ */
+function sightCopyChoices(
+  itemName: string,
+  offDescription: string,
+): WizardControlChoice[] {
+  return [
+    {
+      label: "Off",
+      description: offDescription,
+      value: "off" satisfies SightCopies,
+    },
+    {
+      label: `One ${itemName}`,
+      description: `Adds one ${itemName} to the item pool.`,
+      value: "one" satisfies SightCopies,
+    },
+    {
+      label: `Two ${itemName}s`,
+      description:
+        "Adds two to the item pool. The first one undoes the challenge, and the second adds its Sight Bonus.",
+      value: "two" satisfies SightCopies,
+    },
+    {
+      label: `Three ${itemName}s`,
+      description:
+        "Adds three, so the first two turn up sooner. The first undoes the challenge, and the second adds its Sight Bonus.",
+      value: "three" satisfies SightCopies,
+    },
+    {
+      label: `Four ${itemName}s`,
+      description:
+        "Adds four, so the first two turn up sooner still. The first undoes the challenge, and the second adds its Sight Bonus.",
+      value: "four" satisfies SightCopies,
+    },
+  ];
+}
+
+/** Challenges definition consumed by its component and wizard navigation. */
+export const challengeSetupStep: WizardStep = {
+  id: "challenges",
+  title: "Challenges",
+  description:
+    "Optional ways to make every run harder, on top of Ascension. Everything here is off by default.",
+  warning: {
+    title: "Only turn these on if you know what you're doing.",
+    description:
+      "Logic doesn't account for any challenge. Each one makes runs harder, and turning on several can make runs too hard to win. Then the checks your seed needs stay out of reach and the seed gets stuck. If you aren't confident, leave every challenge off.",
+  },
+  sectionKey: "challenges",
+  questions: [
+    {
+      // Rendered by ChallengeOptIn.vue, which asks three times before turning challenges on.
+      id: "challenges-enabled",
+    },
+    {
+      id: "run-modifiers",
+      isVisible: usesChallenges,
+      title: "Which run modifiers should apply?",
+      description:
+        "Most leave Act 1 as it is and grow harder in Acts 2 and 3. In multiplayer, the host's modifiers apply to the whole run.",
+    },
+    {
+      id: "enemy-hp-scaling",
+      isVisible: usesChallenges,
+      title: "How much extra max HP should enemies have after Act 1?",
+      description:
+        "Enemies get this much extra max HP in Acts 2 and 3. Stacks with Ascension. In multiplayer, the host's value applies to the whole run.",
+      help: "0% leaves enemy HP unchanged.",
+      control: {
+        kind: "slider",
+        field: "enemyHpScaling",
+        range: generatedRange("enemyHpScaling"),
+        unit: "%",
+        ariaLabel: "Enemy HP scaling percent",
+      },
+    },
+    {
+      id: "enemy-damage-scaling",
+      isVisible: usesChallenges,
+      title: "How much extra damage should enemies deal after Act 1?",
+      description:
+        "Enemies deal this much extra damage in Acts 2 and 3. Stacks with Ascension. In multiplayer, the host's value applies to the whole run.",
+      help: "0% leaves enemy damage unchanged.",
+      control: {
+        kind: "slider",
+        field: "enemyDamageScaling",
+        range: generatedRange("enemyDamageScaling"),
+        unit: "%",
+        ariaLabel: "Enemy damage scaling percent",
+      },
+    },
+    {
+      id: "dread-mode",
+      isVisible: usesChallenges,
+      title: "Should runs be Dread runs?",
+      description:
+        "Dread is a harder game mode from the base game. Each act has a Dominion, an extra combat rule set by that act's boss. Bosses are stronger, and you gain an Ascender's Bane at the start of Act 2 and of Act 3. In multiplayer, the host's setting applies to the whole run.",
+      help: describeDreadModeRequirements,
+      control: {
+        kind: "checkbox",
+        field: "dreadMode",
+        label: "Dread Mode",
+        description:
+          "Your Ascensions and Ascension Down items from Character Setup still apply. The base game only plays Dread at Ascension 10, so turn on all ten Ascensions for the same challenge.",
+      },
+    },
+    {
+      id: "hidden-intents",
+      isVisible: usesChallenges,
+      title: "Should enemy intents be hidden?",
+      description:
+        "Hidden Intents hides enemy intents and the Intent Graph overlay until an Intent Sight is found. Finding one shows intents again, with their numbers, for every character.",
+      control: {
+        kind: "radio",
+        field: "hiddenIntents",
+        choices: sightCopyChoices(
+          "Intent Sight",
+          "Intents are shown as normal.",
+        ),
+      },
+    },
+    {
+      id: "hidden-health",
+      isVisible: usesChallenges,
+      title: "Should health be hidden?",
+      description:
+        "Hidden Health keeps health bars full and shows no HP numbers until a Health Sight is found. Block is still shown. Finding one shows everyone's health again, for every character.",
+      control: {
+        kind: "radio",
+        field: "hiddenHealth",
+        choices: sightCopyChoices("Health Sight", "Health is shown as normal."),
+      },
+    },
+    {
+      id: "hidden-piles",
+      isVisible: usesChallenges,
+      title: "Should your combat piles be hidden?",
+      description:
+        'Hidden Piles shows "?" on the draw, discard and exhaust piles and stops them opening until a Pile Sight is found. Finding one shows the piles again, for every character.',
+      control: {
+        kind: "radio",
+        field: "hiddenPiles",
+        choices: sightCopyChoices("Pile Sight", "Piles are shown as normal."),
+      },
+    },
+    {
+      id: "hidden-map",
+      isVisible: usesChallenges,
+      title: "Should the map be hidden?",
+      description:
+        "Hidden Map only shows the rooms you can move to next. Rooms further ahead show a closed eye until a Map Sight is found. Finding one shows the whole map again, for every character.",
+      control: {
+        kind: "radio",
+        field: "hiddenMap",
+        choices: sightCopyChoices("Map Sight", "The map is shown as normal."),
+      },
+    },
+    {
+      id: "hidden-cards",
+      isVisible: usesChallenges,
+      title: "Should cards be hidden?",
+      description:
+        "Hidden Cards makes every card unknown: its name, text and energy cost are hidden, its art is blurred and it shows no tooltips, until a Card Sight is found. Finding one shows cards again, for every character.",
+      control: {
+        kind: "radio",
+        field: "hiddenCards",
+        choices: sightCopyChoices("Card Sight", "Cards are shown as normal."),
+      },
+    },
+    {
+      id: "hidden-relics",
+      isVisible: usesChallenges,
+      title: "Should relics be hidden?",
+      description:
+        "Hidden Relics makes every relic unknown: its name and text are hidden, and it works without showing it: no counters, flashes or their sounds, no glow when ready and no grey when used, until a Relic Sight is found. Finding one shows relics again, for every character.",
+      control: {
+        kind: "radio",
+        field: "hiddenRelics",
+        choices: sightCopyChoices("Relic Sight", "Relics are shown as normal."),
+      },
+    },
+    {
+      id: "sight-bonuses",
+      isVisible: hasSightBonusCopies,
+      title: "Which Sights should add a bonus with their second copy?",
+      description:
+        "A Sight left unticked stops at undoing its challenge, however many copies there are. The Intent, Health, Card and Relic Sight bonuses are singleplayer only.",
+      control: {
+        kind: "checkbox-grid",
+        items: SIGHTS.map((sight) => ({
+          field: `sightBonuses.${sight.bonusField}`,
+          label: sight.bonusLabel,
+          description: sight.bonusEffect,
+        })),
+      },
+    },
+    {
+      id: "strict-card-rewards",
+      isVisible: usesChallenges,
+      title: "Should Card Rewards in the AP Menu be picked one at a time?",
+      description:
+        "Normally you can look through every Card Reward in the AP Menu before picking.",
+      help: "The mod's own settings can override this.",
+      control: {
+        kind: "checkbox",
+        field: "strictCardRewards",
+        label: "Strict Card Rewards",
+        description:
+          "Opening a Card Reward reveals its cards and locks the others until you take a card or discard it, like a card reward after a fight.",
+      },
+    },
+  ],
+};
+
+/** Checks definition consumed by its component and navigation. */
+export const checkSetupStep: WizardStep = {
+  id: "checks",
+  title: "Checks",
+  description:
+    "Select which locations (checks) are in your world and which rewards are shuffled into the Multiworld.",
+  sectionKey: "checks",
+  questions: [
     {
       id: "check-types",
       title: "Which additional checks and rewards should be shuffled?",
@@ -412,13 +701,13 @@ export const checkSetupStep: WizardStep = {
         // compiler assignment, and generated schema entry have also been added.
         items: [
           {
-            field: "checks.neowSanity",
+            field: "types.neowSanity",
             label: "Neow's Blessing",
             description:
               "Include Neow's Blessing as a third Progressive Ancient reward.",
           },
           {
-            field: "checks.includeFloorChecks",
+            field: "types.includeFloorChecks",
             label: "Floor Checks",
             description:
               "Make reaching new floors into locations and add helpful filler items to fill them.",
@@ -426,35 +715,76 @@ export const checkSetupStep: WizardStep = {
             applyChange: includeFloorChecksTransition,
           },
           {
-            field: "checks.campfireSanity",
+            field: "types.campfireSanity",
             label: "Campfire Actions",
             description:
               "Shuffle Progressive Rest and Smith items into the Multiworld, per character, per Act.",
           },
           {
-            field: "checks.goldSanity",
+            field: "types.goldSanity",
             label: "Gold Rewards",
             description:
               "Move combat, elite, and boss gold rewards into the Multiworld.",
           },
           {
-            field: "checks.potionSanity",
+            field: "types.potionSanity",
             label: "Potion Drops",
             description: "Move potion rewards into the Multiworld.",
           },
           {
-            field: "checks.shuffleAllCards",
+            field: "types.shuffleAllCards",
             label: "All Card Rewards",
             description:
               "Shuffle every card reward instead of the default behavior of shuffling every other reward.",
           },
+        ],
+      },
+    },
+    {
+      id: "starting-equipment",
+      title: "Which starting equipment should be progressive?",
+      description:
+        "These global defaults require Floor Checks and add two progressive items per enabled character. Override them for individual characters in Character Setup.",
+      help: startingEquipmentHelp,
+      isEnabled: usesFloorChecks,
+      control: {
+        kind: "checkbox-grid",
+        items: [
           {
-            field: "shop.enabled",
-            label: "Shop Slots",
+            field: "startingEquipment.progressiveStarterCard",
+            label: "Progressive Starter Card",
             description:
-              "Parts of the Shop can be shuffled into the Multiworld.",
+              "Add two items per character that restore, then transform, their compatible special starter card(s). For example, the Ironclad would first unlock Bash, then transform it into Break.",
+          },
+          {
+            field: "startingEquipment.progressiveStarterRelic",
+            label: "Progressive Starter Relic",
+            description:
+              "Add two items per character that restore, then upgrade, their compatible starter relic. For example, the Ironclad would first unlock Burning Blood, then upgrade it to Black Blood.",
           },
         ],
+      },
+    },
+  ],
+};
+
+/** Shops definition consumed by its component and navigation. */
+export const shopSetupStep: WizardStep = {
+  id: "shops",
+  title: "Shops",
+  description:
+    "Choose whether shop slots become checks, and change what shops sell.",
+  sectionKey: "shops",
+  questions: [
+    {
+      id: "shop-sanity",
+      title: "Should parts of the shop be shuffled into the Multiworld?",
+      control: {
+        kind: "checkbox",
+        field: "shop.enabled",
+        label: "Shop Slots",
+        description:
+          "Shuffled slots move to a separate Archipelago shop page as checks you buy. Items in the Multiworld unlock them again on the normal shop page.",
       },
     },
     {
@@ -534,6 +864,73 @@ export const checkSetupStep: WizardStep = {
       },
     },
     {
+      id: "random-shop-cards",
+      title: "Do you want to customize which cards shops sell?",
+      description:
+        "By default, a shop sells 2 Attacks, 2 Skills, a Power and 2 colorless cards.",
+      help: "Works with or without Shop Slots.",
+      control: {
+        kind: "checkbox",
+        field: "shopCards.enabled",
+        label: "Custom Shop Cards",
+        description:
+          "Choose how often each of the 7 card slots holds each kind of card.",
+      },
+    },
+    {
+      id: "shop-card-weights",
+      title: "How often should a shop card slot hold each kind of card?",
+      isVisible: (answers) => answers.shops.shopCards.enabled,
+    },
+    {
+      id: "random-shop-relics",
+      title: "Do you want to customize which relics shops sell?",
+      description: "By default, a shop sells 2 random relics and a Shop relic.",
+      help: "Works with or without Shop Slots.",
+      control: {
+        kind: "checkbox",
+        field: "shopRelics.enabled",
+        label: "Custom Shop Relics",
+        description:
+          "Choose how often each of the 3 relic slots holds each kind of relic. Event and Ancient relics can appear.",
+      },
+    },
+    {
+      id: "shop-relic-weights",
+      title: "How often should a shop relic slot hold each kind of relic?",
+      isVisible: (answers) => answers.shops.shopRelics.enabled,
+    },
+    {
+      id: "random-shop-potions",
+      title: "Do you want to customize which potions shops sell?",
+      description:
+        "By default, a shop sells 3 random potions from your class and the shared pool.",
+      help: "Works with or without Shop Slots.",
+      control: {
+        kind: "checkbox",
+        field: "shopPotions.enabled",
+        label: "Custom Shop Potions",
+        description:
+          "Choose how often each of the 3 potion slots holds each kind of potion. Potions from other classes and from events can appear.",
+      },
+    },
+    {
+      id: "shop-potion-weights",
+      title: "How often should a shop potion slot hold each kind of potion?",
+      isVisible: (answers) => answers.shops.shopPotions.enabled,
+    },
+  ],
+};
+
+/** Item Pool definition consumed by its component and navigation. */
+export const itemPoolSetupStep: WizardStep = {
+  id: "item-pool",
+  title: "Item Pool",
+  description:
+    "Choose what fills the item pool besides the items your world needs: Bonus Items, filler and traps.",
+  sectionKey: "itemPool",
+  questions: [
+    {
       id: "bonus-items",
       title: "Which Bonus Items should be added to the item pool?",
       description: "Additional Items to help you Slay the Spire.",
@@ -557,7 +954,38 @@ export const checkSetupStep: WizardStep = {
     {
       id: "trap-weights",
       title: "Which traps should appear?",
-      isVisible: (answers) => answers.checksAndRewards.traps.chance > 0,
+      isVisible: (answers) => answers.itemPool.traps.chance > 0,
+    },
+  ],
+};
+
+/** Boons definition consumed by its component and navigation. */
+export const boonSetupStep: WizardStep = {
+  id: "boons",
+  title: "Boons",
+  description:
+    "Optional ways to make every run easier. Logic doesn't account for any of them. Everything here is off by default.",
+  sectionKey: "boons",
+  questions: [
+    {
+      id: "boons",
+      title: "Which Boons should apply?",
+      description:
+        "Boons marked Solo only are left out of multiplayer runs. In multiplayer, the host's Boons apply to the whole run.",
+    },
+    {
+      id: "blitz-merchant-chance",
+      title: "How many shops should be Blitz merchants?",
+      description:
+        "A Blitz merchant comes from the base game's Blitz mode. It replaces a shop's cards, relics and potions with six offers, such as a rare card reward, a relic, a card removal or a full heal with extra max HP (some come with a curse), and you take three of them for free. Shop Sanity checks are still sold on the shop's AP page.",
+      help: "This is very strong, and logic doesn't account for it at all. Three free picks are worth far more than a normal shop visit, and at high percentages there is little left to spend gold on, so gold becomes much less useful. Pair it with harder settings from the Challenges step, such as Run Modifiers, Enemy HP and Damage Scaling, or Dread Mode. 0% leaves every shop normal. In multiplayer, the host's chance applies to everyone. Beta branch only: on the game's main branch every shop stays normal.",
+      control: {
+        kind: "slider",
+        field: "blitzMerchantChance",
+        range: generatedRange("blitzMerchantChance"),
+        unit: "%",
+        ariaLabel: "Blitz merchant chance percent",
+      },
     },
   ],
 };
@@ -640,27 +1068,9 @@ export const deathLinkSetupStep: WizardStep = {
 export const progressionSetupStep: WizardStep = {
   id: "progression",
   title: "Progression",
-  description:
-    "Choose generation logic, progression balancing, and accessibility.",
+  description: "Choose progression balancing and accessibility.",
   sectionKey: "progression",
   questions: [
-    {
-      id: "use-new-logic",
-      control: {
-        kind: "checkbox",
-        field: "useNewLogic",
-        label: "Use New Logic",
-        description:
-          "Allow extra cards and relics to make up for missing progression items. Disable to use the previous logic.",
-      },
-      help: (answers) =>
-        answers.progression.useNewLogic &&
-        !answers.checksAndRewards.checks.includeFloorChecks &&
-        !answers.checksAndRewards.checks.goldSanity &&
-        !answers.checksAndRewards.checks.potionSanity
-          ? "Previous logic will still be used because Floor Checks, Gold Rewards, and Potion Drops are all disabled."
-          : "Previous logic is used automatically when Floor Checks, Gold Rewards, and Potion Drops are all disabled.",
-    },
     {
       id: "progression-balancing",
       title: "How strongly should Archipelago balance progression items?",
@@ -708,13 +1118,60 @@ export const progressionSetupStep: WizardStep = {
   ],
 };
 
+/** Starting items, starting hints, and where items may be placed. */
+export const itemsSetupStep: WizardStep = {
+  id: "items",
+  title: "Items & Hints",
+  description:
+    "Choose items to start with, items to know the location of from the start, and items to keep in or out of your world.",
+  sectionKey: "items",
+  questions: [
+    {
+      id: "starting-inventory",
+      title: "Which items should you start with?",
+      description:
+        "You receive these when you connect, on top of the items in the Multiworld. Modded characters without a predefined name aren't listed, because their item names depend on the roster Archipelago generates.",
+    },
+    {
+      id: "start-hints",
+      title: "Which items should be hinted from the start?",
+      description:
+        "Archipelago tells you where these items are as soon as the game starts, without spending hint points.",
+    },
+    {
+      id: "local-items",
+      title: "Which items should stay in your own world?",
+      description: "These items are only placed at your own locations.",
+    },
+    {
+      id: "non-local-items",
+      title: "Which items should go to other players' worlds?",
+      description:
+        "These items are only placed at other players' locations. An item can't be in both lists.",
+    },
+  ],
+};
+
+/** Death Link, Progression, and Items & Hints, shown together because each is short. */
+export const multiworldSetupStep: WizardStep = {
+  id: "multiworld",
+  title: "Multiworld",
+  description:
+    "Choose whether deaths are shared with other players, how Archipelago places your items, and what you start with.",
+  questions: [],
+  parts: [deathLinkSetupStep, progressionSetupStep, itemsSetupStep],
+};
+
 /** Declarative step and question ordering for the guided wizard. */
 export const wizardSteps: WizardStep[] = [
   characterSetupStep,
   runSetupStep,
   checkSetupStep,
-  deathLinkSetupStep,
-  progressionSetupStep,
+  shopSetupStep,
+  itemPoolSetupStep,
+  boonSetupStep,
+  challengeSetupStep,
+  multiworldSetupStep,
   {
     id: "review",
     title: "Review",

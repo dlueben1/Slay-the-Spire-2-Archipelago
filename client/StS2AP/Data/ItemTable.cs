@@ -62,6 +62,11 @@
             /// unlocks the Nth entry configured in the YAML's bonus_items list.
             /// IDs match universal_bonus_items in items.py.
             BonusWaxRelic = 600,
+            BonusRelic = 601,
+            BonusEnchantment = 602,
+            BonusEnchantedCards = 603,
+            BonusMaxHp = 604,
+            BonusCards = 605,
 
             // Universal traps; IDs match trap_item_table in the APWorld.
             WeakTrap = 700,
@@ -73,6 +78,16 @@
             ConfusedTrap = 706,
             SlothTrap = 707,
             DazedTrap = 708,
+            
+            /// ── Challenge items (universal / character-agnostic) ───────────────────────
+            /// Undo a challenge option; each copy is a permanent unlock for every character.
+            /// IDs match challenge_item_table in items.py.
+            IntentSight = 800,
+            HealthSight = 801,
+            PileSight = 802,
+            MapSight = 803,
+            CardSight = 804,
+            RelicSight = 805,
         }
 
         public static Dictionary<int, string> Items = new Dictionary<int, string>
@@ -87,7 +102,7 @@
             { 7, "Progressive Rest" },
             { 8, "Progressive Smith" },
             { 9, "Shop Card Slot" },
-            { 10, "Neutral Shop Card Slot" },
+            { 10, "Shop Colorless Card Slot" },
             { 11, "Shop Relic Slot" },
             { 12, "Shop Potion Slot" },
             { 13, "Progressive Shop Remove" },
@@ -123,6 +138,11 @@
             { 512, "Thorns" },
             { 513, "Artifact" },
             { 600, "Bonus Wax Relic" },
+            { 601, "Bonus Relic" },
+            { 602, "Bonus Enchantment" },
+            { 603, "Bonus Enchanted Cards" },
+            { 604, "Bonus Max HP" },
+            { 605, "Bonus Cards" },
             { 700, "Weak Trap" },
             { 701, "Frail Trap" },
             { 702, "Vulnerable Trap" },
@@ -132,6 +152,12 @@
             { 706, "Confused Trap" },
             { 707, "Sloth Trap" },
             { 708, "Dazed Trap" },
+            { 800, "Intent Sight" },
+            { 801, "Health Sight" },
+            { 802, "Pile Sight" },
+            { 803, "Map Sight" },
+            { 804, "Card Sight" },
+            { 805, "Relic Sight" },
         };
 
         /// <summary>
@@ -147,7 +173,7 @@
         };
 
         public static bool IsUniversalTrap(long itemId) =>
-            (APItem)ArchipelagoIdCodec.WithoutPlayer(itemId) is
+            (APItem)itemId is
                 APItem.WeakTrap or APItem.FrailTrap or APItem.VulnerableTrap or APItem.NoDrawTrap
                 or APItem.TangledTrap or APItem.VakuuTrap or APItem.ConfusedTrap or APItem.SlothTrap
                 or APItem.DazedTrap;
@@ -155,7 +181,7 @@
         /// <summary>Whether an item ID is one of the universal ephemeral combat buffs.</summary>
         public static bool IsUniversalCombatBuff(long itemId)
         {
-            return (APItem)ArchipelagoIdCodec.WithoutPlayer(itemId) switch
+            return (APItem)itemId switch
             {
                 APItem.FreeAttack or APItem.FreePower or APItem.FreeSkill
                     or APItem.Dexterity or APItem.Strength or APItem.Plating
@@ -179,7 +205,7 @@
         };
 
         public static bool IsMultiplayerBuffGoldFallback(long itemId) =>
-            MultiplayerBuffGoldFallbacks.Contains((APItem)ArchipelagoIdCodec.WithoutPlayer(itemId));
+            MultiplayerBuffGoldFallbacks.Contains((APItem)itemId);
 
         public static bool CanBePickedUp(this APItem item)
         {
@@ -214,6 +240,11 @@
                     return false;
               case APItem.Potion:
               case APItem.BonusWaxRelic:
+              case APItem.BonusRelic:
+              case APItem.BonusEnchantment:
+              case APItem.BonusEnchantedCards:
+              case APItem.BonusMaxHp:
+              case APItem.BonusCards:
                     return true;
               case APItem.SwarmingElites:
               case APItem.WearyTraveler:

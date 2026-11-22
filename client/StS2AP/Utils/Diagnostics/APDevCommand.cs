@@ -13,17 +13,17 @@ namespace StS2AP.Utils
         public override string CmdName => "ap";
 
         public override string Args =>
-            "report | deathlink | !command";
+            "report | deathlink | characters | !command";
 
         public override string Description =>
-            "AP report, DeathLink status, and AP server commands";
+            "AP report, DeathLink status, modded character IDs, and AP server commands";
 
         public override bool IsNetworked => false;
 
         public override CompletionResult GetArgumentCompletions(Player? player, string[] args)
         {
             if (args.Length <= 1)
-                return CompleteArgument(["report", "deathlink"], [], args.FirstOrDefault() ?? "", CompletionType.Subcommand);
+                return CompleteArgument(["report", "deathlink", "characters"], [], args.FirstOrDefault() ?? "", CompletionType.Subcommand);
             return base.GetArgumentCompletions(player, args);
         }
 
@@ -31,7 +31,14 @@ namespace StS2AP.Utils
         {
             if (args.Length == 0)
             {
-                return new CmdResult(false, "Usage: ap report | ap deathlink | ap !command");
+                return new CmdResult(false, "Usage: ap report | ap deathlink | ap characters | ap !command");
+            }
+
+            if (args[0].Equals("characters", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.Length != 1)
+                    return new CmdResult(false, "Usage: ap characters (lists modded character IDs and copies them as YAML)");
+                return ListModdedCharacters();
             }
 
             if (args[0].Equals("report", StringComparison.OrdinalIgnoreCase))
@@ -59,7 +66,20 @@ namespace StS2AP.Utils
                 return new CmdResult(true);
             }
 
-            return new CmdResult(false, "Unknown AP command. Use ap report, ap deathlink, or ap !command.");
+            return new CmdResult(false, "Unknown AP command. Use ap report, ap deathlink, ap characters, or ap !command.");
+        }
+
+        private static CmdResult ListModdedCharacters()
+        {
+            IReadOnlyList<string> ids = InstalledCharacterIds.GetModdedIds();
+            if (ids.Count == 0)
+                return new CmdResult(false, "No modded characters are installed.");
+
+            bool copied = InstalledCharacterIds.TryCopyToClipboard(out string copyMessage);
+            string list = string.Join("\n", ids);
+            // Also log the list so it can be recovered from godot.log if the clipboard is unavailable.
+            LogUtility.Info($"Installed modded character IDs:\n{list}");
+            return new CmdResult(copied, $"{list}\n{copyMessage}");
         }
 
         private static string GetDeathLinkStatus(Player? issuingPlayer)

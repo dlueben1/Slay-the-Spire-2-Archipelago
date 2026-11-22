@@ -9,7 +9,7 @@
 import { describe, expect, it } from "vitest";
 import { optionCatalog } from "../../generated/optionCatalog";
 import { createDefaultFillerAnswers } from "../FillerItem";
-import { getGuidedOptionKeys } from "../GuidedOption";
+import { getGuidedOptionKeys, selectGuidedOptions } from "../GuidedOption";
 import { createDefaultWizardAnswers } from "../WizardAnswers";
 import {
   ANCIENT_OPTION_KEYS,
@@ -23,9 +23,18 @@ import {
 import {
   checkSetupStep,
   deathLinkSetupStep,
+  itemPoolSetupStep,
+  runSetupStep,
+  shopSetupStep,
   getVisibleQuestionIds,
 } from "../WizardStep";
 import { compileWizardAnswers } from "../compiler/compileWizardAnswers";
+import {
+  summarizeRunAnswers,
+  summarizeShopCardAnswers,
+  summarizeShopPotionAnswers,
+  summarizeShopRelicAnswers,
+} from "../review";
 
 /**
  * Creates complete schema-derived answers for gameplay-section tests.
@@ -76,18 +85,22 @@ function compilesConfiguredGameplaySections(): void {
   const answers = createTestAnswers();
   answers.run = {
     relicRewardsAvailableAnytime: 7,
+    removeOpRelics: { ancient: true, rare: true },
     releaseOnVictory: false,
+    eventsInAnyAct: true,
     seeded: true,
+    ancients: answers.run.ancients,
   };
-  answers.checksAndRewards.startingEquipment = {
+  answers.boons.blitzMerchantChance = 25;
+  answers.checks.startingEquipment = {
     progressiveStarterCard: true,
     progressiveStarterRelic: true,
   };
-  answers.checksAndRewards.ancients = {
+  answers.run.ancients = {
     relicLocation: "start_of_act",
     relicPool: "true_chaos",
   };
-  answers.checksAndRewards.checks = {
+  answers.checks.types = {
     neowSanity: true,
     includeFloorChecks: true,
     campfireSanity: true,
@@ -96,11 +109,10 @@ function compilesConfiguredGameplaySections(): void {
     shuffleAllCards: true,
   };
   answers.progression = {
-    useNewLogic: true,
     progressionBalancing: 99,
     accessibility: "minimal",
   };
-  answers.checksAndRewards.shop = {
+  answers.shops.shop = {
     enabled: true,
     cardSlots: 5,
     neutralCardSlots: 2,
@@ -108,6 +120,19 @@ function compilesConfiguredGameplaySections(): void {
     potionSlots: 3,
     removeSlots: true,
     costs: "Tiered",
+  };
+  answers.shops.shopCards = {
+    enabled: true,
+    weights: {
+      attack: 0,
+      skill: 1,
+      power: 2,
+      common: 3,
+      uncommon: 0,
+      rare: 3,
+      colorless: 1,
+      event: 2,
+    },
   };
   answers.deathLink = {
     enabled: true,
@@ -124,9 +149,18 @@ function compilesConfiguredGameplaySections(): void {
   expect(options.ancient_relic_location).toBe("start_of_act");
   expect(options.ancient_relic_pool).toBe("true_chaos");
   expect(options.relic_rewards_available_anytime).toBe(7);
+  expect(options.remove_op_relics).toEqual(["Ancient", "Rare"]);
   expect(options.release_on_victory).toBe(false);
+  expect(options.events_in_any_act).toBe(true);
   expect(options.neow_sanity).toBe(true);
   expect(options.seeded).toBe(true);
+  expect(options.random_shop_cards).toBe(true);
+  expect(options.shop_attack_weight).toBe("none");
+  expect(options.shop_skill_weight).toBe("low");
+  expect(options.shop_power_weight).toBe("medium");
+  expect(options.shop_rare_weight).toBe("high");
+  expect(options.shop_colorless_weight).toBe("low");
+  expect(options.shop_event_weight).toBe("medium");
   expect(options.progression_balancing).toBe(99);
   expect(options.accessibility).toBe("minimal");
   expect(options.include_floor_checks).toBe(true);
@@ -149,6 +183,108 @@ function compilesConfiguredGameplaySections(): void {
 }
 
 /**
+ * Verifies Random Shop Cards weights reach the YAML only while the switch is on.
+ *
+ * @returns Nothing; Vitest records assertion failures.
+ */
+function showsShopCardWeightsOnlyWhenRandom(): void {
+  const answers = createTestAnswers();
+
+  const vanilla = selectGuidedOptions(
+    compileWizardAnswers(answers, optionCatalog),
+  );
+  expect(vanilla.random_shop_cards).toBe(false);
+  expect(vanilla).not.toHaveProperty("shop_rare_weight");
+  expect(summarizeShopCardAnswers(answers.shops.shopCards)).toBe(
+    "Shops sell their usual cards.",
+  );
+
+  answers.shops.shopCards.enabled = true;
+  answers.shops.shopCards.weights.attack = 0;
+  const random = selectGuidedOptions(
+    compileWizardAnswers(answers, optionCatalog),
+  );
+  expect(random.random_shop_cards).toBe(true);
+  expect(random.shop_attack_weight).toBe("none");
+  expect(random.shop_rare_weight).toBe("medium");
+  expect(summarizeShopCardAnswers(answers.shops.shopCards)).toBe(
+    "Each shop card slot holds a random kind of card: Skills, Powers, Commons, Uncommons, Rares, colorless cards, Event cards.",
+  );
+}
+
+/**
+ * Verifies relic and potion weights reach the YAML only while their own switch is on.
+ *
+ * @returns Nothing; Vitest records assertion failures.
+ */
+function showsShopStockWeightsOnlyWhenRandom(): void {
+  const answers = createTestAnswers();
+  const { shopRelics, shopPotions } = answers.shops;
+
+  const vanilla = selectGuidedOptions(
+    compileWizardAnswers(answers, optionCatalog),
+  );
+  expect(vanilla.random_shop_relics).toBe(false);
+  expect(vanilla.random_shop_potions).toBe(false);
+  expect(vanilla).not.toHaveProperty("shop_relic_ancient_weight");
+  expect(vanilla).not.toHaveProperty("shop_potion_event_weight");
+  expect(summarizeShopRelicAnswers(shopRelics)).toBe(
+    "Shops sell their usual relics.",
+  );
+  expect(summarizeShopPotionAnswers(shopPotions)).toBe(
+    "Shops sell their usual potions.",
+  );
+
+  // Only the relic switch: the potion weights must stay out of the YAML.
+  shopRelics.enabled = true;
+  shopRelics.weights.common = 0;
+  shopRelics.weights.ancient = 3;
+  const relicsOnly = selectGuidedOptions(
+    compileWizardAnswers(answers, optionCatalog),
+  );
+  expect(relicsOnly.random_shop_relics).toBe(true);
+  expect(relicsOnly.shop_relic_common_weight).toBe("none");
+  expect(relicsOnly.shop_relic_uncommon_weight).toBe("medium");
+  expect(relicsOnly.shop_relic_event_weight).toBe("low");
+  expect(relicsOnly.shop_relic_ancient_weight).toBe("high");
+  expect(relicsOnly).not.toHaveProperty("shop_potion_event_weight");
+  expect(summarizeShopRelicAnswers(shopRelics)).toBe(
+    "Each shop relic slot holds a random kind of relic: Uncommons, Rares, Shop relics, Event relics, Ancient relics.",
+  );
+
+  shopPotions.enabled = true;
+  shopPotions.weights.otherClass = 3;
+  const both = selectGuidedOptions(
+    compileWizardAnswers(answers, optionCatalog),
+  );
+  expect(both.random_shop_potions).toBe(true);
+  expect(both.shop_potion_other_class_weight).toBe("high");
+  expect(both.shop_potion_event_weight).toBe("low");
+  expect(summarizeShopPotionAnswers(shopPotions)).toBe(
+    "Each shop potion slot holds a random kind of potion: Commons, Uncommons, Rares, other classes' potions, Event potions.",
+  );
+}
+
+/**
+ * Verifies each overpowered-relic checkbox maps to exactly its own category.
+ *
+ * @returns Nothing; Vitest records assertion failures.
+ */
+function compilesSingleOpRelicCategory(): void {
+  // Remove only the Rare category so the Ancient checkbox is proven independent.
+  const answers = createTestAnswers();
+  answers.run.removeOpRelics = { ancient: false, rare: true };
+
+  // Compile through the same boundary used by Review and YAML generation.
+  const options = compileWizardAnswers(answers, optionCatalog);
+
+  expect(options.remove_op_relics).toEqual(["Rare"]);
+  expect(summarizeRunAnswers(answers.run)).toContain(
+    "Overpowered Rare relics are removed.",
+  );
+}
+
+/**
  * Verifies progressive Starting Equipment cannot outlive its Floor Checks budget.
  *
  * @returns Nothing; Vitest records assertion failures.
@@ -156,9 +292,9 @@ function compilesConfiguredGameplaySections(): void {
 function disablesStartingEquipmentWithoutFloorChecks(): void {
   // Preserve deliberately stale enabled answers to exercise compiler normalization.
   const answers = createTestAnswers();
-  answers.checksAndRewards.checks.includeFloorChecks = false;
-  answers.checksAndRewards.startingEquipment.progressiveStarterCard = true;
-  answers.checksAndRewards.startingEquipment.progressiveStarterRelic = true;
+  answers.checks.types.includeFloorChecks = false;
+  answers.checks.startingEquipment.progressiveStarterCard = true;
+  answers.checks.startingEquipment.progressiveStarterRelic = true;
 
   // Compile through the same boundary used by Review and YAML generation.
   const options = compileWizardAnswers(answers, optionCatalog);
@@ -240,12 +376,12 @@ function rejectsDeathLinkWithoutReceivedEffect(): void {
 function rejectsEmptyEnabledShop(): void {
   // Match the contradictory state that the Python world would otherwise disable.
   const answers = createTestAnswers();
-  answers.checksAndRewards.shop.enabled = true;
-  answers.checksAndRewards.shop.cardSlots = 0;
-  answers.checksAndRewards.shop.neutralCardSlots = 0;
-  answers.checksAndRewards.shop.relicSlots = 0;
-  answers.checksAndRewards.shop.potionSlots = 0;
-  answers.checksAndRewards.shop.removeSlots = false;
+  answers.shops.shop.enabled = true;
+  answers.shops.shop.cardSlots = 0;
+  answers.shops.shop.neutralCardSlots = 0;
+  answers.shops.shop.relicSlots = 0;
+  answers.shops.shop.potionSlots = 0;
+  answers.shops.shop.removeSlots = false;
 
   /** Compiles the deliberately empty enabled shop. */
   function compileEmptyShop(): void {
@@ -298,13 +434,30 @@ function rejectsFractionalRangeAnswers(): void {
  * @returns Nothing; Vitest records assertion failures.
  */
 function revealsDependentGameplayQuestions(): void {
-  // Defaults disable both sections, leaving only their controlling questions visible.
+  // With both sections off, only their controlling questions are visible.
   const answers = createTestAnswers();
-  expect(getVisibleQuestionIds(checkSetupStep, answers)).toEqual([
-    "starting-equipment",
+  answers.shops.shop.enabled = false;
+  answers.deathLink.enabled = false;
+  expect(getVisibleQuestionIds(runSetupStep, answers)).toEqual([
+    "seeded",
+    "release-on-victory",
+    "relic-rewards-available-anytime",
+    "remove-op-relics",
+    "events-in-any-act",
     "ancient-location",
     "ancient-pool",
+  ]);
+  expect(getVisibleQuestionIds(checkSetupStep, answers)).toEqual([
     "check-types",
+    "starting-equipment",
+  ]);
+  expect(getVisibleQuestionIds(shopSetupStep, answers)).toEqual([
+    "shop-sanity",
+    "random-shop-cards",
+    "random-shop-relics",
+    "random-shop-potions",
+  ]);
+  expect(getVisibleQuestionIds(itemPoolSetupStep, answers)).toEqual([
     "bonus-items",
     "filler-weights",
     "trap-chance",
@@ -314,19 +467,22 @@ function revealsDependentGameplayQuestions(): void {
   ]);
 
   // Enabling each section should reveal every dependent configuration question.
-  answers.checksAndRewards.shop.enabled = true;
+  answers.shops.shop.enabled = true;
+  answers.shops.shopCards.enabled = true;
+  answers.shops.shopRelics.enabled = true;
+  answers.shops.shopPotions.enabled = true;
   answers.deathLink.enabled = true;
-  expect(getVisibleQuestionIds(checkSetupStep, answers)).toEqual([
-    "starting-equipment",
-    "ancient-location",
-    "ancient-pool",
-    "check-types",
+  expect(getVisibleQuestionIds(shopSetupStep, answers)).toEqual([
+    "shop-sanity",
     "shop-slots",
     "shop-removal",
     "shop-costs",
-    "bonus-items",
-    "filler-weights",
-    "trap-chance",
+    "random-shop-cards",
+    "shop-card-weights",
+    "random-shop-relics",
+    "shop-relic-weights",
+    "random-shop-potions",
+    "shop-potion-weights",
   ]);
   expect(getVisibleQuestionIds(deathLinkSetupStep, answers)).toEqual([
     "death-link-enabled",
@@ -405,6 +561,18 @@ function coversEveryGameSpecificOption(): void {
 function registerGameplayCompilerTests(): void {
   // Cover default fidelity, explicit mappings, dependencies, and key ownership.
   it("round-trips generated defaults", compilesGeneratedGameplayDefaults);
+  it(
+    "compiles one overpowered-relic category on its own",
+    compilesSingleOpRelicCategory,
+  );
+  it(
+    "shows shop card weights only with Random Shop Cards",
+    showsShopCardWeightsOnlyWhenRandom,
+  );
+  it(
+    "shows relic and potion weights only with their own switch",
+    showsShopStockWeightsOnlyWhenRandom,
+  );
   it(
     "compiles configured gameplay sections",
     compilesConfiguredGameplaySections,

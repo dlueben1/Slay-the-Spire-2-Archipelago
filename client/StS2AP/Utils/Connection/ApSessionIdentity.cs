@@ -18,7 +18,6 @@ internal sealed record ApSessionIdentity
     public string RoomSeed => Slot.RoomSeed;
     public int ApTeamId => Slot.ApTeamId;
     public int ApSlotId => Slot.ApSlotId;
-    public int PlayerNumber => Slot.PlayerNumber;
 
     private ApSessionIdentity(string serverAuthority, ApSlotIdentity slot)
     {
@@ -30,8 +29,7 @@ internal sealed record ApSessionIdentity
         string serverAddress,
         string roomSeed,
         int apTeamId,
-        int apSlotId,
-        int playerNumber = 1
+        int apSlotId
     )
     {
         if (string.IsNullOrWhiteSpace(serverAddress))
@@ -47,7 +45,7 @@ internal sealed record ApSessionIdentity
             throw new ArgumentException(
                 "The AP server address is unavailable.", nameof(serverAddress));
         }
-        return new ApSessionIdentity(authority, ApSlotIdentity.Create(roomSeed, apTeamId, apSlotId, playerNumber));
+        return new ApSessionIdentity(authority, ApSlotIdentity.Create(roomSeed, apTeamId, apSlotId));
     }
 
     /// <summary>
@@ -59,8 +57,6 @@ internal sealed record ApSessionIdentity
         string canonical = FormattableString.Invariant(
             $"{ServerAuthority.Length}:{ServerAuthority}|{RoomSeed.Length}:{RoomSeed}|{ApTeamId}|{ApSlotId}"
         );
-        if (PlayerNumber != 1)
-            canonical += FormattableString.Invariant($"|player-{PlayerNumber}");
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
     }
 

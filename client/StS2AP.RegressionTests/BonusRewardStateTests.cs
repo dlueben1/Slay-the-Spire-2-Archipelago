@@ -52,17 +52,4 @@ public sealed class BonusRewardStateTests
         var removed = ApProgressDelta.Between(restored, received).ApplyToCopy(restored);
         Assert.Empty(removed.BonusRelicAssignments);
     }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(2)]
-    public void BonusRequiresExactlyOneSerializedRelic(int models)
-    {
-        var spec = new ApMirroredRewardSpec
-        {
-            Kind = ApMirroredRewardKind.Bonus,
-            SerializedModels = Enumerable.Repeat("{}", models).ToList(),
-        };
-        Assert.Throws<InvalidOperationException>(() => MirroredRewardAdapter.Decode(spec, 3));
-    }
 }

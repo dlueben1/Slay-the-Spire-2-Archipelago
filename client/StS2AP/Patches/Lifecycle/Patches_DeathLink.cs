@@ -4,6 +4,7 @@ using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves;
 using StS2AP.Utils;
+using StS2AP.Utils.RunGraph;
 
 namespace StS2AP.Patches
 {
@@ -26,7 +27,7 @@ namespace StS2AP.Patches
         [HarmonyPatch(typeof(NRun), nameof(NRun.ShowGameOverScreen))]
         public static class OnRunFailed
         {
-            static bool Prefix(NRun __instance, SerializableRun serializableRun)
+            static bool Prefix(NRun __instance)
             {
                 // AP_MP: multiplayer uses a replicated individual-death boundary instead.
                 if (!MultiplayerSupport.IsFeatureEnabled(MultiplayerFeature.DeathLink))
@@ -85,6 +86,7 @@ namespace StS2AP.Patches
                     return true;
                 }
                 deathLinkController.SendDeathLink(new DeathLink(ArchipelagoClient.PlayerName, causeMsg));
+                ApRunGraphRecorder.RecordDeathLinkSent();
 
                 // Finally, return control to the function
                 return true;

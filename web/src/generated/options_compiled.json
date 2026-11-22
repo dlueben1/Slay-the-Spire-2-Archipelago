@@ -4,20 +4,535 @@
   "sources": {
     "characters": {
       "path": "world/spire2/characters.py",
-      "sha256": "fbbad75e5c458518fe37b245bcc9d3279e052b39f9f9885cc1af50b5ce8d10ea"
+      "sha256": "b4823b1de0ce40c6d05f5aaa5f3515188842e8e6a8b2b8fb6aafe6e7c75f189c"
     },
     "constants": {
       "path": "world/spire2/constants.py",
-      "sha256": "964c569fdddc19ec01fbcae0a29b709c6853973bf420b695ed4c137c78d7f5e7"
+      "sha256": "157cfe23568604a27a8b3ee11a9f38c5dbaa373c86faa3e112d23e0745355f5f"
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "a1c26659cf23e24211472a6631e1fd7b600835dbfedba7a8e43372a3623e9f1d"
+      "sha256": "2ba9eed6a95813bafeafc594eaf1c16dd60d20d629a556786bfcfe179932a34f"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
-      "sha256": "f6b75f70365b4eb322c1fabe1d8486f4ce9b179ea4669b786a5d6b5fc65608b3"
+      "sha256": "9c20b6686466516d3f541d3c798d956a39fa9654a09efaf72856dd3836a606b8"
+    },
+    "items": {
+      "path": "world/spire2/items.py",
+      "sha256": "17c6f2568ddfe462c6fa8752b437e47dbad9d794867ce10ca90689e5f95f740a"
     }
+  },
+  "characters": {
+    "generic_character_limit": 20,
+    "predefined": [
+      {
+        "name": "Tectonic",
+        "internal_id": "INTOTHESPIREVERSE-SHADOW_IRONCLAD"
+      },
+      {
+        "name": "Captain",
+        "internal_id": "INTOTHESPIREVERSE-SHADOW_REGENT"
+      },
+      {
+        "name": "Acolyte",
+        "internal_id": "INTOTHESPIREVERSE-SHADOW_SILENT"
+      },
+      {
+        "name": "Slime Boss",
+        "internal_id": "SLIMEBOSS-SLIME_BOSS"
+      },
+      {
+        "name": "Guardian",
+        "internal_id": "GUARDIAN-GUARDIAN"
+      },
+      {
+        "name": "Hexaghost",
+        "internal_id": "HEXAGHOST-HEXAGHOST"
+      },
+      {
+        "name": "Champ",
+        "internal_id": "CHAMP-CHAMP"
+      },
+      {
+        "name": "Automaton",
+        "internal_id": "AUTOMATON-AUTOMATON"
+      },
+      {
+        "name": "Snecko",
+        "internal_id": "SNECKO-SNECKO"
+      },
+      {
+        "name": "Hermit",
+        "internal_id": "HERMIT-HERMIT"
+      },
+      {
+        "name": "Awakened One",
+        "internal_id": "AWAKENED-AWAKENED"
+      },
+      {
+        "name": "Watcher",
+        "internal_id": "WATCHER-WATCHER"
+      },
+      {
+        "name": "Hornet",
+        "internal_id": "HORNET_MOD_CHARACTER_HORNET_MOD_CHARACTER"
+      },
+      {
+        "name": "Slugcat Survivor",
+        "internal_id": "SLUGCAT_THE_SPIRE_II_CHARACTER_RAINWORLD_LIVER"
+      },
+      {
+        "name": "Slugcat Hunter",
+        "internal_id": "SLUGCAT_THE_SPIRE_II_CHARACTER_RAINWORLD_REDCAT"
+      },
+      {
+        "name": "Slugcat Rivulet",
+        "internal_id": "SLUGCAT_THE_SPIRE_II_CHARACTER_RAINWORLD_RIVER"
+      },
+      {
+        "name": "Alchemist",
+        "internal_id": "ALCHEMIST-ALCHEMIST"
+      },
+      {
+        "name": "Runesmith",
+        "internal_id": "RUNESMITH2-RUNESMITH2"
+      },
+      {
+        "name": "Witch",
+        "internal_id": "THEWITCH-WITCH"
+      },
+      {
+        "name": "Tailor",
+        "internal_id": "THETAILOR-THE_TAILOR"
+      },
+      {
+        "name": "Engineer",
+        "internal_id": "THEENGINEER-THE_ENGINEER"
+      },
+      {
+        "name": "Kakarot",
+        "internal_id": "KAKAROTMOD-KAKAROT"
+      },
+      {
+        "name": "Fae Sorceress",
+        "internal_id": "FAESORCERESS-FAE_SORCERESS"
+      }
+    ],
+    "beta_only": [
+      "Fool"
+    ]
+  },
+  "items": {
+    "character_items": [
+      {
+        "name": "Card Reward",
+        "groups": [
+          "Card Rewards"
+        ]
+      },
+      {
+        "name": "Rare Card Reward",
+        "groups": [
+          "Card Rewards",
+          "Rare Card Rewards"
+        ]
+      },
+      {
+        "name": "Relic",
+        "groups": [
+          "Relics"
+        ]
+      },
+      {
+        "name": "Progressive Ancient",
+        "groups": [
+          "Ancients"
+        ]
+      },
+      {
+        "name": "One Gold",
+        "groups": []
+      },
+      {
+        "name": "Five Gold",
+        "groups": []
+      },
+      {
+        "name": "Combat Gold",
+        "groups": [
+          "Gold"
+        ]
+      },
+      {
+        "name": "Elite Gold",
+        "groups": [
+          "Gold"
+        ]
+      },
+      {
+        "name": "Boss Gold",
+        "groups": [
+          "Gold"
+        ]
+      },
+      {
+        "name": "Progressive Rest",
+        "groups": [
+          "Campfire Upgrades"
+        ]
+      },
+      {
+        "name": "Progressive Smith",
+        "groups": [
+          "Campfire Upgrades"
+        ]
+      },
+      {
+        "name": "Shop Card Slot",
+        "groups": [
+          "Shop Slots"
+        ]
+      },
+      {
+        "name": "Shop Colorless Card Slot",
+        "groups": [
+          "Shop Slots"
+        ]
+      },
+      {
+        "name": "Shop Relic Slot",
+        "groups": [
+          "Shop Slots"
+        ]
+      },
+      {
+        "name": "Shop Potion Slot",
+        "groups": [
+          "Shop Slots"
+        ]
+      },
+      {
+        "name": "Progressive Shop Remove",
+        "groups": [
+          "Shop Slots"
+        ]
+      },
+      {
+        "name": "Unlock",
+        "groups": [
+          "Character Unlocks"
+        ]
+      },
+      {
+        "name": "Potion",
+        "groups": [
+          "Potions"
+        ]
+      },
+      {
+        "name": "Progressive Starter Card",
+        "groups": [
+          "Starter Upgrades"
+        ]
+      },
+      {
+        "name": "Progressive Starter Relic",
+        "groups": [
+          "Starter Upgrades"
+        ]
+      },
+      {
+        "name": "Disable Swarming Elites",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Weary Traveler",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Poverty",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Tight Belt",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Ascender's Bane",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Inflation",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Scarcity",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Tough Enemies",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Deadly Enemies",
+        "groups": [
+          "Ascension Downs"
+        ]
+      },
+      {
+        "name": "Disable Double Boss",
+        "groups": [
+          "Ascension Downs"
+        ]
+      }
+    ],
+    "universal_items": [
+      {
+        "name": "Free Attack",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Free Power",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Free Skill",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Dexterity",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Strength",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Plating",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Friendship",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Post-Combat Card Upgrade",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Post-Combat Card Removal",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Additional Card Reward",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Buffer",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Vigor",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Thorns",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Artifact",
+        "groups": [
+          "Buffs"
+        ]
+      },
+      {
+        "name": "Intent Sight",
+        "groups": [
+          "Sights"
+        ]
+      },
+      {
+        "name": "Health Sight",
+        "groups": [
+          "Sights"
+        ]
+      },
+      {
+        "name": "Pile Sight",
+        "groups": [
+          "Sights"
+        ]
+      },
+      {
+        "name": "Map Sight",
+        "groups": [
+          "Sights"
+        ]
+      },
+      {
+        "name": "Card Sight",
+        "groups": [
+          "Sights"
+        ]
+      },
+      {
+        "name": "Relic Sight",
+        "groups": [
+          "Sights"
+        ]
+      },
+      {
+        "name": "Weak Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Frail Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Vulnerable Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "No Draw Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Tangled Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Vakuu Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Confused Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Sloth Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Dazed Trap",
+        "groups": [
+          "Traps"
+        ]
+      },
+      {
+        "name": "Bonus Wax Relic",
+        "groups": [
+          "Bonus Items"
+        ]
+      },
+      {
+        "name": "Bonus Relic",
+        "groups": [
+          "Bonus Items"
+        ]
+      },
+      {
+        "name": "Bonus Enchantment",
+        "groups": [
+          "Bonus Items"
+        ]
+      },
+      {
+        "name": "Bonus Enchanted Cards",
+        "groups": [
+          "Bonus Items"
+        ]
+      },
+      {
+        "name": "Bonus Max HP",
+        "groups": [
+          "Bonus Items"
+        ]
+      },
+      {
+        "name": "Bonus Cards",
+        "groups": [
+          "Bonus Items"
+        ]
+      }
+    ],
+    "groups": [
+      "Ancients",
+      "Ascension Downs",
+      "Bonus Items",
+      "Buffs",
+      "Campfire Upgrades",
+      "Card Rewards",
+      "Character Unlocks",
+      "Gold",
+      "Potions",
+      "Rare Card Rewards",
+      "Relics",
+      "Shop Slots",
+      "Sights",
+      "Starter Upgrades",
+      "Traps",
+      "Everything"
+    ]
   },
   "option_order": [
     "progression_balancing",
@@ -39,10 +554,11 @@
     "unlocked_character",
     "ascension",
     "ascension_down",
-    "use_new_logic",
     "ancient_relic_location",
     "ancient_relic_pool",
     "relic_rewards_available_anytime",
+    "remove_op_relics",
+    "events_in_any_act",
     "progressive_starter_card",
     "progressive_starter_relic",
     "shuffle_all_cards",
@@ -59,6 +575,28 @@
     "shop_potion_slots",
     "shop_remove_slots",
     "shop_sanity_costs",
+    "random_shop_cards",
+    "shop_attack_weight",
+    "shop_skill_weight",
+    "shop_power_weight",
+    "shop_common_weight",
+    "shop_uncommon_weight",
+    "shop_rare_weight",
+    "shop_colorless_weight",
+    "shop_event_weight",
+    "random_shop_relics",
+    "shop_relic_common_weight",
+    "shop_relic_uncommon_weight",
+    "shop_relic_rare_weight",
+    "shop_relic_shop_weight",
+    "shop_relic_event_weight",
+    "shop_relic_ancient_weight",
+    "random_shop_potions",
+    "shop_potion_common_weight",
+    "shop_potion_uncommon_weight",
+    "shop_potion_rare_weight",
+    "shop_potion_other_class_weight",
+    "shop_potion_event_weight",
     "death_link",
     "enable_death_fragments",
     "death_link_damage_percent",
@@ -91,7 +629,21 @@
     "vakuu_trap_weight",
     "confused_trap_weight",
     "sloth_trap_weight",
-    "dazed_trap_weight"
+    "dazed_trap_weight",
+    "boons",
+    "run_modifiers",
+    "enemy_hp_scaling",
+    "enemy_damage_scaling",
+    "dread_mode",
+    "blitz_merchant_chance",
+    "hidden_intents",
+    "hidden_health",
+    "hidden_piles",
+    "hidden_map",
+    "hidden_cards",
+    "hidden_relics",
+    "sight_bonuses",
+    "strict_card_rewards"
   ],
   "groups": [
     {
@@ -112,15 +664,17 @@
     {
       "name": "Game Options",
       "option_keys": [
-        "use_new_logic",
         "progression_balancing",
         "accessibility",
         "ancient_relic_location",
         "ancient_relic_pool",
         "relic_rewards_available_anytime",
+        "remove_op_relics",
+        "events_in_any_act",
         "progressive_starter_card",
         "progressive_starter_relic",
-        "shuffle_all_cards"
+        "shuffle_all_cards",
+        "blitz_merchant_chance"
       ],
       "start_collapsed": false,
       "source": "web_world"
@@ -140,6 +694,49 @@
         "shop_potion_slots",
         "shop_remove_slots",
         "shop_sanity_costs"
+      ],
+      "start_collapsed": false,
+      "source": "web_world"
+    },
+    {
+      "name": "Shop Cards",
+      "option_keys": [
+        "random_shop_cards",
+        "shop_attack_weight",
+        "shop_skill_weight",
+        "shop_power_weight",
+        "shop_common_weight",
+        "shop_uncommon_weight",
+        "shop_rare_weight",
+        "shop_colorless_weight",
+        "shop_event_weight"
+      ],
+      "start_collapsed": false,
+      "source": "web_world"
+    },
+    {
+      "name": "Shop Relics",
+      "option_keys": [
+        "random_shop_relics",
+        "shop_relic_common_weight",
+        "shop_relic_uncommon_weight",
+        "shop_relic_rare_weight",
+        "shop_relic_shop_weight",
+        "shop_relic_event_weight",
+        "shop_relic_ancient_weight"
+      ],
+      "start_collapsed": false,
+      "source": "web_world"
+    },
+    {
+      "name": "Shop Potions",
+      "option_keys": [
+        "random_shop_potions",
+        "shop_potion_common_weight",
+        "shop_potion_uncommon_weight",
+        "shop_potion_rare_weight",
+        "shop_potion_other_class_weight",
+        "shop_potion_event_weight"
       ],
       "start_collapsed": false,
       "source": "web_world"
@@ -209,6 +806,33 @@
         "vigor_filler_weight",
         "thorns_filler_weight",
         "artifact_filler_weight"
+      ],
+      "start_collapsed": false,
+      "source": "web_world"
+    },
+    {
+      "name": "Boons",
+      "option_keys": [
+        "boons"
+      ],
+      "start_collapsed": false,
+      "source": "web_world"
+    },
+    {
+      "name": "Challenges",
+      "option_keys": [
+        "run_modifiers",
+        "enemy_hp_scaling",
+        "enemy_damage_scaling",
+        "dread_mode",
+        "hidden_intents",
+        "hidden_health",
+        "hidden_piles",
+        "hidden_map",
+        "hidden_cards",
+        "hidden_relics",
+        "sight_bonuses",
+        "strict_card_rewards"
       ],
       "start_collapsed": false,
       "source": "web_world"
@@ -549,7 +1173,7 @@
       "module": "worlds.spire2.options",
       "kind": "set",
       "display_name": "Characters",
-      "description": "Enter the list of characters to play as.  Valid characters are:\n'Ironclad'\n'Silent'\n'Defect'\n'Regent'\n'Necrobinder'",
+      "description": "Enter the list of characters to play as.  Valid characters are:\n'Ironclad'\n'Silent'\n'Defect'\n'Regent'\n'Necrobinder'\n'Fool' (game beta branch only)",
       "default": [
         "Ironclad"
       ],
@@ -573,7 +1197,8 @@
         "Silent",
         "Defect",
         "Regent",
-        "Necrobinder"
+        "Necrobinder",
+        "Fool"
       ],
       "valid_keys_casefold": false,
       "allow_custom_values": false,
@@ -586,7 +1211,7 @@
       "module": "worlds.spire2.options",
       "kind": "list",
       "display_name": "Modded Characters",
-      "description": "Modded characters to include when Advanced Characters is disabled. Enter each character's\ninternal ID or a predefined display name, such as Watcher, Guardian, or Tectonic.\nThe list of predefined display names will probably be pinned somewhere on Discord.\nAt most 20 modded characters can be present in the generated character set.\nDuplicate aliases and IDs are removed, keeping the first occurrence. Predefined characters use their\ndisplay names; other selected characters are numbered consecutively in YAML order.\nA larger candidate list is allowed when Pick Number of Characters selects a subset.\n\nIf using a modded character:\nPredefined display names and internal IDs are matched case-insensitively.\nUnrecognised characters still require their full internal ID.\n\nIf you don't know the exact ID to enter with the mod installed go to\n`Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.\n\nEvery configured character must be installed with the matching internal ID. The client\nrejects the AP connection if a configured character cannot be loaded.",
+      "description": "Modded characters to include when Advanced Characters is disabled. Enter each character's\ninternal ID or a predefined display name, such as Watcher, Guardian, or Tectonic.\nPredefined characters, with their internal IDs and mods, are listed at\nhttps://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/predefined-characters.md\nAny number of predefined characters can be present in the generated character set, but at\nmost 20 characters without a predefined name.\nDuplicate aliases and IDs are removed, keeping the first occurrence. Predefined characters use their\ndisplay names; other selected characters are numbered consecutively in YAML order.\nA larger candidate list is allowed when Pick Number of Characters selects a subset.\n\nIf using a modded character:\nPredefined display names and internal IDs are matched case-insensitively.\nUnrecognised characters still require their full internal ID.\n\nIf you don't know the exact ID to enter with the mod installed go to\n`Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.\n\nEvery configured character must be installed with the matching internal ID. The client\nrejects the AP connection if a configured character cannot be loaded.",
       "default": [],
       "raw_default": [],
       "visibility": {
@@ -612,7 +1237,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Pick Number of Characters",
-      "description": "Randomly select from the configured characters this many characters for each player to generate for.\nEach player's selection is rolled independently, and selections may overlap.\n0 gives every player all configured characters.\nFor example, if \"character\" is configured to be:\n    characters:\n        - Ironclad\n        - Silent\n        - Defect\nand pick_num_characters is 2, one possible generated set is Ironclad and Defect.",
+      "description": "Randomly select this many of the configured characters to generate for.\n0, or a number at least as large as the configured list, uses every configured character.\nFor example, if \"character\" is configured to be:\n    characters:\n        - Ironclad\n        - Silent\n        - Defect\nand pick_num_characters is 2, one possible generated set is Ironclad and Defect.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -628,7 +1253,7 @@
       },
       "source": "game",
       "minimum": 0,
-      "maximum": 25,
+      "maximum": 49,
       "supports_weighting": true,
       "group": "Character Options"
     },
@@ -638,7 +1263,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Number of Characters to Goal",
-      "description": "How many characters you need to complete a run with before you goal. 0 means all characters",
+      "description": "How many characters you need to complete a run with before you goal. 0, or a number larger than the\ngenerated set of characters, means all characters.",
       "default": 0,
       "raw_default": 0,
       "visibility": {
@@ -654,7 +1279,7 @@
       },
       "source": "game",
       "minimum": 0,
-      "maximum": 25,
+      "maximum": 49,
       "supports_weighting": true,
       "group": "Character Options"
     },
@@ -705,7 +1330,7 @@
       "module": "worlds.spire2.options",
       "kind": "text_choice",
       "display_name": "Unlocked Character",
-      "description": "Which character you start with when lock_characters is set to locked_fixed.\nIt must be one of your configured characters, and is always kept when Pick Number of\nCharacters selects a subset. Leave it empty (\"\") to start with a random character.\nCan also enter a predefined display name or full internal ID for modded characters.\nThe list of predefined display names will probably be pinned somewhere on Discord.",
+      "description": "Which character you start with when lock_characters is set to locked_fixed.\nIt must be one of your configured characters, and is always kept when Pick Number of\nCharacters selects a subset. Defaults to Ironclad, so generation fails if you use locked_fixed\nwithout Ironclad and leave this unset. Enter \"\" to start with a random character.\nCan also enter a predefined display name or full internal ID for modded characters.\nPredefined characters, with their internal IDs and mods, are listed at\nhttps://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/predefined-characters.md",
       "default": "ironclad",
       "raw_default": 0,
       "visibility": {
@@ -745,6 +1370,11 @@
           "name": "necrobinder",
           "display_name": "Necrobinder",
           "value": 4
+        },
+        {
+          "name": "fool",
+          "display_name": "Fool",
+          "value": 5
         }
       ],
       "allow_custom_values": true,
@@ -851,42 +1481,6 @@
       "supports_weighting": false,
       "group": "Character Options"
     },
-    "use_new_logic": {
-      "key": "use_new_logic",
-      "class_name": "UseNewLogic",
-      "module": "worlds.spire2.options",
-      "kind": "toggle",
-      "display_name": "Use New Logic",
-      "description": "Use the new logic. Disable to use the previous 1.1.X and below logic.\nNew logic allows more random item order—for example, Extra relics and cards can help supplement missing ancients or rests.\nOne example is that old logic required your progressive starter card+relic to beat your 1st elite but new logic\nno longer requires this as 'Power' can be made up with extra cards/relics. Similar cases for ancients/smiths/rests.\n\nOld logic is used automatically (regardless of this option) when floor, gold, and potion checks\n are all disabled to reduce failed generations.",
-      "default": true,
-      "raw_default": 1,
-      "visibility": {
-        "name": "all",
-        "value": 15,
-        "flags": [
-          "template",
-          "simple_ui",
-          "complex_ui",
-          "spoiler",
-          "all"
-        ]
-      },
-      "source": "game",
-      "choices": [
-        {
-          "name": "false",
-          "display_name": "False",
-          "value": 0
-        },
-        {
-          "name": "true",
-          "display_name": "True",
-          "value": 1
-        }
-      ],
-      "supports_weighting": true,
-      "group": "Game Options"
-    },
     "ancient_relic_location": {
       "key": "ancient_relic_location",
       "class_name": "AncientRelicLocation",
@@ -990,13 +1584,79 @@
       "supports_weighting": true,
       "group": "Game Options"
     },
+    "remove_op_relics": {
+      "key": "remove_op_relics",
+      "class_name": "RemoveOPRelics",
+      "module": "worlds.spire2.options",
+      "kind": "set",
+      "display_name": "Remove Overpowered Relics",
+      "description": "Removes relics that are much stronger in Archipelago than in a normal run.\nEach category removes only the relics that the Archipelago mod lists for it, so the exact\nrelics can change between mod versions. Leave this empty to keep every relic.\n\n- 'Ancient': Removes Pael's Growth and Glitter from Anytime Ancient rewards. Ancient rewards\n  offered at the start of an act are unaffected.\n- 'Rare': Removes Prayer Wheel and White Star from every relic source. In multiplayer, one player\n  choosing this removes them from the whole run.",
+      "default": [],
+      "raw_default": [],
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "valid_keys": [
+        "Ancient",
+        "Rare"
+      ],
+      "valid_keys_casefold": false,
+      "allow_custom_values": false,
+      "supports_weighting": false,
+      "group": "Game Options"
+    },
+    "events_in_any_act": {
+      "key": "events_in_any_act",
+      "class_name": "EventsInAnyAct",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Events in Any Act",
+      "description": "Events can appear in any act instead of only their usual acts. Event fights and rewards\nare not adjusted for the act you meet them in. Singleplayer only: multiplayer runs keep the\nusual events.",
+      "default": false,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Game Options"
+    },
     "progressive_starter_card": {
       "key": "progressive_starter_card",
       "class_name": "ProgressiveStarterCard",
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Progressive Starter Card",
-      "description": "Enables progressive special starter cards by default for every configured character.\nAdvanced Characters can override this per character with progressive_starter_card.\n\nRequires Include Floor Checks. Each character gets two Progressive Starter Card items, which\nreplace two floor-check filler items. With none received, the character\nstarts without the special starter card that Archaic Tooth would transform (Bash, Neutralize, a compatible modded equivalent etc).\nThe first item restores the normal card; the second applies its Archaic Tooth transformation.\n\nCharacters without an Archaic Tooth transformation are left unchanged, although their two\nProgressive Starter Card items are still present in the multiworld.\n\nWARNING: This can make the early game significantly harder for some characters.",
+      "description": "Enables progressive special starter cards by default for every configured character.\nAdvanced Characters can override this per character with progressive_starter_card.\n\nRequires Include Floor Checks. Each character gets two Progressive Starter Card items, which\nreplace two floor-check filler items. With none received, the character\nstarts without the special starter card that Archaic Tooth would transform (Bash, Neutralize, a compatible modded equivalent etc).\nThe first item restores the normal card; the second applies its Archaic Tooth transformation.\n\nCharacters without an Archaic Tooth transformation are left unchanged, although their two\nProgressive Starter Card items are still present in the multiworld.",
       "default": false,
       "raw_default": 0,
       "visibility": {
@@ -1032,7 +1692,7 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Progressive Starter Relic",
-      "description": "Enables progressive starter relics by default for every configured character.\nAdvanced Characters can override this per character with progressive_starter_relic.\n\nRequires Include Floor Checks. Each character gets two Progressive Starter Relic items, which\nreplace two floor-check filler items. With none received, the character\nstarts without the starter relic that Touch of Orobas would refine (such as Burning Blood, or a\ncompatible modded equivalent).\n\nThe first item restores the normal relic; the second applies its Touch of Orobas refinement.\n\nCharacters without a Touch of Orobas refinement are left unchanged, although their two\nProgressive Starter Relic items are still present in the multiworld.\n\nWARNING: This can make the early game significantly harder for characters whose starting relic\nis central to their early power.",
+      "description": "Enables progressive starter relics by default for every configured character.\nAdvanced Characters can override this per character with progressive_starter_relic.\n\nRequires Include Floor Checks. Each character gets two Progressive Starter Relic items, which\nreplace two floor-check filler items. With none received, the character\nstarts without the starter relic that Touch of Orobas would refine (such as Burning Blood, or a\ncompatible modded equivalent).\n\nThe first item restores the normal relic; the second applies its Touch of Orobas refinement.\n\nCharacters without a Touch of Orobas refinement are left unchanged, although their two\nProgressive Starter Relic items are still present in the multiworld.",
       "default": false,
       "raw_default": 0,
       "visibility": {
@@ -1104,7 +1764,7 @@
       "module": "worlds.spire2.options",
       "kind": "list",
       "display_name": "Bonus Items",
-      "description": "Add a number of Bonus Items to the item pool.\nThese items make the game easier to complete, and are not accounted for in logic.\n\nEach ordered entry creates one character-agnostic bonus item and must provide either\na non-empty list of value Pools or one specific Value. For example:\n\n    bonus_items:\n        - WAX_RELIC:\n            Pools: [Common, Uncommon]\n        - WAX_RELIC:\n            Value: Orichalcum\n\n\nGeneration fails if more bonus items are configured than there are filler slots.\n\nIt's HIGHLY recommended to use the YAML Builder on our website to easily generate this option, which you can find at https://sts2ap.net",
+      "description": "Add a number of Bonus Items to the item pool.\nThese items make the game easier to complete, and are not accounted for in logic.\nOnce found, each one can be claimed once in every run, from the Archipelago reward menu.\n\nEach entry creates one bonus item and gives either a list of Pools to roll from or\none specific Value. Entries of the same kind are handed out in a random order.\n\n- WAX_RELIC: a relic that melts after a few combats. Pools are relic pools such as Common\n  or Ancient. Relics with an \"Upon pickup\" effect can't be wax.\n- RELIC: a relic that stays for the whole run, from the same Pools or Value. These can\n  have an \"Upon pickup\" effect.\n- ENCHANTMENT: choose a card to enchant. Pools: Common, Uncommon, Rare; or name an\n  enchantment as the Value.\n- ENCHANTED_CARDS: a card reward whose cards are all enchanted, from the same Pools or Value.\n- MAX_HP: gain this much max HP. Value only.\n- CARDS: choose 1 of 3 cards. Each Pool can name a source (a character, Other, Colorless, Event\n  or Ancient; your own character if left out), a type (Attack, Skill, Power) and a rarity\n  (Common, Uncommon, Rare), such as 'Regent Attack' or 'Colorless Rare'. Add 'Upgraded' for\n  upgraded cards; 'Random' mixes sources card by card. Fool pools need game version 0.113 and\n  are skipped on older ones. Or name one card as the Value.\n\nFor example:\n\n    bonus_items:\n        - WAX_RELIC:\n            Pools: [Common, Uncommon]\n        - RELIC:\n            Value: Orichalcum\n        - ENCHANTMENT:\n            Pools: [Common]\n        - ENCHANTED_CARDS:\n            Value: Swift\n        - MAX_HP:\n            Value: 6\n        - CARDS:\n            Pools: [Regent Attack, Colorless Rare]\n\n\nGeneration fails if more bonus items are configured than there are filler slots.\n\nIt's HIGHLY recommended to use the YAML Builder on our website to easily generate this option, which you can find at https://sts2ap.terairk.dev/#/builder (or https://sts2ap.net)",
       "default": [],
       "raw_default": [],
       "visibility": {
@@ -1126,7 +1786,7 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Include Floor Checks",
-      "description": "Add locations for reaching new floors and fill the corresponding item-pool space with\nconfigurable filler. Ascension Down and Progressive Starter options require these locations.",
+      "description": "Add locations for reaching new floors and fill the corresponding item-pool space with\nconfigurable filler. Ascension Down, Progressive Starter and Hidden options require these locations.",
       "default": true,
       "raw_default": 1,
       "visibility": {
@@ -1199,8 +1859,8 @@
       "kind": "toggle",
       "display_name": "Campfire Sanity",
       "description": "Whether to shuffle being able to rest and smith at each campsite per act.  Also adds\nnew locations at campsites per act.",
-      "default": false,
-      "raw_default": 0,
+      "default": true,
+      "raw_default": 1,
       "visibility": {
         "name": "all",
         "value": 15,
@@ -1234,9 +1894,9 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Gold Sanity",
-      "description": "Whether to replace combat, elite, and boss gold rewards with AP locations. Adds 22 locations per character.",
-      "default": false,
-      "raw_default": 0,
+      "description": "Whether to replace combat, elite, and boss gold rewards with AP locations. Adds 22 locations per character.\n    ",
+      "default": true,
+      "raw_default": 1,
       "visibility": {
         "name": "all",
         "value": 15,
@@ -1271,8 +1931,8 @@
       "kind": "toggle",
       "display_name": "Potion Sanity",
       "description": "Whether to replace potion rewards with AP locations. Adds 9 locations per character.",
-      "default": false,
-      "raw_default": 0,
+      "default": true,
+      "raw_default": 1,
       "visibility": {
         "name": "all",
         "value": 15,
@@ -1306,9 +1966,9 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Shop Sanity",
-      "description": "Move the configured shop slots to a separate AP shop page as purchasable location checks and\nshuffle items that progressively restore the corresponding slots on the normal shop page.",
-      "default": false,
-      "raw_default": 0,
+      "description": "Move the configured shop slots to a separate AP shop page as purchasable location checks and\nshuffle items that progressively restore the corresponding slots on the normal shop page.\nShop Sanity is turned off if every slot count below is 0 and Shop Remove Slots is off.",
+      "default": true,
+      "raw_default": 1,
       "visibility": {
         "name": "all",
         "value": 15,
@@ -1482,7 +2142,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Shop Sanity Costs",
-      "description": "Controls the price paid for location checks on the AP shop page. Normal shop-item prices are\nunaffected. Tiered modes first calculate a vanilla-style baseline for the AP card, relic, or potion.\n\nFixed: 15 gold per AP check.\nSuper Discount Tiered: 20 percent of the calculated baseline.\nDiscount Tiered: 50 percent of the calculated baseline.\nTiered: the full calculated baseline.\n\nGeneration logic does not account for these prices.",
+      "description": "Controls the price paid for location checks on the AP shop page. Normal shop-item prices are\nunaffected. Tiered modes first calculate a vanilla-style baseline for the AP card, relic, or potion.\n\nFixed: 15 gold per AP check.\nSuper Discount Tiered: 20 percent of the calculated baseline.\nDiscount Tiered: 50 percent of the calculated baseline.\nTiered: the full calculated baseline.\n\nSomewhat accounted for in logic.",
       "default": "Discount_Tiered",
       "raw_default": 2,
       "visibility": {
@@ -1521,6 +2181,988 @@
       ],
       "supports_weighting": true,
       "group": "Sanities"
+    },
+    "random_shop_cards": {
+      "key": "random_shop_cards",
+      "class_name": "RandomShopCards",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Custom Shop Cards",
+      "description": "Each of the shop's 7 card slots holds a random kind of card, picked with the weights below,\ninstead of 2 Attacks, 2 Skills, a Power and 2 colorless cards.\nIf every weight is none, the shop keeps its usual cards.",
+      "default": false,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Cards"
+    },
+    "shop_attack_weight": {
+      "key": "shop_attack_weight",
+      "class_name": "ShopAttackWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Attack Weight",
+      "description": "How often a random shop card slot holds an Attack.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Cards"
+    },
+    "shop_skill_weight": {
+      "key": "shop_skill_weight",
+      "class_name": "ShopSkillWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Skill Weight",
+      "description": "How often a random shop card slot holds a Skill.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Cards"
+    },
+    "shop_power_weight": {
+      "key": "shop_power_weight",
+      "class_name": "ShopPowerWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Power Weight",
+      "description": "How often a random shop card slot holds a Power.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Cards"
+    },
+    "shop_common_weight": {
+      "key": "shop_common_weight",
+      "class_name": "ShopCommonWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Common Weight",
+      "description": "How often a random shop card slot holds a Common card.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Cards"
+    },
+    "shop_uncommon_weight": {
+      "key": "shop_uncommon_weight",
+      "class_name": "ShopUncommonWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Uncommon Weight",
+      "description": "How often a random shop card slot holds an Uncommon card.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Cards"
+    },
+    "shop_rare_weight": {
+      "key": "shop_rare_weight",
+      "class_name": "ShopRareWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Rare Weight",
+      "description": "How often a random shop card slot holds a Rare card.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Cards"
+    },
+    "shop_colorless_weight": {
+      "key": "shop_colorless_weight",
+      "class_name": "ShopColorlessWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Colorless Weight",
+      "description": "How often a random shop card slot holds a colorless card, Uncommon or Rare.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Cards"
+    },
+    "shop_event_weight": {
+      "key": "shop_event_weight",
+      "class_name": "ShopEventWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Event Weight",
+      "description": "How often a random shop card slot holds an Event card.",
+      "default": "low",
+      "raw_default": 1,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Cards"
+    },
+    "random_shop_relics": {
+      "key": "random_shop_relics",
+      "class_name": "RandomShopRelics",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Custom Shop Relics",
+      "description": "If enabled, allows you to override the default shop relics randomness.",
+      "default": false,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Relics"
+    },
+    "shop_relic_common_weight": {
+      "key": "shop_relic_common_weight",
+      "class_name": "ShopRelicCommonWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Relic Common Weight",
+      "description": "How often a random shop relic slot holds a Common relic.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Relics"
+    },
+    "shop_relic_uncommon_weight": {
+      "key": "shop_relic_uncommon_weight",
+      "class_name": "ShopRelicUncommonWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Relic Uncommon Weight",
+      "description": "How often a random shop relic slot holds an Uncommon relic.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Relics"
+    },
+    "shop_relic_rare_weight": {
+      "key": "shop_relic_rare_weight",
+      "class_name": "ShopRelicRareWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Relic Rare Weight",
+      "description": "How often a random shop relic slot holds a Rare relic.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Relics"
+    },
+    "shop_relic_shop_weight": {
+      "key": "shop_relic_shop_weight",
+      "class_name": "ShopRelicShopWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Relic Shop Weight",
+      "description": "How often a random shop relic slot holds a Shop relic.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Relics"
+    },
+    "shop_relic_event_weight": {
+      "key": "shop_relic_event_weight",
+      "class_name": "ShopRelicEventWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Relic Event Weight",
+      "description": "How often a random shop relic slot holds an Event relic.",
+      "default": "low",
+      "raw_default": 1,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Relics"
+    },
+    "shop_relic_ancient_weight": {
+      "key": "shop_relic_ancient_weight",
+      "class_name": "ShopRelicAncientWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Relic Ancient Weight",
+      "description": "How often a random shop relic slot holds an Ancient relic.",
+      "default": "low",
+      "raw_default": 1,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Relics"
+    },
+    "random_shop_potions": {
+      "key": "random_shop_potions",
+      "class_name": "RandomShopPotions",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Custom Shop Potions",
+      "description": "If enabled, allows you to override the default shop potions randomness.",
+      "default": false,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Potions"
+    },
+    "shop_potion_common_weight": {
+      "key": "shop_potion_common_weight",
+      "class_name": "ShopPotionCommonWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Potion Common Weight",
+      "description": "How often a random shop potion slot holds a Common potion.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Potions"
+    },
+    "shop_potion_uncommon_weight": {
+      "key": "shop_potion_uncommon_weight",
+      "class_name": "ShopPotionUncommonWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Potion Uncommon Weight",
+      "description": "How often a random shop potion slot holds an Uncommon potion.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Potions"
+    },
+    "shop_potion_rare_weight": {
+      "key": "shop_potion_rare_weight",
+      "class_name": "ShopPotionRareWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Potion Rare Weight",
+      "description": "How often a random shop potion slot holds a Rare potion.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Potions"
+    },
+    "shop_potion_other_class_weight": {
+      "key": "shop_potion_other_class_weight",
+      "class_name": "ShopPotionOtherClassWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Potion Other Class Weight",
+      "description": "How often a random shop potion slot holds a potion from another class.",
+      "default": "medium",
+      "raw_default": 3,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Potions"
+    },
+    "shop_potion_event_weight": {
+      "key": "shop_potion_event_weight",
+      "class_name": "ShopPotionEventWeight",
+      "module": "worlds.spire2.options",
+      "kind": "choice",
+      "display_name": "Shop Potion Event Weight",
+      "description": "How often a random shop potion slot holds an Event potion.",
+      "default": "low",
+      "raw_default": 1,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "none",
+          "display_name": "None",
+          "value": 0
+        },
+        {
+          "name": "low",
+          "display_name": "Low",
+          "value": 1
+        },
+        {
+          "name": "medium",
+          "display_name": "Medium",
+          "value": 3
+        },
+        {
+          "name": "high",
+          "display_name": "High",
+          "value": 5
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Shop Potions"
     },
     "death_link": {
       "key": "death_link",
@@ -1698,7 +3340,7 @@
       "module": "worlds.spire2.options",
       "kind": "toggle",
       "display_name": "Advanced Characters",
-      "description": "Whether to use the advanced characters feature. The normal options for character, ascension, etc. are ignored.\nGlobal progressive starter options remain defaults unless overridden for a character.\nSee the \"advanced_characters\" option.",
+      "description": "Whether to use the advanced characters feature. Characters, Modded Characters, Ascension and Ascension Down\nare ignored; Pick Number of Characters, Lock Characters, Unlocked Character and Number of Characters to Goal\nstill apply. Global progressive starter options remain defaults unless overridden for a character.\nSee the \"advanced_characters\" option.",
       "default": false,
       "raw_default": 0,
       "visibility": {
@@ -1730,7 +3372,7 @@
       "module": "worlds.spire2.options",
       "kind": "dictionary",
       "display_name": "Advanced Characters",
-      "description": "The configuration for advanced characters.  Each character's options can be configured\nindependently of each other.  No validation is done on the character name, so use carefully.\nFormat is:\n    <char name>:\n        ascension:\n            - <string or number>\n        ascension_down:\n            - <string or number>\n        progressive_starter_card: <true or false>\n        progressive_starter_relic: <true or false>\n\nOmitted progressive starter options inherit their global settings. Explicit true/false\nvalues override them for that character. Both still require Include Floor Checks.\n\nIf using a modded character:\nEnter its full internal ID or a predefined display name, such as Watcher.\nThe list of predefined display names will probably be pinned somewhere on Discord.\nDo not include both an alias and its full ID as separate entries.\n\nIf you don't know the exact ID to enter with the mod installed go to\n`Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.\n\nEvery configured character must be installed with the matching internal ID. The client\nrejects the AP connection if a configured character cannot be loaded.",
+      "description": "The configuration for advanced characters.  Each character's options can be configured\nindependently of each other.  No validation is done on the character name, so use carefully.\nFormat is:\n    <char name>:\n        ascension:\n            - <string or number>\n        ascension_down:\n            - <string or number>\n        progressive_starter_card: <true or false>\n        progressive_starter_relic: <true or false>\n\nAscension names are not validated here either: a misspelled name is ignored, so check them\nagainst the list in the Ascension option.\n\nOmitted progressive starter options inherit their global settings. Explicit true/false\nvalues override them for that character. Both still require Include Floor Checks.\n\nIf using a modded character:\nEnter its full internal ID or a predefined display name, such as Watcher.\nPredefined characters, with their internal IDs and mods, are listed at\nhttps://github.com/dlueben1/Slay-the-Spire-2-Archipelago/blob/setup-docs-do-not-delete/docs/predefined-characters.md\nDo not include both an alias and its full ID as separate entries.\n\nIf you don't know the exact ID to enter with the mod installed go to\n`Archipelago Settings -> Archipelago` to view a list of installed modded character IDs.\n\nEvery configured character must be installed with the matching internal ID. The client\nrejects the AP connection if a configured character cannot be loaded.",
       "default": {
         "ironclad": {
           "ascension": [
@@ -2934,6 +4576,437 @@
       ],
       "supports_weighting": true,
       "group": "Traps"
+    },
+    "boons": {
+      "key": "boons",
+      "class_name": "Boons",
+      "module": "worlds.spire2.options",
+      "kind": "set",
+      "display_name": "Boons",
+      "description": "Helpful modifiers for every run. Logic does not account for them. Names are case-sensitive.\nOnly Compound Interest, Gilded, Loyal Customer and Endless Upgrades work in multiplayer, where\nthe host's choice applies to the whole run; multiplayer runs leave out the others.\n\n- 'Wayfinder': Three times per act, travel to any room in the next row, ignoring the paths.\n- 'SecondWind': Once per act, survive a killing blow and heal 25% of your max HP.\n- 'EmberEnchanting': Campfires let you enchant a card with a random enchantment. This uses up\n  the campfire and needs the same Progressive Smith as upgrading.\n- 'CompoundInterest': At the start of Act 2 and of Act 3, gain 20% of the gold you hold, up to\n  100.\n- 'Gilded': Gain 30% more gold, including gold from Archipelago items.\n- 'SpringCleaning': After the Act 1 and Act 2 bosses, choose one: remove a card, transform a\n  card, or upgrade 2 random cards.\n- 'LoyalCustomer': Each purchase makes the rest of that shop 15% cheaper, up to 45%.\n  Archipelago checks in the shop count and get the discount too.\n- 'CampfireBrewing': Once per campfire, brew a random potion. You can still rest or upgrade\n  afterwards.\n- 'EndlessUpgrades': Cards can be upgraded any number of times. Each upgrade adds the card's\n  upgrade bonus again; upgrades that only add or remove a keyword do nothing after the first.",
+      "default": [],
+      "raw_default": [],
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "valid_keys": [
+        "CampfireBrewing",
+        "CompoundInterest",
+        "EmberEnchanting",
+        "EndlessUpgrades",
+        "Gilded",
+        "LoyalCustomer",
+        "SecondWind",
+        "SpringCleaning",
+        "Wayfinder"
+      ],
+      "valid_keys_casefold": false,
+      "allow_custom_values": false,
+      "supports_weighting": false,
+      "group": "Boons"
+    },
+    "run_modifiers": {
+      "key": "run_modifiers",
+      "class_name": "RunModifiers",
+      "module": "worlds.spire2.options",
+      "kind": "set",
+      "display_name": "Run Modifiers",
+      "description": "Extra difficulty modifiers for every run, on top of Ascension. Logic does not account for them.\nMost leave Act 1 as it is and grow harder in Acts 2 and 3. Names are case-sensitive. In\nmultiplayer, the host's modifiers apply to the whole run.\n\n- 'RisingStrength': Elites and bosses start each combat with 1 Strength in Act 2 and 2 in Act 3.\n- 'EscalatingBuffs': Enemies start combat with one random buff in Act 2 and two different ones in\n  Act 3, from 1 Strength, 4 Plating, 2 Thorns, 1 Artifact, 3 Regen, 4 Curl Up, 4 Vigor and\n  1 Slippery.\n- 'ShrinkingRests': Resting heals 25% of max HP in Act 2 and 20% in Act 3, instead of 30%.\n- 'MountingCurses': Gain a random curse at the start of Act 2 and of Act 3.\n- 'MountingBanes': Gain an Ascender's Bane, which cannot be removed, at the start of Act 2 and\n  of Act 3.\n- 'CursedRun': Gain a random curse at the start of every act, including Act 1 (the base game's\n  Cursed Run). Stacks with 'MountingCurses'.\n- 'ExtraAscendersBane': Start each run with an extra Ascender's Bane. Stacks with\n  'MountingBanes'.\n- 'SlowStart': Draw 1 fewer card on the first turn of each combat, in every act.\n- 'FrailStart': Start each run with 10% less max HP.\n- 'DangerousUnknowns': ? rooms lean towards fights. Combat starts at 20% and rises 15% each\n  time a ? room is not a fight; elites start at 0% and rise 4%; chests start and rise at 1%.\n  Shops are unchanged. The chances reset each act, with no cap. Juzu Bracelet never appears.\n  The extra fights and elites reach combat and relic checks sooner than logic expects.\n\nEasiest to set up in the YAML Builder: https://sts2ap.terairk.dev/#/builder",
+      "default": [],
+      "raw_default": [],
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "valid_keys": [
+        "CursedRun",
+        "DangerousUnknowns",
+        "EscalatingBuffs",
+        "ExtraAscendersBane",
+        "FrailStart",
+        "MountingBanes",
+        "MountingCurses",
+        "RisingStrength",
+        "ShrinkingRests",
+        "SlowStart"
+      ],
+      "valid_keys_casefold": false,
+      "allow_custom_values": false,
+      "supports_weighting": false,
+      "group": "Challenges"
+    },
+    "enemy_hp_scaling": {
+      "key": "enemy_hp_scaling",
+      "class_name": "EnemyHpScaling",
+      "module": "worlds.spire2.options",
+      "kind": "range",
+      "display_name": "Enemy HP Scaling",
+      "description": "Extra max HP for every enemy in Acts 2 and 3, as a percentage. Act 1 is unchanged. Stacks with\nAscension. Logic does not account for it. In multiplayer, the host's value applies to the whole\nrun. Easiest to set up in the YAML Builder: https://sts2ap.terairk.dev/#/builder",
+      "default": 0,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "minimum": 0,
+      "maximum": 15,
+      "supports_weighting": true,
+      "group": "Challenges"
+    },
+    "enemy_damage_scaling": {
+      "key": "enemy_damage_scaling",
+      "class_name": "EnemyDamageScaling",
+      "module": "worlds.spire2.options",
+      "kind": "range",
+      "display_name": "Enemy Damage Scaling",
+      "description": "Extra damage from every enemy in Acts 2 and 3, as a percentage. Act 1 is unchanged. Stacks with\nAscension. Logic does not account for it. In multiplayer, the host's value applies to the whole\nrun. Easiest to set up in the YAML Builder: https://sts2ap.terairk.dev/#/builder",
+      "default": 0,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "minimum": 0,
+      "maximum": 15,
+      "supports_weighting": true,
+      "group": "Challenges"
+    },
+    "dread_mode": {
+      "key": "dread_mode",
+      "class_name": "DreadMode",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Dread Mode",
+      "description": "Every run is a Dread run, the game's Dread mode. Each act has a Dominion, an extra combat rule\nset by that act's boss. Bosses are stronger, and you gain an Ascender's Bane at the start of Act 2\nand of Act 3. Your Ascension and Ascension Down settings apply as usual; the base game plays\nDread at Ascension 10. Needs the game's beta branch; on the main branch runs are standard runs.\nLogic does not account for it. In multiplayer, the host's setting applies to the whole run.",
+      "default": false,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "required_game_feature": "dread",
+      "supports_weighting": true,
+      "group": "Challenges"
+    },
+    "blitz_merchant_chance": {
+      "key": "blitz_merchant_chance",
+      "class_name": "BlitzMerchantChance",
+      "module": "worlds.spire2.options",
+      "kind": "range",
+      "display_name": "Blitz Merchant Chance",
+      "description": "Chance, in percent, for each shop to be a Blitz merchant instead: six offers and three free\npicks in place of a shop's stock. Shop Sanity checks are still sold there. Very strong, and\nlogic ignores it entirely; at high values gold has little use. Pair it with harder Challenges.\nIn multiplayer, the host's chance applies. Needs the game's beta branch; on the main branch\nevery shop is normal.",
+      "default": 0,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "minimum": 0,
+      "maximum": 100,
+      "required_game_feature": "blitz_merchant",
+      "supports_weighting": true,
+      "group": "Game Options"
+    },
+    "hidden_intents": {
+      "key": "hidden_intents",
+      "class_name": "HiddenIntents",
+      "module": "worlds.spire2.options",
+      "kind": "range",
+      "display_name": "Hidden Intents",
+      "description": "Enemy intents are hidden, like Runic Dome in the first game, and so is the Intent Graph \nmod's overlay.\nThe value is how many Intent Sight items are added to the item pool, and 0 turns it off. Finding\nany one of them shows intents again for every character, with their numbers and the Intent Graph overlay, and\na second one adds its Sight Bonus, which logic counts.",
+      "default": 0,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "minimum": 0,
+      "maximum": 4,
+      "supports_weighting": true,
+      "group": "Challenges"
+    },
+    "hidden_health": {
+      "key": "hidden_health",
+      "class_name": "HiddenHealth",
+      "module": "worlds.spire2.options",
+      "kind": "range",
+      "display_name": "Hidden Health",
+      "description": "Health is hidden. Health bars stay full and show no numbers, the top bar shows no HP, and the\npoison and doom previews on health bars are hidden. Block is still shown. The value is how many Health Sight\nitems are added to the item pool, and 0 turns it off. Finding any one of them shows everyone's health again\nfor every character, and a second one adds its Sight Bonus, which logic counts.",
+      "default": 0,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "minimum": 0,
+      "maximum": 4,
+      "supports_weighting": true,
+      "group": "Challenges"
+    },
+    "hidden_piles": {
+      "key": "hidden_piles",
+      "class_name": "HiddenPiles",
+      "module": "worlds.spire2.options",
+      "kind": "range",
+      "display_name": "Hidden Piles",
+      "description": "The draw, discard and exhaust piles show \"?\" instead of a card count\nand can't be opened. The value is how many Pile Sight items are added to the item pool, and 0 turns it off.\nFinding any one of them shows the piles again for every character, and a second one adds its Sight Bonus,\nwhich logic counts.",
+      "default": 0,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "minimum": 0,
+      "maximum": 4,
+      "supports_weighting": true,
+      "group": "Challenges"
+    },
+    "hidden_map": {
+      "key": "hidden_map",
+      "class_name": "HiddenMap",
+      "module": "worlds.spire2.options",
+      "kind": "range",
+      "display_name": "Hidden Map",
+      "description": "The map only shows the rooms you can move to next. Rooms further ahead show a closed eye \nuntil you can reach them.\nThe value is how many Map Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows the whole map again for every character, and a second one adds its Sight Bonus, which logic counts.",
+      "default": 0,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "minimum": 0,
+      "maximum": 4,
+      "supports_weighting": true,
+      "group": "Challenges"
+    },
+    "hidden_cards": {
+      "key": "hidden_cards",
+      "class_name": "HiddenCards",
+      "module": "worlds.spire2.options",
+      "kind": "range",
+      "display_name": "Hidden Cards",
+      "description": "Cards are unknown: their name, text and energy cost are hidden, their art is blurred and they\nshow no tooltips.\nThe value is how many Card Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows cards again for every character, and a second one adds its Sight Bonus, which logic counts.",
+      "default": 0,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "minimum": 0,
+      "maximum": 4,
+      "supports_weighting": true,
+      "group": "Challenges"
+    },
+    "hidden_relics": {
+      "key": "hidden_relics",
+      "class_name": "HiddenRelics",
+      "module": "worlds.spire2.options",
+      "kind": "range",
+      "display_name": "Hidden Relics",
+      "description": "Relics are unknown: their name and text are hidden, wherever they are offered or owned. They keep their\neffects but no longer show them: counters, flashes, the activation sound, the glow of a relic that is ready\nand the grey of a used one are all hidden.\nThe value is how many Relic Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows relics again for every character, and a second one adds its Sight Bonus, which logic counts.",
+      "default": 0,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "minimum": 0,
+      "maximum": 4,
+      "supports_weighting": true,
+      "group": "Challenges"
+    },
+    "sight_bonuses": {
+      "key": "sight_bonuses",
+      "class_name": "SightBonuses",
+      "module": "worlds.spire2.options",
+      "kind": "set",
+      "display_name": "Sight Bonuses",
+      "description": "Sight items whose second copy adds a bonus. A Sight left out stops at undoing its Hidden\noption. Names are case-sensitive.\n\n- 'IntentSight': Start each combat with Forewarned: for each enemy whose attacks your Block stops\n  completely on its turn, draw 1 more card next turn.\n- 'HealthSight': Gain Aged Cheese: after defeating an Elite or a boss, raise your Max HP by 3.\n- 'PileSight': Gain Frozen Eye: the draw pile shows cards in the order you will draw them.\n- 'MapSight': The map shows your next 2 fights, your next elite and what your next 2 ? rooms will be.\n- 'CardSight': Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.\n- 'RelicSight': Relic rewards offer 2 relics to choose from. The one you leave goes back into the relic pool.\n\nLogic counts each bonus as extra power in Act 3. The Intent, Health, Card and Relic Sight bonuses are\nsingleplayer only, but logic still counts them.",
+      "default": [
+        "CardSight",
+        "HealthSight",
+        "IntentSight",
+        "MapSight",
+        "PileSight",
+        "RelicSight"
+      ],
+      "raw_default": [
+        "CardSight",
+        "HealthSight",
+        "IntentSight",
+        "MapSight",
+        "PileSight",
+        "RelicSight"
+      ],
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "valid_keys": [
+        "CardSight",
+        "HealthSight",
+        "IntentSight",
+        "MapSight",
+        "PileSight",
+        "RelicSight"
+      ],
+      "valid_keys_casefold": false,
+      "allow_custom_values": false,
+      "supports_weighting": false,
+      "group": "Challenges"
+    },
+    "strict_card_rewards": {
+      "key": "strict_card_rewards",
+      "class_name": "StrictCardRewards",
+      "module": "worlds.spire2.options",
+      "kind": "toggle",
+      "display_name": "Strict Card Rewards",
+      "description": "You can no longer look through every Card Reward in the AP Menu before picking.\nOpening one reveals its cards and locks the other Card Rewards until you take a card or Discard it,\nlike a card reward after a fight. Skip, the map, the deck and closing the menu keep the revealed\nreward for later. With Pael's Wing, its Sacrifice replaces Discard.\nIn singleplayer, a Card Reward you have not opened yet depends on what you took from the ones before it,\nso loading a checkpoint and picking differently changes it.\nDoes not change logic. The mod's settings can override this.",
+      "default": false,
+      "raw_default": 0,
+      "visibility": {
+        "name": "all",
+        "value": 15,
+        "flags": [
+          "template",
+          "simple_ui",
+          "complex_ui",
+          "spoiler",
+          "all"
+        ]
+      },
+      "source": "game",
+      "choices": [
+        {
+          "name": "false",
+          "display_name": "False",
+          "value": 0
+        },
+        {
+          "name": "true",
+          "display_name": "True",
+          "value": 1
+        }
+      ],
+      "supports_weighting": true,
+      "group": "Challenges"
     }
   }
 }

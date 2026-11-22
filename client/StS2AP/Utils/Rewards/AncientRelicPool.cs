@@ -32,6 +32,8 @@ namespace StS2AP.Utils
             // Golden Compass regenerates the current map on pickup. Only offer it at the
             // Act 2 Ancient, never in an Anytime reward or at the start of another act.
             || (relic is GoldenCompass && startOfActIndex != 1)
+            // remove_op_relics' Ancient category applies only to Anytime rewards (no start act).
+            || (startOfActIndex == null && OpRelicPolicy.IsRemovedFromAnytimeAncients(relic, player, settings))
             || ProgressiveStarterUtility.ShouldExcludeAncientRelic(relic, player, settings);
 
         /// <summary>
@@ -109,6 +111,47 @@ namespace StS2AP.Utils
             );
 
             return choices;
+        }
+
+        /// <summary>
+        /// Picks one Ancient relic for a Random Shop Relics slot, from every act's Ancients
+        /// including Neow. Returns null when no relic is eligible. Every replica builds every
+        /// player's shop, so the pick depends only on run state and the shop RNG.
+        /// </summary>
+        public static RelicModel? CreateForShopSlot(
+            Player player,
+            string choiceKey,
+            IReadOnlyCollection<ModelId> relicIdsOnSale,
+            ArchipelagoSettings settings)
+        {
+            var ownedOrOnSale = player.Relics.Select(relic => relic.Id).ToHashSet();
+            ownedOrOnSale.UnionWith(relicIdsOnSale);
+
+            var allAncients = ModelDb.Acts
+                .SelectMany(act => act.AllAncients)
+                .Concat(ModelDb.AllSharedAncients)
+                .GroupBy(ancient => ancient.Id)
+                .Select(group => group.First());
+
+            // A sorted list so that the same RNG roll means the same relic on every replica.
+            var candidates = CollectCandidateRelics(player, allAncients, ownedOrOnSale, logFailures: true, settings)
+                .Values
+                .Where(relic => !OpRelicPolicy.IsRemovedFromAnytimeAncients(relic, player, settings))
+                .OrderBy(relic => relic.Id.Entry, StringComparer.Ordinal)
+                .ToList();
+
+            long? characterOffset = player.GetAPCharacterNumber();
+            while (candidates.Count > 0)
+            {
+                var candidate = player.PlayerRng.Shops.NextItem(candidates)!;
+                candidates.Remove(candidate);
+
+                var prepared = PrepareForPlayer(candidate, player, choiceKey, characterOffset);
+                if (prepared != null)
+                    return prepared;
+            }
+
+            return null;
         }
 
         /// <summary>

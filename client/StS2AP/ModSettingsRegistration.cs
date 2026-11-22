@@ -36,12 +36,17 @@ public static class ModSettingsRegistration
     private const string RelicRewards_OverrideId = "override_relic_rewards_available_anytime";
     private const string RelicRewards_AvailableAnytimeId = "relic_rewards_available_anytime";
 
+    // Card rewards
+    private const string CardRewards_OverrideStrictId = "override_strict_card_rewards";
+    private const string CardRewards_StrictId = "strict_card_rewards";
+
     // Cloud saves
     private const string CloudSaves_EnableId = "enable_remote_singleplayer_saves";
 
     // Local saves
-    private const string LocalSaves_DeleteSingleplayerId = "delete_local_singleplayer_saves";
-    private const string LocalSaves_DeleteMultiplayerId = "delete_local_multiplayer_saves";
+    private const string LocalSaves_ForgetUnplayedId = "forget_unplayed_local_seeds";
+    private const string LocalSaves_ForgetOthersId = "forget_other_local_seeds";
+    private const string LocalSaves_OpenFolderId = "open_local_data_folder";
 
     #endregion
 
@@ -75,25 +80,27 @@ public static class ModSettingsRegistration
         ApLootHotkeyHandle?.Dispose();
         ApLootHotkeyHandle = RuntimeHotkeyService.Register(
             GetApLootBindings(normalizedBinding),
-            () =>
-            {
-                // Ignore if we're not in a run
-                if (!GameUtility.IsInRun)
-                    return;
-
-                ArchipelagoRewardUI.Toggle();
-            },
+            ToggleApLootMenu,
             new RuntimeHotkeyOptions
             {
                 Id = $"{ModEntry.ModId}.{KeyBinds_APMenuId}",
                 DisplayName = RuntimeHotkeyText.Literal("Open AP Loot Menu"),
                 Description = RuntimeHotkeyText.Literal(
-                    "Opens the Archipelago Loot menu with the configured keyboard shortcut or L3."
+                    "Opens the Archipelago Loot menu with the configured keyboard shortcut, or with L3 (press the left stick down) on a controller."
                 ),
                 Category = RuntimeHotkeyText.Literal("Archipelago"),
                 MarkInputHandled = true,
             }
         );
+    }
+
+    /// <summary>Opens or closes the AP Loot menu; does nothing outside a run.</summary>
+    internal static void ToggleApLootMenu()
+    {
+        if (!GameUtility.IsInRun)
+            return;
+
+        ArchipelagoRewardUI.Toggle();
     }
 
     private static string[] GetApLootBindings(string keyboardBinding)
@@ -127,10 +134,10 @@ public static class ModSettingsRegistration
                     .AddSection("cloud_saves", ConfigureCloudSavesSection)
                     .AddSection("local_saves", ConfigureLocalSavesSection)
                     .AddSection("relic_rewards", ConfigureRelicRewardsSection)
+                    .AddSection("card_rewards", ConfigureCardRewardsSection)
                     .AddSection("ancient_rewards", ConfigureAncientRewardsSection)
                     .AddSection("deathlink", ConfigureDeathLinkSection)
                     .AddSection("bug_reports", ConfigureBugReportsSection)
-                    .AddSection("custom_apworld", ConfigureCustomApWorldSection)
         );
         RegisterHotkeys();
     }
@@ -139,6 +146,14 @@ public static class ModSettingsRegistration
     {
         section.WithTitle(ModSettingsText.Literal("Installed Characters"))
                 .WithDescription(ModSettingsText.Literal("Internal Names of Installed Modded Characters"))
+                // The info card cannot scroll or select text, so long rosters need the copy button.
+                .AddButton("copy_modded_character_ids", ModSettingsText.Literal("Copy character IDs"),
+                    ModSettingsText.Literal("Copy"), host =>
+                    {
+                        InstalledCharacterIds.TryCopyToClipboard(out _);
+                        host.RequestRefresh();
+                    }, description: ModSettingsText.Dynamic(() =>
+                        InstalledCharacterIds.Status + " You can also type ap characters in the console."))
                 .AddInfoCard("ap-modded-chars", ModSettingsText.Literal("Character Names"), ModSettingsText.Dynamic(GetModdedNames));
 
     }
@@ -157,31 +172,8 @@ public static class ModSettingsRegistration
                 ModSettingsText.Dynamic(() => ApBugReport.Status));
     }
 
-    private static string GetModdedNames()
-    {
-        StringWriter sw =  new StringWriter();
-        var moddedChars = ModelDb.AllCharacters.Where(c => {
-            if(!c.IsPlayable)
-            {
-                return false;
-            }
-            switch(c.Id.Entry)
-            {
-                case "IRONCLAD":
-                case "SILENT":
-                case "REGENT":
-                case "DEFECT":
-                case "NECROBINDER":
-                    return false;
-            }
-            return true;
-        });
-        foreach(var c in moddedChars)
-        {
-            sw.WriteLine(c.Id.Entry);
-        }
-        return sw.ToString();
-    }
+    private static string GetModdedNames() =>
+        string.Join(System.Environment.NewLine, InstalledCharacterIds.GetModdedIds());
 
     /// <summary>
     /// Composes the Keybinds settings section
@@ -192,7 +184,7 @@ public static class ModSettingsRegistration
             .WithTitle(ModSettingsText.Literal("Controls"))
             .WithDescription(
                 ModSettingsText.Literal(
-                    "Configure Archipelago controls. The AP Loot Menu also opens with L3."
+                    "Configure Archipelago controls. On a controller, the AP Loot Menu opens with L3 (press the left stick down)."
                 )
             )
             .AddKeyBinding(
@@ -381,32 +373,6 @@ public static class ModSettingsRegistration
                     "Balanced uses the run's Ancient; Chaos uses the act's pool; True Chaos combines Acts 2 and 3. Neow remains Neow-only."));
     }
 
-    private static void ConfigureCustomApWorldSection(ModSettingsSectionBuilder section)
-    {
-        const string key = "multiplayer_player_number";
-        section.WithTitle(ModSettingsText.Literal("Custom APWorld"))
-            .WithDescription(ModSettingsText.Literal(
-                "Each player normally connects to their own YAML/AP slot; no player number is needed. "
-                + "This setting only applies to custom APWorlds with numbered players sharing one slot. "
-                + "For those worlds, select your player number before connecting."))
-            .AddIntSlider(key, ModSettingsText.Literal("Shared-slot player number"),
-                CreateBinding(static settings => settings.MultiplayerPlayerNumber,
-                    static (settings, value) =>
-                    {
-                        if (CanChangePlayerNumber())
-                        {
-                            settings.MultiplayerPlayerNumber = value;
-                            LogUtility.Info($"[AP Settings] Player Number set to {value}");
-                        }
-                    }),
-                minValue: 1, maxValue: 4, step: 1,
-                valueFormatter: static value => $"Player {value}",
-                description: ModSettingsText.Dynamic(() => GetPlayerNumberLockReason()
-                    ?? "Only used by custom shared-slot APWorlds. Ordinary slots always use Player 1."))
-            .ConfigureEntryMenu(key, ModSettingsMenuCapabilities.None)
-            .WithEntryEnabledWhen(key, CanChangePlayerNumber);
-    }
-
     private static void ConfigureCloudSavesSection(ModSettingsSectionBuilder section)
     {
         section.WithTitle(ModSettingsText.Literal("Cloud Saves"))
@@ -429,44 +395,34 @@ public static class ModSettingsRegistration
     {
         section.WithTitle(ModSettingsText.Literal("Local Save Management"))
             .WithDescription(ModSettingsText.Literal(
-                "Permanently remove Archipelago checkpoints stored on this machine for the current STS profile."))
+                "Each AP seed keeps its checkpoints, multiplayer campaigns, run graphs and unsent checks on this computer until you forget it."))
             .WithMenuCapabilities(ModSettingsMenuCapabilities.None)
             .AddButton(
-                LocalSaves_DeleteSingleplayerId,
-                ModSettingsText.Literal("Singleplayer AP checkpoints"),
-                ModSettingsText.Literal("Delete All"),
-                host => LocalSaveManagement.ShowDeleteConfirmation(
-                    multiplayer: false,
-                    host.RequestRefresh
-                ),
+                LocalSaves_ForgetUnplayedId,
+                ModSettingsText.Literal($"Seeds not played in {LocalSaveManagement.UnplayedDays} days"),
+                ModSettingsText.Literal("Forget"),
+                host => LocalSaveManagement.ShowForgetConfirmation(onlyUnplayed: true, host.RequestRefresh),
                 description: ModSettingsText.Literal(
-                    "Deletes every local AP singleplayer checkpoint for this profile. AP server cloud backups are unaffected."))
-            .ConfigureEntryMenu(LocalSaves_DeleteSingleplayerId, ModSettingsMenuCapabilities.None)
-            .WithEntryEnabledWhen(LocalSaves_DeleteSingleplayerId, LocalSaveManagement.CanDelete)
+                    "Deletes the local data of every AP seed you have not played for a while. You see the list before anything is deleted."))
+            .ConfigureEntryMenu(LocalSaves_ForgetUnplayedId, ModSettingsMenuCapabilities.None)
+            .WithEntryEnabledWhen(LocalSaves_ForgetUnplayedId, LocalSaveManagement.CanForget)
             .AddButton(
-                LocalSaves_DeleteMultiplayerId,
-                ModSettingsText.Literal("Multiplayer AP campaigns"),
-                ModSettingsText.Literal("Delete All"),
-                host => LocalSaveManagement.ShowDeleteConfirmation(
-                    multiplayer: true,
-                    host.RequestRefresh
-                ),
+                LocalSaves_ForgetOthersId,
+                ModSettingsText.Literal("All seeds except the connected one"),
+                ModSettingsText.Literal("Forget"),
+                host => LocalSaveManagement.ShowForgetConfirmation(onlyUnplayed: false, host.RequestRefresh),
                 description: ModSettingsText.Literal(
-                    "Deletes every active, completed, and archived local AP multiplayer campaign for this profile. Non-AP multiplayer saves are preserved."))
-            .ConfigureEntryMenu(LocalSaves_DeleteMultiplayerId, ModSettingsMenuCapabilities.None)
-            .WithEntryEnabledWhen(LocalSaves_DeleteMultiplayerId, LocalSaveManagement.CanDelete);
-    }
-
-    private static bool CanChangePlayerNumber() => GetPlayerNumberLockReason() == null;
-
-    private static string? GetPlayerNumberLockReason()
-    {
-        if (GameUtility.IsInRun || MultiplayerSupport.IsMultiplayerScope)
-            return "Locked while in a run or multiplayer menu/lobby. Return to the main menu first.";
-        if (ArchipelagoClient.HasSlotConnection)
-            return "Locked to the selected AP slot. Use Disconnect from Archipelago (or Cancel Connection/Reconnect) "
-                + "on the main menu, then reopen these settings.";
-        return null;
+                    "Deletes the local data of every AP seed but the one you are connected to. AP server cloud saves are kept."))
+            .ConfigureEntryMenu(LocalSaves_ForgetOthersId, ModSettingsMenuCapabilities.None)
+            .WithEntryEnabledWhen(LocalSaves_ForgetOthersId, LocalSaveManagement.CanForget)
+            .AddButton(
+                LocalSaves_OpenFolderId,
+                ModSettingsText.Literal("Local AP data folder"),
+                ModSettingsText.Literal("Open"),
+                _ => LocalSaveManagement.OpenFolder(),
+                description: ModSettingsText.Literal(
+                    "Opens the folder with every seed's data, plus saved recap images and run exports."))
+            .ConfigureEntryMenu(LocalSaves_OpenFolderId, ModSettingsMenuCapabilities.None);
     }
 
     private static void ConfigureRelicRewardsSection(ModSettingsSectionBuilder section)
@@ -530,6 +486,55 @@ public static class ModSettingsRegistration
             );
     }
 
+    private static void ConfigureCardRewardsSection(ModSettingsSectionBuilder section)
+    {
+        section
+            .WithTitle(ModSettingsText.Literal("Card Rewards"))
+            .WithDescription(
+                ModSettingsText.Literal("Configure how AP menu card rewards are opened.")
+            )
+            .WithMenuCapabilities(ModSettingsMenuCapabilities.None)
+            .AddToggle(
+                CardRewards_OverrideStrictId,
+                ModSettingsText.Literal("Override AP Strict Card Rewards"),
+                CreateBinding(
+                    static settings => settings.OverrideStrictCardRewards,
+                    static (settings, value) =>
+                    {
+                        // Start an override from the slot's value instead of a stale local value.
+                        if (value && !settings.OverrideStrictCardRewards)
+                        {
+                            settings.StrictCardRewards =
+                                ArchipelagoClient.Settings?.StrictCardRewards
+                                ?? settings.StrictCardRewards;
+                        }
+
+                        settings.OverrideStrictCardRewards = value;
+                    }
+                ),
+                ModSettingsText.Literal(
+                    "Use a local value instead of the one supplied by the Archipelago slot."
+                )
+            )
+            .ConfigureEntryMenu(CardRewards_OverrideStrictId, ModSettingsMenuCapabilities.None)
+            .AddToggle(
+                CardRewards_StrictId,
+                ModSettingsText.Literal("Strict Card Rewards"),
+                CreateBinding(
+                    static settings => settings.OverrideStrictCardRewards
+                        ? settings.StrictCardRewards
+                        : ArchipelagoClient.Settings?.StrictCardRewards
+                            ?? settings.StrictCardRewards,
+                    static (settings, value) => settings.StrictCardRewards = value
+                ),
+                ModSettingsText.Literal(
+                    "Harder: opening an AP card reward locks the others until you take a card or Discard it. Skip, the map, the deck and closing the menu keep it for later. Applies the next time the AP menu opens."
+                )
+            )
+            .ConfigureEntryMenu(CardRewards_StrictId, ModSettingsMenuCapabilities.None)
+            .WithEntryEnabledWhen(CardRewards_StrictId, IsStrictCardRewardsOverrideEnabled);
+    }
+
     #endregion
 
     #region Helper Functions
@@ -550,6 +555,12 @@ public static class ModSettingsRegistration
     {
         var store = RitsuLibFramework.GetDataStore(ModEntry.ModId);
         return store.Get<ClientSettings>("apsettings").OverrideRelicRewardsAvailableAnytime;
+    }
+
+    private static bool IsStrictCardRewardsOverrideEnabled()
+    {
+        var store = RitsuLibFramework.GetDataStore(ModEntry.ModId);
+        return store.Get<ClientSettings>("apsettings").OverrideStrictCardRewards;
     }
 
     /// <summary>

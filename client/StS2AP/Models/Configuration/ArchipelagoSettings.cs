@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using StS2AP.Utils;
 
 namespace StS2AP.Models
 {
@@ -14,8 +15,6 @@ namespace StS2AP.Models
     /// </summary>
     public class ArchipelagoSettings
     {
-        public int PlayerCount { get; set; } = 1;
-        public int PlayerNumber { get; set; } = 1;
         private static readonly StringComparer CharacterNameComparer =
             StringComparer.InvariantCultureIgnoreCase;
 
@@ -69,8 +68,69 @@ namespace StS2AP.Models
         /// </summary>
         public int RelicRewardsAvailableAnytime { get; set; } = 10;
 
+        /// <summary>
+        /// Whether opening an AP menu card reward locks the other card rewards until a card is
+        /// taken or the revealed reward is discarded.
+        /// </summary>
+        public bool StrictCardRewards { get; set; }
+
+        /// <summary>
+        /// Whether the slot enabled the Hidden Intents challenge. When it is off, intents are never
+        /// hidden. When it is on, <see cref="StS2AP.Utils.IntentSight"/> works out what is visible
+        /// from the Intent Sight items received so far.
+        /// </summary>
+        public bool HiddenIntents { get; set; }
+
+        /// <summary>
+        /// Whether the slot enabled the Hidden Health challenge. When it is off, health is never
+        /// hidden. When it is on, <see cref="StS2AP.Utils.Combat.HealthSight"/> works out what is visible
+        /// from the Health Sight items received so far.
+        /// </summary>
+        public bool HiddenHealth { get; set; }
+
+        /// <summary>
+        /// Whether the slot enabled the Hidden Piles challenge. When it is on, combat piles stay
+        /// hidden until <see cref="StS2AP.Utils.Combat.PileSight"/> sees a Pile Sight item.
+        /// </summary>
+        public bool HiddenPiles { get; set; }
+
+        /// <summary>
+        /// Whether the slot enabled the Hidden Map challenge. When it is on, rooms beyond the next
+        /// step stay hidden until <see cref="StS2AP.Utils.MapSight"/> sees a Map Sight item.
+        /// </summary>
+        public bool HiddenMap { get; set; }
+
+        /// <summary>
+        /// Whether the slot enabled the Hidden Cards challenge. When it is on, cards look unseen
+        /// until <see cref="StS2AP.Utils.Combat.CardSight"/> sees a Card Sight item.
+        /// </summary>
+        public bool HiddenCards { get; set; }
+
+        /// <summary>
+        /// Whether the slot enabled the Hidden Relics challenge. When it is on, relic counters,
+        /// flashes and status looks stay hidden until <see cref="StS2AP.Utils.Combat.RelicSight"/>
+        /// sees a Relic Sight item.
+        /// </summary>
+        public bool HiddenRelics { get; set; }
+
+        /// <summary>
+        /// Sight Bonuses names from the YAML (for example "PileSight"): the Sight items whose second
+        /// copy adds a bonus; see <see cref="StS2AP.Utils.ChallengeSightItems"/>. Older APWorlds
+        /// send no list, and their slots get every bonus.
+        /// </summary>
+        public HashSet<string> SightBonuses { get; set; } = new();
+
         /// <summary>Whether a victory releases the winning character's remaining checks.</summary>
         public bool ReleaseOnVictory { get; set; } = true;
+
+        /// <summary>Overpowered-relic categories this slot removes from its runs.</summary>
+        public OpRelicCategories RemovedOpRelics { get; set; }
+
+        /// <summary>
+        /// Whether singleplayer runs draw every act's events from one pool that ignores the
+        /// game's act restrictions. See <see cref="StS2AP.Patches.Patches_EventsInAnyAct"/>.
+        /// </summary>
+        public bool EventsInAnyAct { get; set; }
 
         private Dictionary<string, List<BonusItemDefinition>> _bonusItemsByCategory =
             new(StringComparer.OrdinalIgnoreCase);
@@ -97,6 +157,36 @@ namespace StS2AP.Models
                 ? definitions
                 : Array.Empty<BonusItemDefinition>();
 
+        /// <summary>
+        /// Run Modifiers names from the YAML (for example "EliteStrength"). A new run adds the
+        /// matching AP modifiers; see <see cref="ApRunModifiers"/>.
+        /// </summary>
+        public List<string> RunModifiers { get; set; } = new();
+
+        /// <summary>
+        /// Boons names from the YAML (for example "Wayfinder"): helpful modifiers that a new run
+        /// adds; see <see cref="ApRunModifiers"/>.
+        /// </summary>
+        public List<string> Boons { get; set; } = new();
+
+        /// <summary>Extra enemy max HP in Acts 2 and 3, in percent (0-15).</summary>
+        public int EnemyHpScaling { get; set; }
+
+        /// <summary>Extra enemy damage in Acts 2 and 3, in percent (0-15).</summary>
+        public int EnemyDamageScaling { get; set; }
+
+        /// <summary>
+        /// Whether the slot's runs are Dread runs. In multiplayer, the host's value applies to
+        /// the whole run. Only game versions with <see cref="GameFeatures.Dread"/> can honour it.
+        /// </summary>
+        public bool DreadMode { get; set; }
+
+        /// <summary>
+        /// Chance, in percent, for each shop to be a Blitz merchant. In multiplayer, the host's
+        /// value applies to the whole run. See <see cref="BlitzMerchantVisits"/>.
+        /// </summary>
+        public int BlitzMerchantChance { get; set; }
+
         public bool CampfireSanity { get; set; }
         public bool GoldSanity { get; set; }
         public bool PotionSanity { get; set; }
@@ -104,13 +194,28 @@ namespace StS2AP.Models
         public bool ProgressiveStarterCard { get; set; }
         public bool ProgressiveStarterRelic { get; set; }
 
+        /// <summary>
+        /// Looks up the slot configuration a game character plays with. Besides the slot's own
+        /// characters, Defect can answer with a configuration borrowed from a slot character whose
+        /// mod is not loaded; see <see cref="MissingCharacterFallback"/>.
+        /// </summary>
+        public bool TryGetCharacterConfig(string characterId, out CharacterConfig config)
+        {
+            if (Characters.TryGetValue(characterId, out CharacterConfig? configured))
+            {
+                config = configured;
+                return true;
+            }
+            return MissingCharacterFallback.TryGetBorrowedConfig(this, characterId, out config);
+        }
+
         public bool IsProgressiveStarterCardEnabled(string characterId) =>
-            Floorsanity && (Characters.TryGetValue(characterId, out var config)
+            Floorsanity && (TryGetCharacterConfig(characterId, out var config)
                 ? config.ProgressiveStarterCard ?? ProgressiveStarterCard
                 : ProgressiveStarterCard);
 
         public bool IsProgressiveStarterRelicEnabled(string characterId) =>
-            Floorsanity && (Characters.TryGetValue(characterId, out var config)
+            Floorsanity && (TryGetCharacterConfig(characterId, out var config)
                 ? config.ProgressiveStarterRelic ?? ProgressiveStarterRelic
                 : ProgressiveStarterRelic);
 
@@ -123,6 +228,24 @@ namespace StS2AP.Models
         public int ShopPotionSlots { get; set; }
         public bool ShopRemoveSlots { get; set; }
         public int ShopSanityCosts { get; set; }
+
+        /// <summary>
+        /// Random Shop Cards weights by kind name ("attack", "skill", "power", "common",
+        /// "uncommon", "rare", "colorless"). Empty keeps the vanilla shop card layout.
+        /// </summary>
+        public Dictionary<string, int> ShopCardWeights { get; set; } = new();
+
+        /// <summary>
+        /// Random Shop Relics weights by kind name ("common", "uncommon", "rare", "shop", "event",
+        /// "ancient"). Empty keeps the vanilla shop relic layout.
+        /// </summary>
+        public Dictionary<string, int> ShopRelicWeights { get; set; } = new();
+
+        /// <summary>
+        /// Random Shop Potions weights by kind name ("common", "uncommon", "rare", "otherclass",
+        /// "event"). Empty keeps the vanilla shop potion layout.
+        /// </summary>
+        public Dictionary<string, int> ShopPotionWeights { get; set; } = new();
 
         /// <summary>
         /// Total number of generic Shop Slot locations generated per character. Enabling card

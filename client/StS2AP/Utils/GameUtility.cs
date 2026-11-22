@@ -17,6 +17,7 @@ using StS2AP.Extensions;
 using StS2AP.Patches;
 using StS2AP.UI;
 using static StS2AP.Data.ItemTable;
+using StS2AP.Utils.RunGraph;
 
 namespace StS2AP.Utils
 {
@@ -322,6 +323,16 @@ namespace StS2AP.Utils
 
         private static HashSet<string> _allGoaledCharacters = new(StringComparer.OrdinalIgnoreCase);
         private static bool _slotGoalSent;
+        private static Player? _victoryAwaitingReconnect;
+
+        /// <summary>Sends a singleplayer victory that was won while the AP connection was down.</summary>
+        internal static void SendVictoryAwaitingReconnect()
+        {
+            Player? player = _victoryAwaitingReconnect;
+            _victoryAwaitingReconnect = null;
+            if (player != null)
+                _ = TrySetGoalAchieved(player);
+        }
 
         public static async Task RestoreGoaledCharsFromStorage()
         {
@@ -352,15 +363,14 @@ namespace StS2AP.Utils
             // Goal records only grow. A delayed initial read must not erase a newer notification.
             if (stored != null)
                 _allGoaledCharacters.UnionWith(stored.Where(pair => pair.Value).Select(pair => pair.Key));
-            _goaledCharacters.UnionWith(settings.Characters.Keys.Where(character =>
-                _allGoaledCharacters.Contains(ArchipelagoIdCodec.PlayerName(character, settings.PlayerNumber))));
-            if (!_slotGoalSent && CoopGoalPolicy.IsComplete(_allGoaledCharacters, settings.Characters.Keys,
-                    settings.PlayerCount, settings.NumCharsGoal))
+            _goaledCharacters.UnionWith(settings.Characters.Keys.Where(_allGoaledCharacters.Contains));
+            if (!_slotGoalSent && SlotGoalPolicy.IsComplete(_allGoaledCharacters, settings.Characters.Keys,
+                    settings.NumCharsGoal))
             {
                 session.SetGoalAchieved();
                 _slotGoalSent = true;
-                LogUtility.Success($"All {settings.PlayerCount} co-op players completed their character goals. SetGoalAchieved sent.");
-                NotificationUtility.ShowRawText("Goal Complete! Every player has finished their goals.");
+                LogUtility.Success("The slot's character goal is complete. SetGoalAchieved sent.");
+                NotificationUtility.ShowRawText("Goal Complete!");
             }
         }
 
@@ -369,6 +379,7 @@ namespace StS2AP.Utils
             _goaledCharacters = new(StringComparer.OrdinalIgnoreCase);
             _allGoaledCharacters = new(StringComparer.OrdinalIgnoreCase);
             _slotGoalSent = false;
+            _victoryAwaitingReconnect = null;
             CurrentPlayer = null;
             CurrentConfig = null;
         }
@@ -384,7 +395,20 @@ namespace StS2AP.Utils
 
             if (!ArchipelagoClient.IsConnected)
             {
-                LogUtility.Warn("TrySetGoalAchieved: not connected");
+                // A singleplayer run keeps going through a dropped connection, so it can be won
+                // offline. Hold the victory for the next login to the same slot.
+                if (ArchipelagoClient.HasAuthenticatedSlot && !MultiplayerSupport.IsMultiplayerScope)
+                {
+                    _victoryAwaitingReconnect = player;
+                    LogUtility.Warn("TrySetGoalAchieved: not connected; the victory will be sent after reconnecting");
+                    NotificationUtility.ShowRawText(
+                        "Victory saved. It will be sent to Archipelago when the connection returns.",
+                        timeout: 6.0);
+                }
+                else
+                {
+                    LogUtility.Warn("TrySetGoalAchieved: not connected");
+                }
                 return;
             }
 
@@ -414,8 +438,14 @@ namespace StS2AP.Utils
                 const string storageKey = "StS2AP_GoaledChars";
                 LogUtility.Debug($"TrySetGoalAchieved: charName - {charName}");
 
+                // Any win also completes the goals of characters whose mods are not loaded.
+                IReadOnlyList<string> goalCharacterIds = MissingCharacterFallback
+                    .GetPlan(settings)
+                    .GoalCharacterIds(charName);
+
                 // Add to local cache HashSet.Add returns false if already present
-                bool wasNew = _goaledCharacters.Add(charName);
+                string[] newGoals = goalCharacterIds.Where(_goaledCharacters.Add).ToArray();
+                bool wasNew = newGoals.Length > 0;
                 LogUtility.Debug($"TrySetGoalAchieved: wasNew - {wasNew.ToString()}");
 
                 if (wasNew)
@@ -427,13 +457,13 @@ namespace StS2AP.Utils
                         Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
                         .Initialize(new Newtonsoft.Json.Linq.JObject());
 
-                    var updateDict = new Dictionary<string, bool> { { CoopSlot.Name(charName), true } };
+                    var updateDict = newGoals.ToDictionary(goalCharacterId => goalCharacterId, _ => true);
  
                     session.DataStorage[
                         Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
                         += Operation.Update(updateDict);
 
-                    LogUtility.Success($"TrySetGoalAchieved: Recorded goal for '{charName}'. Total goaled: {_goaledCharacters.Count}");
+                    LogUtility.Success($"TrySetGoalAchieved: Recorded goal for '{string.Join("', '", newGoals)}'. Total goaled: {_goaledCharacters.Count}");
 
                     // Goal progress is independent from whether victory releases this character's checks.
                     if (settings.ReleaseOnVictory)
@@ -453,8 +483,8 @@ namespace StS2AP.Utils
                     LogUtility.Info($"TrySetGoalAchieved: '{charName}' already recorded as goaled. Total goaled: {_goaledCharacters.Count}");
                 }
 
-                // Shared-slot completion is evaluated from merged server records, including updates
-                // from other connected clients. Never goal from this player's local count alone.
+                // Completion is evaluated from merged server records, including victories by other
+                // clients connected to this slot. Never goal from this client's local count alone.
                 var merged = await session.DataStorage[Archipelago.MultiClient.Net.Enums.Scope.Slot, storageKey]
                     .GetAsync<Dictionary<string, bool>>();
                 ArchipelagoClient.RunForSession(session, () => ApplySharedGoalProgress(session, settings, merged));
@@ -477,9 +507,7 @@ namespace StS2AP.Utils
                 return;
             long blockStart = (characterNumber.Value - 1) * ArchipelagoIdCodec.BlockSize;
             var locations = ArchipelagoClient.SlotLocationIds.Where(id =>
-                CoopSlot.Owns(id)
-                && ArchipelagoIdCodec.WithoutPlayer(id) >= blockStart
-                && ArchipelagoIdCodec.WithoutPlayer(id) < blockStart + ArchipelagoIdCodec.BlockSize);
+                id >= blockStart && id < blockStart + ArchipelagoIdCodec.BlockSize);
             QueueChecks(locations);
         }
 
@@ -506,6 +534,16 @@ namespace StS2AP.Utils
 
         internal static LocationCheckSendResult QueueChecks(IEnumerable<long> locationIds)
         {
+            // Every check also counts for characters whose mods are not loaded.
+            MissingCharacterFallbackPlan fallbackPlan = ArchipelagoClient.Settings is { } settings
+                ? MissingCharacterFallback.GetPlan(settings)
+                : MissingCharacterFallbackPlan.None;
+            return QueueExactChecks(fallbackPlan.WithMirroredLocations(locationIds));
+        }
+
+        /// <summary>Queues exactly these locations, without mirroring them to missing characters.</summary>
+        internal static LocationCheckSendResult QueueExactChecks(IEnumerable<long> locationIds)
+        {
             long[] requested = locationIds.Distinct().ToArray();
             if (!ArchipelagoClient.HasAuthenticatedSlot
                 || (MultiplayerSupport.IsMultiplayerScope && !MultiplayerSupport.IsLocalOwnApSlot))
@@ -519,7 +557,7 @@ namespace StS2AP.Utils
             var pending = new List<long>();
             foreach (long id in requested)
             {
-                if (id < 0 || !CoopSlot.Owns(id) || !ArchipelagoClient.SlotLocationIds.Contains(id))
+                if (id < 0 || !ArchipelagoClient.SlotLocationIds.Contains(id))
                     notInSlot++;
                 else if (ArchipelagoClient.CheckedLocations.Contains(id))
                     alreadyChecked++;
@@ -533,9 +571,8 @@ namespace StS2AP.Utils
                 or LocationCheckSendResult.DispatchStatus.Submitted)
             {
                 accepted = pending.Count;
-                foreach (long id in pending)
-                    if (!ArchipelagoClient.CheckedLocations.Contains(id))
-                        ArchipelagoClient.CheckedLocations.Add(id);
+                ArchipelagoClient.CheckedLocations.UnionWith(pending);
+                ApRunGraphRecorder.RecordChecks(pending);
             }
             return new(dispatch, requested.Length, accepted, alreadyChecked, notInSlot);
         }
