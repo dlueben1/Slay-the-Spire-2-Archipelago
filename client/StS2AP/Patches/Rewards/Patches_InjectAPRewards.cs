@@ -306,6 +306,11 @@ namespace StS2AP.Patches
                     // Note the logic is only sound because of the GateTreasureRelicPicker prefix
                     RelicRewardUtility.ReconcileBankedRewards(player);
                 }
+                else
+                {
+                    // The chest's relic is paired with an AP Relic.
+                    RelicSightChoices.OfferChestChoice(relicPicker, player);
+                }
             }
         }
 

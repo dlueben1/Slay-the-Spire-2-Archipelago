@@ -2,6 +2,7 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Factories;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Utils.Combat;
@@ -13,6 +14,8 @@ namespace StS2AP.Utils;
 /// player keeps one. Each extra relic is taken from the player's relic pool like a normal reward,
 /// and every relic left behind goes back to the end of the pool for its rarity, so a run spends
 /// one relic per reward just as without the bonus and does not run out sooner. Singleplayer only.
+/// Covers relics paired with an AP Relic: Elite and Black Star rewards, treasure chests and the AP
+/// menu.
 /// </summary>
 internal static class RelicSightChoices
 {
@@ -66,6 +69,74 @@ internal static class RelicSightChoices
         LogUtility.Info($"Relic Sight offers a choice of {string.Join(", ", relics.Select(relic => relic.Id))}");
     }
 
+    /// <summary>The chest whose extra relics are waiting for the player's pick.</summary>
+    private static PendingChest? s_pendingChest;
+
+    private sealed record PendingChest(TreasureRoomRelicSynchronizer Picker, Player Player, List<RelicModel> Offered);
+
+    /// <summary>
+    /// Adds extras of the same rarity to a singleplayer chest that holds one relic paired with an AP
+    /// Relic. Call it when the chest opens, before the chest screen lays out its relics. The game's
+    /// chest screen already lays out several relics (multiplayer chests have one per player), and
+    /// the relics left unpicked end the vote unawarded.
+    /// </summary>
+    internal static void OfferChestChoice(TreasureRoomRelicSynchronizer picker, Player player)
+    {
+        s_pendingChest = null;
+        if (!RelicSight.HasChoiceBonus || picker._currentRelics is not { Count: 1 } relics)
+            return;
+#if STS2_AT_LEAST_0_113_0
+        // Blitz chests already hand out a second relic over a second round.
+        if (player.RunState.GameMode == GameMode.Blitz)
+            return;
+#endif
+
+        RelicModel baseRelic = relics[0];
+        RelicRarity rarity = PoolRarities.Contains(baseRelic.Rarity) ? baseRelic.Rarity : RelicRarity.Common;
+        while (relics.Count < RelicSight.ChoiceCount)
+        {
+            // Chests draw from the run's shared pool, so the extras do too.
+            RelicModel? extra = picker._sharedGrabBag.PullFromFront(
+                rarity,
+                candidate => relics.All(offered => offered.Id != candidate.Id),
+                player.RunState);
+            if (extra == null)
+                break;
+            relics.Add(extra);
+        }
+        if (relics.Count < 2)
+            return;
+
+        s_pendingChest = new PendingChest(picker, player, relics.ToList());
+        LogUtility.Info($"Relic Sight offers a chest choice of {string.Join(", ", relics.Select(relic => relic.Id))}");
+    }
+
+    /// <summary>Returns the chest relics the player passed over once they pick one.</summary>
+    internal static void OnChestPicked(TreasureRoomRelicSynchronizer picker, int? index)
+    {
+        if (s_pendingChest is not { } chest || chest.Picker != picker || !index.HasValue)
+            return;
+        if (picker._currentRelics is not { } relics || index.Value < 0 || index.Value >= relics.Count)
+            return;
+        s_pendingChest = null;
+        ModelId picked = relics[index.Value].Id;
+        foreach (RelicModel relic in chest.Offered.Where(relic => relic.Id != picked))
+            ReturnToPool(chest.Player, relic);
+    }
+
+    /// <summary>
+    /// Returns every chest relic when the player leaves without picking. Skipping a singleplayer
+    /// chest leaves the room, so this is where a skip ends.
+    /// </summary>
+    internal static void OnChestRoomExited(TreasureRoomRelicSynchronizer picker)
+    {
+        if (s_pendingChest is not { } chest || chest.Picker != picker)
+            return;
+        s_pendingChest = null;
+        foreach (RelicModel relic in chest.Offered)
+            ReturnToPool(chest.Player, relic);
+    }
+
     /// <summary>
     /// The relics an AP Relic's saved assignment holds besides <paramref name="first"/>. The AP
     /// menu entry carries only the first; the bonus's other choices stay in the assignment.
@@ -110,7 +181,7 @@ internal static class RelicSightChoices
 
     private static void AddToBack(RelicGrabBag bag, RelicModel canonical)
     {
-        // An unpopulated bag (the shared bag outside multiplayer) has nothing to return to.
+        // An unpopulated bag has no rarities to return to.
         if (!bag.IsPopulated || bag._deques.Values.Any(deque => deque.Any(relic => relic.Id == canonical.Id)))
             return;
         if (!bag._deques.TryGetValue(canonical.Rarity, out List<RelicModel>? deque))
