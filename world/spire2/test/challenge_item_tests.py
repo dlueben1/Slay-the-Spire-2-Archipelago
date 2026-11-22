@@ -215,6 +215,6 @@ class TestSightBonusesDefaultToAll(Spire2TestBase):
 
     def test_every_sight_bonus_is_on_by_default(self):
         self.assertEqual(
-            ["CardSight", "HealthSight", "IntentSight", "MapSight", "PileSight"],
+            ["CardSight", "HealthSight", "IntentSight", "MapSight", "PileSight", "RelicSight"],
             sorted(self.world.fill_slot_data()["sight_bonuses"]),
         )

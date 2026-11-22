@@ -475,6 +475,7 @@ export function hasActiveChallenges(answers: ChallengeAnswers): boolean {
       answers.hiddenPiles !== "off" ||
       answers.hiddenMap !== "off" ||
       answers.hiddenCards !== "off" ||
+      answers.hiddenRelics !== "off" ||
       answers.strictCardRewards)
   );
 }
@@ -540,6 +541,7 @@ function describeSightBonuses(answers: ChallengeAnswers): string {
     { field: "pile", copies: answers.hiddenPiles, name: "Pile Sight" },
     { field: "map", copies: answers.hiddenMap, name: "Map Sight" },
     { field: "card", copies: answers.hiddenCards, name: "Card Sight" },
+    { field: "relic", copies: answers.hiddenRelics, name: "Relic Sight" },
   ] as const;
   const names = sights
     .filter(
@@ -621,6 +623,12 @@ export function summarizeChallengeAnswers(answers: ChallengeAnswers): string {
   if (answers.hiddenCards !== "off") {
     sentences.push(
       `Cards are unknown until ${describeSightItems(answers.hiddenCards, "Card Sight")} is found.`,
+    );
+  }
+
+  if (answers.hiddenRelics !== "off") {
+    sentences.push(
+      `Relics hide what they do until ${describeSightItems(answers.hiddenRelics, "Relic Sight")} is found.`,
     );
   }
 

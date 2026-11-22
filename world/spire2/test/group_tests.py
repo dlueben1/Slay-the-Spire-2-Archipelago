@@ -45,4 +45,5 @@ class TestItemGroups(TestCase):
         self.assertFalse({"Ironclad One Gold", "Ironclad Five Gold"} & item_groups["Gold"])
 
     def test_sights_group_has_every_sight(self):
-        self.assertEqual({"Intent Sight", "Health Sight", "Pile Sight", "Map Sight", "Card Sight"}, item_groups["Sights"])
+        self.assertEqual({"Intent Sight", "Health Sight", "Pile Sight", "Map Sight", "Card Sight", "Relic Sight"},
+                         item_groups["Sights"])

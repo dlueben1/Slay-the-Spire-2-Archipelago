@@ -588,6 +588,7 @@ export function readChallengeAnswers(
     hiddenPiles: readSightCopies(options[CHALLENGE_OPTION_KEYS.hiddenPiles]),
     hiddenMap: readSightCopies(options[CHALLENGE_OPTION_KEYS.hiddenMap]),
     hiddenCards: readSightCopies(options[CHALLENGE_OPTION_KEYS.hiddenCards]),
+    hiddenRelics: readSightCopies(options[CHALLENGE_OPTION_KEYS.hiddenRelics]),
     sightBonuses: readSightBonusNames(
       (options[CHALLENGE_OPTION_KEYS.sightBonuses] as string[] | undefined) ?? [],
     ),

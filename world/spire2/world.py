@@ -163,6 +163,7 @@ class SlayTheSpire2World(World):
             self.options.hidden_piles.value = 0
             self.options.hidden_map.value = 0
             self.options.hidden_cards.value = 0
+            self.options.hidden_relics.value = 0
         names = {config.official_name for config in self.characters}
         if len(names) != len(self.characters):
             raise OptionError(f"Found duplicate characters: {[c.official_name for c in self.characters]}")
@@ -671,6 +672,7 @@ class SlayTheSpire2World(World):
         bonus_item_names += ["Pile Sight"] * self.options.hidden_piles.value
         bonus_item_names += ["Map Sight"] * self.options.hidden_map.value
         bonus_item_names += ["Card Sight"] * self.options.hidden_cards.value
+        bonus_item_names += ["Relic Sight"] * self.options.hidden_relics.value
 
         available_filler_slots = sum(count for _, count in filler_counts)
         if len(bonus_item_names) > available_filler_slots:
@@ -797,6 +799,7 @@ class SlayTheSpire2World(World):
             "hidden_piles",
             "hidden_map",
             "hidden_cards",
+            "hidden_relics",
             "sight_bonuses",
             "include_floor_checks",
             "neow_sanity",
@@ -931,6 +934,7 @@ class SlayTheSpire2World(World):
         self.options.hidden_piles.value = slot_data.get('hidden_piles', 0)
         self.options.hidden_map.value = slot_data.get('hidden_map', 0)
         self.options.hidden_cards.value = slot_data.get('hidden_cards', 0)
+        self.options.hidden_relics.value = slot_data.get('hidden_relics', 0)
         # Logic counts the Sight Bonuses a slot left on; slots from before the option have none.
         self.options.sight_bonuses.value = set(slot_data.get('sight_bonuses', []))
         if self.options.include_floor_checks.value == 0:

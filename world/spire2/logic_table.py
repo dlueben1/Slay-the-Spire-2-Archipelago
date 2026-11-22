@@ -226,6 +226,8 @@ SIGHT_BONUS_POWER = {
     "Pile Sight": 1.5,
     "Map Sight": 1.0,
     "Card Sight": 2.0,
+    # Placeholder until the user picks a number. The bonus only works in singleplayer.
+    "Relic Sight": 1.5,
 }
 # Half shuffle leaves every other combat card reward vanilla.
 VANILLA_CARD_REWARD_SHARE = 0.5

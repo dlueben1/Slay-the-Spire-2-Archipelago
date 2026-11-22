@@ -230,9 +230,9 @@ namespace StS2AP.Utils
                 var choices = progress.GetOrAssignRelicChoices(
                     receipt.Index,
                     player,
-                    choiceCount: 1
+                    RelicSightChoices.AssignmentChoiceCount
                 );
-                if (choices.Count != 1)
+                if (choices.Count == 0)
                 {
                     LogUtility.Error(
                         $"Could not pair banked relic reward with AP item w/ index {receipt.Index} " +

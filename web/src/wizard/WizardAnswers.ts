@@ -247,6 +247,7 @@ export interface SightBonusAnswers {
   pile: boolean;
   map: boolean;
   card: boolean;
+  relic: boolean;
 }
 
 /** Generated `sight_bonuses` names keyed by their answer field, in display order. */
@@ -256,6 +257,7 @@ export const SIGHT_BONUS_NAMES: Readonly<Record<keyof SightBonusAnswers, string>
   pile: "PileSight",
   map: "MapSight",
   card: "CardSight",
+  relic: "RelicSight",
 };
 
 /**
@@ -272,6 +274,7 @@ export function readSightBonusNames(names: Iterable<string>): SightBonusAnswers 
     pile: selected.has(SIGHT_BONUS_NAMES.pile),
     map: selected.has(SIGHT_BONUS_NAMES.map),
     card: selected.has(SIGHT_BONUS_NAMES.card),
+    relic: selected.has(SIGHT_BONUS_NAMES.relic),
   };
 }
 
@@ -302,6 +305,7 @@ export interface ChallengeAnswers {
   hiddenPiles: SightCopies;
   hiddenMap: SightCopies;
   hiddenCards: SightCopies;
+  hiddenRelics: SightCopies;
   /** Which Sights' second copy adds a bonus. */
   sightBonuses: SightBonusAnswers;
   strictCardRewards: boolean;
@@ -675,6 +679,10 @@ export function createDefaultWizardAnswers(
       hiddenCards: getSightCopiesDefault(
         catalog,
         CHALLENGE_OPTION_KEYS.hiddenCards,
+      ),
+      hiddenRelics: getSightCopiesDefault(
+        catalog,
+        CHALLENGE_OPTION_KEYS.hiddenRelics,
       ),
       sightBonuses: readSightBonusNames(
         getStringSetDefault(catalog, CHALLENGE_OPTION_KEYS.sightBonuses),

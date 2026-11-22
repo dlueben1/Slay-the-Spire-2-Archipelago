@@ -107,6 +107,13 @@ namespace StS2AP.Models
         public bool HiddenCards { get; set; }
 
         /// <summary>
+        /// Whether the slot enabled the Hidden Relics challenge. When it is on, relic counters,
+        /// flashes and status looks stay hidden until <see cref="StS2AP.Utils.Combat.RelicSight"/>
+        /// sees a Relic Sight item.
+        /// </summary>
+        public bool HiddenRelics { get; set; }
+
+        /// <summary>
         /// Sight Bonuses names from the YAML (for example "PileSight"): the Sight items whose second
         /// copy adds a bonus; see <see cref="StS2AP.Utils.ChallengeSightItems"/>. Older APWorlds
         /// send no list, and their slots get every bonus.

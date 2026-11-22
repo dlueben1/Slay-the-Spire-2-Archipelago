@@ -64,7 +64,7 @@ class PowerItems(NamedTuple):
 # Each Sight item with its Sight Bonuses key and the Hidden option that sets its copies.
 SIGHT_ITEMS = (("Intent Sight", "IntentSight", "hidden_intents"), ("Health Sight", "HealthSight", "hidden_health"),
                ("Pile Sight", "PileSight", "hidden_piles"), ("Map Sight", "MapSight", "hidden_map"),
-               ("Card Sight", "CardSight", "hidden_cards"))
+               ("Card Sight", "CardSight", "hidden_cards"), ("Relic Sight", "RelicSight", "hidden_relics"))
 
 
 def sight_bonus_power(options: 'Spire2Options', act: int) -> tuple[tuple[str, float], ...]:

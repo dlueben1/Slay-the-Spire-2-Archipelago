@@ -1828,6 +1828,8 @@ namespace StS2AP
                 settings.HiddenMap = Convert.ToInt32(slotData["hidden_map"]) > 0;
             if (slotData.ContainsKey("hidden_cards"))
                 settings.HiddenCards = Convert.ToInt32(slotData["hidden_cards"]) > 0;
+            if (slotData.ContainsKey("hidden_relics"))
+                settings.HiddenRelics = Convert.ToInt32(slotData["hidden_relics"]) > 0;
             if (slotData.TryGetValue("sight_bonuses", out object? sightBonusesValue)
                 && sightBonusesValue is Newtonsoft.Json.Linq.JArray sightBonuses)
             {

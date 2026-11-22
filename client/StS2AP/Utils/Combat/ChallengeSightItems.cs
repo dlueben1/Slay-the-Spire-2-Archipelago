@@ -58,7 +58,7 @@ internal static class ChallengeSightItems
     /// what slots from older APWorlds without that option get.
     /// </summary>
     internal static readonly string[] AllBonusNames =
-        ["IntentSight", "HealthSight", "PileSight", "MapSight", "CardSight"];
+        ["IntentSight", "HealthSight", "PileSight", "MapSight", "CardSight", "RelicSight"];
 
     /// <summary>Copies of a Sight item it takes to add its Sight Bonus.</summary>
     private const int BonusCopies = 2;

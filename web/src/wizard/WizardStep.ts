@@ -466,6 +466,7 @@ function hasSightBonusCopies(answers: WizardAnswers): boolean {
       challenges.hiddenPiles,
       challenges.hiddenMap,
       challenges.hiddenCards,
+      challenges.hiddenRelics,
     ].some((copies) => SIGHT_COPY_COUNTS[copies] >= 2)
   );
 }
@@ -646,11 +647,23 @@ export const challengeSetupStep: WizardStep = {
       },
     },
     {
+      id: "hidden-relics",
+      isVisible: usesChallenges,
+      title: "Should relics be hidden?",
+      description:
+        "Hidden Relics keeps your relics working but hides what they do: counters, flashes and their sounds, the glow of a ready relic and the grey of a used one, until a Relic Sight is found. Finding one shows relics again, for every character.",
+      control: {
+        kind: "radio",
+        field: "hiddenRelics",
+        choices: sightCopyChoices("Relic Sight", "Relics are shown as normal."),
+      },
+    },
+    {
       id: "sight-bonuses",
       isVisible: hasSightBonusCopies,
       title: "Which Sights should add a bonus with their second copy?",
       description:
-        "A Sight left unticked stops at undoing its challenge, however many copies there are. The Intent, Health and Card Sight bonuses are singleplayer only.",
+        "A Sight left unticked stops at undoing its challenge, however many copies there are. The Intent, Health, Card and Relic Sight bonuses are singleplayer only.",
       control: {
         kind: "checkbox-grid",
         items: [
@@ -683,6 +696,12 @@ export const challengeSetupStep: WizardStep = {
             label: "Card Sight: More Choice",
             description:
               "Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.",
+          },
+          {
+            field: "sightBonuses.relic",
+            label: "Relic Sight: Choose Your Relic",
+            description:
+              "Relic rewards offer 2 relics to choose from. The one you leave goes back into the relic pool.",
           },
         ],
       },

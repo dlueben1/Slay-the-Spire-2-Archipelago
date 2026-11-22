@@ -73,6 +73,8 @@ export function applyChallengeOptions(
     SIGHT_COPY_COUNTS[answers.hiddenMap];
   target[CHALLENGE_OPTION_KEYS.hiddenCards] =
     SIGHT_COPY_COUNTS[answers.hiddenCards];
+  target[CHALLENGE_OPTION_KEYS.hiddenRelics] =
+    SIGHT_COPY_COUNTS[answers.hiddenRelics];
 
   const validSightBonuses =
     catalog.options[CHALLENGE_OPTION_KEYS.sightBonuses]!.valid_keys ?? [];
