@@ -399,16 +399,14 @@ public static partial class ApMirroredRewardDispatcher
             }
             case ApMirroredRewardKind.Bonus:
             {
-                BonusAssignment? assignment = BonusRewardUtility.GetOrAssign(receipt, player);
+                string? assignment = BonusRewardUtility.GetOrAssign(receipt, player);
                 if (assignment == null)
                 {
                     spec.Kind = ApMirroredRewardKind.Unavailable;
                     spec.UnavailableReason = "No eligible bonus is configured for this receipt.";
                     break;
                 }
-                spec.SerializedModels.Add(assignment.Relic != null
-                    ? SerializeRelic(assignment.Relic)
-                    : assignment.Payload!.ToJson());
+                spec.SerializedModels.Add(assignment);
                 break;
             }
             case ApMirroredRewardKind.Relic:

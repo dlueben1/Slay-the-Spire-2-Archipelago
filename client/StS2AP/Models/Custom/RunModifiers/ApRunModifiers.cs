@@ -28,37 +28,28 @@ public static class ApRunModifiers
             ["DangerousUnknowns"] = ModelDb.Modifier<ApDangerousUnknowns>,
         };
 
+    /// <summary>
+    /// A Boon is a run modifier, or a relic given to each player when it has uses to track.
+    /// Singleplayer-only Boons hold state or choices that belong to one player, or change the
+    /// shared map, so multiplayer runs leave them out.
+    /// </summary>
+    private sealed record Boon(
+        Func<ModifierModel>? Modifier = null, Func<RelicModel>? Relic = null, bool SingleplayerOnly = false);
+
     // Keys are the APWorld's Boons option names.
-    private static readonly IReadOnlyDictionary<string, Func<ModifierModel>> BoonsByOptionName =
-        new Dictionary<string, Func<ModifierModel>>(StringComparer.Ordinal)
+    private static readonly IReadOnlyDictionary<string, Boon> BoonsByOptionName =
+        new Dictionary<string, Boon>(StringComparer.Ordinal)
         {
-            ["EmberEnchanting"] = ModelDb.Modifier<ApEmberEnchanting>,
-            ["CompoundInterest"] = ModelDb.Modifier<ApCompoundInterest>,
-            ["Gilded"] = ModelDb.Modifier<ApGilded>,
-            ["SpringCleaning"] = ModelDb.Modifier<ApSpringCleaning>,
-            ["LoyalCustomer"] = ModelDb.Modifier<ApLoyalCustomer>,
-            ["CampfireBrewing"] = ModelDb.Modifier<ApCampfireBrewing>,
-            ["EndlessUpgrades"] = ModelDb.Modifier<ApEndlessUpgrades>,
+            ["EmberEnchanting"] = new(Modifier: ModelDb.Modifier<ApEmberEnchanting>, SingleplayerOnly: true),
+            ["CompoundInterest"] = new(Modifier: ModelDb.Modifier<ApCompoundInterest>),
+            ["Gilded"] = new(Modifier: ModelDb.Modifier<ApGilded>),
+            ["SpringCleaning"] = new(Modifier: ModelDb.Modifier<ApSpringCleaning>, SingleplayerOnly: true),
+            ["LoyalCustomer"] = new(Modifier: ModelDb.Modifier<ApLoyalCustomer>),
+            ["CampfireBrewing"] = new(Modifier: ModelDb.Modifier<ApCampfireBrewing>, SingleplayerOnly: true),
+            ["EndlessUpgrades"] = new(Modifier: ModelDb.Modifier<ApEndlessUpgrades>),
+            ["Wayfinder"] = new(Relic: ModelDb.Relic<ApWayfinder>, SingleplayerOnly: true),
+            ["SecondWind"] = new(Relic: ModelDb.Relic<ApSecondWind>, SingleplayerOnly: true),
         };
-
-    // Boons given to each player as a relic. Keys are the APWorld's Boons option names.
-    private static readonly IReadOnlyDictionary<string, Func<RelicModel>> RelicBoonsByOptionName =
-        new Dictionary<string, Func<RelicModel>>(StringComparer.Ordinal)
-        {
-            ["Wayfinder"] = ModelDb.Relic<ApWayfinder>,
-            ["SecondWind"] = ModelDb.Relic<ApSecondWind>,
-        };
-
-    // Boons whose state or choices belong to one player, or that change the shared map. Multiplayer
-    // runs leave them out.
-    private static readonly IReadOnlySet<string> SingleplayerOnlyBoons = new HashSet<string>(StringComparer.Ordinal)
-    {
-        "Wayfinder",
-        "SecondWind",
-        "EmberEnchanting",
-        "SpringCleaning",
-        "CampfireBrewing",
-    };
 
     /// <summary>Whether this modifier came from the Run Modifiers or Boons option.</summary>
     public static bool IsArchipelagoModifier(ModifierModel modifier) =>
@@ -90,7 +81,6 @@ public static class ApRunModifiers
         }
 
         var added = new List<ModifierModel>();
-        var relicBoons = new List<Func<RelicModel>>();
         foreach (string optionName in settings.RunModifiers)
         {
             if (CanonicalByOptionName.TryGetValue(optionName, out Func<ModifierModel>? canonical))
@@ -100,16 +90,14 @@ public static class ApRunModifiers
         }
         foreach (string boonName in settings.Boons)
         {
-            bool isModifier = BoonsByOptionName.TryGetValue(boonName, out Func<ModifierModel>? canonical);
-            bool isRelic = RelicBoonsByOptionName.TryGetValue(boonName, out Func<RelicModel>? relic);
-            if (!isModifier && !isRelic)
+            if (!BoonsByOptionName.TryGetValue(boonName, out Boon? boon))
                 LogUtility.Warn($"Ignoring unknown boon '{boonName}' from slot data.");
-            else if (runState.Players.Count > 1 && SingleplayerOnlyBoons.Contains(boonName))
+            else if (runState.Players.Count > 1 && boon.SingleplayerOnly)
                 LogUtility.Info($"Skipped boon '{boonName}': it is singleplayer only.");
-            else if (isRelic)
-                relicBoons.Add(relic!);
+            else if (boon.Relic != null)
+                GiveToEveryPlayer(runState, boon.Relic);
             else
-                added.Add(canonical!().ToMutable());
+                added.Add(boon.Modifier!().ToMutable());
         }
         if (settings.EnemyHpScaling > 0)
         {
@@ -123,9 +111,6 @@ public static class ApRunModifiers
             damageScaling.Percent = settings.EnemyDamageScaling;
             added.Add(damageScaling);
         }
-
-        foreach (Func<RelicModel> relic in relicBoons.Distinct())
-            GiveToEveryPlayer(runState, relic);
 
         // Keep one of each type, including any the run already has.
         added = added
