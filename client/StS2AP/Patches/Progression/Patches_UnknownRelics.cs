@@ -22,9 +22,8 @@ namespace StS2AP.Patches;
 /// Hidden Relics also makes relics unknown until a Relic Sight arrives: their name, text and keyword
 /// tooltips are replaced everywhere, owned or offered, while their icons stay. Every screen reads
 /// these from the relic model, so patching the model's getters covers the top bar, rewards, chests,
-/// shops, events, the inspect screen and teammates' relics at once. Ancient relics stay known, so
-/// an Ancient's choice is still an informed one, and so do the mod's own relics, because they show
-/// AP state such as banked relic rewards.
+/// shops, events, Ancient options, the inspect screen and teammates' relics at once. The mod's own
+/// relics stay known, because they show AP state such as banked relic rewards.
 /// </summary>
 public static class Patches_UnknownRelics
 {
@@ -33,13 +32,11 @@ public static class Patches_UnknownRelics
 
     /// <summary>
     /// Whether a relic shows as unknown. Only during a run, so the Compendium and run history stay
-    /// as they are. Ancient relics are exempt by rarity, which covers both an Ancient's options and
-    /// the relic once taken.
+    /// as they are.
     /// </summary>
     internal static bool Hides(RelicModel relic) =>
         RunManager.Instance.IsInProgress
         && RelicSight.IsHidden
-        && relic.Rarity != RelicRarity.Ancient
         && relic.GetType().Assembly != typeof(Patches_UnknownRelics).Assembly;
 
     /// <summary>Sea Glass and Wuppy override Title, so their getters are patched as well.</summary>

@@ -110,8 +110,8 @@ Slay the Spire II:
   # Requires include_floor_checks.
   hidden_cards: 0
 
-  # Relics other than Ancient ones are unknown (name and text hidden). All relics keep working without
-  # showing it: counters, flashes, the ready glow and the used grey are hidden.
+  # Relics are unknown (name and text hidden) and keep working without showing it: counters, flashes,
+  # the ready glow and the used grey are hidden.
   # The value (0-4) is how many Relic Sight items the slot gets; 0 is off, and any one of them shows relics again;
   # a second adds its Sight Bonus.
   # Requires include_floor_checks.
