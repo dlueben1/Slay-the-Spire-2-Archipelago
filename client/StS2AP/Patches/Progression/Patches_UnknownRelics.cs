@@ -1,7 +1,3 @@
-// Uncomment to hide relic icons as well. Played 2026-11-22 and turned off: with the art hidden too,
-// there was nothing left to decide, only relics to have.
-// #define UNKNOWN_RELIC_ICONS
-
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Helpers;
@@ -19,15 +15,19 @@ using StS2AP.Utils.Combat;
 namespace StS2AP.Patches;
 
 /// <summary>
-/// Hidden Relics also makes relics unknown until a Relic Sight arrives: their name, text and keyword
-/// tooltips are replaced everywhere, owned or offered, while their icons stay. Every screen reads
-/// these from the relic model, so patching the model's getters covers the top bar, rewards, chests,
-/// shops, events, the inspect screen and teammates' relics at once. Ancient relics stay known, so
+/// Hidden Relics also makes relics unknown until a Relic Sight arrives: their name, text, keyword
+/// tooltips and icon are replaced everywhere, owned or offered. Every screen reads these from the
+/// relic model, so patching the model's getters covers the top bar, rewards, chests, shops, events,
+/// the inspect screen and teammates' relics at once. Ancient relics stay known, so
 /// an Ancient's choice is still an informed one, and so do the mod's own relics, because they show
 /// AP state such as banked relic rewards.
 /// </summary>
 public static class Patches_UnknownRelics
 {
+    private static readonly string UnknownIconPath = ImageHelper.GetImagePath("packed/common_ui/locked_model.png");
+
+    private static Texture2D UnknownIcon => ResourceLoader.Load<Texture2D>(UnknownIconPath, null, ResourceLoader.CacheMode.Reuse);
+
     private static LocString UnknownTitle => new("gameplay_ui", "AP_RELIC_SIGHT_UNKNOWN.title");
     private static LocString UnknownDescription => new("gameplay_ui", "AP_RELIC_SIGHT_UNKNOWN.description");
 
@@ -140,11 +140,6 @@ public static class Patches_UnknownRelics
         }
     }
 
-#if UNKNOWN_RELIC_ICONS
-    private static readonly string UnknownIconPath = ImageHelper.GetImagePath("packed/common_ui/locked_model.png");
-
-    private static Texture2D UnknownIcon => ResourceLoader.Load<Texture2D>(UnknownIconPath, null, ResourceLoader.CacheMode.Reuse);
-
     /// <summary>
     /// Both icon sizes become the Compendium's locked-relic icon. A dark silhouette, the Compendium's
     /// look for unseen relics, would still give a relic away by its shape.
@@ -211,5 +206,4 @@ public static class Patches_UnknownRelics
                 __result = null;
         }
     }
-#endif
 }
