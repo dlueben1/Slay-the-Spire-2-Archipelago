@@ -19,9 +19,10 @@ namespace StS2AP.Patches;
 
 /// <summary>
 /// Hidden Relics makes relics unknown until a Relic Sight arrives: their name, text, keyword
-/// tooltips and icon are replaced everywhere, owned or offered. Every screen reads these from the
-/// relic model, so patching the model's getters covers rewards, chests, shops, events, the inspect
-/// screen and teammates' relics at once; a few nodes that set textures themselves are patched too.
+/// tooltips and icon are replaced everywhere, owned or offered, though Ancient relics keep their
+/// icon. Every screen reads these from the relic model, so patching the model's getters covers
+/// rewards, chests, shops, events, the inspect screen and teammates' relics at once; a few nodes
+/// that set textures themselves are patched too.
 /// Relics still flash, glow and grey out, so the player can work them out by watching. The mod's
 /// own relics stay known, because they show AP state such as banked relic rewards.
 /// </summary>
@@ -42,6 +43,12 @@ public static class Patches_UnknownRelics
         RunManager.Instance.IsInProgress
         && RelicSight.IsHidden
         && relic.GetType().Assembly != typeof(Patches_UnknownRelics).Assembly;
+
+    /// <summary>
+    /// Whether a relic's icon is replaced as well. Ancient relics keep their art: an Ancient offer
+    /// has to be picked before the relic can be watched, so the icon is all a player has to go on.
+    /// </summary>
+    internal static bool HidesIcon(RelicModel relic) => Hides(relic) && relic.Rarity != RelicRarity.Ancient;
 
     /// <summary>Sea Glass and Wuppy override Title, so their getters are patched as well.</summary>
     [HarmonyPatch]
@@ -158,7 +165,7 @@ public static class Patches_UnknownRelics
         [HarmonyPostfix]
         public static void Postfix(RelicModel __instance, ref Texture2D __result)
         {
-            if (Hides(__instance))
+            if (HidesIcon(__instance))
                 __result = UnknownIcon;
         }
     }
@@ -174,7 +181,7 @@ public static class Patches_UnknownRelics
         [HarmonyPostfix]
         public static void Postfix(NRelic __instance)
         {
-            if (!__instance.IsNodeReady() || __instance._model is not { } relic || !Hides(relic))
+            if (!__instance.IsNodeReady() || __instance._model is not { } relic || !HidesIcon(relic))
                 return;
             __instance.Icon.Texture = UnknownIcon;
             __instance.Outline.Texture = null;
@@ -188,7 +195,7 @@ public static class Patches_UnknownRelics
         [HarmonyPostfix]
         public static void Postfix(NEventOptionButton __instance)
         {
-            if (__instance.Event is not AncientEventModel || __instance.Option?.Relic is not { } relic || !Hides(relic))
+            if (__instance.Event is not AncientEventModel || __instance.Option?.Relic is not { } relic || !HidesIcon(relic))
                 return;
             TextureRect icon = __instance.GetNode<TextureRect>("%RelicIcon");
             icon.SetTexture(UnknownIcon);
@@ -207,7 +214,7 @@ public static class Patches_UnknownRelics
         [HarmonyPrefix]
         public static bool Prefix(NRelicInventoryHolder __instance)
         {
-            if (!Hides(__instance._relic.Model))
+            if (!HidesIcon(__instance._relic.Model))
                 return true;
             if (NRun.Instance is not { } run)
                 return false;
@@ -230,7 +237,7 @@ public static class Patches_UnknownRelics
         [HarmonyPostfix]
         public static void Postfix(NRelicFlashVfx __instance)
         {
-            if (__instance._relic is not { } relic || !Hides(relic))
+            if (__instance._relic is not { } relic || !HidesIcon(relic))
                 return;
             __instance._sprite.Texture = UnknownIcon;
             __instance._sprite2.Texture = UnknownIcon;
@@ -245,7 +252,7 @@ public static class Patches_UnknownRelics
         [HarmonyPostfix]
         public static void Postfix(RelicModel __instance, ref Texture2D? __result)
         {
-            if (Hides(__instance))
+            if (HidesIcon(__instance))
                 __result = null;
         }
     }
