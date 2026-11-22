@@ -1,3 +1,7 @@
+// Uncomment to hide relic icons as well. Played 2026-11-22 and turned off: with the art hidden too,
+// there was nothing left to decide, only relics to have.
+// #define UNKNOWN_RELIC_ICONS
+
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Helpers;
@@ -15,28 +19,27 @@ using StS2AP.Utils.Combat;
 namespace StS2AP.Patches;
 
 /// <summary>
-/// Hidden Relics also makes relics unknown until a Relic Sight arrives: their name, text, keyword
-/// tooltips and art are replaced everywhere, owned or offered. Every screen reads these from the
-/// relic model, so patching the model's getters covers the top bar, rewards, chests, shops, Ancient
-/// options, the inspect screen and teammates' relics at once. The mod's own relics stay known,
-/// because they show AP state such as banked relic rewards.
+/// Hidden Relics also makes relics unknown until a Relic Sight arrives: their name, text and keyword
+/// tooltips are replaced everywhere, owned or offered, while their icons stay. Every screen reads
+/// these from the relic model, so patching the model's getters covers the top bar, rewards, chests,
+/// shops, events, the inspect screen and teammates' relics at once. Ancient relics stay known, so
+/// an Ancient's choice is still an informed one, and so do the mod's own relics, because they show
+/// AP state such as banked relic rewards.
 /// </summary>
 public static class Patches_UnknownRelics
 {
-    private static readonly string UnknownIconPath = ImageHelper.GetImagePath("packed/common_ui/locked_model.png");
-
-    private static Texture2D UnknownIcon => ResourceLoader.Load<Texture2D>(UnknownIconPath, null, ResourceLoader.CacheMode.Reuse);
-
     private static LocString UnknownTitle => new("gameplay_ui", "AP_RELIC_SIGHT_UNKNOWN.title");
     private static LocString UnknownDescription => new("gameplay_ui", "AP_RELIC_SIGHT_UNKNOWN.description");
 
     /// <summary>
     /// Whether a relic shows as unknown. Only during a run, so the Compendium and run history stay
-    /// as they are.
+    /// as they are. Ancient relics are exempt by rarity, which covers both an Ancient's options and
+    /// the relic once taken.
     /// </summary>
     internal static bool Hides(RelicModel relic) =>
         RunManager.Instance.IsInProgress
         && RelicSight.IsHidden
+        && relic.Rarity != RelicRarity.Ancient
         && relic.GetType().Assembly != typeof(Patches_UnknownRelics).Assembly;
 
     /// <summary>Sea Glass and Wuppy override Title, so their getters are patched as well.</summary>
@@ -61,9 +64,17 @@ public static class Patches_UnknownRelics
         }
     }
 
-    [HarmonyPatch(typeof(RelicModel), nameof(RelicModel.DynamicDescription), MethodType.Getter)]
+    /// <summary>Events that offer a relic describe it with the event variant of its text.</summary>
+    [HarmonyPatch]
     public static class HideDescription
     {
+        [HarmonyTargetMethods]
+        public static IEnumerable<System.Reflection.MethodBase> TargetMethods() =>
+        [
+            AccessTools.PropertyGetter(typeof(RelicModel), nameof(RelicModel.DynamicDescription)),
+            AccessTools.PropertyGetter(typeof(RelicModel), nameof(RelicModel.DynamicEventDescription)),
+        ];
+
         [HarmonyPostfix]
         public static void Postfix(RelicModel __instance, ref LocString __result)
         {
@@ -110,6 +121,29 @@ public static class Patches_UnknownRelics
                 __result = [];
         }
     }
+
+    /// <summary>
+    /// The inspect screen also shows the relic's rarity, as a label and as its frame colour, and
+    /// its flavor text. These are blanked the way the screen blanks relics you haven't discovered.
+    /// </summary>
+    [HarmonyPatch(typeof(NInspectRelicScreen), nameof(NInspectRelicScreen.UpdateRelicDisplay))]
+    public static class HideInspectRarityAndFlavor
+    {
+        [HarmonyPostfix]
+        public static void Postfix(NInspectRelicScreen __instance)
+        {
+            if (!Hides(__instance._relics[__instance._index]))
+                return;
+            __instance._rarityLabel.SetTextAutoSize(string.Empty);
+            __instance._flavor.Text = string.Empty;
+            __instance.SetRarityVisuals(RelicRarity.Common);
+        }
+    }
+
+#if UNKNOWN_RELIC_ICONS
+    private static readonly string UnknownIconPath = ImageHelper.GetImagePath("packed/common_ui/locked_model.png");
+
+    private static Texture2D UnknownIcon => ResourceLoader.Load<Texture2D>(UnknownIconPath, null, ResourceLoader.CacheMode.Reuse);
 
     /// <summary>
     /// Both icon sizes become the Compendium's locked-relic icon. A dark silhouette, the Compendium's
@@ -166,24 +200,6 @@ public static class Patches_UnknownRelics
         }
     }
 
-    /// <summary>
-    /// The inspect screen also shows the relic's rarity, as a label and as its frame colour, and
-    /// its flavor text. These are blanked the way the screen blanks relics you haven't discovered.
-    /// </summary>
-    [HarmonyPatch(typeof(NInspectRelicScreen), nameof(NInspectRelicScreen.UpdateRelicDisplay))]
-    public static class HideInspectRarityAndFlavor
-    {
-        [HarmonyPostfix]
-        public static void Postfix(NInspectRelicScreen __instance)
-        {
-            if (!Hides(__instance._relics[__instance._index]))
-                return;
-            __instance._rarityLabel.SetTextAutoSize(string.Empty);
-            __instance._flavor.Text = string.Empty;
-            __instance.SetRarityVisuals(RelicRarity.Common);
-        }
-    }
-
     /// <summary>The outline follows the relic's shape, so unknown relics draw none.</summary>
     [HarmonyPatch(typeof(RelicModel), nameof(RelicModel.IconOutline), MethodType.Getter)]
     public static class HideOutline
@@ -195,4 +211,5 @@ public static class Patches_UnknownRelics
                 __result = null;
         }
     }
+#endif
 }

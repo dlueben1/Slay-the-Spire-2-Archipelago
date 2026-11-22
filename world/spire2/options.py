@@ -505,9 +505,9 @@ class HiddenCards(Range):
     default = 0
 
 class HiddenRelics(Range):
-    """Relics are unknown: their name, text and art are hidden, wherever they are offered or owned. They keep
-    their effects but no longer show them: counters, flashes, the activation sound, the glow of a relic that
-    is ready and the grey of a used one are all hidden.
+    """Relics other than Ancient ones are unknown: their name and text are hidden, wherever they are offered or
+    owned. All relics keep their effects but no longer show them: counters, flashes, the activation sound, the
+    glow of a relic that is ready and the grey of a used one are all hidden.
     The value is how many Relic Sight items are added to the item pool, and 0 turns it off. Finding any one of them
     shows relics again for every character, and a second one adds its Sight Bonus, which logic counts.
     """

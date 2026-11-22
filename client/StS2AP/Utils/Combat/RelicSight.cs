@@ -45,7 +45,7 @@ internal static class RelicSight
             return;
         foreach (NRelicInventoryHolder holder in inventory.RelicNodes)
         {
-            // Reload redraws the icon, which Hidden Relics replaced with the unknown one.
+            // Reload redraws the icon, which UNKNOWN_RELIC_ICONS replaces while relics are hidden.
             holder.Relic.Reload();
             holder.RefreshAmount();
             holder.RefreshStatus();
