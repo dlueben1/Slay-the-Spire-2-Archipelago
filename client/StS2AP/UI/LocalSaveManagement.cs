@@ -1,3 +1,5 @@
+using Godot;
+using STS2RitsuLib.Settings;
 using StS2AP.Persistence;
 using StS2AP.UI.RunGraph;
 using StS2AP.Utils;
@@ -58,20 +60,16 @@ internal static class LocalSaveManagement
             return;
         }
 
-        string key = onlyUnplayed ? "AP_FORGET_UNPLAYED_SEEDS" : "AP_FORGET_OTHER_SEEDS";
-        TextUtility.RegisterLocString(key + "_HEADER", onlyUnplayed
-            ? $"Forget AP Seeds Not Played in {UnplayedDays} Days?"
-            : "Forget All Other AP Seeds?", "ap");
-        TextUtility.RegisterLocString(key + "_BODY", DescribeForget(slots), "ap");
-        TextUtility.RegisterLocString(key + "_CONFIRM", "Forget Permanently", "ap");
-
-        new ConfirmPopup
-        {
-            Header = TextUtility.GetLocString(key + "_HEADER", "ap"),
-            Body = TextUtility.GetLocString(key + "_BODY", "ap"),
-            YesString = TextUtility.GetLocString(key + "_CONFIRM", "ap"),
-            ButtonPressed = confirmed => ForgetIfConfirmed(confirmed, slots, requestRefresh),
-        }.Show();
+        // RitsuLib's dialog draws on its own layer above the settings screen. The game's popup
+        // would open behind it, on the main menu, and only show once settings closed.
+        ModSettingsUiFactory.ShowStyledConfirm(
+            ((SceneTree)Engine.GetMainLoop()).Root,
+            onlyUnplayed ? $"Forget AP Seeds Not Played in {UnplayedDays} Days?" : "Forget All Other AP Seeds?",
+            DescribeForget(slots),
+            cancelText: "Cancel",
+            confirmText: "Forget Permanently",
+            confirmIsDanger: true,
+            onConfirm: () => ForgetConfirmed(slots, requestRefresh));
     }
 
     private static IReadOnlyList<ApStorageLayout.SlotSummary> SelectSlots(bool onlyUnplayed)
@@ -103,11 +101,8 @@ internal static class LocalSaveManagement
             + "AP server cloud saves are kept.";
     }
 
-    private static void ForgetIfConfirmed(bool confirmed,
-        IReadOnlyList<ApStorageLayout.SlotSummary> slots, Action requestRefresh)
+    private static void ForgetConfirmed(IReadOnlyList<ApStorageLayout.SlotSummary> slots, Action requestRefresh)
     {
-        if (!confirmed)
-            return;
         if (!CanForget())
         {
             NotificationUtility.ShowRawText("Local AP seeds were kept because the game left the main menu.");
