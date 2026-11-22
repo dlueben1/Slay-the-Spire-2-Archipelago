@@ -9,9 +9,7 @@ public sealed class SingleplayerCheckpointBankTests : IDisposable
     private readonly SingleplayerCheckpointBank.BankKey _key = new(new("seed", 0, 1), "IRONCLAD");
     private SingleplayerCheckpointBank Store => new(_root);
     private string BankDirectory => Store.DirectoryFor(_key);
-    private string[] BankDirectories => Directory.Exists(_root)
-        ? Directory.GetFiles(_root, "metadata.json", SearchOption.AllDirectories).Select(Path.GetDirectoryName).ToArray()!
-        : Array.Empty<string>();
+    private int BankCount => Directory.GetFiles(_root, "metadata.json", SearchOption.AllDirectories).Length;
 
     [Fact]
     public void FreshAttemptUsesSamePositionsAndOnlyOverwritesReachedBoundary()
@@ -27,7 +25,7 @@ public sealed class SingleplayerCheckpointBankTests : IDisposable
         Assert.Equal("old 1-boss", Store.Load(_key, "1-boss").Payload);
         Assert.Equal("old 3-treasure", Store.Load(_key, "3-treasure").Payload);
         Assert.Equal("old 3-campfire", Store.Load(_key, "3-campfire").Payload);
-        Assert.Single(BankDirectories);
+        Assert.Equal(1, BankCount);
         Assert.Equal(SingleplayerCheckpointBank.Milestones.Length, Directory.GetFiles(BankDirectory, "run-*.save").Length);
     }
 
@@ -73,52 +71,8 @@ public sealed class SingleplayerCheckpointBankTests : IDisposable
             Assert.Throws<InvalidDataException>(() => Store.Load(other, "1-boss"));
             Store.Save(other, "1-boss", "other", 17, false);
         }
-        Assert.Equal(5, BankDirectories.Length);
+        Assert.Equal(5, BankCount);
         Assert.Equal("original", Store.Load(_key, "1-boss").Payload);
-    }
-
-    [Fact]
-    public void BanksLiveInTheirSlotFolderByCharacter()
-    {
-        Store.Save(_key, "1-boss", "checkpoint", 17, true);
-        Assert.Equal(Path.Combine(_root, "slots", "seed_t0_s1", "checkpoints", "IRONCLAD"), BankDirectory);
-        var modded = _key with { Character = "Mod:Character" };
-        Store.Save(modded, "1-boss", "modded", 17, true);
-        string moddedFolder = Path.GetFileName(Store.DirectoryFor(modded));
-        Assert.StartsWith("h", moddedFolder);
-        Assert.DoesNotContain(":", moddedFolder);
-        Assert.Equal("modded", Store.Load(modded, "1-boss").Payload);
-    }
-
-    [Fact]
-    public void LegacyBanksImportAndKeepTheNewerSaveOfEachMilestone()
-    {
-        Store.Save(_key, "1-boss", "current boss", 17, true);
-        string legacyRoot = _root + "-legacy";
-        try
-        {
-            // A legacy bank from another profile, with the removed co-op player number.
-            var legacyStore = new SingleplayerCheckpointBank(legacyRoot);
-            legacyStore.Save(_key, "1-boss", "older boss", 17, true);
-            legacyStore.Save(_key, "2-boss", "only legacy", 33, true);
-            string legacy = legacyStore.DirectoryFor(_key);
-            string manifest = Path.Combine(legacy, "metadata.json");
-            var json = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(manifest))!;
-            json["Identity"]!["Owner"]!["PlayerNumber"] = 1;
-            json["Checkpoints"]!["1-boss"]!["SavedAt"] = DateTimeOffset.UtcNow.AddDays(-1);
-            File.WriteAllText(manifest, json.ToJsonString());
-
-            var (key, _) = Store.ImportLegacyBank(legacy);
-            Assert.Equal(_key, key);
-            Assert.False(Directory.Exists(legacy));
-            Assert.Equal("current boss", Store.Load(_key, "1-boss").Payload);
-            Assert.Equal("only legacy", Store.Load(_key, "2-boss").Payload);
-            Assert.Equal(2, Directory.GetFiles(BankDirectory, "run-*.save").Length);
-        }
-        finally
-        {
-            if (Directory.Exists(legacyRoot)) Directory.Delete(legacyRoot, recursive: true);
-        }
     }
 
     [Theory]

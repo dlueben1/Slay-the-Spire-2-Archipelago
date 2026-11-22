@@ -125,47 +125,18 @@ public sealed class ApRunGraphLogTests : IDisposable
     {
         var log = new ApRunGraphLog { StartTime = 7, SlotName = "Ironclad" };
         log.Events.Add(Check(3, ApRunGraphItemType.Progression));
-        SlotStore("seed", 0, 1).Save(log);
-        var archive = new ApRunGraphArchive(_root);
+        Store.Save(log);
 
         var bundle = ApRunGraphStore.ExportBundle(log, """{ "win": true, "map_point_history": [[{ "unknown_field": 4 }]] }""");
-        string path = archive.WriteExport("7-ironclad.json", bundle);
-        Assert.Equal(Path.Combine(_root, "exports", "7-ironclad.json"), path);
+        string path = ApRunGraphStore.WriteExport(Path.Combine(_root, "exports"), "7-ironclad.json", bundle);
 
         var read = JsonNode.Parse(File.ReadAllText(path))!;
         Assert.Equal(ApRunGraphStore.ExportFormat, read["format"]!.GetValue<string>());
         Assert.Equal("Ironclad", read["ap"]!["slot_name"]!.GetValue<string>());
         Assert.Equal("progression", read["ap"]!["events"]![0]!["classification"]!.GetValue<string>());
         Assert.Equal(4, read["run"]!["map_point_history"]![0]![0]!["unknown_field"]!.GetValue<int>());
-        Assert.Equal(new long[] { 7 }, archive.ListStartTimes());
+        Assert.Equal(new long[] { 7 }, Store.ListStartTimes());
     }
-
-    [Fact]
-    public void ArchiveFindsRunsInEverySlotFolder()
-    {
-        SlotStore("seed", 0, 1).Save(new ApRunGraphLog { StartTime = 10, Seed = "seed", Team = 0, Slot = 1, ProfileId = 2 });
-        SlotStore("seed", 0, 2).Save(new ApRunGraphLog { StartTime = 20, Seed = "seed", Team = 0, Slot = 2 });
-        SlotStore("other", 0, 1).Save(new ApRunGraphLog { StartTime = 30, Seed = "other" });
-        SlotStore("other", 0, 1).SaveSnapshot(30, "{}");
-        var archive = new ApRunGraphArchive(_root);
-
-        Assert.Equal(new long[] { 30, 20, 10 }, archive.ListStartTimes());
-        var first = archive.Load(10, out string? error);
-        Assert.Null(error);
-        Assert.Equal(2, first!.ProfileId);
-        Assert.Equal(1, first.Slot);
-        Assert.Contains("\"profile_id\": 2", File.ReadAllText(SlotStore("seed", 0, 1).PathFor(10)));
-        Assert.Null(archive.Load(40, out _));
-        Assert.Equal("{}", archive.LoadSnapshot(30, out _));
-
-        archive.Delete(30);
-        Assert.False(archive.Exists(30));
-        Assert.Null(archive.Find(30));
-        Assert.True(archive.Exists(20));
-    }
-
-    private ApRunGraphStore SlotStore(string seed, int team, int slot) =>
-        new(ApStorageLayout.RunGraphsDirectory(ApStorageLayout.SlotDirectory(_root, seed, team, slot)));
 
     [Fact]
     public void UnfinishedRunExportsWithNullHistory()

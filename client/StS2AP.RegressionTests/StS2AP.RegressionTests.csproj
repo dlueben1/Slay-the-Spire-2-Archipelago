@@ -72,7 +72,6 @@
     <Compile Include="..\StS2AP\Utils\RestSitePolicy.cs" Link="Utils\RestSitePolicy.cs" />
     <Compile Include="..\StS2AP\Persistence\SingleplayerCheckpointBank.cs" Link="Persistence\SingleplayerCheckpointBank.cs" />
     <Compile Include="..\StS2AP\Persistence\ApStorageLayout.cs" Link="Persistence\ApStorageLayout.cs" />
-    <Compile Include="..\StS2AP\Persistence\ApStorageMigration.cs" Link="Persistence\ApStorageMigration.cs" />
     <Compile Include="..\StS2AP\Persistence\RemoteSingleplayerSaveKey.cs" Link="Persistence\RemoteSingleplayerSaveKey.cs" />
     <Compile Include="..\StS2AP\Persistence\CampaignSaveFiles.cs" Link="Persistence\CampaignSaveFiles.cs" />
     <Compile Include="..\StS2AP\Persistence\ApRunGraphLog.cs" Link="Persistence\ApRunGraphLog.cs" />
