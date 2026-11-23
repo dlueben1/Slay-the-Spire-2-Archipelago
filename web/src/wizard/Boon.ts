@@ -48,6 +48,21 @@ export const BOONS: readonly Boon[] = [
     group: "travel",
   },
   {
+    optionName: "Amphorae",
+    name: "Amphorae",
+    effect:
+      "At the start of each act, fill all empty potion slots with random potions.",
+    worksInMultiplayer: true,
+    group: "travel",
+  },
+  {
+    optionName: "CursedKettle",
+    name: "Cursed Kettle",
+    effect: "The first time you draw a Curse each turn, draw 1 card.",
+    worksInMultiplayer: true,
+    group: "travel",
+  },
+  {
     optionName: "InkBottle",
     name: "Ink Bottle",
     effect: "Every time you play 10 cards, draw 1 card.",
@@ -87,21 +102,6 @@ export const BOONS: readonly Boon[] = [
     optionName: "Turnip",
     name: "Turnip",
     effect: "You can't become Frail.",
-    worksInMultiplayer: true,
-    group: "relics",
-  },
-  {
-    optionName: "Amphorae",
-    name: "Amphorae",
-    effect:
-      "At the start of each act, fill all empty potion slots with random potions.",
-    worksInMultiplayer: true,
-    group: "relics",
-  },
-  {
-    optionName: "CursedKettle",
-    name: "Cursed Kettle",
-    effect: "The first time you draw a Curse each turn, draw 1 card.",
     worksInMultiplayer: true,
     group: "relics",
   },
