@@ -12,7 +12,7 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "29a8b622cd94afb9af0930f41f211a5832914f7f046e0c176d9ba20f8a0016c1"
+      "sha256": "d6cd690a759aefffd4376675a566909e02af09e65c70a13ccc3edd901b2c1c8b"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
@@ -4912,7 +4912,7 @@
       "module": "worlds.spire2.options",
       "kind": "range",
       "display_name": "Hidden Relics",
-      "description": "Relics are unknown: their name and text are hidden, wherever they are offered or owned. They keep their\neffects but no longer show them: counters, flashes, the activation sound, the glow of a relic that is ready\nand the grey of a used one are all hidden.\nThe value is how many Relic Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows relics again for every character, and a second one adds its Sight Bonus, which logic counts.",
+      "description": "Relics are unknown: their name, text and art are hidden, wherever they are offered or owned (Ancient\nrelics keep their art), and counters show \"?\". They still flash and play their sound when they trigger, so\nyou can work out what they are.\nThe value is how many Relic Sight items are added to the item pool, and 0 turns it off. Finding any one of them\nshows relics again for every character, and a second one adds its Sight Bonus, which logic counts.",
       "default": 0,
       "raw_default": 0,
       "visibility": {

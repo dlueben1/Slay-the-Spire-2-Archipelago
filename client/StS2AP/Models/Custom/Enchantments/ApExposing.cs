@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
+using StS2AP.Patches;
 
 namespace StS2AP.Models.Enchantments;
 
@@ -14,6 +15,9 @@ public sealed class ApExposing : EnchantmentModel
     protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<VulnerablePower>()];
 
     public override bool CanEnchantCardType(CardType cardType) => cardType == CardType.Attack;
+
+    // Like Inky, it needs an enemy target: random-target attacks have none to apply Vulnerable to.
+    public override bool CanEnchant(CardModel card) => base.CanEnchant(card) && Patches_InkyTargets.TargetsEnemies(card);
 
     public override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay? cardPlay)
     {

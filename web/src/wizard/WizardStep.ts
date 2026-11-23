@@ -643,7 +643,7 @@ export const challengeSetupStep: WizardStep = {
       isVisible: usesChallenges,
       title: "Should relics be hidden?",
       description:
-        "Hidden Relics makes every relic unknown: its name and text are hidden, and it works without showing it: no counters, flashes or their sounds, no glow when ready and no grey when used, until a Relic Sight is found. Finding one shows relics again, for every character.",
+        "Hidden Relics makes every relic unknown: its name, text and art are hidden (Ancient relics keep their art) and its counter shows \"?\", until a Relic Sight is found. Relics still flash when they trigger, so you can work out what they are. Finding one shows relics again, for every character.",
       control: {
         kind: "radio",
         field: "hiddenRelics",
