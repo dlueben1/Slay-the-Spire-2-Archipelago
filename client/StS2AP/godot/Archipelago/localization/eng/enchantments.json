@@ -4,5 +4,6 @@
   "AP_EAGER.title": "Eager",
   "AP_EAGER.description": "The first time you draw this card each combat, it costs [blue]1[/blue] less until played.",
   "AP_EXPOSING.title": "Exposing",
-  "AP_EXPOSING.description": "This card applies [blue]{Amount}[/blue] [gold]Vulnerable[/gold]."
+  "AP_EXPOSING.description": "This card applies [blue]{Amount}[/blue] [gold]Vulnerable[/gold].",
+  "AP_EXPOSING.extraCardText": "Apply [blue]{Amount}[/blue] [gold]Vulnerable[/gold]{TargetType:choose(AllEnemies): to ALL enemies|}."
 }

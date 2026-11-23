@@ -13,6 +13,7 @@ using MegaCrit.Sts2.Core.Nodes.Relics;
 using MegaCrit.Sts2.Core.Nodes.Screens.InspectScreens;
 using MegaCrit.Sts2.Core.Nodes.Vfx;
 using MegaCrit.Sts2.Core.Runs;
+using StS2AP.Models;
 using StS2AP.Utils.Combat;
 
 namespace StS2AP.Patches;
@@ -24,7 +25,7 @@ namespace StS2AP.Patches;
 /// rewards, chests, shops, events, the inspect screen and teammates' relics at once; a few nodes
 /// that set textures themselves are patched too.
 /// Relics still flash, glow and grey out, so the player can work them out by watching. The mod's
-/// own relics stay known, because they show AP state such as banked relic rewards.
+/// relics are hidden too, except the two that only show AP state (<see cref="ShowsApState"/>).
 /// </summary>
 public static class Patches_UnknownRelics
 {
@@ -42,7 +43,15 @@ public static class Patches_UnknownRelics
     internal static bool Hides(RelicModel relic) =>
         RunManager.Instance.IsInProgress
         && RelicSight.IsHidden
-        && relic.GetType().Assembly != typeof(Patches_UnknownRelics).Assembly;
+        && !ShowsApState(relic);
+
+    /// <summary>
+    /// The mod's relics that only present AP state stay known: Relic Coupons counts banked relic
+    /// rewards, and AP item relics in shops name another player's item. The mod's gameplay relics
+    /// (Boons, Sight bonuses) are hidden like the game's, so every relic that does something works
+    /// the same way.
+    /// </summary>
+    internal static bool ShowsApState(RelicModel relic) => relic is RelicCoupons or ApItemRelicModel;
 
     /// <summary>
     /// Whether a relic's icon is replaced as well. Ancient relics keep their art: an Ancient offer

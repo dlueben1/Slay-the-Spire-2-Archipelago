@@ -1,4 +1,5 @@
 using HarmonyLib;
+using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Relics;
 using StS2AP.Utils.Combat;
 
@@ -25,7 +26,8 @@ public static class Patches_HiddenRelics
         [HarmonyPostfix]
         public static void Postfix(NRelicInventoryHolder __instance)
         {
-            if (__instance._amountLabel.Visible && RelicSight.Hides(__instance._relic.Model))
+            RelicModel relic = __instance._relic.Model;
+            if (__instance._amountLabel.Visible && RelicSight.Hides(relic) && !Patches_UnknownRelics.ShowsApState(relic))
                 __instance._amountLabel.SetTextAutoSize(HiddenText);
         }
     }
