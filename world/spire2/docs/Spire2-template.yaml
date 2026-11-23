@@ -67,8 +67,8 @@ Slay the Spire II:
 
   # Helpful modifiers for every run; logic ignores them. Names (case-sensitive):
   #   Wayfinder, SecondWind, EmberEnchanting, CompoundInterest, Gilded,
-  #   SpringCleaning, LoyalCustomer, CampfireBrewing, EndlessUpgrades. Details are on the
-  #   website.
+  #   SpringCleaning, LoyalCustomer, CampfireBrewing, EndlessUpgrades, InkBottle,
+  #   MedicalKit, BlueCandle, PreservedInsect, Torii, Turnip. Details are on the website.
   boons: []
 
   ##############

@@ -49,6 +49,12 @@ public static class ApRunModifiers
             ["EndlessUpgrades"] = new(Modifier: ModelDb.Modifier<ApEndlessUpgrades>),
             ["Wayfinder"] = new(Relic: ModelDb.Relic<ApWayfinder>, SingleplayerOnly: true),
             ["SecondWind"] = new(Relic: ModelDb.Relic<ApSecondWind>, SingleplayerOnly: true),
+            ["InkBottle"] = new(Relic: ModelDb.Relic<ApInkBottle>),
+            ["MedicalKit"] = new(Relic: ModelDb.Relic<ApMedicalKit>),
+            ["BlueCandle"] = new(Relic: ModelDb.Relic<ApBlueCandle>),
+            ["PreservedInsect"] = new(Relic: ModelDb.Relic<ApPreservedInsect>),
+            ["Torii"] = new(Relic: ModelDb.Relic<ApTorii>),
+            ["Turnip"] = new(Relic: ModelDb.Relic<ApTurnip>),
         };
 
     /// <summary>Whether this modifier came from the Run Modifiers or Boons option.</summary>

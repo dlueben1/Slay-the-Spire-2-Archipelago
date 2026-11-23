@@ -758,24 +758,30 @@ class RunModifiers(OptionSet):
 
 class Boons(OptionSet):
     """Helpful modifiers for every run. Logic does not account for them. Names are case-sensitive.
-    Only Compound Interest, Gilded, Loyal Customer and Endless Upgrades work in multiplayer, where
-    the host's choice applies to the whole run; multiplayer runs leave out the others.
+    Wayfinder, SecondWind, EmberEnchanting, SpringCleaning and CampfireBrewing are singleplayer only
+    and multiplayer runs leave them out; for the rest, the host's choice applies to the whole run.
 
-    - 'Wayfinder': Three times per act, travel to any room in the next row, ignoring the paths.
-    - 'SecondWind': Once per act, survive a killing blow and heal 25% of your max HP.
+    - 'Wayfinder': Three times per run, travel to any room in the next row, ignoring the paths.
+    - 'SecondWind': Once per run, survive a killing blow and heal 35% of your max HP.
     - 'EmberEnchanting': Campfires let you enchant a card with a random enchantment. This uses up
       the campfire and needs the same Progressive Smith as upgrading.
     - 'CompoundInterest': At the start of Act 2 and of Act 3, gain 20% of the gold you hold, up to
       100.
     - 'Gilded': Gain 30% more gold, including gold from Archipelago items.
-    - 'SpringCleaning': After the Act 1 and Act 2 bosses, choose one: remove a card, transform a
-      card, or upgrade 2 random cards.
+    - 'SpringCleaning': After the Act 1 and Act 2 bosses, get one of these at random: remove a
+      card, transform a card, or upgrade 2 random cards.
     - 'LoyalCustomer': Each purchase makes the rest of that shop 15% cheaper, up to 45%.
       Archipelago checks in the shop count and get the discount too.
     - 'CampfireBrewing': Once per campfire, brew a random potion. You can still rest or upgrade
       afterwards.
     - 'EndlessUpgrades': Cards can be upgraded any number of times. Each upgrade adds the card's
-      upgrade bonus again; upgrades that only add or remove a keyword do nothing after the first."""
+      upgrade bonus again; upgrades that only add or remove a keyword do nothing after the first.
+    - 'InkBottle': Every time you play 10 cards, draw 1 card.
+    - 'MedicalKit': Status cards can be played for 0 energy and Exhaust when played.
+    - 'BlueCandle': Curses can be played for 0 energy; playing one costs 1 HP and Exhausts it.
+    - 'PreservedInsect': Enemies in Elite fights have 25% less HP.
+    - 'Torii': Unblocked attack damage of 5 or less is reduced to 1.
+    - 'Turnip': You can't become Frail."""
     display_name = "Boons"
     valid_keys_casefold = False
     valid_keys = {
@@ -788,6 +794,12 @@ class Boons(OptionSet):
         "LoyalCustomer",
         "CampfireBrewing",
         "EndlessUpgrades",
+        "InkBottle",
+        "MedicalKit",
+        "BlueCandle",
+        "PreservedInsect",
+        "Torii",
+        "Turnip",
     }
     default = frozenset()
 

@@ -1,7 +1,10 @@
 using Godot;
+using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Relics;
+using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Helpers;
+using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Models.RelicPools;
 using MegaCrit.Sts2.Core.Runs;
 using StS2AP.Utils.Combat;
@@ -11,10 +14,12 @@ using STS2RitsuLib.Scaffolding.Content;
 namespace StS2AP.Models;
 
 /// <summary>
-/// Shows that the Pile Sight bonus is active: the draw pile screen lists cards in draw order, as
-/// Frozen Eye did in the first game. The relic does nothing itself;
-/// <see cref="Patches.Patches_PileSightDrawOrder"/> does the work. As with Relic Coupons, the
-/// relic localization keys must stay ARCHIPELAGO to match the ModId.
+/// The Pile Sight bonus. The draw pile screen lists cards in draw order, as Frozen Eye did in the
+/// first game; <see cref="Patches.Patches_PileSightDrawOrder"/> does that part. The relic itself
+/// rewards planning around the shuffle: the first shuffle each turn draws 1 more card next turn.
+/// The card waits for next turn so that a shuffle can never pay for another shuffle in the same
+/// turn. As with Relic Coupons, the relic localization keys must stay ARCHIPELAGO to match the
+/// ModId.
 /// </summary>
 [RegisterRelic(typeof(SharedRelicPool))]
 public sealed class ApFrozenEye : ModRelicTemplate
@@ -23,6 +28,7 @@ public sealed class ApFrozenEye : ModRelicTemplate
     // such relic, so the mod shows that art without carrying a copy. Glass Eye stands in if a game
     // update drops it.
     private const string FrozenEyeArt = "frozen_eye";
+    private const int CardsPerShuffle = 1;
     private const string StandInArt = "glass_eye";
 
     private static readonly Lazy<string> ArtName = new(() =>
@@ -51,6 +57,25 @@ public sealed class ApFrozenEye : ModRelicTemplate
 #else
     public override bool IsAllowed(IRunState runState) => false;
 #endif
+
+    // The fight and turn of the last shuffle that earned a card. Not saved: a reload restarts the
+    // fight, and with it the turn count.
+    private object? _rewardedCombat;
+    private int _rewardedTurn;
+
+    public override async Task AfterShuffle(PlayerChoiceContext choiceContext, Player shuffler)
+    {
+        if (shuffler != Owner || Owner.PlayerCombatState is not { } combatState)
+            return;
+        object? combat = Owner.Creature.CombatState;
+        if (ReferenceEquals(combat, _rewardedCombat) && combatState.TurnNumber == _rewardedTurn)
+            return;
+        _rewardedCombat = combat;
+        _rewardedTurn = combatState.TurnNumber;
+        Flash();
+        // The game's own next-turn draw, as Forewarned uses.
+        await PowerCmd.Apply<DrawCardsNextTurnPower>(choiceContext, Owner.Creature, CardsPerShuffle, Owner.Creature, null);
+    }
 
     /// <summary>
     /// Adds the relic when the player has the Pile Sight bonus and lacks it. Singleplayer only: the

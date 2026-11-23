@@ -11,19 +11,19 @@ using STS2RitsuLib.Scaffolding.Content;
 namespace StS2AP.Models;
 
 /// <summary>
-/// The Second Wind boon: once per act, the player survives a killing blow and heals 25% of max HP.
+/// The Second Wind boon: once per run, the player survives a killing blow and heals 35% of max HP.
 /// Works like the base game's Lizard Tail, whose art it borrows, so it also stops lethal damage
 /// from an incoming DeathLink, which goes through the same death check. Once used, it stays greyed
-/// out until the next act. <see cref="ApRunModifiers"/> grants it at run start; the run save keeps
-/// it from then on.
+/// out for the rest of the run. <see cref="ApRunModifiers"/> grants it at run start; the run save
+/// keeps it from then on.
 /// </summary>
 [RegisterRelic(typeof(SharedRelicPool))]
 public sealed class ApSecondWind : ModRelicTemplate, IApTintedRelic
 {
-    private const decimal HealShare = 0.25m;
+    private const decimal HealShare = 0.35m;
     private static readonly string LizardTailIconPath = ImageHelper.GetImagePath("relics/lizard_tail.png");
 
-    private bool _usedThisAct;
+    private bool _used;
 
     public Godot.Color IconTint => IApTintedRelic.BoonTint;
 
@@ -45,35 +45,27 @@ public sealed class ApSecondWind : ModRelicTemplate, IApTintedRelic
     public override bool IsAllowed(IRunState runState) => false;
 #endif
 
-    public override bool IsUsedUp => UsedThisAct;
+    public override bool IsUsedUp => Used;
 
     [SavedProperty]
-    public bool UsedThisAct
+    public bool Used
     {
-        get => _usedThisAct;
+        get => _used;
         set
         {
             AssertMutable();
-            _usedThisAct = value;
-            // Unlike Lizard Tail, a used Second Wind comes back, so the status goes both ways.
+            _used = value;
             Status = value ? RelicStatus.Disabled : RelicStatus.Normal;
         }
     }
 
-    public override Task AfterActEntered()
-    {
-        if (UsedThisAct)
-            UsedThisAct = false;
-        return Task.CompletedTask;
-    }
-
     // The late check, as Lizard Tail uses, lets other death-preventing effects go first.
-    public override bool ShouldDieLate(Creature creature) => creature != Owner.Creature || UsedThisAct;
+    public override bool ShouldDieLate(Creature creature) => creature != Owner.Creature || Used;
 
     public override async Task AfterPreventingDeath(Creature creature)
     {
         Flash();
-        UsedThisAct = true;
+        Used = true;
         await CreatureCmd.Heal(creature, Math.Max(1m, creature.MaxHp * HealShare));
     }
 }

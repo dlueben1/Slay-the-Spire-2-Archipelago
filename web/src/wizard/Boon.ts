@@ -10,7 +10,7 @@
 
 import type { ModifierTableRow } from "./ModifierTableRow";
 
-export type BoonGroup = "travel" | "campfires" | "gold" | "deck";
+export type BoonGroup = "travel" | "relics" | "campfires" | "gold" | "deck";
 
 export interface Boon {
   optionName: string;
@@ -24,6 +24,7 @@ export interface Boon {
 /** Table group headings in display order. */
 export const BOON_GROUPS: readonly { id: BoonGroup; title: string }[] = [
   { id: "travel", title: "Map and combat" },
+  { id: "relics", title: "Relics from the first game" },
   { id: "campfires", title: "Campfires" },
   { id: "gold", title: "Gold and shops" },
   { id: "deck", title: "Deck" },
@@ -35,16 +36,59 @@ export const BOONS: readonly Boon[] = [
     optionName: "Wayfinder",
     name: "Wayfinder",
     effect:
-      "Three times per act, travel to any room in the next row, ignoring the paths.",
+      "Three times per run, travel to any room in the next row, ignoring the paths.",
     worksInMultiplayer: false,
     group: "travel",
   },
   {
     optionName: "SecondWind",
     name: "Second Wind",
-    effect: "Once per act, survive a killing blow and heal 25% of your max HP.",
+    effect: "Once per run, survive a killing blow and heal 35% of your max HP.",
     worksInMultiplayer: false,
     group: "travel",
+  },
+  {
+    optionName: "InkBottle",
+    name: "Ink Bottle",
+    effect: "Every time you play 10 cards, draw 1 card.",
+    worksInMultiplayer: true,
+    group: "relics",
+  },
+  {
+    optionName: "MedicalKit",
+    name: "Medical Kit",
+    effect: "Status cards can be played for 0 energy and Exhaust when played.",
+    worksInMultiplayer: true,
+    group: "relics",
+  },
+  {
+    optionName: "BlueCandle",
+    name: "Blue Candle",
+    effect:
+      "Curses can be played for 0 energy; playing one costs 1 HP and Exhausts it.",
+    worksInMultiplayer: true,
+    group: "relics",
+  },
+  {
+    optionName: "PreservedInsect",
+    name: "Preserved Insect",
+    effect: "Enemies in Elite fights have 25% less HP.",
+    worksInMultiplayer: true,
+    group: "relics",
+  },
+  {
+    optionName: "Torii",
+    name: "Torii",
+    effect: "Unblocked attack damage of 5 or less is reduced to 1.",
+    worksInMultiplayer: true,
+    group: "relics",
+  },
+  {
+    optionName: "Turnip",
+    name: "Turnip",
+    effect: "You can't become Frail.",
+    worksInMultiplayer: true,
+    group: "relics",
   },
   {
     optionName: "EmberEnchanting",
@@ -89,7 +133,7 @@ export const BOONS: readonly Boon[] = [
     optionName: "SpringCleaning",
     name: "Spring Cleaning",
     effect:
-      "After the Act 1 and Act 2 bosses, choose one: remove a card, transform a card, or upgrade 2 random cards.",
+      "After the Act 1 and Act 2 bosses, get one at random: remove a card, transform a card, or upgrade 2 random cards.",
     worksInMultiplayer: false,
     group: "deck",
   },
