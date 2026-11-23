@@ -418,6 +418,7 @@ namespace StS2AP.Patches
                 case APItem.MapSight:
                     ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);
                     MapSight.RefreshVisibleMap();
+                    ApRouteDiagram.EnsureOwnedIfEarned(GameUtility.CurrentPlayer);
                     break;
                 case APItem.CardSight:
                     ArchipelagoClient.Progress.Items.RegisterConsumed(receipt);

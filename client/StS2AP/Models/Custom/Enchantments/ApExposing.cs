@@ -12,6 +12,9 @@ namespace StS2AP.Models.Enchantments;
 /// <summary>Attacks apply Vulnerable to what they hit, the way the game's Inky applies Weak.</summary>
 public sealed class ApExposing : EnchantmentModel
 {
+    // Inky's "Apply 1 Weak" line on the card, here "Apply 1 Vulnerable".
+    public override bool HasExtraCardText => true;
+
     protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<VulnerablePower>()];
 
     public override bool CanEnchantCardType(CardType cardType) => cardType == CardType.Attack;
