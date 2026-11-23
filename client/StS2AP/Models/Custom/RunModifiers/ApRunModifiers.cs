@@ -55,6 +55,8 @@ public static class ApRunModifiers
             ["PreservedInsect"] = new(Relic: ModelDb.Relic<ApPreservedInsect>),
             ["Torii"] = new(Relic: ModelDb.Relic<ApTorii>),
             ["Turnip"] = new(Relic: ModelDb.Relic<ApTurnip>),
+            ["Amphorae"] = new(Relic: ModelDb.Relic<ApAmphorae>),
+            ["CursedKettle"] = new(Relic: ModelDb.Relic<ApCursedKettle>),
         };
 
     /// <summary>Whether this modifier came from the Run Modifiers or Boons option.</summary>

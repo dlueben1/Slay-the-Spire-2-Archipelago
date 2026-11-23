@@ -38,5 +38,11 @@
   "ARCHIPELAGO_RELIC_AP_TORII.flavor": "A Boon from your Archipelago settings.",
   "ARCHIPELAGO_RELIC_AP_TURNIP.title": "Turnip",
   "ARCHIPELAGO_RELIC_AP_TURNIP.description": "You can't become Frail.",
-  "ARCHIPELAGO_RELIC_AP_TURNIP.flavor": "A Boon from your Archipelago settings."
+  "ARCHIPELAGO_RELIC_AP_TURNIP.flavor": "A Boon from your Archipelago settings.",
+  "ARCHIPELAGO_RELIC_AP_AMPHORAE.title": "Amphorae",
+  "ARCHIPELAGO_RELIC_AP_AMPHORAE.description": "At the start of each act, fill all empty potion slots with random potions.",
+  "ARCHIPELAGO_RELIC_AP_AMPHORAE.flavor": "A Boon from your Archipelago settings.",
+  "ARCHIPELAGO_RELIC_AP_CURSED_KETTLE.title": "Cursed Kettle",
+  "ARCHIPELAGO_RELIC_AP_CURSED_KETTLE.description": "The first time you draw a Curse each turn, draw 1 card.",
+  "ARCHIPELAGO_RELIC_AP_CURSED_KETTLE.flavor": "A Boon from your Archipelago settings."
 }

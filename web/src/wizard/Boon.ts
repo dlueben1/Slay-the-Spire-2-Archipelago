@@ -91,6 +91,21 @@ export const BOONS: readonly Boon[] = [
     group: "relics",
   },
   {
+    optionName: "Amphorae",
+    name: "Amphorae",
+    effect:
+      "At the start of each act, fill all empty potion slots with random potions.",
+    worksInMultiplayer: true,
+    group: "relics",
+  },
+  {
+    optionName: "CursedKettle",
+    name: "Cursed Kettle",
+    effect: "The first time you draw a Curse each turn, draw 1 card.",
+    worksInMultiplayer: true,
+    group: "relics",
+  },
+  {
     optionName: "EmberEnchanting",
     name: "Ember Enchanting",
     effect:

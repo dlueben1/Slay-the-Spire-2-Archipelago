@@ -781,7 +781,9 @@ class Boons(OptionSet):
     - 'BlueCandle': Curses can be played for 0 energy; playing one costs 1 HP and Exhausts it.
     - 'PreservedInsect': Enemies in Elite fights have 25% less HP.
     - 'Torii': Unblocked attack damage of 5 or less is reduced to 1.
-    - 'Turnip': You can't become Frail."""
+    - 'Turnip': You can't become Frail.
+    - 'Amphorae': At the start of each act, fill all empty potion slots with random potions.
+    - 'CursedKettle': The first time you draw a Curse each turn, draw 1 card."""
     display_name = "Boons"
     valid_keys_casefold = False
     valid_keys = {
@@ -800,6 +802,8 @@ class Boons(OptionSet):
         "PreservedInsect",
         "Torii",
         "Turnip",
+        "Amphorae",
+        "CursedKettle",
     }
     default = frozenset()
 
