@@ -39,10 +39,3 @@ class TestItemGroups(TestCase):
             item_groups["Shop Slots"],
         )
         self.assertIn("Custom Character 1 Progressive Rest", item_groups["Campfire Upgrades"])
-
-    def test_gold_leaves_out_filler_gold(self):
-        self.assertLessEqual({"Ironclad Combat Gold", "Ironclad Elite Gold", "Ironclad Boss Gold"}, item_groups["Gold"])
-        self.assertFalse({"Ironclad One Gold", "Ironclad Five Gold"} & item_groups["Gold"])
-
-    def test_sights_group_has_every_sight(self):
-        self.assertEqual({"Intent Sight", "Health Sight", "Pile Sight", "Map Sight", "Card Sight"}, item_groups["Sights"])

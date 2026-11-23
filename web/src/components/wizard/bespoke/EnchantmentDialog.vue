@@ -10,6 +10,8 @@ import type {
   BonusItemAnswer,
   EnchantmentBonusKind,
 } from "../../../wizard/WizardAnswers";
+import BonusItemDialogShell from "./BonusItemDialogShell.vue";
+import PickerList, { type PickerOption } from "./PickerList.vue";
 
 type EnchantmentMode = "specific" | "random";
 
@@ -54,6 +56,14 @@ const modeItems = computed<RadioGroupItem[]>(() => [
 ]);
 
 const enchantments = getBonusEnchantments();
+const enchantmentOptions: PickerOption[] = enchantments.map((entry) => ({
+  id: entry.name,
+  name: entry.displayName,
+  imageUrl: entry.imageUrl,
+  imageAlt: `${entry.displayName} icon`,
+  description: entry.description,
+  tag: entry.tier ?? "Only by name",
+}));
 const tierOptions = BONUS_ENCHANTMENT_TIERS.map((tier) => ({
   name: tier,
   description: BONUS_ENCHANTMENT_TIER_DESCRIPTIONS[tier],
@@ -76,17 +86,11 @@ const kindName = computed(() =>
   props.kind === "ENCHANTMENT" ? "Enchantment" : "Enchanted Cards",
 );
 
-const dialogTitle = computed(
-  () => `${props.editItem ? "Edit" : "Add"} ${kindName.value}`,
-);
-
 const dialogDescription = computed(() =>
   props.kind === "ENCHANTMENT"
     ? "When claimed, choose a card in your deck that has no enchantment yet and enchant it."
     : "A card reward of three cards from your character's pool, each already enchanted.",
 );
-
-const submitLabel = computed(() => (props.editItem ? "Save" : "Add"));
 
 /** Resets the draft from the edited item (or defaults) each time the dialog opens. */
 watch(
@@ -104,12 +108,16 @@ watch(
         tiers: [],
       };
     } else if (item && item.kind === props.kind && item.mode === "random") {
-      draft.value = { mode: "random", enchantment: null, tiers: [...item.tiers] };
+      draft.value = {
+        mode: "random",
+        enchantment: null,
+        tiers: [...item.tiers],
+      };
     } else {
       draft.value = { mode: "random", enchantment: null, tiers: ["Common"] };
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 function setMode(value: unknown): void {
@@ -139,10 +147,6 @@ function toggleTier(tier: string, checked: unknown): void {
   };
 }
 
-function cancel(): void {
-  emit("update:open", false);
-}
-
 function submit(): void {
   if (!isSubmittable.value) {
     return;
@@ -163,114 +167,61 @@ function submit(): void {
 </script>
 
 <template>
-  <UModal
+  <BonusItemDialogShell
     :open="open"
-    :title="dialogTitle"
+    :item-name="kindName"
     :description="dialogDescription"
-    scrollable
-    :ui="{ content: 'sm:max-w-2xl', footer: 'justify-end' }"
+    :editing="editItem !== null"
+    :submittable="isSubmittable"
     @update:open="emit('update:open', $event)"
+    @submit="submit"
   >
-    <template #body>
-      <div class="enchant-dialog">
-        <URadioGroup
-          :model-value="draft.mode"
-          :items="modeItems"
-          value-key="value"
-          label-key="label"
-          description-key="description"
-          color="primary"
-          variant="table"
-          :ui="{ item: 'cursor-pointer' }"
-          @update:model-value="setMode"
-        />
-
-        <div
-          v-if="draft.mode === 'specific'"
-          class="enchant-list"
-          role="listbox"
-          aria-label="Enchantments"
-          aria-multiselectable="false"
-        >
-          <button
-            v-for="entry in enchantments"
-            :key="entry.name"
-            type="button"
-            role="option"
-            class="enchant-option"
-            :class="{
-              'enchant-option--selected': draft.enchantment === entry.name,
-            }"
-            :aria-selected="draft.enchantment === entry.name"
-            @click="selectEnchantment(entry.name)"
-          >
-            <img
-              :src="entry.imageUrl"
-              :alt="`${entry.displayName} icon`"
-              class="enchant-option__image"
-              loading="lazy"
-            />
-            <span class="enchant-option__text">
-              <span class="enchant-option__name">
-                {{ entry.displayName }}
-                <span class="enchant-option__tier">
-                  {{ entry.tier ?? "Only by name" }}
-                </span>
-              </span>
-              <span class="enchant-option__description">
-                {{ entry.description }}
-              </span>
-            </span>
-            <UIcon
-              v-if="draft.enchantment === entry.name"
-              name="i-glyphs-check-circle-bold"
-              class="enchant-option__check"
-            />
-          </button>
-        </div>
-
-        <div v-else class="wizard-toggle-grid">
-          <UCheckbox
-            v-for="option in tierOptions"
-            :key="option.name"
-            :model-value="draft.tiers.includes(option.name)"
-            :label="`${option.name} (${option.count})`"
-            :description="option.description"
-            color="primary"
-            variant="card"
-            class="cursor-pointer"
-            :ui="{ label: 'cursor-pointer', description: 'cursor-pointer' }"
-            @update:model-value="toggleTier(option.name, $event)"
-          />
-        </div>
-
-        <p v-if="!isSubmittable" class="wizard-error" role="status">
-          {{
-            draft.mode === "specific"
-              ? "Select an enchantment to continue."
-              : "Select at least one tier to continue."
-          }}
-        </p>
-      </div>
-    </template>
-
-    <template #footer>
-      <UButton
-        label="Cancel"
-        color="neutral"
-        variant="outline"
-        class="cursor-pointer"
-        @click="cancel"
-      />
-      <UButton
-        :label="submitLabel"
+    <div class="enchant-dialog">
+      <URadioGroup
+        :model-value="draft.mode"
+        :items="modeItems"
+        value-key="value"
+        label-key="label"
+        description-key="description"
         color="primary"
-        class="cursor-pointer"
-        :disabled="!isSubmittable"
-        @click="submit"
+        variant="table"
+        :ui="{ item: 'cursor-pointer' }"
+        @update:model-value="setMode"
       />
-    </template>
-  </UModal>
+
+      <PickerList
+        v-if="draft.mode === 'specific'"
+        :options="enchantmentOptions"
+        :selected-id="draft.enchantment"
+        label="Enchantments"
+        image-size="2.5rem"
+        @select="selectEnchantment"
+      />
+
+      <div v-else class="wizard-toggle-grid">
+        <UCheckbox
+          v-for="option in tierOptions"
+          :key="option.name"
+          :model-value="draft.tiers.includes(option.name)"
+          :label="`${option.name} (${option.count})`"
+          :description="option.description"
+          color="primary"
+          variant="card"
+          class="cursor-pointer"
+          :ui="{ label: 'cursor-pointer', description: 'cursor-pointer' }"
+          @update:model-value="toggleTier(option.name, $event)"
+        />
+      </div>
+
+      <p v-if="!isSubmittable" class="wizard-error" role="status">
+        {{
+          draft.mode === "specific"
+            ? "Select an enchantment to continue."
+            : "Select at least one tier to continue."
+        }}
+      </p>
+    </div>
+  </BonusItemDialogShell>
 </template>
 
 <style scoped src="../core/wizard.css" />
@@ -279,79 +230,5 @@ function submit(): void {
 .enchant-dialog {
   display: grid;
   gap: 1.25rem;
-}
-
-.enchant-list {
-  display: grid;
-  max-height: 22rem;
-  overflow-y: auto;
-  border: 1px solid var(--ui-border-muted);
-  border-radius: 0.6rem;
-  background: rgba(0, 0, 0, 0.25);
-}
-
-.enchant-option {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.85rem;
-  padding: 0.6rem 0.85rem;
-  color: var(--ui-text);
-  text-align: left;
-  border: 0;
-  border-bottom: 1px solid var(--ui-border-muted);
-  background: transparent;
-  cursor: pointer;
-}
-
-.enchant-option:last-child {
-  border-bottom: 0;
-}
-
-.enchant-option:hover {
-  background: color-mix(in oklab, var(--color-amber-500) 7%, transparent);
-}
-
-.enchant-option--selected {
-  background: color-mix(in oklab, var(--color-amber-500) 14%, transparent);
-  box-shadow: inset 0 0 0 1px
-    color-mix(in oklab, var(--color-amber-500) 60%, transparent);
-}
-
-.enchant-option__image {
-  width: 2.5rem;
-  height: 2.5rem;
-  object-fit: contain;
-}
-
-.enchant-option__text {
-  display: grid;
-  min-width: 0;
-  gap: 0.1rem;
-}
-
-.enchant-option__name {
-  color: var(--ui-text-highlighted);
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.enchant-option__tier {
-  margin-left: 0.4rem;
-  color: var(--ui-text-dimmed);
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.enchant-option__description {
-  color: var(--ui-text-muted);
-  font-size: 0.8rem;
-  line-height: 1.35;
-}
-
-.enchant-option__check {
-  width: 1.25rem;
-  height: 1.25rem;
-  color: var(--color-green-400);
 }
 </style>

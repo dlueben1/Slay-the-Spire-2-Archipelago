@@ -21,7 +21,7 @@ from .characters import (CharacterConfig, character_list, vanilla_character_ids,
 from .constants import NUM_CUSTOM, ASCENSION_LIST, CHAR_OFFSET, GENERIC_CHARACTER_BLOCKS
 from .items import (item_table, chars_to_items, bonus_item_table, ItemType, base_event_item_pairs, ItemData,
                     item_groups, BONUS_ENCHANTMENT_TIERS, BONUS_ENCHANTMENT_VALUES, BONUS_MAX_HP_LIMIT,
-                    normalize_bonus_enchantment, parse_bonus_card_pool)
+                    normalize_bonus_enchantment, parse_bonus_card_pool, SIGHTS)
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
 from .options import Spire2Options
 
@@ -163,6 +163,7 @@ class SlayTheSpire2World(World):
             self.options.hidden_piles.value = 0
             self.options.hidden_map.value = 0
             self.options.hidden_cards.value = 0
+            self.options.hidden_relics.value = 0
         names = {config.official_name for config in self.characters}
         if len(names) != len(self.characters):
             raise OptionError(f"Found duplicate characters: {[c.official_name for c in self.characters]}")
@@ -666,11 +667,8 @@ class SlayTheSpire2World(World):
             validate_bonus_entry(bonus_type, bonus_entry[bonus_type])
             bonus_item_names.append(bonus_data.item_name)
         # Challenge items take filler slots the same way Bonus Items do.
-        bonus_item_names += ["Intent Sight"] * self.options.hidden_intents.value
-        bonus_item_names += ["Health Sight"] * self.options.hidden_health.value
-        bonus_item_names += ["Pile Sight"] * self.options.hidden_piles.value
-        bonus_item_names += ["Map Sight"] * self.options.hidden_map.value
-        bonus_item_names += ["Card Sight"] * self.options.hidden_cards.value
+        for sight_item, _, hidden_option in SIGHTS:
+            bonus_item_names += [sight_item] * getattr(self.options, hidden_option).value
 
         available_filler_slots = sum(count for _, count in filler_counts)
         if len(bonus_item_names) > available_filler_slots:
@@ -797,6 +795,7 @@ class SlayTheSpire2World(World):
             "hidden_piles",
             "hidden_map",
             "hidden_cards",
+            "hidden_relics",
             "sight_bonuses",
             "include_floor_checks",
             "neow_sanity",
@@ -926,11 +925,8 @@ class SlayTheSpire2World(World):
         self.options.progressive_starter_relic.value = slot_data['progressive_starter_relic']
         self.options.bonus_items.value = deepcopy(slot_data.get('bonus_items', []))
         # Sight items take filler slots, so a YAML's values could exceed what the seed generated with.
-        self.options.hidden_intents.value = slot_data.get('hidden_intents', 0)
-        self.options.hidden_health.value = slot_data.get('hidden_health', 0)
-        self.options.hidden_piles.value = slot_data.get('hidden_piles', 0)
-        self.options.hidden_map.value = slot_data.get('hidden_map', 0)
-        self.options.hidden_cards.value = slot_data.get('hidden_cards', 0)
+        for _, _, hidden_option in SIGHTS:
+            getattr(self.options, hidden_option).value = slot_data.get(hidden_option, 0)
         # Logic counts the Sight Bonuses a slot left on; slots from before the option have none.
         self.options.sight_bonuses.value = set(slot_data.get('sight_bonuses', []))
         if self.options.include_floor_checks.value == 0:

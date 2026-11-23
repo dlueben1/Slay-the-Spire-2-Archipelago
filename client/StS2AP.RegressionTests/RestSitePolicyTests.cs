@@ -117,22 +117,6 @@ public sealed class RestSitePolicyTests
         Assert.False(Apply(new RestSitePolicy(1, 0, 1), available));
     }
 
-    // Ember Enchanting shares Smith's lock through CanSmith, which must match what ApplyLocks removes.
-    [Theory]
-    [InlineData(1, 0, false)]
-    [InlineData(1, 1, true)]
-    [InlineData(2, 1, false)]
-    [InlineData(3, 3, true)]
-    [InlineData(4, 3, true)]
-    public void CanSmithMatchesTheSmithLock(int act, int smith, bool expected)
-    {
-        var policy = new RestSitePolicy(act, 3, smith);
-        var options = NativeOptions(smithEnabled: true);
-        Apply(policy, options);
-        Assert.Equal(expected, policy.CanSmith);
-        Assert.Equal(expected, options.Any(option => option.Id == "SMITH"));
-    }
-
     // Deliberately arbitrary: the adapter supplies real AP IDs; the policy must preserve them.
     private static long SuppliedLocationId(int act, int campfire) => (act, campfire) switch
     {

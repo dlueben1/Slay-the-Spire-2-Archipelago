@@ -6,10 +6,12 @@
  */
 
 import type { OptionCatalog } from "../../generated/optionCatalog";
-import { getOrderedBoons } from "../Boon";
+import { BOONS } from "../Boon";
+import { getOrderedOptionNames } from "../ModifierTableRow";
 import type { BoonAnswers } from "../WizardAnswers";
 import { BOON_OPTION_KEYS } from "../WizardOptionKey";
 import type { CompiledOptions } from "./applyCharacterOptions";
+import { requireAcceptedNames } from "./requireAcceptedNames";
 
 /**
  * Applies player-facing Boons answers to a compiler-owned option object.
@@ -32,17 +34,8 @@ export function applyBoonOptions(
     }
   }
 
-  // A renamed Boon must fail here rather than in Archipelago's generator.
-  const validBoons = catalog.options[BOON_OPTION_KEYS.boons]!.valid_keys ?? [];
-  const boons = getOrderedBoons(answers.selected);
-
-  for (const boon of boons) {
-    if (!validBoons.includes(boon)) {
-      throw new Error(
-        `Generated option '${BOON_OPTION_KEYS.boons}' no longer accepts '${boon}'.`,
-      );
-    }
-  }
+  const boons = getOrderedOptionNames(BOONS, answers.selected);
+  requireAcceptedNames(catalog, BOON_OPTION_KEYS.boons, boons);
 
   target[BOON_OPTION_KEYS.boons] = boons;
   target[BOON_OPTION_KEYS.blitzMerchantChance] = answers.blitzMerchantChance;

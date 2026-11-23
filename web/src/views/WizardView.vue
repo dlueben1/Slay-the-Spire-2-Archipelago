@@ -9,6 +9,7 @@ import ChecksStep from "../components/wizard/steps/ChecksStep.vue";
 import DeathLinkStep from "../components/wizard/steps/DeathLinkStep.vue";
 import ItemPoolStep from "../components/wizard/steps/ItemPoolStep.vue";
 import ProgressionStep from "../components/wizard/steps/ProgressionStep.vue";
+import ItemsStep from "../components/wizard/steps/ItemsStep.vue";
 import ReviewStep from "../components/wizard/steps/ReviewStep.vue";
 import RunSettingsStep from "../components/wizard/steps/RunSettingsStep.vue";
 import ShopsStep from "../components/wizard/steps/ShopsStep.vue";
@@ -48,12 +49,7 @@ const sectionStepComponents: Record<WizardSectionKey, Component> = {
   challenges: ChallengesStep,
   deathLink: DeathLinkStep,
   progression: ProgressionStep,
-};
-
-/** Steps that were merged into another, so a saved position still lands nearby. */
-const RENAMED_STEP_IDS: Readonly<Record<string, string>> = {
-  "death-link": "multiworld",
-  progression: "multiworld",
+  items: ItemsStep,
 };
 
 const availableCharacters = optionCatalog.options.characters?.valid_keys ?? [];
@@ -78,8 +74,7 @@ provideWizardAnswers(answers);
 
 /** Index of a step by ID, or -1 when no step has that ID. */
 function findStepIndex(stepId: string): number {
-  const currentId = RENAMED_STEP_IDS[stepId] ?? stepId;
-  return wizardSteps.findIndex((step) => step.id === currentId);
+  return wizardSteps.findIndex((step) => step.id === stepId);
 }
 
 const stepIndex = ref(Math.max(0, findStepIndex(savedState?.stepId ?? "")));
@@ -124,7 +119,7 @@ function getGuidedSettings() {
   const compiledOptions = compileCurrentAnswers();
 
   // Delegate ordered key selection to the registry shared with section compilers.
-  return selectGuidedOptions(compiledOptions);
+  return selectGuidedOptions(compiledOptions, answers.keptOptions);
 }
 
 /** Comments for the generated YAML, pointing back to this copy of the builder. */

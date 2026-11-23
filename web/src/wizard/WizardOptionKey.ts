@@ -56,6 +56,7 @@ export const CHALLENGE_OPTION_KEYS = {
   hiddenPiles: "hidden_piles",
   hiddenMap: "hidden_map",
   hiddenCards: "hidden_cards",
+  hiddenRelics: "hidden_relics",
   sightBonuses: "sight_bonuses",
   strictCardRewards: "strict_card_rewards",
 } as const;
@@ -112,6 +113,14 @@ export const SHOP_POTION_OPTION_KEY = "random_shop_potions" as const;
 export const BONUS_ITEM_OPTION_KEY = "bonus_items" as const;
 
 /** Generated option keys owned by the Death Link compiler. */
+/** Common Archipelago options owned by the Items & Hints step. */
+export const ITEM_OPTION_KEYS = {
+  startInventory: "start_inventory",
+  startHints: "start_hints",
+  localItems: "local_items",
+  nonLocalItems: "non_local_items",
+} as const;
+
 export const DEATH_LINK_OPTION_KEYS = {
   enabled: "death_link",
   enableFragments: "enable_death_fragments",

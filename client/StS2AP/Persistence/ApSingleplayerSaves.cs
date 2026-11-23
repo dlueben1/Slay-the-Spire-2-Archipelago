@@ -14,21 +14,7 @@ internal static class ApSingleplayerSaves
     // Set before native setup, whose reload counter writes through the native save manager.
     internal static bool IsHandlingSingleplayerRun => _selected != null;
 
-    private static string CurrentProfileRoot => ProjectSettings.GlobalizePath(
-        $"user://ArchipelagoSingleplayerCheckpoints/profile-{SaveManager.Instance.CurrentProfileId}");
-
-    internal static SingleplayerCheckpointBank Bank => new(CurrentProfileRoot);
-
-    internal static bool DeleteAllLocalCheckpointsForCurrentProfile()
-    {
-        if (IsHandlingSingleplayerRun)
-            throw new InvalidOperationException("Local AP checkpoints cannot be deleted during a run.");
-        if (!Directory.Exists(CurrentProfileRoot))
-            return false;
-
-        Directory.Delete(CurrentProfileRoot, recursive: true);
-        return true;
-    }
+    internal static SingleplayerCheckpointBank Bank => new(ApLocalStorage.Root);
 
     internal static SingleplayerCheckpointBank.Identity CurrentIdentity()
     {

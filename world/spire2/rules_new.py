@@ -15,6 +15,7 @@ from .logic_table import (
     SIGHT_BONUS_POWER, SMITH_POWER_BY_TIER,
     PowerCheck, card_reward_strength, card_reward_table, gold_sanity_run_gold, last_elite, normal_run_gold,
 )
+from .items import SIGHTS
 from .options import AncientRelicLocation
 
 if TYPE_CHECKING:
@@ -61,18 +62,12 @@ class PowerItems(NamedTuple):
                    f"{char} Elite Gold", f"{char} Boss Gold")
 
 
-# Each Sight item with its Sight Bonuses key and the Hidden option that sets its copies.
-SIGHT_ITEMS = (("Intent Sight", "IntentSight", "hidden_intents"), ("Health Sight", "HealthSight", "hidden_health"),
-               ("Pile Sight", "PileSight", "hidden_piles"), ("Map Sight", "MapSight", "hidden_map"),
-               ("Card Sight", "CardSight", "hidden_cards"))
-
-
 def sight_bonus_power(options: 'Spire2Options', act: int) -> tuple[tuple[str, float], ...]:
     """The Sight items whose second copy adds power in this act: from SIGHT_BONUS_FIRST_ACT, those
     with at least two copies in the pool and a bonus the player left on."""
     if act < SIGHT_BONUS_FIRST_ACT:
         return ()
-    return tuple((item, SIGHT_BONUS_POWER[item]) for item, key, option in SIGHT_ITEMS
+    return tuple((item, SIGHT_BONUS_POWER[item]) for item, key, option in SIGHTS
                  if getattr(options, option).value >= 2 and key in options.sight_bonuses.value)
 
 

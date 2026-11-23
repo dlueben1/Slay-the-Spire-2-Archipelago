@@ -399,24 +399,26 @@ public static partial class ApMirroredRewardDispatcher
             }
             case ApMirroredRewardKind.Bonus:
             {
-                BonusAssignment? assignment = BonusRewardUtility.GetOrAssign(receipt, player);
+                string? assignment = BonusRewardUtility.GetOrAssign(receipt, player);
                 if (assignment == null)
                 {
                     spec.Kind = ApMirroredRewardKind.Unavailable;
                     spec.UnavailableReason = "No eligible bonus is configured for this receipt.";
                     break;
                 }
-                spec.SerializedModels.Add(assignment.Relic != null
-                    ? SerializeRelic(assignment.Relic)
-                    : assignment.Payload!.ToJson());
+                spec.SerializedModels.Add(assignment);
                 break;
             }
             case ApMirroredRewardKind.Relic:
             {
-                IReadOnlyList<RelicModel> choices =
-                    ArchipelagoClient.Progress.GetOrAssignRelicChoices(itemIndex, player, 1);
-                if (choices.Count != 1)
+                IReadOnlyList<RelicModel> choices = ArchipelagoClient.Progress.GetOrAssignRelicChoices(
+                    itemIndex,
+                    player,
+                    RelicSightChoices.AssignmentChoiceCount);
+                if (choices.Count == 0)
                     throw new InvalidOperationException($"Could not assign relic reward {itemIndex}.");
+                // The entry carries one relic. A Relic Sight bonus's other choices stay in the
+                // saved assignment, which only singleplayer gives more than one.
                 spec.SerializedModels.Add(SerializeRelic(choices[0]));
                 break;
             }
@@ -580,12 +582,24 @@ public static partial class ApMirroredRewardDispatcher
         RelicModel relic = DeserializeRelic(model);
         RelicReceiptMultiplayer.RecordMenuAssignment(player, origin.ReceivedItemIndex, model);
         StandardRelicPool.ReserveChoice(player, relic);
-        return new ApNativeRelicReward(
+        var first = new ApNativeRelicReward(
             relic,
             player,
             origin,
             ApMirroredRewardKind.Relic
         );
+
+        IReadOnlyList<RelicModel> others = RelicSightChoices.OtherAssignedChoices(origin.ReceivedItemIndex, relic);
+        if (others.Count == 0)
+            return first;
+        var children = new List<Reward> { first };
+        foreach (RelicModel other in others)
+        {
+            RelicModel choice = DeserializeRelic(SerializeRelic(other));
+            StandardRelicPool.ReserveChoice(player, choice);
+            children.Add(new ApNativeRelicReward(choice, player, origin, ApMirroredRewardKind.Relic));
+        }
+        return LinkedRewardSets.Create(children, player, LinkedRewardSelectionMode.ChooseOne);
     }
 
     private static CardCreationOptions CreateCardOptions(Player player, bool rare)
@@ -1025,7 +1039,12 @@ public static partial class ApMirroredRewardDispatcher
                 throw new InvalidOperationException($"AP relic receipt {Player.NetId}:{_itemIndex} is not approved for this menu.");
             bool applied = await base.OnSelect();
             if (applied && _kind == ApMirroredRewardKind.Relic)
+            {
                 RelicReceiptMultiplayer.ConsumeMenu(Player, _itemIndex);
+                // Before CommitDiscreteReward drops the assignment that lists the other choices.
+                if (LocalContext.IsMe(Player))
+                    RelicSightChoices.ReturnUnpickedAssignment(Player, _itemIndex, Relic!);
+            }
             if (applied && LocalContext.IsMe(Player))
                 CommitDiscreteReward(_itemIndex, _kind);
             return applied;

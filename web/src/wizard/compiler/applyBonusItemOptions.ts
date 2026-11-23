@@ -17,21 +17,54 @@ import {
 } from "../BonusEnchantmentData";
 import { formatBonusCardPool, parseBonusCardPool } from "../BonusCardData";
 import { isBonusRelicPool, isEligibleSpecificRelicId } from "../BonusRelicData";
-import {
-  isEnchantmentBonusItem,
-  type BonusItemAnswer,
-} from "../WizardAnswers";
+import { isEnchantmentBonusItem, type BonusItemAnswer } from "../WizardAnswers";
 import { BONUS_ITEM_OPTION_KEY } from "../WizardOptionKey";
 import type { CompiledOptions } from "./applyCharacterOptions";
 
 /** The generated `bonus_items` value: one single-key mapping per configured row. */
-type CompiledBonusItem = Record<string, Record<string, string | number | string[]>>;
+type CompiledBonusItem = Record<
+  string,
+  Record<string, string | number | string[]>
+>;
 type CompiledBonusItems = CompiledBonusItem[];
 
 /** Max HP a new Max HP row starts with. */
 export const BONUS_MAX_HP_DEFAULT = 6;
 /** The largest Max HP bonus the APWorld accepts (`BONUS_MAX_HP_LIMIT` in items.py). */
 export const BONUS_MAX_HP_LIMIT = 50;
+
+/**
+ * Checks the Pools of a random relic or enchantment row.
+ *
+ * @param pools - Pools the row draws from.
+ * @param isKnown - Whether the row type accepts a pool.
+ * @param poolName - What a pool is called, such as "relic pool".
+ * @param shortName - The shorter name used for a repeat, such as "pool".
+ * @throws When the row has no pools, an unknown pool or one pool twice.
+ */
+function requireKnownPools(
+  pools: readonly string[],
+  isKnown: (pool: string) => boolean,
+  poolName: string,
+  shortName: string,
+  context: string,
+): void {
+  if (!Array.isArray(pools) || pools.length === 0) {
+    throw new Error(`${context} must select at least one ${poolName}.`);
+  }
+  const seenPools = new Set<string>();
+  for (const pool of pools) {
+    if (!isKnown(pool)) {
+      throw new Error(`${context} selects unknown ${poolName} '${pool}'.`);
+    }
+    if (seenPools.has(pool)) {
+      throw new Error(
+        `${context} selects ${shortName} '${pool}' more than once.`,
+      );
+    }
+    seenPools.add(pool);
+  }
+}
 
 /**
  * Validates and converts an enchantment row.
@@ -52,19 +85,13 @@ function compileEnchantmentItem(
     return { [item.kind]: { Value: enchantment.name } };
   }
 
-  if (!Array.isArray(item.tiers) || item.tiers.length === 0) {
-    throw new Error(`${context} must select at least one enchantment tier.`);
-  }
-  const seenTiers = new Set<string>();
-  for (const tier of item.tiers) {
-    if (!isBonusEnchantmentTier(tier)) {
-      throw new Error(`${context} selects unknown enchantment tier '${tier}'.`);
-    }
-    if (seenTiers.has(tier)) {
-      throw new Error(`${context} selects tier '${tier}' more than once.`);
-    }
-    seenTiers.add(tier);
-  }
+  requireKnownPools(
+    item.tiers,
+    isBonusEnchantmentTier,
+    "enchantment tier",
+    "tier",
+    context,
+  );
   return { [item.kind]: { Pools: [...item.tiers] } };
 }
 
@@ -92,11 +119,15 @@ function compileCardsItem(
   for (const pool of item.pools) {
     const parts = parseBonusCardPool(pool);
     if ("error" in parts) {
-      throw new Error(`${context} has card pool '${pool}', which is not valid: ${parts.error}.`);
+      throw new Error(
+        `${context} has card pool '${pool}', which is not valid: ${parts.error}.`,
+      );
     }
     const canonical = formatBonusCardPool(parts);
     if (pools.includes(canonical)) {
-      throw new Error(`${context} has card pool '${canonical}' more than once.`);
+      throw new Error(
+        `${context} has card pool '${canonical}' more than once.`,
+      );
     }
     pools.push(canonical);
   }
@@ -138,6 +169,8 @@ function compileBonusItem(
     return compileCardsItem(item, context);
   }
 
+  // The types rule this out, but answers restored from browser storage keep their rows
+  // whole, so a saved row can still carry a kind the builder no longer has.
   if (item.kind !== "WAX_RELIC" && item.kind !== "RELIC") {
     throw new Error(
       `${context} uses unsupported type '${String((item as BonusItemAnswer).kind)}'.`,
@@ -155,21 +188,13 @@ function compileBonusItem(
   }
 
   if (item.mode === "random") {
-    if (!Array.isArray(item.pools) || item.pools.length === 0) {
-      throw new Error(`${context} must select at least one relic pool.`);
-    }
-
-    const seenPools = new Set<string>();
-    for (const pool of item.pools) {
-      if (!isBonusRelicPool(pool)) {
-        throw new Error(`${context} selects unknown relic pool '${pool}'.`);
-      }
-      if (seenPools.has(pool)) {
-        throw new Error(`${context} selects pool '${pool}' more than once.`);
-      }
-      seenPools.add(pool);
-    }
-
+    requireKnownPools(
+      item.pools,
+      isBonusRelicPool,
+      "relic pool",
+      "pool",
+      context,
+    );
     return { [item.kind]: { Pools: [...item.pools] } };
   }
 

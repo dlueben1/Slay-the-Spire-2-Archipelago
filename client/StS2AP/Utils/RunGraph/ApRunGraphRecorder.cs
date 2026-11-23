@@ -1,3 +1,6 @@
+using MegaCrit.Sts2.Core.Saves.Managers;
+using MegaCrit.Sts2.Core.Runs.History;
+using StS2AP.Persistence;
 using Archipelago.MultiClient.Net.Models;
 using Godot;
 using MegaCrit.Sts2.Core.Context;
@@ -14,14 +17,28 @@ namespace StS2AP.Utils.RunGraph;
 internal static class ApRunGraphRecorder
 {
     private static ApRunGraphLog? _active;
+    // The slot folder the active log is written to, fixed when the run opens.
+    private static ApRunGraphStore? _activeStore;
 
-    internal static ApRunGraphStore Store => new(ProjectSettings.GlobalizePath(
-        $"user://ArchipelagoRunGraphs/profile-{SaveManager.Instance.CurrentProfileId}"));
+    /// <summary>Every slot's logs, for looking runs up by StartTime.</summary>
+    internal static ApRunGraphArchive Archive => new(ApLocalStorage.Root);
+
+    /// <summary>
+    /// The game's history for a finished run, read from the profile it was played on, since Past
+    /// AP Runs lists every profile's runs. A log without a profile uses the current one.
+    /// </summary>
+    internal static ReadSaveResult<RunHistory> LoadRunHistory(ApRunGraphLog log)
+    {
+        var saves = SaveManager.Instance;
+        return new RunHistorySaveManager(log.ProfileId ?? saves.CurrentProfileId, saves._saveStore, saves._migrationManager)
+            .LoadHistory($"{log.StartTime}.run");
+    }
 
     /// <summary>Opens the log for a new or continued run, or stops recording for a non-AP run.</summary>
     internal static void BeginRun(RunState state)
     {
         _active = null;
+        _activeStore = null;
         Guard(nameof(BeginRun), () =>
         {
             var session = ArchipelagoClient.Session;
@@ -29,7 +46,12 @@ internal static class ApRunGraphRecorder
                 return;
 
             long startTime = RunManager.Instance._startTime;
-            var store = Store;
+            string seed = session.RoomState.Seed;
+            int team = session.ConnectionInfo.Team;
+            int slot = session.ConnectionInfo.Slot;
+            // A continued run keeps the folder its log is already in.
+            var store = Archive.Find(startTime) ?? new ApRunGraphStore(ApStorageLayout.RunGraphsDirectory(
+                ApLocalStorage.SlotDirectory(seed, team, slot)));
             var log = store.Load(startTime, out string? error) ?? new ApRunGraphLog
             {
                 StartTime = startTime,
@@ -39,7 +61,10 @@ internal static class ApRunGraphRecorder
                 LogUtility.Warn(error + " Starting a new run graph log.");
 
             var me = LocalContext.GetMe(state) ?? state.Players.FirstOrDefault();
-            log.Seed = session.RoomState.Seed;
+            log.Seed = seed;
+            log.Team = team;
+            log.Slot = slot;
+            log.ProfileId = SaveManager.Instance.CurrentProfileId;
             log.SlotName = ArchipelagoClient.PlayerName;
             log.SlotLocationCount = ArchipelagoClient.SlotLocationIds.Count;
             log.IsMultiplayer = state.Players.Count > 1;
@@ -49,6 +74,7 @@ internal static class ApRunGraphRecorder
                 log.Character = me.Character.Id.Entry;
             }
             _active = log;
+            _activeStore = store;
             store.Save(log);
         });
     }
@@ -137,9 +163,10 @@ internal static class ApRunGraphRecorder
     {
         Guard(nameof(OnCheckpointRestored), () =>
         {
-            var store = Store;
-            var log = _active?.StartTime == startTime ? _active : store.Load(startTime, out _);
-            if (log == null)
+            bool active = _active?.StartTime == startTime && _activeStore != null;
+            var store = active ? _activeStore : Archive.Find(startTime);
+            var log = active ? _active : store?.Load(startTime, out _);
+            if (store == null || log == null)
                 return;
             // A count larger than this log came from a log on another machine (a remote save).
             int marked = eventCount is { } count && count <= log.Events.Count
@@ -158,7 +185,7 @@ internal static class ApRunGraphRecorder
         {
             _active.Outcome = won ? ApRunOutcome.Won : ApRunOutcome.Lost;
             _active.SlotChecksAtEnd = ArchipelagoClient.CheckedLocations.Count;
-            Store.Save(_active);
+            _activeStore?.Save(_active);
         });
     }
 
@@ -213,6 +240,7 @@ internal static class ApRunGraphRecorder
         });
         // Nothing is recorded between runs; the next run opens its own log.
         _active = null;
+        _activeStore = null;
     }
 
     /// <summary>
@@ -236,7 +264,9 @@ internal static class ApRunGraphRecorder
             Players = run.Players,
             MapPointHistory = run.MapPointHistory,
         };
-        var store = Store;
+        var store = _activeStore;
+        if (store == null)
+            return;
         store.SaveSnapshot(run.StartTime, JsonSerializationUtility.ToJson(recapOnly));
 
         // The floor count from the map history, as the recap draws it: a save on entering a room
@@ -249,7 +279,7 @@ internal static class ApRunGraphRecorder
     /// <summary>The run as last snapshotted, or null when it has none or it cannot be read.</summary>
     internal static SerializableRun? LoadSnapshot(long startTime)
     {
-        string? json = Store.LoadSnapshot(startTime, out string? error);
+        string? json = Archive.LoadSnapshot(startTime, out string? error);
         if (error != null)
             LogUtility.Warn(error);
         if (json == null)
@@ -280,7 +310,7 @@ internal static class ApRunGraphRecorder
             e.ActIndex = state.CurrentActIndex;
         }
         _active.Events.Add(e);
-        Store.Save(_active);
+        _activeStore?.Save(_active);
     }
 
     private static void Guard(string operation, Action action)

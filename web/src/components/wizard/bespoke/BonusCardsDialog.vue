@@ -16,6 +16,7 @@ import {
   type BonusCardType,
 } from "../../../wizard/BonusCardData";
 import type { BonusItemAnswer } from "../../../wizard/WizardAnswers";
+import BonusItemDialogShell from "./BonusItemDialogShell.vue";
 
 type CardsMode = "random" | "specific";
 
@@ -46,7 +47,8 @@ const emit = defineEmits<{
 const modeItems: RadioGroupItem[] = [
   {
     label: "Card Pools",
-    description: "Each of the 3 cards comes from one of the pools you list, rolled each run.",
+    description:
+      "Each of the 3 cards comes from one of the pools you list, rolled each run.",
     value: "random",
   },
   {
@@ -78,7 +80,11 @@ const emptyPool = (): BonusCardPoolParts => ({
   upgraded: false,
 });
 
-const draft = ref<CardsDraft>({ mode: "random", card: "", pools: [emptyPool()] });
+const draft = ref<CardsDraft>({
+  mode: "random",
+  card: "",
+  pools: [emptyPool()],
+});
 
 /** Each pool as the YAML writes it, or the reason it can't be used. */
 const poolChecks = computed(() =>
@@ -86,13 +92,18 @@ const poolChecks = computed(() =>
     // A pool needs at least one word; plain cards of your own character are an ordinary reward.
     const text = formatBonusCardPool(parts);
     const checked = text ? parseBonusCardPool(text) : null;
-    return { text, error: checked && "error" in checked ? checked.error : null };
+    return {
+      text,
+      error: checked && "error" in checked ? checked.error : null,
+    };
   }),
 );
 
 const duplicatePool = computed(() => {
   const texts = poolChecks.value.map((check) => check.text);
-  return texts.find((text, index) => text && texts.indexOf(text) !== index) ?? null;
+  return (
+    texts.find((text, index) => text && texts.indexOf(text) !== index) ?? null
+  );
 });
 
 const isSubmittable = computed(() =>
@@ -102,9 +113,6 @@ const isSubmittable = computed(() =>
       poolChecks.value.every((check) => check.text && !check.error) &&
       !duplicatePool.value,
 );
-
-const dialogTitle = computed(() => `${props.editItem ? "Edit" : "Add"} Card Reward`);
-const submitLabel = computed(() => (props.editItem ? "Save" : "Add"));
 
 watch(
   () => props.open,
@@ -119,7 +127,11 @@ watch(
       const pools = item.pools
         .map(parseBonusCardPool)
         .filter((parts): parts is BonusCardPoolParts => !("error" in parts));
-      draft.value = { mode: "random", card: "", pools: pools.length ? pools : [emptyPool()] };
+      draft.value = {
+        mode: "random",
+        card: "",
+        pools: pools.length ? pools : [emptyPool()],
+      };
     } else {
       draft.value = {
         mode: "random",
@@ -145,7 +157,10 @@ function updatePool(index: number, change: Partial<BonusCardPoolParts>): void {
     next.source = null;
     next.type = null;
   }
-  if (!bonusCardPoolTakesRarity(next) || (next.source === "Colorless" && next.rarity === "Common")) {
+  if (
+    !bonusCardPoolTakesRarity(next) ||
+    (next.source === "Colorless" && next.rarity === "Common")
+  ) {
     next.rarity = null;
   }
   pools[index] = next;
@@ -171,13 +186,16 @@ function setType(index: number, value: unknown): void {
 }
 
 function setRarity(index: number, value: unknown): void {
-  updatePool(index, { rarity: value === ANY ? null : (value as BonusCardRarity) });
+  updatePool(index, {
+    rarity: value === ANY ? null : (value as BonusCardRarity),
+  });
 }
 
 function rarityItems(parts: BonusCardPoolParts): SelectItem[] {
-  const rarities = parts.source === "Colorless"
-    ? BONUS_CARD_RARITIES.filter((name) => name !== "Common")
-    : BONUS_CARD_RARITIES;
+  const rarities =
+    parts.source === "Colorless"
+      ? BONUS_CARD_RARITIES.filter((name) => name !== "Common")
+      : BONUS_CARD_RARITIES;
   return [
     { label: "Any rarity", value: ANY },
     ...rarities.map((name) => ({ label: name, value: name })),
@@ -204,10 +222,6 @@ function removePool(index: number): void {
   };
 }
 
-function cancel(): void {
-  emit("update:open", false);
-}
-
 function submit(): void {
   if (!isSubmittable.value) {
     return;
@@ -215,161 +229,150 @@ function submit(): void {
   const item: BonusItemAnswer =
     draft.value.mode === "specific"
       ? { kind: "CARDS", mode: "specific", card: draft.value.card.trim() }
-      : { kind: "CARDS", mode: "random", pools: poolChecks.value.map((check) => check.text) };
+      : {
+          kind: "CARDS",
+          mode: "random",
+          pools: poolChecks.value.map((check) => check.text),
+        };
   emit("submit", item);
   emit("update:open", false);
 }
 </script>
 
 <template>
-  <UModal
+  <BonusItemDialogShell
     :open="open"
-    :title="dialogTitle"
+    item-name="Card Reward"
     description="A card reward: choose 1 of 3 cards, or skip it."
-    scrollable
-    :ui="{ content: 'sm:max-w-2xl', footer: 'justify-end' }"
+    :editing="editItem !== null"
+    :submittable="isSubmittable"
     @update:open="emit('update:open', $event)"
+    @submit="submit"
   >
-    <template #body>
-      <div class="cards-dialog">
-        <URadioGroup
-          :model-value="draft.mode"
-          :items="modeItems"
-          value-key="value"
-          label-key="label"
-          description-key="description"
-          color="primary"
-          variant="table"
-          :ui="{ item: 'cursor-pointer' }"
-          @update:model-value="setMode"
-        />
+    <div class="cards-dialog">
+      <URadioGroup
+        :model-value="draft.mode"
+        :items="modeItems"
+        value-key="value"
+        label-key="label"
+        description-key="description"
+        color="primary"
+        variant="table"
+        :ui="{ item: 'cursor-pointer' }"
+        @update:model-value="setMode"
+      />
 
-        <div v-if="draft.mode === 'specific'" class="cards-specific">
-          <UInput
-            :model-value="draft.card"
-            placeholder="Card name, such as Apotheosis"
-            aria-label="Card name"
-            color="primary"
-            variant="outline"
-            class="w-full"
-            @update:model-value="draft = { ...draft, card: String($event) }"
-          />
+      <div v-if="draft.mode === 'specific'" class="cards-specific">
+        <UInput
+          :model-value="draft.card"
+          placeholder="Card name, such as Apotheosis"
+          aria-label="Card name"
+          color="primary"
+          variant="outline"
+          class="w-full"
+          @update:model-value="draft = { ...draft, card: String($event) }"
+        />
+        <p class="cards-hint">
+          Use the card's English name. Spaces, capitals and punctuation don't
+          matter.
+        </p>
+      </div>
+
+      <div v-else class="cards-pools">
+        <div
+          v-for="(pool, index) in draft.pools"
+          :key="index"
+          class="cards-pool"
+        >
+          <div class="cards-pool__fields">
+            <USelect
+              :model-value="sourceValue(pool)"
+              :items="sourceItems"
+              value-key="value"
+              label-key="label"
+              color="primary"
+              variant="outline"
+              class="cursor-pointer"
+              :aria-label="`Source of pool ${index + 1}`"
+              @update:model-value="setSource(index, $event)"
+            />
+            <USelect
+              :model-value="pool.type ?? 'any'"
+              :items="typeItems"
+              :disabled="pool.random"
+              value-key="value"
+              label-key="label"
+              color="primary"
+              variant="outline"
+              class="cursor-pointer"
+              :aria-label="`Card type of pool ${index + 1}`"
+              @update:model-value="setType(index, $event)"
+            />
+            <USelect
+              :model-value="pool.rarity ?? 'any'"
+              :items="rarityItems(pool)"
+              :disabled="!bonusCardPoolTakesRarity(pool)"
+              value-key="value"
+              label-key="label"
+              color="primary"
+              variant="outline"
+              class="cursor-pointer"
+              :aria-label="`Rarity of pool ${index + 1}`"
+              @update:model-value="setRarity(index, $event)"
+            />
+            <UCheckbox
+              :model-value="pool.upgraded"
+              label="Upgraded"
+              color="primary"
+              class="cursor-pointer"
+              @update:model-value="
+                updatePool(index, { upgraded: $event === true })
+              "
+            />
+            <UButton
+              type="button"
+              icon="i-glyphs-minus-bold"
+              color="error"
+              variant="ghost"
+              size="sm"
+              square
+              class="cursor-pointer"
+              :disabled="draft.pools.length === 1"
+              :aria-label="`Remove pool ${index + 1}`"
+              @click="removePool(index)"
+            />
+          </div>
           <p class="cards-hint">
-            Use the card's English name. Spaces, capitals and punctuation don't matter.
+            {{ sourceDescription(pool) }}
+            <span v-if="poolChecks[index]?.text" class="cards-pool__yaml">
+              YAML: {{ poolChecks[index]?.text }}
+            </span>
           </p>
         </div>
 
-        <div v-else class="cards-pools">
-          <div
-            v-for="(pool, index) in draft.pools"
-            :key="index"
-            class="cards-pool"
-          >
-            <div class="cards-pool__fields">
-              <USelect
-                :model-value="sourceValue(pool)"
-                :items="sourceItems"
-                value-key="value"
-                label-key="label"
-                color="primary"
-                variant="outline"
-                class="cursor-pointer"
-                :aria-label="`Source of pool ${index + 1}`"
-                @update:model-value="setSource(index, $event)"
-              />
-              <USelect
-                :model-value="pool.type ?? 'any'"
-                :items="typeItems"
-                :disabled="pool.random"
-                value-key="value"
-                label-key="label"
-                color="primary"
-                variant="outline"
-                class="cursor-pointer"
-                :aria-label="`Card type of pool ${index + 1}`"
-                @update:model-value="setType(index, $event)"
-              />
-              <USelect
-                :model-value="pool.rarity ?? 'any'"
-                :items="rarityItems(pool)"
-                :disabled="!bonusCardPoolTakesRarity(pool)"
-                value-key="value"
-                label-key="label"
-                color="primary"
-                variant="outline"
-                class="cursor-pointer"
-                :aria-label="`Rarity of pool ${index + 1}`"
-                @update:model-value="setRarity(index, $event)"
-              />
-              <UCheckbox
-                :model-value="pool.upgraded"
-                label="Upgraded"
-                color="primary"
-                class="cursor-pointer"
-                @update:model-value="updatePool(index, { upgraded: $event === true })"
-              />
-              <UButton
-                type="button"
-                icon="i-glyphs-minus-bold"
-                color="error"
-                variant="ghost"
-                size="sm"
-                square
-                class="cursor-pointer"
-                :disabled="draft.pools.length === 1"
-                :aria-label="`Remove pool ${index + 1}`"
-                @click="removePool(index)"
-              />
-            </div>
-            <p class="cards-hint">
-              {{ sourceDescription(pool) }}
-              <span v-if="poolChecks[index]?.text" class="cards-pool__yaml">
-                YAML: {{ poolChecks[index]?.text }}
-              </span>
-            </p>
-          </div>
-
-          <UButton
-            type="button"
-            label="Add pool"
-            icon="i-glyphs-plus-bold"
-            color="primary"
-            variant="soft"
-            size="sm"
-            class="cursor-pointer justify-self-start"
-            @click="addPool"
-          />
-        </div>
-
-        <p v-if="!isSubmittable" class="wizard-error" role="status">
-          {{
-            draft.mode === "specific"
-              ? "Name a card to continue."
-              : duplicatePool
-                ? `The pool '${duplicatePool}' is listed twice.`
-                : "Give every pool at least a source, type, rarity or Upgraded."
-          }}
-        </p>
+        <UButton
+          type="button"
+          label="Add pool"
+          icon="i-glyphs-plus-bold"
+          color="primary"
+          variant="soft"
+          size="sm"
+          class="cursor-pointer justify-self-start"
+          @click="addPool"
+        />
       </div>
-    </template>
 
-    <template #footer>
-      <UButton
-        label="Cancel"
-        color="neutral"
-        variant="outline"
-        class="cursor-pointer"
-        @click="cancel"
-      />
-      <UButton
-        :label="submitLabel"
-        color="primary"
-        class="cursor-pointer"
-        :disabled="!isSubmittable"
-        @click="submit"
-      />
-    </template>
-  </UModal>
+      <p v-if="!isSubmittable" class="wizard-error" role="status">
+        {{
+          draft.mode === "specific"
+            ? "Name a card to continue."
+            : duplicatePool
+              ? `The pool '${duplicatePool}' is listed twice.`
+              : "Give every pool at least a source, type, rarity or Upgraded."
+        }}
+      </p>
+    </div>
+  </BonusItemDialogShell>
 </template>
 
 <style scoped src="../core/wizard.css" />

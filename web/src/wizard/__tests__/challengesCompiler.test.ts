@@ -91,12 +91,14 @@ function compilesConfiguredChallenges(): void {
     hiddenPiles: "one",
     hiddenMap: "four",
     hiddenCards: "one",
+    hiddenRelics: "off",
     sightBonuses: {
       intent: true,
       health: false,
       pile: true,
       map: true,
       card: false,
+      relic: false,
     },
     strictCardRewards: true,
   };
@@ -144,12 +146,14 @@ function ignoresChallengesUntilOptedIn(): void {
     hiddenPiles: "two",
     hiddenMap: "one",
     hiddenCards: "two",
+    hiddenRelics: "off",
     sightBonuses: {
       intent: false,
       health: false,
       pile: false,
       map: false,
       card: false,
+      relic: false,
     },
     strictCardRewards: true,
   };
@@ -189,6 +193,7 @@ function showsQuestionsOnlyAfterOptingIn(): void {
     "hidden-piles",
     "hidden-map",
     "hidden-cards",
+    "hidden-relics",
     "strict-card-rewards",
   ]);
 }

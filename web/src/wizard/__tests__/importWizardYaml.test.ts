@@ -39,7 +39,7 @@ function buildYaml(answers: WizardAnswers): string {
   const compiled = compileWizardAnswers(answers, optionCatalog);
   return buildWizardYaml(
     answers.playerName,
-    selectGuidedOptions(compiled),
+    selectGuidedOptions(compiled, answers.keptOptions),
     builderYamlComments("https://builder.test/#/builder"),
   );
 }
@@ -267,20 +267,6 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
     },
   ],
   [
-    "Bonus Items of every other kind",
-    (answers) => {
-      answers.itemPool.bonusItems = [
-        { kind: "RELIC", mode: "random", pools: ["Rare"] },
-        { kind: "ENCHANTMENT", mode: "random", tiers: ["Common", "Rare"] },
-        { kind: "ENCHANTMENT", mode: "specific", enchantment: "RoyallyApproved" },
-        { kind: "ENCHANTED_CARDS", mode: "specific", enchantment: "Swift" },
-        { kind: "MAX_HP", amount: 6 },
-        { kind: "CARDS", mode: "random", pools: ["Regent Attack", "Upgraded Colorless Rare", "Random"] },
-        { kind: "CARDS", mode: "specific", card: "Apotheosis" },
-      ];
-    },
-  ],
-  [
     "Death Link with fragments only",
     (answers) => {
       answers.deathLink = {
@@ -354,25 +340,18 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
         hiddenPiles: "one",
         hiddenMap: "three",
         hiddenCards: "one",
+        hiddenRelics: "off",
         sightBonuses: {
           intent: false,
           health: true,
           pile: true,
           map: true,
           card: false,
+          relic: false,
         },
         strictCardRewards: true,
       };
       answers.checks.types.includeFloorChecks = true;
-    },
-  ],
-  [
-    "several Boons with Blitz merchants",
-    (answers) => {
-      answers.boons = {
-        selected: ["SpringCleaning", "Wayfinder", "Gilded"],
-        blitzMerchantChance: 15,
-      };
     },
   ],
   [
@@ -404,6 +383,25 @@ const ROUND_TRIP_CASES: [string, (answers: WizardAnswers) => void][] = [
       answers.progression.progressionBalancing = 37;
     },
   ],
+  [
+    "starting items, starting hints and placement lists",
+    (answers) => {
+      answers.characters.selectedCharacters = ["Ironclad", "Silent"];
+      answers.characters.moddedCharacters = [
+        { name: "Tectonic", ascensions: answers.characters.sharedAscensions },
+      ];
+      answers.items = {
+        startingInventory: [
+          { character: "Silent", item: "Relic", count: 2 },
+          { character: "Tectonic", item: "Card Reward", count: 3 },
+          { character: null, item: "Card Sight", count: 1 },
+        ],
+        startHints: ["Character Unlocks"],
+        localItems: ["Sights"],
+        nonLocalItems: ["Traps"],
+      };
+    },
+  ],
 ];
 
 describe("importWizardYaml round trips", () => {
@@ -427,16 +425,6 @@ describe("importWizardYaml round trips", () => {
 });
 
 describe("importWizardYaml reading hand-written values", () => {
-  it("orders known Boons and warns about unknown ones", () => {
-    const { answers, warnings } = importWizardYaml(
-      handWritten("boons: [Gilded, NotABoon, Wayfinder]"),
-      optionCatalog,
-    );
-
-    expect(answers.boons.selected).toEqual(["Wayfinder", "Gilded"]);
-    expect(warnings.join(" ")).toContain("NotABoon");
-  });
-
   it("uses a weighted value whose other weights are zero", () => {
     const goldDefault = optionCatalog.options.gold_sanity!.default as boolean;
     const { answers, warnings } = importWizardYaml(
@@ -616,8 +604,8 @@ describe("importWizardYaml documents", () => {
     ).toThrow(/no "Slay the Spire II:" section/);
   });
 
-  it("lists dropped and unknown settings once each", () => {
-    const { warnings } = importWizardYaml(
+  it("lists kept, dropped and unknown settings once each", () => {
+    const { answers, warnings } = importWizardYaml(
       handWritten(
         [
           "local_items: []",
@@ -633,14 +621,20 @@ describe("importWizardYaml documents", () => {
       optionCatalog,
     );
 
-    expect(warnings).toHaveLength(2);
-    const [dropped, unknown] = warnings as [string, string];
-    expect(dropped).toContain(displayName("start_inventory"));
-    expect(dropped).toContain(displayName("item_links"));
+    expect(warnings).toHaveLength(3);
+    const [kept, dropped, unknown] = warnings as [string, string, string];
+    expect(kept).toContain(displayName("item_links"));
+    expect(kept).not.toContain(displayName("local_items"));
     expect(dropped).toContain("triggers");
-    expect(dropped).not.toContain(displayName("local_items"));
     expect(unknown).toContain("not_an_option");
     expect(unknown).toContain("also_unknown");
+    // Starting items are a builder question now, not a kept setting.
+    expect(answers.items.startingInventory).toEqual([
+      { character: "Ironclad", item: "Relic", count: 1 },
+    ]);
+    expect(answers.keptOptions).toEqual({
+      item_links: [{ name: "Shared", item_pool: ["Everything"] }],
+    });
   });
 
   it("imports the hand-edited release template", () => {
@@ -658,5 +652,57 @@ describe("importWizardYaml documents", () => {
     ]);
     expect(answers.shops.shop.costs).toBe("Discount_Tiered");
     expect(() => compileWizardAnswers(answers, optionCatalog)).not.toThrow();
+  });
+});
+
+describe("importWizardYaml keeps settings the builder doesn't ask about", () => {
+  it("writes them back unchanged, weights and all", () => {
+    const yaml = handWritten(
+      [
+        "exclude_locations:",
+        "  - Ironclad Potion Drop 9",
+        "item_links:",
+        "  - name: Shared",
+        "    item_pool: [Traps]",
+        "    replacement_item: null",
+        "priority_locations: {Ironclad Boss Gold 2: 1}",
+      ].join("\n"),
+    );
+
+    const first = importWizardYaml(yaml, optionCatalog);
+    const reloaded = importWizardYaml(buildYaml(first.answers), optionCatalog);
+
+    expect(first.answers.keptOptions).toEqual({
+      exclude_locations: ["Ironclad Potion Drop 9"],
+      item_links: [
+        { name: "Shared", item_pool: ["Traps"], replacement_item: null },
+      ],
+      priority_locations: { "Ironclad Boss Gold 2": 1 },
+    });
+    expect(reloaded.answers.keptOptions).toEqual(first.answers.keptOptions);
+  });
+});
+
+describe("importWizardYaml reading item names", () => {
+  it("fixes capitalisation and leaves out what the builder can't show", () => {
+    const { answers, warnings } = importWizardYaml(
+      handWritten(
+        [
+          "start_inventory:",
+          "  ironclad relic: 2",
+          "  Custom Character 1 Relic: 1",
+          "  Weak Trap: 1",
+          "start_hints: [sights, Silent Unlock, Not An Item]",
+        ].join("\n"),
+      ),
+      optionCatalog,
+    );
+
+    expect(answers.items.startingInventory).toEqual([
+      { character: "Ironclad", item: "Relic", count: 2 },
+    ]);
+    expect(answers.items.startHints).toEqual(["Sights", "Silent Unlock"]);
+    expect(warnings.join("\n")).toContain("Custom Character 1 Relic");
+    expect(warnings.join("\n")).toContain("Not An Item");
   });
 });

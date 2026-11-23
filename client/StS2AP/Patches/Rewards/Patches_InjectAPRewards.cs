@@ -46,6 +46,8 @@ namespace StS2AP.Patches
             // The native reward already exists. A receipt decides whether it survives beside the check.
             if (!RelicRewardUtility.TryConsumeWaitingReceiptForNaturalReward(player))
                 rewards.Remove(relicReward);
+            else
+                RelicSightChoices.OfferNativeChoice(rewards, relicReward, player);
         }
         /// <summary>
         /// Patches RewardsSet.GenerateRewardsFor to replace or inject Archipelago Location rewards.
@@ -303,6 +305,11 @@ namespace StS2AP.Patches
                     // in the chest. They spend the new bank through the AP menu instead.
                     // Note the logic is only sound because of the GateTreasureRelicPicker prefix
                     RelicRewardUtility.ReconcileBankedRewards(player);
+                }
+                else
+                {
+                    // The chest's relic is paired with an AP Relic.
+                    RelicSightChoices.OfferChestChoice(relicPicker, player);
                 }
             }
         }

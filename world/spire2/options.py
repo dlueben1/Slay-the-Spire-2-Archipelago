@@ -504,6 +504,18 @@ class HiddenCards(Range):
     range_end = 4
     default = 0
 
+class HiddenRelics(Range):
+    """Relics are unknown: their name, text and art are hidden, wherever they are offered or owned (Ancient
+    relics keep their art), and counters show "?". They still flash and play their sound when they trigger, so
+    you can work out what they are.
+    The value is how many Relic Sight items are added to the item pool, and 0 turns it off. Finding any one of them
+    shows relics again for every character, and a second one adds its Sight Bonus, which logic counts.
+    """
+    display_name = "Hidden Relics"
+    range_start = 0
+    range_end = 4
+    default = 0
+
 class SightBonuses(OptionSet):
     """Sight items whose second copy adds a bonus. A Sight left out stops at undoing its Hidden
     option. Names are case-sensitive.
@@ -514,8 +526,9 @@ class SightBonuses(OptionSet):
     - 'PileSight': Gain Frozen Eye: the draw pile shows cards in the order you will draw them.
     - 'MapSight': The map shows your next 2 fights, your next elite and what your next 2 ? rooms will be.
     - 'CardSight': Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.
+    - 'RelicSight': Relic rewards offer 2 relics to choose from. The one you leave goes back into the relic pool.
 
-    Logic counts each bonus as extra power in Act 3. The Intent, Health and Card Sight bonuses are
+    Logic counts each bonus as extra power in Act 3. The Intent, Health, Card and Relic Sight bonuses are
     singleplayer only, but logic still counts them."""
     display_name = "Sight Bonuses"
     valid_keys_casefold = False
@@ -525,6 +538,7 @@ class SightBonuses(OptionSet):
         "PileSight",
         "MapSight",
         "CardSight",
+        "RelicSight",
     }
     default = frozenset(valid_keys)
 
@@ -1198,5 +1212,6 @@ class Spire2Options(PerGameCommonOptions):
     hidden_piles: HiddenPiles
     hidden_map: HiddenMap
     hidden_cards: HiddenCards
+    hidden_relics: HiddenRelics
     sight_bonuses: SightBonuses
     strict_card_rewards: StrictCardRewards

@@ -1,6 +1,6 @@
 from BaseClasses import ItemClassification
 import typing
-from typing import Dict
+from typing import Dict, Tuple
 from collections import defaultdict
 from enum import auto, Enum
 
@@ -37,6 +37,7 @@ class ItemType(Enum):
     PILE_SIGHT = auto()
     MAP_SIGHT = auto()
     CARD_SIGHT = auto()
+    RELIC_SIGHT = auto()
     TRAP = auto()
     CAW_CAW = auto()
     BUFF = auto()
@@ -248,7 +249,18 @@ challenge_item_table: Dict[str, ItemData] = {
     "Pile Sight": ItemData(802, ItemType.PILE_SIGHT, ItemClassification.progression_deprioritized_skip_balancing),
     "Map Sight": ItemData(803, ItemType.MAP_SIGHT, ItemClassification.progression_deprioritized_skip_balancing),
     "Card Sight": ItemData(804, ItemType.CARD_SIGHT, ItemClassification.progression_deprioritized_skip_balancing),
+    "Relic Sight": ItemData(805, ItemType.RELIC_SIGHT, ItemClassification.progression_deprioritized_skip_balancing),
 }
+
+# Each Sight item with its key in the Sight Bonuses option and the Hidden option that sets its copies.
+SIGHTS: Tuple[Tuple[str, str, str], ...] = (
+    ("Intent Sight", "IntentSight", "hidden_intents"),
+    ("Health Sight", "HealthSight", "hidden_health"),
+    ("Pile Sight", "PileSight", "hidden_piles"),
+    ("Map Sight", "MapSight", "hidden_map"),
+    ("Card Sight", "CardSight", "hidden_cards"),
+    ("Relic Sight", "RelicSight", "hidden_relics"),
+)
 
 # `universal_bonus_items` is keyed by the actual Archipelago item name (like "Bonus Wax Relic").
 # This matches item_table and create_item() lookups.
@@ -301,8 +313,6 @@ def create_item_groups(items: dict[str, ItemData]) -> dict[str, typing.Set[str]]
         "Bonus Items": set(),
         "Sights": set(),
     }
-    sight_types = {ItemType.INTENT_SIGHT, ItemType.HEALTH_SIGHT, ItemType.PILE_SIGHT, ItemType.MAP_SIGHT,
-                   ItemType.CARD_SIGHT}
 
     for item_name, item_data in items.items():
         if item_data.code is None:
@@ -344,7 +354,7 @@ def create_item_groups(items: dict[str, ItemData]) -> dict[str, typing.Set[str]]
             groups["Buffs"].add(item_name)
         elif item_name in universal_bonus_items:
             groups["Bonus Items"].add(item_name)
-        elif item_data.type in sight_types:
+        elif item_name in challenge_item_table:
             groups["Sights"].add(item_name)
 
     return groups

@@ -87,6 +87,7 @@
             PileSight = 802,
             MapSight = 803,
             CardSight = 804,
+            RelicSight = 805,
         }
 
         public static Dictionary<int, string> Items = new Dictionary<int, string>
@@ -156,6 +157,7 @@
             { 802, "Pile Sight" },
             { 803, "Map Sight" },
             { 804, "Card Sight" },
+            { 805, "Relic Sight" },
         };
 
         /// <summary>

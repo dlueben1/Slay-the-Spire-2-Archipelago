@@ -16,9 +16,6 @@ using StS2AP.Models;
 
 namespace StS2AP.Utils;
 
-/// <summary>The reward a bonus receipt was assigned: a relic, or a payload for the other kinds.</summary>
-internal sealed record BonusAssignment(RelicModel? Relic, BonusRewardPayload? Payload);
-
 internal static class BonusRewardUtility
 {
     private static readonly IReadOnlyDictionary<ItemTable.APItem, string> Categories =
@@ -46,11 +43,15 @@ internal static class BonusRewardUtility
         && MultiplayerSupport.IsMultiplayerScope
         && !MultiplayerSupport.ShouldRunReplicatedConstruction(MultiplayerFeature.BonusItems);
 
-    public static BonusAssignment? GetOrAssign(IndexedItemInfo receipt, Player player)
+    /// <summary>
+    /// The saved JSON of the reward this receipt was assigned: a serialized relic for the relic
+    /// kinds, a <see cref="BonusRewardPayload"/> for the rest. It is assigned once and then reused.
+    /// </summary>
+    public static string? GetOrAssign(IndexedItemInfo receipt, Player player)
     {
         var progress = ArchipelagoClient.Progress;
         if (progress.BonusRelicAssignments.TryGetValue(receipt.Index, out string? saved))
-            return Restore(saved, receipt.Index);
+            return saved;
 
         if (!Categories.TryGetValue(receipt.Item.GetUniversalItemId(), out string? category)
             || !ApPlayerContextResolver.TryGetRewardSettings(player, out var settings))
@@ -63,40 +64,26 @@ internal static class BonusRewardUtility
             return null;
 
         BonusItemDefinition definition = definitions[ordinal];
-        BonusAssignment? assignment = category switch
+        string? assignment = category switch
         {
             BonusItemDefinition.WaxRelicCategory => AssignRelic(definition, player, ordinal, category, isWax: true),
             BonusItemDefinition.RelicCategory => AssignRelic(definition, player, ordinal, category, isWax: false),
-            BonusItemDefinition.EnchantmentCategory => AssignEnchantment(definition, player, ordinal),
-            BonusItemDefinition.EnchantedCardsCategory => AssignEnchantedCards(definition, player, ordinal),
-            BonusItemDefinition.MaxHpCategory => AssignMaxHp(definition),
-            BonusItemDefinition.CardsCategory => AssignCards(definition, player, ordinal),
+            BonusItemDefinition.EnchantmentCategory => AssignEnchantment(definition, player, ordinal)?.ToJson(),
+            BonusItemDefinition.EnchantedCardsCategory => AssignEnchantedCards(definition, player, ordinal)?.ToJson(),
+            BonusItemDefinition.MaxHpCategory => AssignMaxHp(definition)?.ToJson(),
+            BonusItemDefinition.CardsCategory => AssignCards(definition, player, ordinal)?.ToJson(),
             _ => null,
         };
         if (assignment == null)
             return null;
 
-        progress.BonusRelicAssignments[receipt.Index] = assignment.Relic != null
-            ? JsonSerializer.Serialize(assignment.Relic.ToSerializable(), SerializationUtility.CombinedOptions)
-            : assignment.Payload!.ToJson();
+        progress.BonusRelicAssignments[receipt.Index] = assignment;
         LogUtility.Info(
-            $"Assigned bonus {category} #{ordinal}: player={player.NetId}, receipt={receipt.Index}, "
-                + $"{(assignment.Relic != null ? assignment.Relic.Id.ToString() : progress.BonusRelicAssignments[receipt.Index])}");
+            $"Assigned bonus {category} #{ordinal}: player={player.NetId}, receipt={receipt.Index}, {assignment}");
         return assignment;
     }
 
-    private static BonusAssignment Restore(string saved, int receiptIndex)
-    {
-        BonusRewardPayload? payload = BonusRewardPayload.TryParse(saved);
-        if (payload != null)
-            return new BonusAssignment(null, payload);
-
-        var serialized = JsonSerializer.Deserialize<SerializableRelic>(saved, SerializationUtility.CombinedOptions)
-            ?? throw new InvalidOperationException($"Invalid bonus assignment at receipt {receiptIndex}.");
-        return new BonusAssignment(RelicModel.FromSerializable(serialized), null);
-    }
-
-    private static BonusAssignment? AssignRelic(
+    private static string? AssignRelic(
         BonusItemDefinition definition, Player player, int ordinal, string category, bool isWax)
     {
         string SelectionKey(string id) => BonusRewardSelectionKey.Create(
@@ -123,7 +110,7 @@ internal static class BonusRewardUtility
             if (!BonusRelicResolver.TrySetUpForPlayer(mutable, player, SelectionKey))
                 continue;
             mutable.IsWax = isWax;
-            return new BonusAssignment(mutable, null);
+            return JsonSerializer.Serialize(mutable.ToSerializable(), SerializationUtility.CombinedOptions);
         }
         return null;
     }
@@ -132,7 +119,7 @@ internal static class BonusRewardUtility
     /// Picks the enchantment once. From Pools, it skips any that no card in the deck can take right
     /// now, so a Sharp is not handed to a deck without Attacks.
     /// </summary>
-    private static BonusAssignment? AssignEnchantment(BonusItemDefinition definition, Player player, int ordinal)
+    private static BonusRewardPayload? AssignEnchantment(BonusItemDefinition definition, Player player, int ordinal)
     {
         IReadOnlyList<BonusEnchantment> candidates = BonusEnchantmentCatalog.Candidates(definition);
         BonusEnchantment? chosen = candidates
@@ -143,19 +130,19 @@ internal static class BonusRewardUtility
             .FirstOrDefault();
         return chosen == null
             ? null
-            : new BonusAssignment(null, new BonusRewardPayload
+            : new BonusRewardPayload
             {
                 Category = BonusItemDefinition.EnchantmentCategory,
                 Enchantment = chosen.Name,
                 Amount = chosen.Amount,
-            });
+            };
     }
 
     /// <summary>
     /// Rolls three cards from the character's pool and enchants each with a different enchantment
     /// from the entry where it can. With a named Value, only cards that can take it are offered.
     /// </summary>
-    private static BonusAssignment? AssignEnchantedCards(BonusItemDefinition definition, Player player, int ordinal)
+    private static BonusRewardPayload? AssignEnchantedCards(BonusItemDefinition definition, Player player, int ordinal)
     {
         IReadOnlyList<BonusEnchantment> candidates = BonusEnchantmentCatalog.Candidates(definition);
         if (candidates.Count == 0)
@@ -184,26 +171,26 @@ internal static class BonusRewardUtility
             CardCmd.Enchant(chosen.Canonical().ToMutable(), card, chosen.Amount);
         }
 
-        return new BonusAssignment(null, new BonusRewardPayload
+        return new BonusRewardPayload
         {
             Category = BonusItemDefinition.EnchantedCardsCategory,
             Cards = SerializeAndRelease(cards, player),
-        });
+        };
     }
 
     /// <summary>Rolls the cards of a CARDS bonus from its pools, or offers the one card it names.</summary>
-    private static BonusAssignment? AssignCards(BonusItemDefinition definition, Player player, int ordinal)
+    private static BonusRewardPayload? AssignCards(BonusItemDefinition definition, Player player, int ordinal)
     {
         Rng rng = CreateRng(player, ordinal, BonusItemDefinition.CardsCategory);
         List<CardModel> cards = BonusCardPools.Roll(definition, player, rng);
         if (cards.Count == 0)
             return null;
-        return new BonusAssignment(null, new BonusRewardPayload
+        return new BonusRewardPayload
         {
             Category = BonusItemDefinition.CardsCategory,
             Cards = SerializeAndRelease(cards, player),
             Label = BonusCardPools.Label(definition),
-        });
+        };
     }
 
     private static List<string> SerializeAndRelease(List<CardModel> cards, Player player)
@@ -221,18 +208,18 @@ internal static class BonusRewardUtility
         return serialized;
     }
 
-    private static BonusAssignment? AssignMaxHp(BonusItemDefinition definition)
+    private static BonusRewardPayload? AssignMaxHp(BonusItemDefinition definition)
     {
         if (!int.TryParse(definition.Value, out int amount) || amount <= 0)
         {
             LogUtility.Error($"Bonus max HP value '{definition.Value}' is not a positive number");
             return null;
         }
-        return new BonusAssignment(null, new BonusRewardPayload
+        return new BonusRewardPayload
         {
             Category = BonusItemDefinition.MaxHpCategory,
             Amount = amount,
-        });
+        };
     }
 
     private static int? PlayerSlotIndex(Player player) =>

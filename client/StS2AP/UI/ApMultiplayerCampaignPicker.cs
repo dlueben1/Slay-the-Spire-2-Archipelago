@@ -424,7 +424,7 @@ public sealed partial class ApMultiplayerCampaignPicker : Control, IScreenContex
             }),
             ("Delete Permanently", true, () =>
             {
-                ApMultiplayerCampaignStore.DeleteCampaign(campaign.CampaignId);
+                ApMultiplayerCampaignStore.DeleteCampaign(campaign);
                 Refresh();
             })
         );
@@ -437,7 +437,7 @@ public sealed partial class ApMultiplayerCampaignPicker : Control, IScreenContex
             "This removes both local campaign saves and cannot be undone.",
             ("Delete Permanently", true, () =>
             {
-                ApMultiplayerCampaignStore.DeleteCampaign(campaign.CampaignId);
+                ApMultiplayerCampaignStore.DeleteCampaign(campaign);
                 Refresh();
             })
         );

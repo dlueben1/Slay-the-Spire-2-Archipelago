@@ -5,6 +5,7 @@ import {
   BONUS_MAX_HP_LIMIT,
 } from "../../../wizard/compiler/applyBonusItemOptions";
 import type { BonusItemAnswer } from "../../../wizard/WizardAnswers";
+import BonusItemDialogShell from "./BonusItemDialogShell.vue";
 
 const props = defineProps<{
   open: boolean;
@@ -19,10 +20,6 @@ const emit = defineEmits<{
 
 const amount = ref(BONUS_MAX_HP_DEFAULT);
 
-const dialogTitle = computed(() =>
-  props.editItem ? "Edit Max HP" : "Add Max HP",
-);
-const submitLabel = computed(() => (props.editItem ? "Save" : "Add"));
 const isSubmittable = computed(
   () =>
     Number.isInteger(amount.value) &&
@@ -40,7 +37,7 @@ watch(
     amount.value =
       item && item.kind === "MAX_HP" ? item.amount : BONUS_MAX_HP_DEFAULT;
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 function setAmount(value: unknown): void {
@@ -59,45 +56,29 @@ function submit(): void {
 </script>
 
 <template>
-  <UModal
+  <BonusItemDialogShell
     :open="open"
-    :title="dialogTitle"
+    item-name="Max HP"
     description="When claimed, raise your max HP (and current HP) by this much."
-    :ui="{ footer: 'justify-end' }"
+    :editing="editItem !== null"
+    :submittable="isSubmittable"
+    compact
     @update:open="emit('update:open', $event)"
+    @submit="submit"
   >
-    <template #body>
-      <label class="max-hp-dialog">
-        <span>Max HP</span>
-        <UInputNumber
-          :model-value="amount"
-          :min="1"
-          :max="BONUS_MAX_HP_LIMIT"
-          color="primary"
-          variant="outline"
-          class="wizard-number-input"
-          @update:model-value="setAmount"
-        />
-      </label>
-    </template>
-
-    <template #footer>
-      <UButton
-        label="Cancel"
-        color="neutral"
-        variant="outline"
-        class="cursor-pointer"
-        @click="emit('update:open', false)"
-      />
-      <UButton
-        :label="submitLabel"
+    <label class="max-hp-dialog">
+      <span>Max HP</span>
+      <UInputNumber
+        :model-value="amount"
+        :min="1"
+        :max="BONUS_MAX_HP_LIMIT"
         color="primary"
-        class="cursor-pointer"
-        :disabled="!isSubmittable"
-        @click="submit"
+        variant="outline"
+        class="wizard-number-input"
+        @update:model-value="setAmount"
       />
-    </template>
-  </UModal>
+    </label>
+  </BonusItemDialogShell>
 </template>
 
 <style scoped src="../core/wizard.css" />

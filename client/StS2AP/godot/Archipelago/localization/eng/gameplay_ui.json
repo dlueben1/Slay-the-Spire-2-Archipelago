@@ -13,5 +13,7 @@
   "AP_SCOUTING.merchant": "Merchant",
   "AP_SCOUTING.blitzMerchant": "Blitz Merchant",
   "AP_SCOUTING.or": "or",
-  "AP_SCOUTING.treasure": "Treasure"
+  "AP_SCOUTING.treasure": "Treasure",
+  "AP_RELIC_SIGHT_UNKNOWN.title": "Unknown Relic",
+  "AP_RELIC_SIGHT_UNKNOWN.description": "You can't make out what this relic is until you find a Relic Sight."
 }

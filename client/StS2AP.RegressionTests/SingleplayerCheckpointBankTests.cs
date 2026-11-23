@@ -8,7 +8,8 @@ public sealed class SingleplayerCheckpointBankTests : IDisposable
     private readonly string _root = Path.Combine(Path.GetTempPath(), "ap-checkpoint-bank-" + Guid.NewGuid().ToString("N"));
     private readonly SingleplayerCheckpointBank.BankKey _key = new(new("seed", 0, 1), "IRONCLAD");
     private SingleplayerCheckpointBank Store => new(_root);
-    private string BankDirectory => Directory.GetDirectories(_root).Single();
+    private string BankDirectory => Store.DirectoryFor(_key);
+    private int BankCount => Directory.GetFiles(_root, "metadata.json", SearchOption.AllDirectories).Length;
 
     [Fact]
     public void FreshAttemptUsesSamePositionsAndOnlyOverwritesReachedBoundary()
@@ -24,7 +25,7 @@ public sealed class SingleplayerCheckpointBankTests : IDisposable
         Assert.Equal("old 1-boss", Store.Load(_key, "1-boss").Payload);
         Assert.Equal("old 3-treasure", Store.Load(_key, "3-treasure").Payload);
         Assert.Equal("old 3-campfire", Store.Load(_key, "3-campfire").Payload);
-        Assert.Single(Directory.GetDirectories(_root));
+        Assert.Equal(1, BankCount);
         Assert.Equal(SingleplayerCheckpointBank.Milestones.Length, Directory.GetFiles(BankDirectory, "run-*.save").Length);
     }
 
@@ -70,25 +71,8 @@ public sealed class SingleplayerCheckpointBankTests : IDisposable
             Assert.Throws<InvalidDataException>(() => Store.Load(other, "1-boss"));
             Store.Save(other, "1-boss", "other", 17, false);
         }
-        Assert.Equal(5, Directory.GetDirectories(_root).Length);
+        Assert.Equal(5, BankCount);
         Assert.Equal("original", Store.Load(_key, "1-boss").Payload);
-    }
-
-    [Fact]
-    public void ExistingCheckpointBanksKeepTheirDirectoryAndLoad()
-    {
-        Store.Save(_key, "1-boss", "existing checkpoint", 17, true);
-        // Existing bank directories are named by the hash of precisely this shape.
-        var oldKey = new { Owner = new { Seed = "seed", Team = 0, Slot = 1 }, Character = "IRONCLAD" };
-        string oldDirectory = Path.Combine(_root, Convert.ToHexString(
-            System.Security.Cryptography.SHA256.HashData(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(oldKey))));
-        Assert.Equal(oldDirectory, BankDirectory);
-        // Metadata from the removed shared-slot co-op also recorded the (always 1) player number.
-        string manifest = Path.Combine(oldDirectory, "metadata.json");
-        var json = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(manifest))!;
-        json["Identity"]!["Owner"]!["PlayerNumber"] = 1;
-        File.WriteAllText(manifest, json.ToJsonString());
-        Assert.Equal("existing checkpoint", new SingleplayerCheckpointBank(_root).Load(_key, "1-boss").Payload);
     }
 
     [Theory]

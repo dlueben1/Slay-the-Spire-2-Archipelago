@@ -12,6 +12,8 @@ import type {
   RelicBonusKind,
   SpecificRelicBonusItem,
 } from "../../../wizard/WizardAnswers";
+import BonusItemDialogShell from "./BonusItemDialogShell.vue";
+import PickerList, { type PickerOption } from "./PickerList.vue";
 
 type WaxRelicMode = "specific" | "random";
 
@@ -62,8 +64,14 @@ const draft = ref<WaxRelicDraft>({
 const searchQuery = ref("");
 
 /** Relics matching the current case-insensitive name filter. */
-const filteredRelics = computed(() =>
-  filterRelicsByName(eligibleRelics.value, searchQuery.value),
+const filteredRelics = computed<PickerOption[]>(() =>
+  filterRelicsByName(eligibleRelics.value, searchQuery.value).map((relic) => ({
+    id: relic.id,
+    name: relic.name,
+    imageUrl: relic.imageUrl,
+    imageAlt: `${relic.name} image`,
+    description: relic.description,
+  })),
 );
 
 /** Whether the draft in the active mode is complete enough to submit. */
@@ -77,17 +85,11 @@ const kindName = computed(() =>
   props.kind === "WAX_RELIC" ? "Wax Relic" : "Relic",
 );
 
-const dialogTitle = computed(
-  () => `${props.editItem ? "Edit" : "Add"} ${kindName.value}`,
-);
-
 const dialogDescription = computed(() =>
   props.kind === "WAX_RELIC"
     ? "Wax Relics are pulled from the normal relic pool and melt away after enough combats. Relics with a pickup effect can't be wax."
     : "Relics are pulled from the normal relic pool and stay for the whole run.",
 );
-
-const submitLabel = computed(() => (props.editItem ? "Save" : "Add"));
 
 /**
  * Resets the draft from the edited item (or defaults) each time the dialog opens.
@@ -113,7 +115,7 @@ watch(
       draft.value = { mode: "specific", relicId: null, pools: [] };
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 /** Narrows and applies the reward-mode radio selection. */
@@ -148,11 +150,6 @@ function togglePool(poolName: string, checked: unknown): void {
   draft.value = { ...draft.value, pools: ordered };
 }
 
-/** Closes the dialog without committing the draft. */
-function cancel(): void {
-  emit("update:open", false);
-}
-
 /** Commits the draft as a semantic Bonus Item answer and closes the dialog. */
 function submit(): void {
   if (!isSubmittable.value) {
@@ -182,124 +179,72 @@ function submit(): void {
 </script>
 
 <template>
-  <UModal
+  <BonusItemDialogShell
     :open="open"
-    :title="dialogTitle"
+    :item-name="kindName"
     :description="dialogDescription"
-    scrollable
-    :ui="{ content: 'sm:max-w-2xl', footer: 'justify-end' }"
+    :editing="editItem !== null"
+    :submittable="isSubmittable"
     @update:open="emit('update:open', $event)"
+    @submit="submit"
   >
-    <template #body>
-      <div class="wax-dialog">
-        <URadioGroup
-          :model-value="draft.mode"
-          :items="modeItems"
-          value-key="value"
-          label-key="label"
-          description-key="description"
+    <div class="wax-dialog">
+      <URadioGroup
+        :model-value="draft.mode"
+        :items="modeItems"
+        value-key="value"
+        label-key="label"
+        description-key="description"
+        color="primary"
+        variant="table"
+        :ui="{ item: 'cursor-pointer' }"
+        @update:model-value="setMode"
+      />
+
+      <div v-if="draft.mode === 'specific'" class="wax-dialog__specific">
+        <UInput
+          v-model="searchQuery"
+          icon="i-glyphs-search-bold"
+          placeholder="Filter by relic name..."
+          aria-label="Filter relics by name"
           color="primary"
-          variant="table"
-          :ui="{ item: 'cursor-pointer' }"
-          @update:model-value="setMode"
+          variant="outline"
+          class="w-full"
         />
 
-        <div v-if="draft.mode === 'specific'" class="wax-dialog__specific">
-          <UInput
-            v-model="searchQuery"
-            icon="i-glyphs-search-bold"
-            placeholder="Filter by relic name..."
-            aria-label="Filter relics by name"
-            color="primary"
-            variant="outline"
-            class="w-full"
-          />
-
-          <div
-            class="wax-relic-list"
-            role="listbox"
-            aria-label="Eligible relics"
-            aria-multiselectable="false"
-          >
-            <p v-if="!filteredRelics.length" class="wax-relic-list__empty">
-              No relics match this filter.
-            </p>
-
-            <button
-              v-for="relic in filteredRelics"
-              :key="relic.id"
-              type="button"
-              role="option"
-              class="wax-relic-option"
-              :class="{
-                'wax-relic-option--selected': draft.relicId === relic.id,
-              }"
-              :aria-selected="draft.relicId === relic.id"
-              @click="selectRelic(relic.id)"
-            >
-              <img
-                :src="relic.imageUrl"
-                :alt="`${relic.name} image`"
-                class="wax-relic-option__image"
-                loading="lazy"
-              />
-              <span class="wax-relic-option__text">
-                <span class="wax-relic-option__name">{{ relic.name }}</span>
-                <span class="wax-relic-option__description">
-                  {{ relic.description }}
-                </span>
-              </span>
-              <UIcon
-                v-if="draft.relicId === relic.id"
-                name="i-glyphs-check-circle-bold"
-                class="wax-relic-option__check"
-              />
-            </button>
-          </div>
-        </div>
-
-        <div v-else class="wizard-toggle-grid">
-          <UCheckbox
-            v-for="option in poolOptions"
-            :key="option.name"
-            :model-value="draft.pools.includes(option.name)"
-            :label="`${option.name} (${option.relicCount})`"
-            :description="option.description"
-            color="primary"
-            variant="card"
-            class="cursor-pointer"
-            :ui="{ label: 'cursor-pointer', description: 'cursor-pointer' }"
-            @update:model-value="togglePool(option.name, $event)"
-          />
-        </div>
-
-        <p v-if="!isSubmittable" class="wizard-error" role="status">
-          {{
-            draft.mode === "specific"
-              ? "Select a relic to continue."
-              : "Select at least one pool to continue."
-          }}
-        </p>
+        <PickerList
+          :options="filteredRelics"
+          :selected-id="draft.relicId"
+          label="Eligible relics"
+          empty-text="No relics match this filter."
+          @select="selectRelic"
+        />
       </div>
-    </template>
 
-    <template #footer>
-      <UButton
-        label="Cancel"
-        color="neutral"
-        variant="outline"
-        class="cursor-pointer"
-        @click="cancel"
-      />
-      <UButton
-        :label="submitLabel"
-        color="primary"
-        class="cursor-pointer"
-        :disabled="!isSubmittable"
-        @click="submit"
-      />
-    </template>
-  </UModal>
+      <div v-else class="wizard-toggle-grid">
+        <UCheckbox
+          v-for="option in poolOptions"
+          :key="option.name"
+          :model-value="draft.pools.includes(option.name)"
+          :label="`${option.name} (${option.relicCount})`"
+          :description="option.description"
+          color="primary"
+          variant="card"
+          class="cursor-pointer"
+          :ui="{ label: 'cursor-pointer', description: 'cursor-pointer' }"
+          @update:model-value="togglePool(option.name, $event)"
+        />
+      </div>
+
+      <p v-if="!isSubmittable" class="wizard-error" role="status">
+        {{
+          draft.mode === "specific"
+            ? "Select a relic to continue."
+            : "Select at least one pool to continue."
+        }}
+      </p>
+    </div>
+  </BonusItemDialogShell>
 </template>
 
 <style scoped src="../core/wizard.css" />
@@ -313,79 +258,5 @@ function submit(): void {
 .wax-dialog__specific {
   display: grid;
   gap: 0.75rem;
-}
-
-.wax-relic-list {
-  display: grid;
-  max-height: 22rem;
-  overflow-y: auto;
-  border: 1px solid var(--ui-border-muted);
-  border-radius: 0.6rem;
-  background: rgba(0, 0, 0, 0.25);
-}
-
-.wax-relic-list__empty {
-  padding: 1.5rem 1rem;
-  color: var(--ui-text-muted);
-  font-size: 0.9rem;
-  text-align: center;
-}
-
-.wax-relic-option {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.85rem;
-  padding: 0.6rem 0.85rem;
-  color: var(--ui-text);
-  text-align: left;
-  border: 0;
-  border-bottom: 1px solid var(--ui-border-muted);
-  background: transparent;
-  cursor: pointer;
-}
-
-.wax-relic-option:last-child {
-  border-bottom: 0;
-}
-
-.wax-relic-option:hover {
-  background: color-mix(in oklab, var(--color-amber-500) 7%, transparent);
-}
-
-.wax-relic-option--selected {
-  background: color-mix(in oklab, var(--color-amber-500) 14%, transparent);
-  box-shadow: inset 0 0 0 1px
-    color-mix(in oklab, var(--color-amber-500) 60%, transparent);
-}
-
-.wax-relic-option__image {
-  width: 2.75rem;
-  height: 2.75rem;
-  object-fit: contain;
-}
-
-.wax-relic-option__text {
-  display: grid;
-  min-width: 0;
-  gap: 0.1rem;
-}
-
-.wax-relic-option__name {
-  color: var(--ui-text-highlighted);
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.wax-relic-option__description {
-  color: var(--ui-text-muted);
-  font-size: 0.8rem;
-  line-height: 1.35;
-}
-
-.wax-relic-option__check {
-  width: 1.25rem;
-  height: 1.25rem;
-  color: var(--color-green-400);
 }
 </style>

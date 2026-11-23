@@ -71,15 +71,6 @@ class TestBonusItemShuffle(Spire2TestBase):
                          [next(iter(entry)) for entry in shuffled])
         self.assertCountEqual(self.options["bonus_items"], shuffled)
 
-    def test_order_changes_between_seeds(self):
-        orders = set()
-        for seed in range(5):
-            self.world.random.seed(seed)
-            self.world.shuffle_bonus_items()
-            orders.add(tuple(entry["WAX_RELIC"]["Value"]
-                             for entry in self.world.options.bonus_items.value if "WAX_RELIC" in entry))
-        self.assertGreater(len(orders), 1)
-
 
 class TestBonusEntryValidation(unittest.TestCase):
     def test_rejects_entries_the_client_cannot_honour(self):

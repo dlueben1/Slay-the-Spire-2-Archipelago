@@ -23,11 +23,8 @@ import type {
   WizardControlChoice,
   WizardControlDescriptor,
 } from "./QuestionControl";
-import {
-  SIGHT_COPY_COUNTS,
-  type SightCopies,
-  type WizardAnswers,
-} from "./WizardAnswers";
+import { hasSecondSightCopy, SIGHTS, type SightCopies } from "./Sight";
+import type { WizardAnswers } from "./WizardAnswers";
 import { CHALLENGE_OPTION_KEYS } from "./WizardOptionKey";
 
 export interface WizardQuestion {
@@ -44,7 +41,10 @@ export interface WizardQuestion {
 }
 
 /** Answer sections addressable by wizard steps; the player name is document metadata. */
-export type WizardSectionKey = Exclude<keyof WizardAnswers, "playerName">;
+export type WizardSectionKey = Exclude<
+  keyof WizardAnswers,
+  "playerName" | "keptOptions"
+>;
 
 /** Prominent caution shown above a step's questions. */
 export interface WizardStepWarning {
@@ -457,16 +457,9 @@ function usesChallenges(answers: WizardAnswers): boolean {
  * @returns Whether the Sight Bonuses question applies.
  */
 function hasSightBonusCopies(answers: WizardAnswers): boolean {
-  const challenges = answers.challenges;
   return (
     usesChallenges(answers) &&
-    [
-      challenges.hiddenIntents,
-      challenges.hiddenHealth,
-      challenges.hiddenPiles,
-      challenges.hiddenMap,
-      challenges.hiddenCards,
-    ].some((copies) => SIGHT_COPY_COUNTS[copies] >= 2)
+    SIGHTS.some((sight) => hasSecondSightCopy(answers.challenges, sight))
   );
 }
 
@@ -646,45 +639,30 @@ export const challengeSetupStep: WizardStep = {
       },
     },
     {
+      id: "hidden-relics",
+      isVisible: usesChallenges,
+      title: "Should relics be hidden?",
+      description:
+        "Hidden Relics makes every relic unknown: its name, text and art are hidden (Ancient relics keep their art) and its counter shows \"?\", until a Relic Sight is found. Relics still flash when they trigger, so you can work out what they are. Finding one shows relics again, for every character.",
+      control: {
+        kind: "radio",
+        field: "hiddenRelics",
+        choices: sightCopyChoices("Relic Sight", "Relics are shown as normal."),
+      },
+    },
+    {
       id: "sight-bonuses",
       isVisible: hasSightBonusCopies,
       title: "Which Sights should add a bonus with their second copy?",
       description:
-        "A Sight left unticked stops at undoing its challenge, however many copies there are. The Intent, Health and Card Sight bonuses are singleplayer only.",
+        "A Sight left unticked stops at undoing its challenge, however many copies there are. The Intent, Health, Card and Relic Sight bonuses are singleplayer only.",
       control: {
         kind: "checkbox-grid",
-        items: [
-          {
-            field: "sightBonuses.intent",
-            label: "Intent Sight: Forewarned",
-            description:
-              "Start each combat with Forewarned: for each enemy whose attacks your Block stops completely on its turn, draw 1 more card next turn.",
-          },
-          {
-            field: "sightBonuses.health",
-            label: "Health Sight: Aged Cheese",
-            description:
-              "Gain Aged Cheese: after defeating an Elite or a boss, raise your Max HP by 3.",
-          },
-          {
-            field: "sightBonuses.pile",
-            label: "Pile Sight: Frozen Eye",
-            description:
-              "Gain Frozen Eye: the draw pile shows cards in the order you will draw them.",
-          },
-          {
-            field: "sightBonuses.map",
-            label: "Map Sight: Scouting",
-            description:
-              "The map shows your next 2 fights, your next Elite and what your next 2 ? rooms will be.",
-          },
-          {
-            field: "sightBonuses.card",
-            label: "Card Sight: More Choice",
-            description:
-              "Card rewards offer 1 more card, and Act 1 card rewards can be upgraded.",
-          },
-        ],
+        items: SIGHTS.map((sight) => ({
+          field: `sightBonuses.${sight.bonusField}`,
+          label: sight.bonusLabel,
+          description: sight.bonusEffect,
+        })),
       },
     },
     {
@@ -1090,8 +1068,7 @@ export const deathLinkSetupStep: WizardStep = {
 export const progressionSetupStep: WizardStep = {
   id: "progression",
   title: "Progression",
-  description:
-    "Choose progression balancing and accessibility.",
+  description: "Choose progression balancing and accessibility.",
   sectionKey: "progression",
   questions: [
     {
@@ -1141,14 +1118,48 @@ export const progressionSetupStep: WizardStep = {
   ],
 };
 
-/** Death Link and Progression, shown together because each is short. */
+/** Starting items, starting hints, and where items may be placed. */
+export const itemsSetupStep: WizardStep = {
+  id: "items",
+  title: "Items & Hints",
+  description:
+    "Choose items to start with, items to know the location of from the start, and items to keep in or out of your world.",
+  sectionKey: "items",
+  questions: [
+    {
+      id: "starting-inventory",
+      title: "Which items should you start with?",
+      description:
+        "You receive these when you connect, on top of the items in the Multiworld. Modded characters without a predefined name aren't listed, because their item names depend on the roster Archipelago generates.",
+    },
+    {
+      id: "start-hints",
+      title: "Which items should be hinted from the start?",
+      description:
+        "Archipelago tells you where these items are as soon as the game starts, without spending hint points.",
+    },
+    {
+      id: "local-items",
+      title: "Which items should stay in your own world?",
+      description: "These items are only placed at your own locations.",
+    },
+    {
+      id: "non-local-items",
+      title: "Which items should go to other players' worlds?",
+      description:
+        "These items are only placed at other players' locations. An item can't be in both lists.",
+    },
+  ],
+};
+
+/** Death Link, Progression, and Items & Hints, shown together because each is short. */
 export const multiworldSetupStep: WizardStep = {
   id: "multiworld",
   title: "Multiworld",
   description:
-    "Choose whether deaths are shared with other players, and how Archipelago places your items.",
+    "Choose whether deaths are shared with other players, how Archipelago places your items, and what you start with.",
   questions: [],
-  parts: [deathLinkSetupStep, progressionSetupStep],
+  parts: [deathLinkSetupStep, progressionSetupStep, itemsSetupStep],
 };
 
 /** Declarative step and question ordering for the guided wizard. */

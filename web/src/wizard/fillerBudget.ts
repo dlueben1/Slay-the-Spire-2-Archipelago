@@ -7,8 +7,8 @@
  * generate. Keep it in step with `create_items` in `world/spire2/world.py`.
  */
 
+import { countSightItems } from "./Sight";
 import {
-  SIGHT_COPY_COUNTS,
   type AscensionConfigurationAnswers,
   type CharacterStarterOverrides,
   type StarterOverride,
@@ -125,17 +125,10 @@ function getSlotsByCharacter(answers: WizardAnswers): Map<string, number> {
 
 /** Slots Bonus Items and Sight items take. Sight items only count while challenges are on. */
 function getUsedSlots(answers: WizardAnswers): number {
-  let used = answers.itemPool.bonusItems.length;
-  const challenges = answers.challenges;
-  if (challenges.enabled) {
-    used +=
-      SIGHT_COPY_COUNTS[challenges.hiddenIntents] +
-      SIGHT_COPY_COUNTS[challenges.hiddenHealth] +
-      SIGHT_COPY_COUNTS[challenges.hiddenPiles] +
-      SIGHT_COPY_COUNTS[challenges.hiddenMap] +
-      SIGHT_COPY_COUNTS[challenges.hiddenCards];
-  }
-  return used;
+  const sightItems = answers.challenges.enabled
+    ? countSightItems(answers.challenges)
+    : 0;
+  return answers.itemPool.bonusItems.length + sightItems;
 }
 
 /**

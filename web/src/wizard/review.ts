@@ -19,6 +19,7 @@ import type {
   CheckTypeAnswers,
   DeathLinkAnswers,
   FillerAnswers,
+  ItemAnswers,
   ItemPoolAnswers,
   ProgressionAnswers,
   RunAnswers,
@@ -29,11 +30,17 @@ import type {
   ShopStockAnswers,
   ShopAnswers,
   ShopsAnswers,
-  SightCopies,
   StartingEquipmentAnswers,
   WizardAnswers,
 } from "./WizardAnswers";
-import { SIGHT_COPY_COUNTS } from "./WizardAnswers";
+import {
+  countSightItems,
+  hasSecondSightCopy,
+  SIGHTS,
+  type SightCopies,
+} from "./Sight";
+import { itemName } from "./ItemNames";
+import { optionCatalog } from "../generated/optionCatalog";
 import {
   getBonusItemDisplayRows,
   type BonusItemDisplayRow,
@@ -470,11 +477,7 @@ export function hasActiveChallenges(answers: ChallengeAnswers): boolean {
       answers.enemyHpScaling > 0 ||
       answers.enemyDamageScaling > 0 ||
       answers.dreadMode ||
-      answers.hiddenIntents !== "off" ||
-      answers.hiddenHealth !== "off" ||
-      answers.hiddenPiles !== "off" ||
-      answers.hiddenMap !== "off" ||
-      answers.hiddenCards !== "off" ||
+      countSightItems(answers) > 0 ||
       answers.strictCardRewards)
   );
 }
@@ -534,20 +537,11 @@ function describeSightItems(
  * @returns A sentence, or an empty string when no Sight has a bonus to give.
  */
 function describeSightBonuses(answers: ChallengeAnswers): string {
-  const sights = [
-    { field: "intent", copies: answers.hiddenIntents, name: "Intent Sight" },
-    { field: "health", copies: answers.hiddenHealth, name: "Health Sight" },
-    { field: "pile", copies: answers.hiddenPiles, name: "Pile Sight" },
-    { field: "map", copies: answers.hiddenMap, name: "Map Sight" },
-    { field: "card", copies: answers.hiddenCards, name: "Card Sight" },
-  ] as const;
-  const names = sights
-    .filter(
-      (sight) =>
-        answers.sightBonuses[sight.field] &&
-        SIGHT_COPY_COUNTS[sight.copies] >= 2,
-    )
-    .map((sight) => sight.name);
+  const names = SIGHTS.filter(
+    (sight) =>
+      answers.sightBonuses[sight.bonusField] &&
+      hasSecondSightCopy(answers, sight),
+  ).map((sight) => sight.itemName);
   if (!names.length) {
     return "";
   }
@@ -594,34 +588,13 @@ export function summarizeChallengeAnswers(answers: ChallengeAnswers): string {
     );
   }
 
-  if (answers.hiddenIntents !== "off") {
-    sentences.push(
-      `Enemy intents are hidden until ${describeSightItems(answers.hiddenIntents, "Intent Sight")} is found.`,
-    );
-  }
-
-  if (answers.hiddenHealth !== "off") {
-    sentences.push(
-      `Health is hidden until ${describeSightItems(answers.hiddenHealth, "Health Sight")} is found.`,
-    );
-  }
-
-  if (answers.hiddenPiles !== "off") {
-    sentences.push(
-      `Combat piles are hidden until ${describeSightItems(answers.hiddenPiles, "Pile Sight")} is found.`,
-    );
-  }
-
-  if (answers.hiddenMap !== "off") {
-    sentences.push(
-      `Rooms beyond your next move are hidden until ${describeSightItems(answers.hiddenMap, "Map Sight")} is found.`,
-    );
-  }
-
-  if (answers.hiddenCards !== "off") {
-    sentences.push(
-      `Cards are unknown until ${describeSightItems(answers.hiddenCards, "Card Sight")} is found.`,
-    );
+  for (const sight of SIGHTS) {
+    const copies = answers[sight.copiesField];
+    if (copies !== "off") {
+      sentences.push(
+        `${sight.hiddenSummary} until ${describeSightItems(copies, sight.itemName)} is found.`,
+      );
+    }
   }
 
   const sightBonuses = describeSightBonuses(answers);
@@ -893,6 +866,53 @@ export function summarizeDeathLinkAnswers(answers: DeathLinkAnswers): string {
   return `A received Death Link ${joinNames(effects)}.`;
 }
 
+/** Summarizes starting items, starting hints, and where items may be placed. */
+export function summarizeItemAnswers(answers: ItemAnswers): string {
+  const sentences: string[] = [];
+
+  if (answers.startingInventory.length) {
+    const stacks = answers.startingInventory.map((stack) => {
+      const name = itemName(stack.character, stack.item);
+      return stack.count === 1 ? name : `${stack.count}× ${name}`;
+    });
+    sentences.push(`You start with ${joinNames(stacks)}.`);
+  } else {
+    sentences.push("You start with no extra items.");
+  }
+  if (answers.startHints.length) {
+    sentences.push(
+      `${joinNames(answers.startHints)} ${answers.startHints.length === 1 ? "is" : "are"} hinted from the start.`,
+    );
+  }
+  if (answers.localItems.length) {
+    sentences.push(`${joinNames(answers.localItems)} stay in your world.`);
+  }
+  if (answers.nonLocalItems.length) {
+    sentences.push(
+      `${joinNames(answers.nonLocalItems)} go to other players' worlds.`,
+    );
+  }
+  return sentences.join(" ");
+}
+
+/**
+ * Describes settings kept from an imported YAML that the builder doesn't ask about.
+ *
+ * @param keptOptions - Kept values keyed by option name.
+ * @returns A sentence naming them, or null when there are none.
+ */
+export function summarizeKeptOptions(
+  keptOptions: Readonly<Record<string, unknown>>,
+): string | null {
+  const names = Object.keys(keptOptions).map(
+    (key) => optionCatalog.options[key]?.display_name ?? key,
+  );
+  if (!names.length) {
+    return null;
+  }
+  return `Your imported YAML's ${joinNames(names)} ${names.length === 1 ? "is" : "are"} kept as written. The builder doesn't ask about ${names.length === 1 ? "it" : "them"}; edit the downloaded YAML to change ${names.length === 1 ? "it" : "them"}.`;
+}
+
 /**
  * Builds ordered review sections for every implemented wizard step.
  *
@@ -934,7 +954,13 @@ export function buildWizardReviewSections(
       title: "Progression",
       summary: summarizeProgressionAnswers(answers.progression),
     },
+    { title: "Items & Hints", summary: summarizeItemAnswers(answers.items) },
   ];
+
+  const kept = summarizeKeptOptions(answers.keptOptions);
+  if (kept !== null) {
+    sections.push({ title: "Kept From Your YAML", summary: kept });
+  }
 
   // Return a fresh presentation model for the review component.
   return sections;

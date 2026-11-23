@@ -112,17 +112,3 @@ export const BOON_TABLE_ROWS: readonly ModifierTableRow<BoonGroup>[] =
     badge: boon.worksInMultiplayer ? "Multiplayer" : "Solo only",
     group: boon.group,
   }));
-
-/**
- * Orders selected Boons for stable state, review, and YAML compilation.
- *
- * @param selected - Canonical Boon names in any order.
- * @returns The known names in catalog order, without duplicates.
- */
-export function getOrderedBoons(selected: Iterable<string>): string[] {
-  const selectedNames = new Set(selected);
-
-  return BOONS.filter((boon) => selectedNames.has(boon.optionName)).map(
-    (boon) => boon.optionName,
-  );
-}
