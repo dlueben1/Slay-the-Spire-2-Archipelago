@@ -58,6 +58,12 @@ public static class ModSettingsRegistration
     private static IRuntimeHotkeyHandle? ApLootHotkeyHandle;
 
     /// <summary>
+    /// The normalized keyboard binding that currently opens the AP Loot Menu, e.g. "P" or "Ctrl+P".
+    /// The top-bar button's keybind badge shows it.
+    /// </summary>
+    public static string ApLootKeyboardBinding { get; private set; } = "P";
+
+    /// <summary>
     /// Registers runtime hotkeys after the game is ready.
     /// Currently we don't have more than one hotkey, but if we ever end up with a lot more
     /// we probably want to refactor this into a separate hotkey registration system.
@@ -75,6 +81,7 @@ public static class ModSettingsRegistration
 
         // Map the normalized binding
         settings.OpenArchLootHotKey = normalizedBinding;
+        ApLootKeyboardBinding = normalizedBinding;
 
         // And register it
         ApLootHotkeyHandle?.Dispose();
@@ -197,6 +204,7 @@ public static class ModSettingsRegistration
                         // Normalize the input and save it
                         var normalizedBinding = RuntimeHotkeyService.NormalizeOrDefault(value, "P");
                         settings.OpenArchLootHotKey = normalizedBinding;
+                        ApLootKeyboardBinding = normalizedBinding;
 
                         // Attempt to rebind it (it should have been initially bound during startup)
                         if (ApLootHotkeyHandle is not null)
