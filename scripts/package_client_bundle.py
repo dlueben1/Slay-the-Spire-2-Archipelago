@@ -12,7 +12,8 @@ from pathlib import Path
 
 
 def assemble(repo: Path, output: Path, configuration: str, main: str, beta: str,
-             *, extra: tuple[str, ...] = (), local: bool = False) -> None:
+             *, extra: tuple[str, ...] = (), local: bool = False,
+             signature_root: str = "") -> None:
     output = output.resolve()
     versions = (main, *extra, beta)
     required_files = ["Archipelago.pck", "Archipelago.json"]
@@ -21,8 +22,15 @@ def assemble(repo: Path, output: Path, configuration: str, main: str, beta: str,
     for required in required_files:
         if not (output / required).is_file():
             raise ValueError(f"Package staging is missing {required}: {output}")
-    # Local builds use the same reference settings as the IDE via local.props.
-    reference_properties = [] if local else ["-p:UseSts2RefLib=true"]
+    # Local builds use the same reference settings as the IDE via local.props. A package build
+    # uses the NuGet reference assemblies unless it was given local game assemblies, which a
+    # release needs while NuGet has no reference package for a new game version yet.
+    if local:
+        reference_properties = []
+    elif signature_root:
+        reference_properties = ["-p:UseSts2RefLib=false", f"-p:Sts2ApiSignatureRoot={signature_root}"]
+    else:
+        reference_properties = ["-p:UseSts2RefLib=true"]
     project = repo / "client/StS2AP/StS2AP.csproj"
     for version in versions:
         subprocess.run([
@@ -79,8 +87,11 @@ if __name__ == "__main__":
                         help="Other game versions to build, separated by semicolons.")
     parser.add_argument("--local", action="store_true",
                         help="Use local reference settings and allow a missing APWorld.")
+    parser.add_argument("--signature-root", default="",
+                        help="Folder of <version>/sts2.dll game assemblies to compile against "
+                             "instead of the NuGet reference packages.")
     args = parser.parse_args()
     assemble(Path(__file__).resolve().parents[1], args.output,
              args.configuration, args.main, args.beta,
              extra=tuple(version.strip() for version in args.extra.split(";") if version.strip()),
-             local=args.local)
+             local=args.local, signature_root=args.signature_root)

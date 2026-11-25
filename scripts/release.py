@@ -258,6 +258,8 @@ def assert_versions_advance_for_publish(repo: Path, versions: Versions, reposito
         raise ReleaseError(
             f"APWorld version {versions.apworld} cannot be lower than {previous_apworld} from tag {previous_tag}"
         )
+    # Player documentation changes on its own don't change what the APWorld generates, so it
+    # doesn't need a new APWorld version.
     world_changes = git(
         repo,
         "diff",
@@ -265,6 +267,7 @@ def assert_versions_advance_for_publish(repo: Path, versions: Versions, reposito
         f"{previous_tag}..HEAD",
         "--",
         "world/spire2",
+        ":(exclude)world/spire2/docs/*.md",
     )
     if world_changes and versions.apworld.compare_precedence(previous_apworld) <= 0:
         raise ReleaseError(
