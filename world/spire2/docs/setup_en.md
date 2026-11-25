@@ -20,7 +20,7 @@ code substantially.
 ## 1. Install the mod
 
 1. Subscribe to [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295)
-   (version 0.6.11 or newer) and [Slay the Spire II Archipelago](https://steamcommunity.com/sharedfiles/filedetails/?id=3748826296)
+   (version 0.6.16 or newer) and [Slay the Spire II Archipelago](https://steamcommunity.com/sharedfiles/filedetails/?id=3748826296)
    on Steam Workshop. The [Slay the Spire 2 Archipelago Minimal Install](https://steamcommunity.com/sharedfiles/filedetails/?id=3839147144)
    collection has both, plus Mod Launch Manager (below): select **Subscribe to all**
    to get all three at once.

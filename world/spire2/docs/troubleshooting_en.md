@@ -7,7 +7,7 @@ see [Getting help](#getting-help).
 
 - **Only have one copy of the mod installed:** use either the Workshop item or `mods/Archipelago`,
   not both. Check this if the mod doesn't load i.e. no Archipelago logo on main screen
-- **RitsuLib is installed:** you need version 0.6.11 or newer.
+- **RitsuLib is installed:** you need version 0.6.16 or newer.
 - **Get the latest versions of all mods** if your mods look out of date, use RitsuLib in the mod's 
   settings to install the latest version of all mods.
 - **Your game version is supported:** your mod release's notes list the supported

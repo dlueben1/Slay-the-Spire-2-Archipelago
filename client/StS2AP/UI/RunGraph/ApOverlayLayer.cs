@@ -1,6 +1,7 @@
 using Godot;
 using MegaCrit.Sts2.Core.ControllerInput;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
+using StS2AP.Utils;
 
 namespace StS2AP.UI.RunGraph;
 
@@ -61,11 +62,11 @@ internal static class ApOverlayLayer
         var hotkeys = NHotkeyManager.Instance;
         if (hotkeys == null)
             return;
-        hotkeys.PushHotkeyPressedBinding(input, action);
+        GameApiCompat.PushHotkeyPressedBinding(hotkeys, input, overlay, action);
         overlay.TreeExiting += () =>
         {
             if (GodotObject.IsInstanceValid(hotkeys))
-                hotkeys.RemoveHotkeyPressedBinding(input, action);
+                GameApiCompat.RemoveHotkeyPressedBinding(hotkeys, input, overlay, action);
         };
     }
 
