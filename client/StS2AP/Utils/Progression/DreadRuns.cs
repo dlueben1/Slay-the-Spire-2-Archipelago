@@ -93,7 +93,13 @@ internal static class DreadRuns
         {
             boss = secondBoss;
         }
+#if STS2_AT_LEAST_0_114_0
+        // Since 0.114.0 the boss icon names the Dominion only while the run holds one. Dread
+        // removes it on entering the boss room, and the icon then names the boss again.
+        DominionModel? dominion = runState.Dominion;
+#else
         DominionModel? dominion = runState.Dominion ?? boss.GetDominion();
+#endif
         if (dominion == null)
             return null;
 
