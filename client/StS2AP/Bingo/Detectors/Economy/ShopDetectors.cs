@@ -31,8 +31,10 @@ internal static class ShopDetectors
     // I-E02 "Buy the on-sale card": the card entry the shop marked on sale, bought.
     private const string BuyOnSaleCardSquare = "I-E02";
 
-    // I-M05 "Buy every potion in one shop": as many potions bought in this visit as the shop
-    // stocked. Counting purchases, not empty slots, still works when The Courier restocks them.
+    // I-M05 "Buy every potion in one shop": as many potions bought in this visit as the shop had
+    // in stock before the visit's first purchase. Shop Sanity empties the potion slots it locks,
+    // so only stocked slots count. Counting purchases, not empty slots, still works when The
+    // Courier restocks them.
     private const string BuyEveryPotionSquare = "I-M05";
 
     // M13 "Buy a card, a relic and a potion in one shop visit".
@@ -52,8 +54,7 @@ internal static class ShopDetectors
     /// purchase hook runs, so it cannot be told apart afterwards.</param>
     /// <param name="WasOnSale">The entry was the shop's on-sale card. A restocked entry (The
     /// Courier) is no longer on sale by the time the purchase hook runs.</param>
-    /// <param name="Inventory">The shop inventory the entry was bought from, when the game passes it.</param>
-    private sealed record PurchaseAttempt(bool IsApCheck, bool WasOnSale, MerchantInventory? Inventory);
+    private sealed record PurchaseAttempt(bool IsApCheck, bool WasOnSale);
 
     private static readonly ConditionalWeakTable<MerchantEntry, PurchaseAttempt> Attempts = new();
 
@@ -68,6 +69,12 @@ internal static class ShopDetectors
         public bool BoughtCard;
         public bool BoughtRelic;
         public int PotionsBought;
+
+        /// <summary>
+        /// Stocked potion slots, taken at the visit's first purchase from the normal stock (AP
+        /// checks pass no inventory), so it is taken before any potion is bought.
+        /// </summary>
+        public int? PotionsStocked;
     }
 
     private static ShopVisit _visit = new();
@@ -105,7 +112,7 @@ internal static class ShopDetectors
                 break;
             case MerchantPotionEntry:
                 _visit.PotionsBought++;
-                int potionsStocked = attempt?.Inventory?.PotionEntries.Count ?? 0;
+                int potionsStocked = _visit.PotionsStocked ?? 0;
                 EconomyDetector.CompleteIf(
                     BuyEveryPotionSquare,
                     potionsStocked > 0 && _visit.PotionsBought >= potionsStocked,
@@ -138,16 +145,18 @@ internal static class ShopDetectors
         [HarmonyPrefix]
         [HarmonyPriority(Priority.First)]
         private static void Prefix(MerchantEntry __instance, MerchantInventory? inventory) =>
-            EconomyDetector.Run(nameof(BeforePurchaseAttempt), () =>
+            EconomyDetector.Run(nameof(BeforePurchaseAttempt), (__instance, inventory), static args =>
             {
-                if (!LocalContext.IsMe(__instance._player))
+                (MerchantEntry entry, MerchantInventory? inventory) = args;
+                if (!LocalContext.IsMe(entry._player))
                     return;
+                if (_visit.PotionsStocked == null && inventory != null)
+                    _visit.PotionsStocked = inventory.PotionEntries.Count(potion => potion.IsStocked);
                 Attempts.AddOrUpdate(
-                    __instance,
+                    entry,
                     new PurchaseAttempt(
-                        IsApCheck: Patches_ShopSanity.IsApSlot(__instance),
-                        WasOnSale: __instance is MerchantCardEntry { IsOnSale: true },
-                        Inventory: inventory));
+                        IsApCheck: Patches_ShopSanity.IsApSlot(entry),
+                        WasOnSale: entry is MerchantCardEntry { IsOnSale: true }));
             });
     }
 
@@ -156,8 +165,9 @@ internal static class ShopDetectors
     {
         [HarmonyPrefix]
         private static void Prefix(IRunState runState, Player player, MerchantEntry itemPurchased) =>
-            EconomyDetector.Run(nameof(AfterItemPurchased), () =>
+            EconomyDetector.Run(nameof(AfterItemPurchased), (runState, player, itemPurchased), static args =>
             {
+                (IRunState runState, Player player, MerchantEntry itemPurchased) = args;
                 if (!LocalContext.IsMe(player))
                     return;
                 OnPurchased(runState, player, itemPurchased);

@@ -46,7 +46,7 @@ internal static class MaxHpDetectors
     {
         [HarmonyPostfix]
         private static void Postfix(Creature creature) =>
-            EconomyDetector.Run(nameof(AfterMaxHpGained), () => CheckPlayerCreature(creature));
+            EconomyDetector.Run(nameof(AfterMaxHpGained), creature, CheckPlayerCreature);
     }
 
     /// <summary>
@@ -58,6 +58,6 @@ internal static class MaxHpDetectors
     {
         [HarmonyPostfix]
         private static void Postfix(Creature creature) =>
-            EconomyDetector.Run(nameof(AfterMaxHpLost), () => CheckPlayerCreature(creature));
+            EconomyDetector.Run(nameof(AfterMaxHpLost), creature, CheckPlayerCreature);
     }
 }

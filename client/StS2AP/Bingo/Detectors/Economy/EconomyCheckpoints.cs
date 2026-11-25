@@ -19,8 +19,9 @@ internal static class EconomyCheckpoints
     {
         [HarmonyPrefix]
         private static void Prefix(IRunState runState, AbstractRoom room) =>
-            EconomyDetector.Run(nameof(AfterRoomEntered), () =>
+            EconomyDetector.Run(nameof(AfterRoomEntered), (runState, room), static args =>
             {
+                (IRunState runState, AbstractRoom room) = args;
                 if (EconomyDetector.LocalPlayer(runState) is not { } me)
                     return;
                 EconomyDetector.CheckAll(me);
@@ -33,7 +34,7 @@ internal static class EconomyCheckpoints
     {
         [HarmonyPrefix]
         private static void Prefix(Player player) =>
-            EconomyDetector.Run(nameof(AfterRewardTaken), () => EconomyDetector.CheckAll(player));
+            EconomyDetector.Run(nameof(AfterRewardTaken), player, static player => EconomyDetector.CheckAll(player));
     }
 
     [HarmonyPatch(typeof(Hook), nameof(Hook.AfterCombatEnd))]
@@ -41,7 +42,7 @@ internal static class EconomyCheckpoints
     {
         [HarmonyPrefix]
         private static void Prefix(IRunState runState) =>
-            EconomyDetector.Run(nameof(AfterCombatEnd), () =>
+            EconomyDetector.Run(nameof(AfterCombatEnd), runState, static runState =>
             {
                 if (EconomyDetector.LocalPlayer(runState) is { } me)
                     EconomyDetector.CheckAll(me);
