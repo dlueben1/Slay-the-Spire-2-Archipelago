@@ -84,7 +84,8 @@ internal sealed class MissingCharacterFallbackPlan
         foreach (long locationId in locationIds)
         {
             yield return locationId;
-            if (!IsActive || ArchipelagoIdCodec.IsArchipelagoReservedId(locationId))
+            // Bingo squares belong to the slot, not to a character block, so they have no mirror.
+            if (!IsActive || !ArchipelagoIdCodec.IsCharacterLocationId(locationId))
                 continue;
 
             long sourceCharacterNumber = ArchipelagoIdCodec.GetAPCharacterNumberFromLocationId(locationId);

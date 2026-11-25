@@ -108,7 +108,7 @@ public sealed class ApReleaseMissingCharacterCmd : AbstractConsoleCmd
     {
         var checkedLocations = ArchipelagoClient.CheckedLocations.ToHashSet();
         return ArchipelagoClient.SlotLocationIds
-            .Where(id => !ArchipelagoIdCodec.IsArchipelagoReservedId(id)
+            .Where(id => ArchipelagoIdCodec.IsCharacterLocationId(id)
                 && ArchipelagoIdCodec.GetAPCharacterNumberFromLocationId(id) == characterNumber
                 && !checkedLocations.Contains(id))
             .Order()

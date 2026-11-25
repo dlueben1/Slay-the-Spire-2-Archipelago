@@ -12,6 +12,7 @@ using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves;
 using Newtonsoft.Json.Linq;
+using StS2AP.Bingo;
 using StS2AP.Data;
 using StS2AP.Extensions;
 using StS2AP.Patches;
@@ -364,6 +365,10 @@ namespace StS2AP.Utils
             if (stored != null)
                 _allGoaledCharacters.UnionWith(stored.Where(pair => pair.Value).Select(pair => pair.Key));
             _goaledCharacters.UnionWith(settings.Characters.Keys.Where(_allGoaledCharacters.Contains));
+            // A bingo slot still records victories (and releases on them), but only its board
+            // sends the goal; see BingoState.
+            if (settings.Goal != SlotGoal.Characters)
+                return;
             if (!_slotGoalSent && SlotGoalPolicy.IsComplete(_allGoaledCharacters, settings.Characters.Keys,
                     settings.NumCharsGoal))
             {
