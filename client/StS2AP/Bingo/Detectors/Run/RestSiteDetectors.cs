@@ -24,7 +24,7 @@ internal static class RestSiteDetectors
         private static void Postfix(IRunState runState, Player player)
         {
             if (LocalContext.IsMe(player))
-                RunSquare.Detect("rest site choice", () => CheckChoices(runState, player));
+                RunSquare.Detect("rest site choice", (runState, player), static args => CheckChoices(args.runState, args.player));
         }
     }
 
@@ -33,7 +33,7 @@ internal static class RestSiteDetectors
     {
         [HarmonyPrefix]
         private static void Prefix(IRunState runState) =>
-            RunSquare.Detect("rest site choices", () =>
+            RunSquare.Detect("rest site choices", runState, static runState =>
             {
                 if (RunHistory.LocalPlayer(runState) is Player me)
                     CheckChoices(runState, me);
@@ -52,7 +52,7 @@ internal static class RestSiteDetectors
         private static void Prefix(Player player, bool isMimicked)
         {
             if (!isMimicked)
-                RunSquare.Detect("rest at full HP", () =>
+                RunSquare.Detect("rest at full HP", player, static player =>
                     RunSquare.CompleteIf("I-E07", player,
                         () => player.Creature.CurrentHp >= player.Creature.MaxHp));
         }
@@ -64,7 +64,7 @@ internal static class RestSiteDetectors
     {
         [HarmonyPrefix]
         private static void Prefix(Player player) =>
-            RunSquare.Detect("smith at low HP", () =>
+            RunSquare.Detect("smith at low HP", player, static player =>
                 RunSquare.CompleteIf("I-E08", player,
                     () => player.Creature.CurrentHp * 4 <= player.Creature.MaxHp));
     }

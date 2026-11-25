@@ -24,13 +24,13 @@ internal static class RunVictoryDetectors
         private static void Postfix(bool isVictory)
         {
             if (isVictory)
-                RunSquare.Detect("run victory", OnRunWon);
+                RunSquare.Detect("run victory", RunManager.Instance, OnRunWon);
         }
     }
 
-    private static void OnRunWon()
+    private static void OnRunWon(RunManager runManager)
     {
-        if (RunManager.Instance.DebugOnlyGetState() is not RunState runState
+        if (runManager.DebugOnlyGetState() is not RunState runState
             || RunHistory.LocalPlayer(runState) is not Player me)
         {
             return;

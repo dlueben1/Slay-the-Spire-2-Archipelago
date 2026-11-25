@@ -25,7 +25,7 @@ internal static class MapRouteDetectors
     {
         [HarmonyPrefix]
         private static void Prefix(IRunState runState) =>
-            RunSquare.Detect("map route", () => Check(runState));
+            RunSquare.Detect("map route", runState, Check);
     }
 
     private static void Check(IRunState runState)

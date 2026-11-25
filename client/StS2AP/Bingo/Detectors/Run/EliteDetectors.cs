@@ -21,7 +21,7 @@ internal static class EliteDetectors
     {
         [HarmonyPrefix]
         private static void Prefix(IRunState runState, CombatRoom room) =>
-            RunSquare.Detect("combat victory", () => OnCombatWon(runState, room));
+            RunSquare.Detect("combat victory", (runState, room), static args => OnCombatWon(args.runState, args.room));
     }
 
     [HarmonyPatch(typeof(Hook), nameof(Hook.BeforeRoomEntered))]
@@ -29,7 +29,7 @@ internal static class EliteDetectors
     {
         [HarmonyPrefix]
         private static void Prefix(IRunState runState) =>
-            RunSquare.Detect("elites", () =>
+            RunSquare.Detect("elites", runState, static runState =>
             {
                 // The room being entered has not been won (yet).
                 if (RunHistory.LocalPlayer(runState) is Player me)
