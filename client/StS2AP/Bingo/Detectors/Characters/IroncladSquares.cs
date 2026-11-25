@@ -104,7 +104,7 @@ internal static class IroncladSquares
         }
     }
 
-    // C-IR-H1: every play of a Power card, auto-plays and replays included.
+    // C-IR-H1: Power cards played, auto-plays included. A replayed card counts once.
     [HarmonyPatch(typeof(Hook), nameof(Hook.AfterCardPlayed))]
     private static class CardPlayed
     {
@@ -117,7 +117,8 @@ internal static class IroncladSquares
             CharacterSquares.Guard($"{nameof(IroncladSquares)}.{nameof(CardPlayed)}", () =>
             {
                 Player player = cardPlay.Player;
-                if (cardPlay.Card.Type == CardType.Power
+                if (cardPlay.IsFirstInSeries
+                    && cardPlay.Card.Type == CardType.Power
                     && CharacterSquares.Plays<Ironclad>(player)
                     && PowersPlayedThisCombat.Add(player) >= 6)
                     BingoSquares.Complete(PlaySixPowers, player);

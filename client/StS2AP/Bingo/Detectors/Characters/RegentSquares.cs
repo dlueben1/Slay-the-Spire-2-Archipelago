@@ -102,7 +102,7 @@ internal static class RegentSquares
     }
 
     // C-RE-M3: plays of cards tagged Minion (Minion Strike, Minion Dive Bomb, Minion Sacrifice,
-    // the same tag Vitruvian Minion checks).
+    // the same tag Vitruvian Minion checks). A replayed card counts once.
     [HarmonyPatch(typeof(Hook), nameof(Hook.AfterCardPlayed))]
     private static class CardPlayed
     {
@@ -115,7 +115,8 @@ internal static class RegentSquares
             CharacterSquares.Guard($"{nameof(RegentSquares)}.{nameof(CardPlayed)}", () =>
             {
                 Player player = cardPlay.Player;
-                if (cardPlay.Card.Tags.Contains(CardTag.Minion)
+                if (cardPlay.IsFirstInSeries
+                    && cardPlay.Card.Tags.Contains(CardTag.Minion)
                     && CharacterSquares.Plays<Regent>(player)
                     && MinionCardsPlayedThisCombat.Add(player) >= 4)
                     BingoSquares.Complete(PlayFourMinionCards, player);

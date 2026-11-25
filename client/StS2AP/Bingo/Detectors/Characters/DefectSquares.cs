@@ -31,11 +31,11 @@ internal static class DefectSquares
     private static readonly PlayerTally ChanneledThisCombat = new(TallyScope.Combat);
     private static readonly PlayerSet<Type> OrbTypesChanneledThisCombat = new(TallyScope.Combat);
 
-    /// <summary>The outermost card a player is playing and the evokes it has caused so far.</summary>
+    /// <summary>The outermost card a player is playing and the distinct orbs it has evoked so far.</summary>
     private sealed class CardInPlay(CardModel card)
     {
         public CardModel Card { get; } = card;
-        public int Evokes { get; set; }
+        public HashSet<OrbModel> EvokedOrbs { get; } = new();
     }
 
     /// <summary>
@@ -49,7 +49,8 @@ internal static class DefectSquares
     // C-DE-E1: every evoke counts, so Dualcast's double evoke of one orb counts twice.
     // C-DE-M5: the Dark orb's evoke value (what it deals before the target's modifiers), and only
     // when it had a target to hit.
-    // C-DE-M6: evokes while a card of the player's is resolving, counted per card play.
+    // C-DE-M6: distinct orbs evoked while a card of the player's is resolving, per card play, so
+    // evoking one orb several times (Multi-Cast) counts once.
     // AfterOrbEvoked runs before the evoked orb is detached, so its Owner is still set.
     [HarmonyPatch(typeof(Hook), nameof(Hook.AfterOrbEvoked))]
     private static class OrbEvoked
@@ -72,7 +73,9 @@ internal static class DefectSquares
                     BingoSquares.Complete(EvokeThreeInOneTurn, owner);
                 if (orb is DarkOrb && orb.EvokeVal >= 50m && targets.Any())
                     BingoSquares.Complete(DarkEvokeForFifty, owner);
-                if (CardsInPlay.TryGetValue(owner.NetId, out CardInPlay? cardInPlay) && ++cardInPlay.Evokes >= 4)
+                if (CardsInPlay.TryGetValue(owner.NetId, out CardInPlay? cardInPlay)
+                    && cardInPlay.EvokedOrbs.Add(orb)
+                    && cardInPlay.EvokedOrbs.Count >= 4)
                     BingoSquares.Complete(EvokeFourWithOneCard, owner);
             });
         }
