@@ -455,7 +455,8 @@ dotnet/embed_build_outputs=false
   <Target Name="AssembleCompatibilityBundle" AfterTargets="PostBuild" Condition="'$(BuildMode)' == 'Local' or '$(BuildMode)' == 'Package'">
     <PropertyGroup>
       <LocalBundleArgument Condition="'$(BuildMode)' == 'Local'">--local</LocalBundleArgument>
+      <SignatureRootArgument Condition="'$(BuildMode)' == 'Package' and '$(UseSts2RefLib)' != 'true' and '$(Sts2ApiSignatureRoot)' != ''">--signature-root &quot;$(Sts2ApiSignatureRoot)&quot;</SignatureRootArgument>
     </PropertyGroup>
-    <Exec Command="&quot;$(PythonExe)&quot; &quot;$(MSBuildProjectDirectory)/../../scripts/package_client_bundle.py&quot; --configuration &quot;$(Configuration)&quot; --output &quot;$(ModsOutputDir)&quot; --main &quot;$(Sts2MainApiCompat)&quot; --beta &quot;$(Sts2BetaApiCompat)&quot; --extra &quot;$(Sts2ExtraApiCompats)&quot; $(LocalBundleArgument)" />
+    <Exec Command="&quot;$(PythonExe)&quot; &quot;$(MSBuildProjectDirectory)/../../scripts/package_client_bundle.py&quot; --configuration &quot;$(Configuration)&quot; --output &quot;$(ModsOutputDir)&quot; --main &quot;$(Sts2MainApiCompat)&quot; --beta &quot;$(Sts2BetaApiCompat)&quot; --extra &quot;$(Sts2ExtraApiCompats)&quot; $(LocalBundleArgument) $(SignatureRootArgument)" />
   </Target>
 </Project>

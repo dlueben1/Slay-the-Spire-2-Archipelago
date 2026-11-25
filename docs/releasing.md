@@ -22,7 +22,9 @@ installs the candidate into the game's mods directory. Publishing creates a GitH
 
 The client embeds the APWorld manifest at compile time. Rebuild the client after
 changing that manifest. Keep the APWorld version unchanged for a client-only
-release; bump it for APWorld logic/options/format changes. Historical APWorld-only
+release; bump it for APWorld logic/options/format changes. The release CLI requires
+a bump when anything under `world/spire2` changed since the last tag, except the
+Markdown player guides in `world/spire2/docs`. Historical APWorld-only
 releases can reuse an explicitly identified client, but the manual builder below
 always recompiles a full bundle.
 
@@ -65,7 +67,9 @@ python scripts/release.py build
 Both commands require clean source by default. `--allow-dirty` permits a local
 rehearsal only; its artifacts are marked dirty and cannot be passed to `publish`.
 The optional `--sts2-api-signature-root PATH` supplies versioned local game DLLs
-for the outer build; nested package variant builds use the pinned NuGet references.
+(`PATH/<version>/sts2.dll`) for every build, the variants included. Without it the
+variants compile against the pinned NuGet reference packages; use it when NuGet has
+no reference package for a new game version yet.
 Use `--expected-mod-version` and `--expected-apworld-version` to assert your intent.
 
 The builder uses the shared headless APWorld script, calls `BuildMode=Package` with
