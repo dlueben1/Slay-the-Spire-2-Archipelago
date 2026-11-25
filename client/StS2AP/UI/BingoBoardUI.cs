@@ -1,5 +1,4 @@
 using Godot;
-using MegaCrit.Sts2.addons.mega_text;
 using StS2AP.Bingo;
 using StS2AP.UI.RunGraph;
 using static StS2AP.UI.RunGraph.RunGraphStyle;
@@ -22,6 +21,8 @@ internal sealed partial class BingoBoardUI : Control
     private const float FooterHeight = 28f;
     private const int SectionSeparation = 18;
     private const int CellSeparation = 10;
+    // Smallest text a square shrinks to, so long squares on a 6x6 board stay readable.
+    private const int MinSquareFontSize = 11;
 
     private static readonly Color DoneFill = Claim.Darkened(0.55f);
 
@@ -30,7 +31,7 @@ internal sealed partial class BingoBoardUI : Control
     private BingoBoard _board = null!;
     private Label _subtitle = null!;
     private Button _close = null!;
-    private readonly List<(BingoSquareInfo Square, PanelContainer Cell, Label Mark, MegaLabel Text)> _cells = new();
+    private readonly List<(BingoSquareInfo Square, PanelContainer Cell, Label Mark, Label Text)> _cells = new();
 
     private const string RewardMenuButtonName = "ApBingoBoardButton";
 
@@ -180,7 +181,7 @@ internal sealed partial class BingoBoardUI : Control
         var cellSize = new Vector2(
             (gridWidth - (CellSeparation * (size - 1))) / size,
             (gridHeight - (CellSeparation * (size - 1))) / size);
-        // Larger boards get smaller text; MegaLabel shrinks it further when a square's text is long.
+        // Larger boards get smaller text; FitSquareText shrinks it further when a square's text is long.
         int maxFontSize = size switch { <= 3 => 30, 4 => 26, 5 => 22, _ => 20 };
 
         var grid = new GridContainer { Columns = size, MouseFilter = MouseFilterEnum.Ignore };
@@ -200,7 +201,7 @@ internal sealed partial class BingoBoardUI : Control
             mark.CustomMinimumSize = new Vector2(0f, 16f);
             stack.AddChild(mark);
 
-            var text = new MegaLabel
+            var text = new Label
             {
                 Text = square.Text,
                 AutowrapMode = TextServer.AutowrapMode.WordSmart,
@@ -210,18 +211,53 @@ internal sealed partial class BingoBoardUI : Control
                 SizeFlagsHorizontal = SizeFlags.ExpandFill,
                 SizeFlagsVertical = SizeFlags.ExpandFill,
                 MouseFilter = MouseFilterEnum.Ignore,
-                MinFontSize = 11,
-                MaxFontSize = maxFontSize,
             };
-            // MegaLabel expects its font as a theme override before it enters the tree.
             text.AddThemeFontOverride("font", Regular);
             text.AddThemeFontSizeOverride("font_size", maxFontSize);
+            // The cell's size is only known after layout, so fit the text whenever the label is resized.
+            text.Resized += () => FitSquareText(text, maxFontSize);
             stack.AddChild(text);
 
             grid.AddChild(cell);
             _cells.Add((square, cell, mark, text));
         }
         return grid;
+    }
+
+    /// <summary>
+    /// Sets the largest font size at which a square's whole text fits its label. The game's
+    /// MegaLabel estimated too small a height for these cells and let the last line be clipped,
+    /// so this measures wrapped lines the way Label draws them: one font height per line plus
+    /// the theme's line spacing between lines.
+    /// </summary>
+    private static void FitSquareText(Label label, int maxFontSize)
+    {
+        Vector2 area = label.Size;
+        if (area.X < 1f || area.Y < 1f)
+            return;
+
+        Font font = label.GetThemeFont("font");
+        int lineSpacing = label.GetThemeConstant("line_spacing");
+        int fontSize = maxFontSize;
+        while (fontSize > MinSquareFontSize
+            && WrappedTextHeight(font, label.Text, area.X, fontSize, lineSpacing) > area.Y)
+        {
+            fontSize--;
+        }
+
+        if (label.GetThemeFontSize("font_size") != fontSize)
+            label.AddThemeFontSizeOverride("font_size", fontSize);
+    }
+
+    private static float WrappedTextHeight(Font font, string text, float width, int fontSize, int lineSpacing)
+    {
+        var paragraph = new TextParagraph { Width = width };
+        paragraph.BreakFlags = TextServer.LineBreakFlag.Mandatory
+            | TextServer.LineBreakFlag.WordBound
+            | TextServer.LineBreakFlag.Adaptive;
+        paragraph.AddString(text, font, fontSize);
+        int lines = paragraph.GetLineCount();
+        return (lines * font.GetHeight(fontSize)) + (Math.Max(0, lines - 1) * lineSpacing);
     }
 
     private void UpdateCells()
