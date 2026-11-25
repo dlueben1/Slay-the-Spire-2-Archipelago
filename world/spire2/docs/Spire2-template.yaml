@@ -51,6 +51,13 @@ Slay the Spire II:
   # Bingo goal only: complete lines (rows, columns, diagonals) needed. 1-14; capped at 2 x size + 2.
   bingo_lines: 2
 
+  # Bingo goal only: how often squares are Easy (Act 1), Medium (Act 2) or Hard (Act 3 or a win),
+  # weighed against each other. 0-100 each; 0 leaves that tier out, e.g. 0/100/0 for an all-Medium
+  # board. A tier your characters and settings can't fill is topped up from the others.
+  bingo_easy_weight: 40
+  bingo_medium_weight: 40
+  bingo_hard_weight: 20
+
   # Whether characters must be unlocked by "Unlock <Character>" items.
   #   unlocked       - every character is available from the start
   #   locked_random  - start with one random character; the rest are unlock items

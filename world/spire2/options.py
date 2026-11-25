@@ -87,6 +87,31 @@ class BingoLines(Range):
     range_end = 14
     default = 2
 
+class BingoEasyWeight(Range):
+    """How often bingo squares are Easy (doable in Act 1), weighed against the Medium and Hard
+    weights. 0 leaves Easy squares out. Only used with the bingo goal."""
+    display_name = "Bingo Easy Weight"
+    range_start = 0
+    range_end = 100
+    default = 40
+
+class BingoMediumWeight(Range):
+    """How often bingo squares are Medium (doable by the end of Act 2), weighed against the Easy and
+    Hard weights. 0 leaves Medium squares out. Only used with the bingo goal."""
+    display_name = "Bingo Medium Weight"
+    range_start = 0
+    range_end = 100
+    default = 40
+
+class BingoHardWeight(Range):
+    """How often bingo squares are Hard (Act 3 or a win), weighed against the Easy and Medium
+    weights. 0 leaves Hard squares out. If your characters and settings don't have enough squares
+    of a tier, the board is filled from the others. Only used with the bingo goal."""
+    display_name = "Bingo Hard Weight"
+    range_start = 0
+    range_end = 100
+    default = 20
+
 class PickNumberCharacters(Range):
     """Randomly select this many of the configured characters to generate for.
     0, or a number at least as large as the configured list, uses every configured character.
@@ -1142,6 +1167,9 @@ class Spire2Options(PerGameCommonOptions):
     goal: Goal
     bingo_size: BingoSize
     bingo_lines: BingoLines
+    bingo_easy_weight: BingoEasyWeight
+    bingo_medium_weight: BingoMediumWeight
+    bingo_hard_weight: BingoHardWeight
     lock_characters: LockCharacters
     unlocked_character: UnlockedCharacter
     # final_act: FinalAct

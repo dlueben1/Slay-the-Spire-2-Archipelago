@@ -18,9 +18,7 @@ BINGO_REGION = "Bingo Board"
 BINGO_LINE_ITEM = "Bingo Line"
 BINGO_LINE_ITEM_DATA = ItemData(None, ItemType.EVENT, ItemClassification.progression, True)
 
-# Share of the board each tier gets, before rounding. Tune freely; a tier the roster runs short of
-# is made up from the others.
-TIER_WEIGHTS: Dict[str, float] = {"E": 0.4, "M": 0.4, "H": 0.2}
+TIERS = ("E", "M", "H")
 
 # A square is in logic once a character who can do it beats the boss of the square's deepest act.
 TIER_EVENTS: Dict[str, str] = {
@@ -127,20 +125,32 @@ def candidate_squares(world: 'SlayTheSpire2World') -> List[BingoSquare]:
             if roster_can_do(square, world.characters) and requirement_met(square.requires, world)]
 
 
-def tier_counts(cells: int, available: Dict[str, int]) -> Dict[str, int]:
+def tier_weights(world: 'SlayTheSpire2World') -> Dict[str, float]:
+    """Each tier's share of the board, from the player's tier weight options."""
+    weights = {"E": world.options.bingo_easy_weight.value,
+               "M": world.options.bingo_medium_weight.value,
+               "H": world.options.bingo_hard_weight.value}
+    total = sum(weights.values())
+    if total == 0:
+        raise OptionError(f"Slay the Spire II player {world.player_name}: the bingo Easy, Medium and Hard "
+                          f"weights are all 0, so no square can be dealt. Give at least one a weight.")
+    return {tier: weight / total for tier, weight in weights.items()}
+
+
+def tier_counts(cells: int, available: Dict[str, int], weights: Dict[str, float]) -> Dict[str, int]:
     """Squares per tier: the weights rounded by largest remainder, then any tier's shortfall moved
-    to the other tiers in weight order."""
-    exact = {tier: cells * weight for tier, weight in TIER_WEIGHTS.items()}
+    to the other tiers in weight order (a tier weighted 0 still fills a gap nothing else can)."""
+    exact = {tier: cells * weight for tier, weight in weights.items()}
     counts = {tier: int(share) for tier, share in exact.items()}
-    by_remainder = sorted(TIER_WEIGHTS, key=lambda tier: exact[tier] - counts[tier], reverse=True)
+    by_remainder = sorted(weights, key=lambda tier: exact[tier] - counts[tier], reverse=True)
     for tier in by_remainder[:cells - sum(counts.values())]:
         counts[tier] += 1
     shortfall = 0
-    for tier in TIER_WEIGHTS:
+    for tier in weights:
         if counts[tier] > available.get(tier, 0):
             shortfall += counts[tier] - available.get(tier, 0)
             counts[tier] = available.get(tier, 0)
-    for tier in sorted(TIER_WEIGHTS, key=TIER_WEIGHTS.get, reverse=True):
+    for tier in sorted(weights, key=weights.get, reverse=True):
         extra = min(shortfall, available.get(tier, 0) - counts[tier])
         counts[tier] += extra
         shortfall -= extra
@@ -155,10 +165,10 @@ def deal_board(world: 'SlayTheSpire2World', size: int) -> List[BingoSquare]:
     if len(candidates) < cells:
         raise OptionError(f"Slay the Spire II player {world.player_name}: only {len(candidates)} bingo squares fit "
                           f"this roster and these settings, too few for a {size}x{size} board.")
-    by_tier: Dict[str, List[BingoSquare]] = {tier: [] for tier in TIER_WEIGHTS}
+    by_tier: Dict[str, List[BingoSquare]] = {tier: [] for tier in TIERS}
     for square in candidates:
         by_tier[square.tier].append(square)
-    counts = tier_counts(cells, {tier: len(squares) for tier, squares in by_tier.items()})
+    counts = tier_counts(cells, {tier: len(squares) for tier, squares in by_tier.items()}, tier_weights(world))
     chosen: List[BingoSquare] = []
     spares: Dict[str, List[BingoSquare]] = {}
     for tier, squares in by_tier.items():
