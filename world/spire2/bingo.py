@@ -7,9 +7,11 @@ from Options import OptionError
 from rule_builder.rules import Has, HasAny, Rule
 from .bingo_squares import BINGO_CONFLICTS, BINGO_SQUARES, BingoSquare
 from .items import ItemData, ItemType
+from .options import BlitzMerchantChance, ShopCardSlots, ShopNeutralSlots, ShopPotionSlots, ShopRelicSlots
 
 if TYPE_CHECKING:
     from .characters import CharacterConfig
+    from .options import Spire2Options
     from .world import SlayTheSpire2World
 
 BINGO_REGION = "Bingo Board"
@@ -72,12 +74,43 @@ def roster_can_do(square: BingoSquare, roster: Sequence['CharacterConfig']) -> L
     return [config for config in roster if config.mod_num == 0 and config.name in square.characters]
 
 
+def shop_part_buyable(part: str, options: 'Spire2Options') -> bool:
+    """Whether a normal shop always offers this part of its vanilla stock. Shop Sanity hides the
+    shuffled slots of each kind until their items arrive (the client's ShopSanity patch), and card
+    removal until that act's Progressive Shop Remove; a square needing a hidden part could be out
+    of reach for the whole seed."""
+    if part == "removal":
+        # Blitz merchants can also offer a removal, but only sometimes, so they do not count.
+        return not (options.shop_sanity and options.shop_remove_slots)
+    # A Blitz merchant replaces the whole stock, so at 100% no shop has vanilla cards, relics or potions.
+    if options.blitz_merchant_chance.value >= BlitzMerchantChance.range_end:
+        return False
+    if not options.shop_sanity:
+        return True
+    if part == "cards":
+        return (options.shop_card_slots.value < ShopCardSlots.range_end
+                or options.shop_neutral_card_slots.value < ShopNeutralSlots.range_end)
+    if part == "character_cards":
+        # The on-sale card is one of the character cards at random, so it is only sometimes among
+        # the unshuffled ones; enough shops give it a chance.
+        return options.shop_card_slots.value < ShopCardSlots.range_end
+    if part == "relics":
+        return options.shop_relic_slots.value < ShopRelicSlots.range_end
+    if part == "potions":
+        return options.shop_potion_slots.value < ShopPotionSlots.range_end
+    if part == "all_potions":
+        # The client's detector needs as many potions bought as the shop stocked, hidden slots
+        # included, so any shuffled potion slot rules the square out.
+        return options.shop_potion_slots.value == 0
+    raise ValueError(f"Unknown bingo shop part '{part}'")
+
+
 def requirement_met(requirement: Optional[str], world: 'SlayTheSpire2World') -> bool:
     options = world.options
     if requirement is None:
         return True
-    if requirement == "no_shop_sanity":
-        return not options.shop_sanity
+    if requirement.startswith("shop:"):
+        return all(shop_part_buyable(part, options) for part in requirement.removeprefix("shop:").split(","))
     if requirement.startswith("boon:"):
         return requirement.removeprefix("boon:") in options.boons.value
     if requirement.startswith("run_modifier:"):

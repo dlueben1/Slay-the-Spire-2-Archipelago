@@ -20,8 +20,10 @@ class BingoSquare(NamedTuple):
     location_name: str
     # Characters that can realistically do it. None means every character, modded ones included.
     characters: Optional[Tuple[str, ...]]
-    # An option the slot must have for the square to be dealt (see world code for the mapping):
-    # "no_shop_sanity", "boon:<Boon>", "run_modifier:<Modifier>", "dread_mode", "blitz_merchants".
+    # An option the slot must have for the square to be dealt (see bingo.py for the mapping):
+    # "shop:<part>[,<part>...]" (vanilla shop parts that must stay buyable: removal, cards,
+    # character_cards, relics, potions, all_potions), "boon:<Boon>", "run_modifier:<Modifier>",
+    # "dread_mode", "blitz_merchants".
     requires: Optional[str] = None
 
     @property
@@ -41,8 +43,8 @@ BINGO_SQUARES: Tuple[BingoSquare, ...] = (
     BingoSquare('E11', 9, 'E', 'Exhaust 5 cards in one combat', 'Bingo: Exhaust 5 cards in one combat', ('Ironclad', 'Silent', 'Defect', 'Necrobinder'), None),
     BingoSquare('E12', 10, 'E', 'Have 10 cards in your hand', 'Bingo: Have 10 cards in your hand', ('Silent', 'Regent', 'Necrobinder', 'Fool'), None),
     BingoSquare('E14', 11, 'E', 'Have 200 gold at once', 'Bingo: Have 200 gold at once', None, None),
-    BingoSquare('E15', 12, 'E', 'Remove a card at a shop', 'Bingo: Remove a card at a shop', None, 'no_shop_sanity'),
-    BingoSquare('E16', 13, 'E', 'Buy a relic from a shop', 'Bingo: Buy a relic from a shop', None, 'no_shop_sanity'),
+    BingoSquare('E15', 12, 'E', 'Remove a card at a shop', 'Bingo: Remove a card at a shop', None, 'shop:removal'),
+    BingoSquare('E16', 13, 'E', 'Buy a relic from a shop', 'Bingo: Buy a relic from a shop', None, 'shop:relics'),
     BingoSquare('E17', 14, 'E', 'Fill every potion slot', 'Bingo: Fill every potion slot', None, None),
     BingoSquare('E18', 15, 'E', 'Have 5 upgraded cards', 'Bingo: Have 5 upgraded cards', None, None),
     BingoSquare('E19', 16, 'E', 'Have 6 relics', 'Bingo: Have 6 relics', None, None),
@@ -61,7 +63,7 @@ BINGO_SQUARES: Tuple[BingoSquare, ...] = (
     BingoSquare('M10', 29, 'M', 'Have no Strikes in your deck', 'Bingo: Have no Strikes in your deck', None, None),
     BingoSquare('M11', 30, 'M', 'Have 400 gold at once', 'Bingo: Have 400 gold at once', None, None),
     BingoSquare('M12', 31, 'M', 'Spend 600 gold in one run', 'Bingo: Spend 600 gold in one run', None, None),
-    BingoSquare('M13', 32, 'M', 'Buy a card, a relic and a potion in one shop visit', 'Bingo: Buy a card, a relic and a potion in one shop visit', None, 'no_shop_sanity'),
+    BingoSquare('M13', 32, 'M', 'Buy a card, a relic and a potion in one shop visit', 'Bingo: Buy a card, a relic and a potion in one shop visit', None, 'shop:cards,relics,potions'),
     BingoSquare('M14', 33, 'M', 'Have 12 relics', 'Bingo: Have 12 relics', None, None),
     BingoSquare('M15', 34, 'M', 'Have 3 enchanted cards', 'Bingo: Have 3 enchanted cards', None, None),
     BingoSquare('M16', 35, 'M', 'Have 5 copies of one card', 'Bingo: Have 5 copies of one card', None, None),
@@ -157,13 +159,13 @@ BINGO_SQUARES: Tuple[BingoSquare, ...] = (
     BingoSquare('F-H02', 125, 'H', 'Defeat a boss without gaining Block', 'Bingo: Defeat a boss without gaining Block', ('Ironclad', 'Necrobinder'), None),
     BingoSquare('F-H03', 126, 'H', "Deal 50% of a boss's Max HP in one turn", "Bingo: Deal 50% of a boss's Max HP in one turn", ('Ironclad', 'Defect', 'Regent', 'Fool'), None),
     BingoSquare('I-E01', 127, 'E', 'Have relics of 3 different rarities (not Starter)', 'Bingo: Have relics of 3 different rarities (not Starter)', None, None),
-    BingoSquare('I-E02', 128, 'E', 'Buy the on-sale card', 'Bingo: Buy the on-sale card', None, None),
+    BingoSquare('I-E02', 128, 'E', 'Buy the on-sale card', 'Bingo: Buy the on-sale card', None, 'shop:character_cards'),
     BingoSquare('I-E06', 129, 'E', 'Smith twice in one act', 'Bingo: Smith twice in one act', None, None),
     BingoSquare('I-E07', 130, 'E', 'Rest while at full HP', 'Bingo: Rest while at full HP', None, None),
     BingoSquare('I-E08', 131, 'E', 'Smith at 25% HP or less', 'Bingo: Smith at 25% HP or less', None, None),
     BingoSquare('I-M01', 132, 'M', 'Have relics of 4 different rarities', 'Bingo: Have relics of 4 different rarities', None, None),
-    BingoSquare('I-M04', 133, 'M', 'Remove 3 cards at shops in one run', 'Bingo: Remove 3 cards at shops in one run', None, None),
-    BingoSquare('I-M05', 134, 'M', 'Buy every potion in one shop', 'Bingo: Buy every potion in one shop', None, None),
+    BingoSquare('I-M04', 133, 'M', 'Remove 3 cards at shops in one run', 'Bingo: Remove 3 cards at shops in one run', None, 'shop:removal'),
+    BingoSquare('I-M05', 134, 'M', 'Buy every potion in one shop', 'Bingo: Buy every potion in one shop', None, 'shop:all_potions'),
     BingoSquare('I-M09', 135, 'M', 'Defeat a boss with every potion slot full', 'Bingo: Defeat a boss with every potion slot full', None, None),
     BingoSquare('I-M10', 136, 'M', 'Smith 5 times in one run', 'Bingo: Smith 5 times in one run', None, None),
     BingoSquare('I-M12', 137, 'M', 'Transform 2 cards in one run', 'Bingo: Transform 2 cards in one run', None, None),
