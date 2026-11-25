@@ -54,6 +54,19 @@ internal static class FightCredit
     public static Player? Me(ICombatState combatState) => LocalContext.GetMe(combatState);
 
     /// <summary>
+    /// Completes a square for the credited player. When no player could be traced, single-player
+    /// credits this client's player (nobody else could have done it); multiplayer gives no credit
+    /// rather than handing the square to every client.
+    /// </summary>
+    public static void CompleteOrSoloFallback(string key, Player? credit, ICombatState combatState)
+    {
+        if (credit != null)
+            BingoSquares.Complete(key, credit);
+        else if (combatState.Players.Count <= 1)
+            BingoSquares.Complete(key, null);
+    }
+
+    /// <summary>
     /// A boss is a primary enemy in a boss encounter, so minions such as the Kin followers
     /// don't count. Two-part bosses (Kaiser Crab) count each part as a boss.
     /// </summary>

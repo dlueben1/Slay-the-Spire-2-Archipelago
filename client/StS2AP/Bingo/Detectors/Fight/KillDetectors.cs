@@ -33,8 +33,15 @@ internal static class KillLog
 
     private static readonly HashSet<Creature> Doomed = new(ReferenceEqualityComparer.Instance);
 
+    /// <summary>
+    /// The player credited with the enemy death being resolved, or null when nobody killed it.
+    /// Effects that react to a death from its hook (Ravenous) read it.
+    /// </summary>
+    public static Player? LatestDeathKiller { get; private set; }
+
     public static void Reset()
     {
+        LatestDeathKiller = null;
         PendingDamageKills.Clear();
         Doomed.Clear();
     }
@@ -56,12 +63,14 @@ internal static class KillLog
     {
         bool damageKilled = PendingDamageKills.Remove(creature, out PendingDamageKill? pending);
         bool doomed = Doomed.Remove(creature);
+        EnemyKill? kill = null;
         if (damageKilled)
-            return pending!.Killer is { } killer ? new EnemyKill(killer, pending.Card, pending.Hit) : null;
+            kill = pending!.Killer is { } killer ? new EnemyKill(killer, pending.Card, pending.Hit) : null;
         // Doom kills count for every player in the combat (user ruling): credit this client's player.
-        if (doomed && FightCredit.Me(combatState) is { } me)
-            return new EnemyKill(me, null, null);
-        return null;
+        else if (doomed && FightCredit.Me(combatState) is { } me)
+            kill = new EnemyKill(me, null, null);
+        LatestDeathKiller = kill?.Killer;
+        return kill;
     }
 
     /// <summary>Forgets a death that was prevented (the enemy revives or changes phase).</summary>

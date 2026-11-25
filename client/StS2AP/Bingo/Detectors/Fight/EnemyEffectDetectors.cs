@@ -4,6 +4,7 @@ using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Monsters;
 using MegaCrit.Sts2.Core.Models.Powers;
 
 namespace StS2AP.Bingo.Detectors.Fight;
@@ -24,7 +25,9 @@ internal static class EnemyEffectDetectors
     /// and the powers that break a mechanic (waking Lagavulin, breaking Burrowed, Slumber,
     /// Shriek, Plow, Flutter, an attack fully blocked against Imbalanced, Ravenous). None of
     /// them says who caused it, so the credit goes to the player who last hit, targeted or
-    /// blocked that enemy, else to the player whose action is resolving.
+    /// blocked that enemy, else to the player whose action is resolving. Ravenous stuns a
+    /// Corpse Slug when another enemy dies, from that death's hook: its credit goes to the
+    /// player who made that kill.
     /// </summary>
     [HarmonyPatch(typeof(CreatureCmd), nameof(CreatureCmd.Stun),
         new[] { typeof(Creature), typeof(Func<IReadOnlyList<Creature>, Task>), typeof(string) })]
@@ -37,11 +40,12 @@ internal static class EnemyEffectDetectors
                 return;
             FightCredit.Guard("stun", () =>
             {
-                var credit = FightLog.LastPlayerToEngage.GetValueOrDefault(creature)
-                             ?? FightCredit.ActingPlayer(creature.CombatState);
-                // A stun with no traceable player still came from this fight's players; credit
-                // this client's player rather than lose it.
-                BingoSquares.Complete(StunKey, credit);
+                // RavenousPower sets IsRavenous just before it stuns the slug.
+                var credit = creature.Monster is CorpseSlug { IsRavenous: true }
+                    ? KillLog.LatestDeathKiller
+                    : FightLog.LastPlayerToEngage.GetValueOrDefault(creature)
+                      ?? FightCredit.ActingPlayer(creature.CombatState);
+                FightCredit.CompleteOrSoloFallback(StunKey, credit, creature.CombatState);
             });
         }
     }
@@ -90,7 +94,7 @@ internal static class EnemyEffectDetectors
                 if (applier is { Side: CombatSide.Enemy })
                     return;
                 var credit = FightCredit.PlayerOf(applier) ?? FightCredit.ActingPlayer(combatState);
-                BingoSquares.Complete(StripArtifactKey, credit);
+                FightCredit.CompleteOrSoloFallback(StripArtifactKey, credit, combatState);
             });
         }
     }
