@@ -19,7 +19,8 @@ from rule_builder.options import OptionFilter
 from rule_builder.rules import Rule, True_, Has, HasFromListUnique
 from .characters import CharacterConfig, character_registry
 from .items import ItemType
-from .options import CampfireSanity, ShopSanity, GoldSanity, ShopRemoveSlots
+from .bingo import set_bingo_rules
+from .options import CampfireSanity, ShopSanity, GoldSanity, ShopRemoveSlots, Goal
 from worlds.AutoWorld import LogicMixin
 
 if TYPE_CHECKING:
@@ -166,6 +167,9 @@ class LegacyNumberOfProgressiveAncients(FieldResolver, game="Slay the Spire II")
 def set_rules(world: 'SlayTheSpire2World') -> None:
     for config in world.characters:
         _set_rules(world, config)
+    if world.options.goal == Goal.option_bingo:
+        set_bingo_rules(world)
+        return
 
     num_goals = len(world.characters) if world.options.num_chars_goal.value == 0 else world.options.num_chars_goal.value
     assert num_goals > 0

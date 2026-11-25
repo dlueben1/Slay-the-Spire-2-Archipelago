@@ -61,6 +61,32 @@ class GoalNumChar(Range):
     range_end = MAX_ROSTER_SIZE
     default = 0
 
+class Goal(Choice):
+    """What you need to do to goal.
+    characters: win runs with Number of Characters to Goal characters.
+    bingo: complete lines on a bingo board of challenges instead of winning with characters. The
+    board only has challenges your characters and settings allow."""
+    display_name = "Goal"
+    option_characters = 0
+    option_bingo = 1
+    default = 0
+
+class BingoSize(Range):
+    """Squares per side of the bingo board, from 3 (9 squares) to 6 (36 squares). Every square is a
+    check. Only used with the bingo goal."""
+    display_name = "Bingo Board Size"
+    range_start = 3
+    range_end = 6
+    default = 5
+
+class BingoLines(Range):
+    """How many complete lines (rows, columns or diagonals) you need to goal with bingo. A board has
+    2 x size + 2 lines; a larger number is lowered to that. Only used with the bingo goal."""
+    display_name = "Bingo Lines Needed"
+    range_start = 1
+    range_end = 14
+    default = 2
+
 class PickNumberCharacters(Range):
     """Randomly select this many of the configured characters to generate for.
     0, or a number at least as large as the configured list, uses every configured character.
@@ -1113,6 +1139,9 @@ class Spire2Options(PerGameCommonOptions):
     modded_characters: ModdedCharacters
     pick_num_characters: PickNumberCharacters
     num_chars_goal: GoalNumChar
+    goal: Goal
+    bingo_size: BingoSize
+    bingo_lines: BingoLines
     lock_characters: LockCharacters
     unlocked_character: UnlockedCharacter
     # final_act: FinalAct

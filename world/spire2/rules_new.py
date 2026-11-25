@@ -15,8 +15,9 @@ from .logic_table import (
     SIGHT_BONUS_POWER, SMITH_POWER_BY_TIER,
     PowerCheck, card_reward_strength, card_reward_table, gold_sanity_run_gold, last_elite, normal_run_gold,
 )
+from .bingo import set_bingo_rules
 from .items import SIGHTS
-from .options import AncientRelicLocation
+from .options import AncientRelicLocation, Goal
 
 if TYPE_CHECKING:
     from .options import Spire2Options
@@ -503,6 +504,9 @@ def region_power(offset: int, prefix: str, region: str, seeded: bool) -> Rule:
 def set_rules(world: 'SlayTheSpire2World') -> None:
     for config in world.characters:
         _set_rules(world, config)
+    if world.options.goal == Goal.option_bingo:
+        set_bingo_rules(world)
+        return
     num_goals = world.options.num_chars_goal.value or len(world.characters)
     assert num_goals > 0
     world.set_completion_rule(HasFromListUnique(

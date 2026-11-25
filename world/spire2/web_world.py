@@ -20,7 +20,7 @@ from .options import (
     DexterityFillerWeight, StrengthFillerWeight, PlatingFillerWeight,
     FriendshipFillerWeight, PostCombatCardUpgradeFillerWeight, PostCombatCardRemovalFillerWeight,
     AdditionalCardRewardFillerWeight, BufferFillerWeight, VigorFillerWeight, ThornsFillerWeight, ArtifactFillerWeight,
-    DreadMode, BlitzMerchantChance,
+    DreadMode, BlitzMerchantChance, Goal, BingoSize, BingoLines,
 )
 
 # The info needed for the Archipelago Website, not the actual `apworld`
@@ -41,7 +41,10 @@ class SlayTheSpire2Web(WebWorld):
             Characters,
             ModdedCharacters,
             PickNumberCharacters,
+            Goal,
             GoalNumChar,
+            BingoSize,
+            BingoLines,
             LockCharacters,
             UnlockedCharacter,
             Ascension,

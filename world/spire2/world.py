@@ -12,6 +12,9 @@ from worlds.AutoWorld import World
 from .regions import create_regions
 from .rules import FALLBACK_REASON, is_sparse, select_logic, set_rules
 from . import rules_old
+from .bingo import (BINGO_LOCATION_NAME_TO_ID, bingo_slot_data, create_bingo_region, restore_bingo,
+                    setup_bingo, spoiler_board)
+from .bingo_squares import BingoSquare
 from .logic_table import (COMBAT_GOLD_ITEMS, PATH_RELIC_REWARDS, REGIONS, RELIC_POWER, SMITH_POWER_BY_TIER,
                           card_reward_strength, card_reward_table, card_rewards_needed)
 from .web_world import SlayTheSpire2Web
@@ -23,7 +26,7 @@ from .items import (item_table, chars_to_items, bonus_item_table, ItemType, base
                     item_groups, BONUS_ENCHANTMENT_TIERS, BONUS_ENCHANTMENT_VALUES, BONUS_MAX_HP_LIMIT,
                     normalize_bonus_enchantment, parse_bonus_card_pool, SIGHTS)
 from .locations import location_table, MAX_CARD_REWARDS, loc_ids_to_data, LocationData, LocationType
-from .options import Spire2Options
+from .options import Goal, Spire2Options
 
 COMBAT_GOLD_ITEM_COUNT = COMBAT_GOLD_ITEMS
 ELITE_GOLD_ITEM_COUNT = 7
@@ -119,7 +122,8 @@ class SlayTheSpire2World(World):
 
     ut_can_gen_without_yaml = True
 
-    location_name_to_id = location_table
+    # Every bingo square is registered, so any board's squares have names and IDs on the server.
+    location_name_to_id = location_table | BINGO_LOCATION_NAME_TO_ID
     # No location groups beyond Archipelago's built-in "Everywhere". Act groups had to leave out numbered card
     # rewards, whose act depends on options, yet they still made up most of the data package.
 
@@ -136,6 +140,8 @@ class SlayTheSpire2World(World):
         self.total_shop_items: int = 0
         self.effective_logic = "new"
         self.logic_fallback_reason = None
+        # Row-major; empty unless the goal is bingo.
+        self.bingo_board: List[BingoSquare] = []
 
     def generate_early(self) -> None:
         if hasattr(self.multiworld, 're_gen_passthrough'):
@@ -186,6 +192,9 @@ class SlayTheSpire2World(World):
         num_chars_goal = self.options.num_chars_goal.value
         if num_chars_goal > len(self.characters):
             self.options.num_chars_goal.value = 0
+        if self.options.goal == Goal.option_bingo:
+            # After the roster and Shop Sanity are final: both decide which squares can be dealt.
+            setup_bingo(self)
         if not self.options.include_floor_checks:
             # Give sparse starts enough support to open Mid Act 1.
             # Mixing cards and relics meets the power/card floor within the available checks;
@@ -431,6 +440,8 @@ class SlayTheSpire2World(World):
 
     def create_regions(self) -> None:
         create_regions(self, self.player)
+        if self.bingo_board:
+            create_bingo_region(self, self.get_region(self.origin_region_name))
         # Region creation already follows character/act/stage order, including shop branches.
         self._ut_region_order = {region.name: index for index, region in enumerate(self.get_regions())}
 
@@ -685,6 +696,9 @@ class SlayTheSpire2World(World):
             for _ in range(filler_count - consumed_slots):
                 pool.append(self.create_item(self.get_filler_item(character=config.name)))
 
+        # Bingo squares are excluded locations, so each gets filler.
+        pool.extend(self.create_item(self.get_filler_item()) for _ in self.bingo_board)
+
         self.multiworld.itempool += pool
         self.shuffle_bonus_items()
 
@@ -739,6 +753,8 @@ class SlayTheSpire2World(World):
         spoiler_handle.write(f"Effective logic: {self.effective_logic}\n")
         if self.logic_fallback_reason:
             spoiler_handle.write(f"Logic fallback: {self.logic_fallback_reason}\n")
+        if self.bingo_board:
+            spoiler_handle.write("\n".join(spoiler_board(self)) + "\n")
 
     def set_rules(self) -> None:
         set_rules(self)
@@ -777,7 +793,10 @@ class SlayTheSpire2World(World):
             "mod_compat_version": self.world_version.as_simple_string(),
             "CompatFlag": self.compat_flag,
             "required_game_features": self.required_game_features(),
+            "goal": self.options.goal.value,
         }
+        if self.options.goal == Goal.option_bingo:
+            slot_data["bingo"] = bingo_slot_data(self)
         slot_data.update(self.options.as_dict(
             "lock_characters",
             "seeded",
@@ -936,6 +955,10 @@ class SlayTheSpire2World(World):
         self.options.gold_sanity.value = slot_data['gold_sanity']
         self.options.potion_sanity.value = slot_data['potion_sanity']
         self.options.num_chars_goal.value = slot_data['num_chars_goal']
+        # Seeds from before the bingo goal have no goal key.
+        self.options.goal.value = slot_data.get('goal', Goal.option_characters)
+        if self.options.goal == Goal.option_bingo:
+            restore_bingo(self, slot_data['bingo'])
         if self.effective_logic == 'old':
             rules_old.restore_tracker_scoring(self)
         self.modded_num = len(self.modded_chars)
