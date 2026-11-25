@@ -127,7 +127,7 @@ internal static class NecrobinderSquares
         }
     }
 
-    // C-NE-E3: plays of the Soul card.
+    // C-NE-E3: plays of the Soul card. A replayed card counts once.
     [HarmonyPatch(typeof(Hook), nameof(Hook.AfterCardPlayed))]
     private static class CardPlayed
     {
@@ -140,7 +140,8 @@ internal static class NecrobinderSquares
             CharacterSquares.Guard($"{nameof(NecrobinderSquares)}.{nameof(CardPlayed)}", () =>
             {
                 Player player = cardPlay.Player;
-                if (cardPlay.Card is Soul
+                if (cardPlay.IsFirstInSeries
+                    && cardPlay.Card is Soul
                     && CharacterSquares.Plays<Necrobinder>(player)
                     && SoulsPlayedThisCombat.Add(player) >= 3)
                     BingoSquares.Complete(PlayThreeSouls, player);

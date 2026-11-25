@@ -25,8 +25,8 @@ internal static class SilentSquares
 
     // C-SI-E1: Poison ticks deal Unblockable, Unpowered damage with no dealer and no card source
     // (PoisonPower.Trigger), and the Poison power is still on its owner when the killing hit is
-    // reported. The kill is credited to whoever applied the Poison; when the game has no applier
-    // it goes to this client's player.
+    // reported. Like Doom kills, a Poison kill counts for every player: one PoisonPower holds
+    // everyone's stacks and its Applier is only whoever created it, so it can't name the killer.
     [HarmonyPatch(typeof(Hook), nameof(Hook.AfterDamageGiven))]
     private static class DamageGiven
     {
@@ -46,14 +46,7 @@ internal static class SilentSquares
                     || (props & PoisonTickProps) != PoisonTickProps)
                     return;
 
-                PoisonPower? poison = target.GetPower<PoisonPower>();
-                if (poison == null)
-                    return;
-
-                Player? poisoner = CharacterSquares.PlayerBehind(poison.Applier);
-                if (poisoner != null)
-                    CharacterSquares.Complete<Silent>(KillWithPoison, poisoner);
-                else
+                if (target.HasPower<PoisonPower>())
                     CharacterSquares.CompleteForLocalPlayer<Silent>(KillWithPoison, combatState);
             });
         }
