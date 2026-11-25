@@ -28,6 +28,8 @@ public sealed class ArchipelagoRewardsTopBarHandler : IModTopBarButtonHandler
     private Tween? _openTween;
     private bool _wasOpen;
 
+    private readonly ApTopBarHotkeyBadge _hotkeyBadge = new();
+
     public void OnClick(ModTopBarButtonContext ctx)
     {
         LogUtility.Info("Toggling Archipelago Rewards UI...");
@@ -44,6 +46,7 @@ public sealed class ArchipelagoRewardsTopBarHandler : IModTopBarButtonHandler
             UpdateOpenTween(ctx.Button, ArchipelagoRewardUI.IsOpen);
             // A singleplayer run continues while AP reconnects; the dimmed icon shows it is offline.
             ctx.Button.Modulate = ArchipelagoClient.IsConnected ? Colors.White : OfflineModulate;
+            _hotkeyBadge.Update(ctx.Button);
         }
         return visible;
     }
