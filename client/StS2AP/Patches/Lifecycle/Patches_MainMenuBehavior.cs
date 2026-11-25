@@ -879,23 +879,6 @@ namespace StS2AP.Patches
         #region Character Select Patches
 
         /// <summary>
-        /// Hides the Back Button from the Character Select Screen.
-        /// </summary>
-        [HarmonyPatch(typeof(NCharacterSelectScreen))]
-        public static class NCharacterSelectScreenPatches
-        {
-            [HarmonyPatch(nameof(NCharacterSelectScreen._Ready))]
-            [HarmonyPostfix]
-            private static void HideBackButtonOnCharSelectScreen(NCharacterSelectScreen __instance)
-            {
-                if (MultiplayerSupport.PendingDestination == ApPlayDestination.Multiplayer)
-                    return;
-
-                __instance.GetNode<NBackButton>("BackButton").Visible = false;
-            }
-        }
-
-        /// <summary>
         /// Ensures the player backs out to the main menu, and thus hides the
         /// connection UI, when they press the back button from the character
         /// select screen.
