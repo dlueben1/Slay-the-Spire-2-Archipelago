@@ -146,7 +146,7 @@ internal static class DeckDetectors
     {
         [HarmonyPrefix]
         private static void Prefix(CardModel card) =>
-            EconomyDetector.Run(nameof(AfterCardChangedPiles), () =>
+            EconomyDetector.Run(nameof(AfterCardChangedPiles), card, static card =>
             {
                 // The hook also fires for every draw and discard in combat; only the deck matters.
                 Player? owner = card._owner;
@@ -168,15 +168,15 @@ internal static class DeckDetectors
     {
         [HarmonyPostfix]
         private static void Postfix(CardModel __instance) =>
-            EconomyDetector.Run(nameof(AfterUpgradeFinalized), () =>
+            EconomyDetector.Run(nameof(AfterUpgradeFinalized), __instance, static card =>
             {
-                Player? owner = __instance._owner;
+                Player? owner = card._owner;
                 if (owner == null || !LocalContext.IsMe(owner))
                     return;
-                CardPile? pile = __instance.Pile;
+                CardPile? pile = card.Pile;
                 if (pile == null)
                     return;
-                CheckUpgradeLevel(owner, __instance.CurrentUpgradeLevel);
+                CheckUpgradeLevel(owner, card.CurrentUpgradeLevel);
                 if (pile.Type == PileType.Deck)
                     CheckDeck(owner);
             });

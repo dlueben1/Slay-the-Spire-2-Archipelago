@@ -83,7 +83,7 @@ internal static class GoldDetectors
     {
         [HarmonyPrefix]
         private static void Prefix(Player player) =>
-            EconomyDetector.Run(nameof(AfterGoldGained), () =>
+            EconomyDetector.Run(nameof(AfterGoldGained), player, static player =>
             {
                 if (LocalContext.IsMe(player))
                     CheckGoldHeld(player);
@@ -99,8 +99,9 @@ internal static class GoldDetectors
     {
         [HarmonyPostfix]
         private static void Postfix(Player player, GoldLossType goldLossType) =>
-            EconomyDetector.Run(nameof(AfterGoldLost), () =>
+            EconomyDetector.Run(nameof(AfterGoldLost), (player, goldLossType), static args =>
             {
+                (Player player, GoldLossType goldLossType) = args;
                 if (goldLossType != GoldLossType.Spent || !LocalContext.IsMe(player))
                     return;
                 CheckGoldSpentInRun(player);

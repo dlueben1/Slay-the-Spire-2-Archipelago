@@ -12,8 +12,9 @@ namespace StS2AP.Bingo.Detectors.Economy;
 /// <summary>Relics held and potion slots filled.</summary>
 internal static class RelicAndPotionDetectors
 {
-    // E19, M14, H08 "Have N relics": every relic in the relic bar. AP relics count (user ruling),
-    // and so do Boon relics; only Relic Coupons, the AP counter that sits in the bar, is left out.
+    // E19, M14, H08 "Have N relics": game relics in the relic bar, including game relics received
+    // as AP items (user ruling). Relics this mod defines are left out: Relic Coupons, Boon relics
+    // and Sight bonus relics are added on their own at run start (the same rule as H20).
     private static readonly (string Key, int Relics)[] RelicCountSquares =
     {
         ("E19", 6),
@@ -22,9 +23,7 @@ internal static class RelicAndPotionDetectors
     };
 
     // I-E01 "Have relics of 3 different rarities (not Starter)" and I-M01 "Have relics of 4
-    // different rarities": the relics' own rarities. Boon relics, Sight bonus relics and Relic
-    // Coupons have rarity None, which is no rarity, and AP's shop-check stand-ins (shown as Shop
-    // relics) are never real relics.
+    // different rarities": the rarities of those same game relics, never None.
     private const string ThreeRaritiesSquare = "I-E01";
     private const string FourRaritiesSquare = "I-M01";
 
@@ -34,7 +33,7 @@ internal static class RelicAndPotionDetectors
     public static void CheckRelics(Player player)
     {
         List<RelicModel> relics = player.Relics
-            .Where(relic => relic is not RelicCoupons and not ApItemRelicModel)
+            .Where(relic => !IsDefinedByThisMod(relic))
             .ToList();
         foreach ((string key, int count) in RelicCountSquares)
             EconomyDetector.CompleteIf(key, relics.Count >= count, player);
@@ -47,6 +46,9 @@ internal static class RelicAndPotionDetectors
         rarities.Remove(RelicRarity.Starter);
         EconomyDetector.CompleteIf(ThreeRaritiesSquare, rarities.Count >= 3, player);
     }
+
+    private static bool IsDefinedByThisMod(RelicModel relic) =>
+        relic.GetType().Assembly == typeof(RelicAndPotionDetectors).Assembly;
 
     public static void CheckPotionSlots(Player player)
     {
@@ -65,7 +67,7 @@ internal static class RelicAndPotionDetectors
     {
         [HarmonyPostfix]
         private static void Postfix(Player player) =>
-            EconomyDetector.Run(nameof(AfterRelicObtained), () =>
+            EconomyDetector.Run(nameof(AfterRelicObtained), player, static player =>
             {
                 if (LocalContext.IsMe(player))
                     CheckRelics(player);
@@ -77,7 +79,7 @@ internal static class RelicAndPotionDetectors
     {
         [HarmonyPrefix]
         private static void Prefix(IRunState runState) =>
-            EconomyDetector.Run(nameof(AfterPotionProcured), () =>
+            EconomyDetector.Run(nameof(AfterPotionProcured), runState, static runState =>
             {
                 if (EconomyDetector.LocalPlayer(runState) is { } me)
                     CheckPotionSlots(me);

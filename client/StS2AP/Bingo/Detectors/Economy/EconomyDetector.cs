@@ -11,14 +11,18 @@ namespace StS2AP.Bingo.Detectors.Economy;
 /// </summary>
 internal static class EconomyDetector
 {
-    /// <summary>Runs a detector body when bingo is active, logging any exception.</summary>
-    public static void Run(string detector, Action body)
+    /// <summary>
+    /// Runs a detector body when bingo is active, logging any exception. Callers pass a static
+    /// lambda and its arguments as <paramref name="state"/>, so hooks that fire constantly (every
+    /// card moved, every upgrade) allocate nothing, whether or not bingo is active.
+    /// </summary>
+    public static void Run<TState>(string detector, TState state, Action<TState> body)
     {
         if (!BingoSquares.IsActive)
             return;
         try
         {
-            body();
+            body(state);
         }
         catch (Exception ex)
         {
