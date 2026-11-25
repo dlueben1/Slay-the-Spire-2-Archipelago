@@ -53,9 +53,13 @@ internal static class RunVictoryDetectors
         // H18: no shop room entered all run (a ? that became a shop counts as a shop).
         RunSquare.CompleteIf("H18", me, () => RunHistory.CountRooms(run, RoomType.Shop) == 0);
 
-        // H19: no two cards in the deck share a card ID; upgraded copies are the same card, and
-        // the starter Strikes and Defends count like any other card.
-        RunSquare.CompleteIf("H19", me, () => deck.Select(card => card.Id).Distinct().Count() == deck.Count);
+        // H19: the game's Highlander badge rule. Basic cards (the starter Strikes and Defends)
+        // are ignored; no two other cards share a card ID, and upgraded copies are the same card.
+        RunSquare.CompleteIf("H19", me, () =>
+        {
+            List<CardModel> nonBasic = deck.Where(card => card.Rarity != CardRarity.Basic).ToList();
+            return nonBasic.Select(card => card.Id).Distinct().Count() == nonBasic.Count;
+        });
 
         // H20: three or fewer relics. Relics this mod defines are AP's own indicators that every
         // AP run carries (Relic Coupons, Boons, Sight bonuses) and would make the square
