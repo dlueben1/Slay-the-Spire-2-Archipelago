@@ -101,11 +101,17 @@ public static class ModSettingsRegistration
         );
     }
 
-    /// <summary>Opens or closes the AP Loot menu; does nothing outside a run.</summary>
+    /// <summary>
+    /// Opens or closes the AP Loot menu in a run. Outside a run, on Character Select, it opens or
+    /// closes the bingo board instead.
+    /// </summary>
     internal static void ToggleApLootMenu()
     {
         if (!GameUtility.IsInRun)
+        {
+            ArchipelagoGoalTrackerUI.ToggleBingoBoard();
             return;
+        }
 
         ArchipelagoRewardUI.Toggle();
     }

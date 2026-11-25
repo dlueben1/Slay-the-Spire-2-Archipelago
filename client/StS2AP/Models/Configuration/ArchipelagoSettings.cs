@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using StS2AP.Bingo;
 using StS2AP.Utils;
 
 namespace StS2AP.Models
@@ -35,6 +36,15 @@ namespace StS2AP.Models
 
         public int NumCharsGoal { get; set; }
         public int TotalCharacters { get; set; }
+
+        /// <summary>
+        /// The slot's goal. Older APWorlds send none, and their slots use the characters goal.
+        /// With <see cref="SlotGoal.Bingo"/>, <see cref="NumCharsGoal"/> is ignored.
+        /// </summary>
+        public SlotGoal Goal { get; set; } = SlotGoal.Characters;
+
+        /// <summary>The bingo board, present only when <see cref="Goal"/> is bingo.</summary>
+        public BingoBoard? Bingo { get; set; }
 
         /// <summary>
         /// A collection of characters that are available in the Multiworld (i.e. have checks for this Slot)

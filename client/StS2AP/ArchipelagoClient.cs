@@ -10,6 +10,7 @@ using Godot;
 using MegaCrit.Sts2.Core.Models;
 using Newtonsoft.Json.Linq;
 using System.Text.Json;
+using StS2AP.Bingo;
 using StS2AP.Data;
 using StS2AP.Persistence;
 using StS2AP.Patches;
@@ -476,6 +477,7 @@ namespace StS2AP
             BuffUtility.ResetSlotState();
             NotificationUtility.ClearQueue();
             GameUtility.ResetSlotState();
+            BingoState.ResetSlotState();
             MultiplayerSupport.ForgetApSession();
             LogUtility.Info("[AP Session] Cleared slot caches and receipt indexes");
         }
@@ -1361,6 +1363,10 @@ namespace StS2AP
             _ = GameUtility.RestoreGoaledCharsFromStorage();
             GameUtility.SendVictoryAwaitingReconnect();
 
+            // Squares checked while offline, by other clients on this slot or by !collect can
+            // complete the bingo goal before this client completes another square.
+            BingoState.Evaluate();
+
             _ = ReadRaceModeAsync(session);
 
             // Load the set of already-consumed buff indices from DataStorage before item processing begins.
@@ -1741,6 +1747,7 @@ namespace StS2AP
                 RunForSession(_session, () =>
                 {
                     CheckedLocations.UnionWith(ids);
+                    BingoState.Evaluate();
                     // This SDK event also includes optimistic local checks. Do not use it
                     // to acknowledge durable outbox entries; fresh login still owns that.
                     int previousCampfireCount = Progress.CheckedCampfireLocationIds.Count;
@@ -1856,6 +1863,20 @@ namespace StS2AP
                 );
             if (slotData.ContainsKey("num_chars_goal"))
                 settings.NumCharsGoal = Convert.ToInt32(slotData["num_chars_goal"]);
+            // Older APWorlds omit the goal key; their slots use the characters goal.
+            if (slotData.ContainsKey("goal"))
+            {
+                int goalValue = Convert.ToInt32(slotData["goal"]);
+                if (!Enum.IsDefined(typeof(SlotGoal), goalValue))
+                    throw new InvalidDataException($"The AP slot has an unknown goal {goalValue}.");
+                settings.Goal = (SlotGoal)goalValue;
+            }
+            if (settings.Goal == SlotGoal.Bingo)
+            {
+                settings.Bingo = BingoBoard.Parse(slotData.GetValueOrDefault("bingo"));
+                LogUtility.Info(
+                    $"SLOT - Goal: bingo, {settings.Bingo.Size}x{settings.Bingo.Size} board, {settings.Bingo.Lines} line(s) needed");
+            }
             if (playerCharacters is System.Collections.IList charsList)
             {
                 // Grab the total number of characters
