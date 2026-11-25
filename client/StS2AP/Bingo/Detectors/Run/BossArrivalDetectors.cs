@@ -28,7 +28,7 @@ internal static class BossArrivalDetectors
         private static void Prefix(IRunState runState, AbstractRoom room)
         {
             if (room.RoomType == RoomType.Boss)
-                RunSquare.Detect("boss arrival", () => OnBossReached(runState));
+                RunSquare.Detect("boss arrival", runState, OnBossReached);
         }
     }
 
@@ -78,11 +78,9 @@ internal static class BossArrivalDetectors
         // R-M06: no upgraded card in the deck at the Act 2 boss.
         RunSquare.CompleteIf("R-M06", me, () => deck.All(card => !card.IsUpgraded));
 
-        // R-M07: at most 5 non-Curse cards added to the deck in the run so far.
+        // R-M07: at most 5 non-Curse, non-Basic cards added to the deck in the run so far.
         RunSquare.CompleteIf("R-M07", me, () =>
-            RunHistory.StatsFor(run, me)
-                .SelectMany(stats => stats.CardsGained)
-                .Count(card => RunHistory.TypeOf(card) != CardType.Curse) <= 5);
+            RunHistory.CardsAdded(run, me).Count(card => card.Type != CardType.Curse) <= 5);
 
         // R-M08: no potion used in the run so far (discarding one is not using it).
         RunSquare.CompleteIf("R-M08", me, () =>
@@ -90,9 +88,8 @@ internal static class BossArrivalDetectors
     }
 
     private static IEnumerable<CardType> CardsAddedThisAct(IReadOnlyList<MapPointHistoryEntry> act, Player me) =>
-        RunHistory.StatsFor(act, me)
-            .SelectMany(stats => stats.CardsGained)
-            .Select(RunHistory.TypeOf)
+        RunHistory.CardsAdded(act, me)
+            .Select(card => card.Type)
             .Where(type => type is CardType.Attack or CardType.Skill or CardType.Power);
 
     private static bool AddedOnly(IEnumerable<CardType> added, CardType wanted)

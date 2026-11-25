@@ -30,7 +30,7 @@ internal static class HalfHpWatch
     {
         [HarmonyPrefix]
         private static void Prefix(IRunState runState, Creature creature) =>
-            RunSquare.Detect("half HP watch", () => Observe(runState, creature));
+            RunSquare.Detect("half HP watch", (runState, creature), static args => Observe(args.runState, args.creature));
     }
 
     private static void Observe(IRunState runState, Creature creature)

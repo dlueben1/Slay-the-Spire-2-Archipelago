@@ -1,11 +1,11 @@
 using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Runs.History;
 using MegaCrit.Sts2.Core.Saves;
-using MegaCrit.Sts2.Core.Saves.Runs;
 using StS2AP.Models;
 using StS2AP.Multiplayer;
 using StS2AP.Persistence;
@@ -53,9 +53,18 @@ internal static class RunHistory
     public static int CountRestChoices(IEnumerable<MapPointHistoryEntry> entries, Player player, string optionId) =>
         StatsFor(entries, player).Sum(stats => stats.RestSiteChoices.Count(choice => choice == optionId));
 
-    /// <summary>The type of a card recorded in the history (cards gained are saved by ID).</summary>
-    public static CardType TypeOf(SerializableCard card) =>
-        card.Id == null ? CardType.None : SaveUtil.CardOrDeprecated(card.Id).Type;
+    /// <summary>
+    /// Cards the player chose to add to the deck at these map points, as their canonical
+    /// models (the history saves cards by ID). Basic cards are left out: none is ever a pick,
+    /// and the history also records the starter card the mod re-adds when a Progressive
+    /// Starter Card item arrives.
+    /// </summary>
+    public static IEnumerable<CardModel> CardsAdded(IEnumerable<MapPointHistoryEntry> entries, Player player) =>
+        StatsFor(entries, player)
+            .SelectMany(stats => stats.CardsGained)
+            .Where(card => card.Id != null)
+            .Select(card => SaveUtil.CardOrDeprecated(card.Id!))
+            .Where(card => card.Rarity != CardRarity.Basic);
 }
 
 /// <summary>Rest site option IDs as the history records them.</summary>
@@ -124,15 +133,17 @@ internal static class RunSquare
 
     /// <summary>
     /// Runs a detector from a game hook. Detectors only read game state; an exception in one
-    /// must never break the hook it watches, so it is logged and swallowed.
+    /// must never break the hook it watches, so it is logged and swallowed. The hook's
+    /// arguments come in as <paramref name="state"/> so callers pass a static lambda: a hook
+    /// that fires often allocates nothing while bingo is off.
     /// </summary>
-    public static void Detect(string detector, Action detect)
+    public static void Detect<TState>(string detector, TState state, Action<TState> detect)
     {
         if (!BingoSquares.IsActive)
             return;
         try
         {
-            detect();
+            detect(state);
         }
         catch (Exception ex)
         {
