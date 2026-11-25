@@ -9,8 +9,9 @@ namespace StS2AP.UI;
 /// <summary>
 /// The bingo board overlay: the slot's squares in a size-by-size grid, done squares marked and
 /// squares on a full line edged in gold, with how many lines the goal needs. Opened from the goal
-/// tracker on Character Select (its Board button or the AP menu hotkey) and closed with Back,
-/// a click outside the board, the Close button or the hotkey again.
+/// tracker on Character Select (its Board button or the AP menu hotkey) or from the Bingo board
+/// row of the in-run AP menu, and closed with Back, a click outside the board, the Close button
+/// or the hotkey again. It only reads the board, so it is safe over a run.
 /// </summary>
 internal sealed partial class BingoBoardUI : Control
 {
@@ -31,13 +32,17 @@ internal sealed partial class BingoBoardUI : Control
     private Button _close = null!;
     private readonly List<(BingoSquareInfo Square, PanelContainer Cell, Label Mark, MegaLabel Text)> _cells = new();
 
-    internal static bool IsOpen => _open != null && IsInstanceValid(_open) && _open.IsInsideTree();
+    private const string RewardMenuButtonName = "ApBingoBoardButton";
+
+    // The overlay layer joins the tree a frame later, so "open" means created and not yet freed.
+    internal static bool IsOpen => _open != null && IsInstanceValid(_open) && !_open.IsQueuedForDeletion();
 
     /// <summary>
     /// Shows the board over everything. It also closes when <paramref name="owner"/>, the screen it
-    /// was opened from, leaves the tree.
+    /// was opened from, leaves the tree. <paramref name="returnFocus"/> gets the focus back when the
+    /// board closes, so controller and keyboard players land where they opened it.
     /// </summary>
-    internal static void Open(Node owner)
+    internal static void Open(Node owner, Control? returnFocus = null)
     {
         if (BingoState.Board is not { } board || IsOpen)
             return;
@@ -45,8 +50,40 @@ internal sealed partial class BingoBoardUI : Control
         var overlay = new BingoBoardUI { Name = "ApBingoBoard", _board = board };
         overlay.Build();
         _open = overlay;
+        if (returnFocus != null)
+        {
+            overlay.TreeExiting += () => Callable.From(() =>
+            {
+                if (IsInstanceValid(returnFocus) && returnFocus.IsVisibleInTree())
+                    returnFocus.GrabFocus();
+            }).CallDeferred();
+        }
         ApOverlayLayer.Show(overlay, owner, Close);
     }
+
+    /// <summary>
+    /// Adds a "Bingo board" row at the top of the in-run AP menu's reward list on bingo slots. The
+    /// AP menu's focus graph takes every child of the list, so the row is reachable with a
+    /// controller or the keyboard like the rewards below it.
+    /// </summary>
+    internal static void AddRewardMenuButton(Control screen, Control rewardsContainer)
+    {
+        if (!BingoState.IsActive || rewardsContainer.GetNodeOrNull(RewardMenuButtonName) != null)
+            return;
+
+        Button button = ActionButton("Bingo board");
+        button.Name = RewardMenuButtonName;
+        button.CustomMinimumSize = new Vector2(360f, 56f);
+        button.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        button.TooltipText = "Show this slot's bingo board.";
+        button.Pressed += () => Open(screen, button);
+        rewardsContainer.AddChild(button);
+        rewardsContainer.MoveChild(button, 0);
+    }
+
+    /// <summary>The AP menu's bingo row, if this screen has one.</summary>
+    internal static Control? FindRewardMenuButton(Control rewardsContainer) =>
+        rewardsContainer.GetNodeOrNull<Control>(RewardMenuButtonName);
 
     internal static void Toggle(Node owner)
     {

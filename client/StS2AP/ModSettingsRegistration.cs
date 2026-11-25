@@ -112,6 +112,12 @@ public static class ModSettingsRegistration
             ArchipelagoGoalTrackerUI.ToggleBingoBoard();
             return;
         }
+        // In a run the board opens from the AP menu; the hotkey closes it back to that menu.
+        if (BingoBoardUI.IsOpen)
+        {
+            BingoBoardUI.Close();
+            return;
+        }
 
         ArchipelagoRewardUI.Toggle();
     }

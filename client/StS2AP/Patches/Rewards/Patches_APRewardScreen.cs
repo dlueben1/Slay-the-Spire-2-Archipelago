@@ -74,7 +74,10 @@ namespace StS2AP.Patches
             if (!ArchipelagoRewardUI.IsApRewardSet(____rewardsSet))
                 return;
             if (__instance.GetNodeOrNull<BoxContainer>("%RewardsContainer") is { } container)
+            {
                 container.AddThemeConstantOverride("separation", 10);
+                BingoBoardUI.AddRewardMenuButton(__instance, container);
+            }
         }
     }
 
@@ -252,6 +255,20 @@ namespace StS2AP.Patches
         }
 
         internal static Control ResolvePreferredFocus(NRewardsScreen screen, Control nativeFocus)
+        {
+            Control focus = ResolveLinkedFocus(screen, nativeFocus);
+            // An empty AP menu points focus at its reward list, which then has nothing to give it
+            // to; the bingo row, when there is one, is the only control left.
+            if (screen.GetNodeOrNull<Control>("%RewardsContainer") is { } container
+                && ReferenceEquals(focus, container)
+                && BingoBoardUI.FindRewardMenuButton(container) is { } bingoButton)
+            {
+                return bingoButton;
+            }
+            return focus;
+        }
+
+        private static Control ResolveLinkedFocus(NRewardsScreen screen, Control nativeFocus)
         {
             FocusState state = States.GetOrCreateValue(screen);
             if (state.LastLinkedChild?.TryGetTarget(out Control? previous) == true
