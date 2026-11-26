@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <Sts2MainApiCompat>0.111.1</Sts2MainApiCompat>
-    <Sts2BetaApiCompat>0.113.1</Sts2BetaApiCompat>
+    <Sts2BetaApiCompat>0.114.0</Sts2BetaApiCompat>
     <!--
       Other game versions that get a build of their own, separated by semicolons. A version the
       main branch is expected to move to belongs here, so that a released mod keeps working when

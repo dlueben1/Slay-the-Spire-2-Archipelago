@@ -11,7 +11,7 @@ Archipelago Client & APWorld for STS2
 > Beta branch updates can temporarily break compatibility until the mod is updated.
 >
 > The client contains exact builds for the main branch **v0.111.1** and beta branch
-> **v0.113.1** game versions.
+> **v0.114.0** game versions.
 
 ## 1.0 Development onwards
 
@@ -42,7 +42,7 @@ Ensure that you have [RitsuLib](https://steamcommunity.com/sharedfiles/filedetai
 5. Put `Archipelago.zip` in `mods`, then extract it into the archive program's default `Archipelago` directory
 
 - If you've done this step correctly, `mods/Archipelago/` contains the loader DLL,
-  common dependencies, the PCK, and `lib/0.111.1/` and `lib/0.113.1/`. Keep that
+  common dependencies, the PCK, and `lib/0.111.1/` and `lib/0.114.0/`. Keep that
   directory structure intact.
 - The bundled `spire2.apworld` matches this mod version. Hosts can install it through the Archipelago Launcher's **Install APWorld**; see Archipelago's guide to [playing with custom worlds](https://archipelago.gg/tutorial/Archipelago/setup/en#playing-with-custom-worlds).
 

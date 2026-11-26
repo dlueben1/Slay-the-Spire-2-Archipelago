@@ -56,7 +56,8 @@ public static class ArchipelagoRewardUI
     private static RewardsSet? _set;
     private static bool _opening;
     private static bool _closing;
-    private static bool _hotkeysRegistered;
+    // The reward screen the hotkeys were bound to; null while none are.
+    private static NRewardsScreen? _hotkeyOwner;
     private static ReturnDestination _returnDestination;
 
     public static Action? OnScreenClosed;
@@ -465,24 +466,30 @@ public static class ArchipelagoRewardUI
 
     private static void RegisterHotkeys()
     {
-        if (_hotkeysRegistered || NHotkeyManager.Instance == null)
+        var hotkeys = NHotkeyManager.Instance;
+        if (_hotkeyOwner != null || hotkeys == null || _screen == null)
             return;
-        NHotkeyManager.Instance.PushHotkeyPressedBinding(MegaInput.cancel, Hide);
-        NHotkeyManager.Instance.PushHotkeyPressedBinding(MegaInput.pauseAndBack, Hide);
-        NHotkeyManager.Instance.PushHotkeyReleasedBinding(MegaInput.viewMap, CloseToMap);
-        NHotkeyManager.Instance.PushHotkeyReleasedBinding(MegaInput.viewDeckAndTabLeft, CloseToDeck);
-        _hotkeysRegistered = true;
+        // The reward screen owns the bindings, so they follow it in and out of view.
+        _hotkeyOwner = _screen;
+        GameApiCompat.PushHotkeyPressedBinding(hotkeys, MegaInput.cancel, _hotkeyOwner, Hide);
+        GameApiCompat.PushHotkeyPressedBinding(hotkeys, MegaInput.pauseAndBack, _hotkeyOwner, Hide);
+        GameApiCompat.PushHotkeyReleasedBinding(hotkeys, MegaInput.viewMap, _hotkeyOwner, CloseToMap);
+        GameApiCompat.PushHotkeyReleasedBinding(hotkeys, MegaInput.viewDeckAndTabLeft, _hotkeyOwner, CloseToDeck);
     }
 
     private static void UnregisterHotkeys()
     {
-        if (!_hotkeysRegistered || NHotkeyManager.Instance == null)
+        var hotkeys = NHotkeyManager.Instance;
+        if (_hotkeyOwner == null)
             return;
-        NHotkeyManager.Instance.RemoveHotkeyPressedBinding(MegaInput.cancel, Hide);
-        NHotkeyManager.Instance.RemoveHotkeyPressedBinding(MegaInput.pauseAndBack, Hide);
-        NHotkeyManager.Instance.RemoveHotkeyReleasedBinding(MegaInput.viewMap, CloseToMap);
-        NHotkeyManager.Instance.RemoveHotkeyReleasedBinding(MegaInput.viewDeckAndTabLeft, CloseToDeck);
-        _hotkeysRegistered = false;
+        if (hotkeys != null)
+        {
+            GameApiCompat.RemoveHotkeyPressedBinding(hotkeys, MegaInput.cancel, _hotkeyOwner, Hide);
+            GameApiCompat.RemoveHotkeyPressedBinding(hotkeys, MegaInput.pauseAndBack, _hotkeyOwner, Hide);
+            GameApiCompat.RemoveHotkeyReleasedBinding(hotkeys, MegaInput.viewMap, _hotkeyOwner, CloseToMap);
+            GameApiCompat.RemoveHotkeyReleasedBinding(hotkeys, MegaInput.viewDeckAndTabLeft, _hotkeyOwner, CloseToDeck);
+        }
+        _hotkeyOwner = null;
     }
 
     private static bool TrySkipOwnedCardPicker()

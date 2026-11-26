@@ -9,6 +9,7 @@ using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Multiplayer.Game.Lobby;
+using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.HoverTips;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Nodes.Screens.GameOverScreen;
@@ -116,6 +117,51 @@ public static class GameApiCompat
 #else
         NHoverTipSet.CreateAndShow(owner, hoverTips, HoverTipAlignment.Center)
             ?.SetGlobalPosition(globalPosition);
+#endif
+    }
+
+    // 0.114.0 gave every hotkey binding an owner node. A binding fires only while its owner is in
+    // the tree, visible, not behind a capstone screen such as the deck view, and inside the newest
+    // blocking screen; removing it needs the same owner. Older versions give each input to the
+    // newest binding, so the owner is unused there.
+
+    /// <summary>Gives a pressed input to <paramref name="action"/> while <paramref name="owner"/> can receive it.</summary>
+    public static void PushHotkeyPressedBinding(NHotkeyManager hotkeys, string input, Node owner, Action action)
+    {
+#if STS2_AT_LEAST_0_114_0
+        hotkeys.PushHotkeyPressedBinding(input, owner, action);
+#else
+        hotkeys.PushHotkeyPressedBinding(input, action);
+#endif
+    }
+
+    /// <summary>Removes a binding added with <see cref="PushHotkeyPressedBinding"/>.</summary>
+    public static void RemoveHotkeyPressedBinding(NHotkeyManager hotkeys, string input, Node owner, Action action)
+    {
+#if STS2_AT_LEAST_0_114_0
+        hotkeys.RemoveHotkeyPressedBinding(input, owner, action);
+#else
+        hotkeys.RemoveHotkeyPressedBinding(input, action);
+#endif
+    }
+
+    /// <summary>Gives a released input to <paramref name="action"/> while <paramref name="owner"/> can receive it.</summary>
+    public static void PushHotkeyReleasedBinding(NHotkeyManager hotkeys, string input, Node owner, Action action)
+    {
+#if STS2_AT_LEAST_0_114_0
+        hotkeys.PushHotkeyReleasedBinding(input, owner, action);
+#else
+        hotkeys.PushHotkeyReleasedBinding(input, action);
+#endif
+    }
+
+    /// <summary>Removes a binding added with <see cref="PushHotkeyReleasedBinding"/>.</summary>
+    public static void RemoveHotkeyReleasedBinding(NHotkeyManager hotkeys, string input, Node owner, Action action)
+    {
+#if STS2_AT_LEAST_0_114_0
+        hotkeys.RemoveHotkeyReleasedBinding(input, owner, action);
+#else
+        hotkeys.RemoveHotkeyReleasedBinding(input, action);
 #endif
     }
 
