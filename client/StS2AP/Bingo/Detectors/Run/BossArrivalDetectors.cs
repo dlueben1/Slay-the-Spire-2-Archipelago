@@ -40,8 +40,9 @@ internal static class BossArrivalDetectors
         IReadOnlyList<MapPointHistoryEntry> act = RunHistory.CurrentAct(runState);
         IReadOnlyList<CardModel> deck = me.Deck.Cards;
 
-        // E21: no ? map point visited this act.
-        RunSquare.CompleteIf("E21", me, () => act.All(entry => entry.MapPointType != MapPointType.Unknown));
+        // E21: at most one ? map point visited this act. None at all needed Winged Boots on most
+        // maps, where every path crosses a ? (user ruling).
+        RunSquare.CompleteIf("E21", me, () => act.Count(entry => entry.MapPointType == MapPointType.Unknown) <= 1);
 
         // E22, E23: took the leftmost (rightmost) way at every step of this act's map.
         RunSquare.CompleteIf("E22", me, () => EdgePath.Followed(runState, leftmost: true));

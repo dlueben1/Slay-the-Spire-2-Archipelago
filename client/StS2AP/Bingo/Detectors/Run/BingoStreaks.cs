@@ -41,7 +41,7 @@ internal static class BingoStreaks
     // entered without the square being done.
     private static readonly Dictionary<string, Func<RunState, Player, bool>> ActStreaks = new()
     {
-        ["E21"] = (run, _) => RunHistory.CurrentAct(run).Any(entry => entry.MapPointType == MapPointType.Unknown),
+        ["E21"] = (run, _) => RunHistory.CurrentAct(run).Count(entry => entry.MapPointType == MapPointType.Unknown) > 1,
         ["E22"] = (run, _) => !BossArrivalDetectors.EdgePath.Followed(run, leftmost: true),
         ["E23"] = (run, _) => !BossArrivalDetectors.EdgePath.Followed(run, leftmost: false),
         ["E25"] = (run, me) => RunHistory.CountRestChoices(RunHistory.CurrentAct(run), me, RestChoices.Heal) > 0,

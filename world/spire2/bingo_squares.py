@@ -49,7 +49,7 @@ BINGO_SQUARES: Tuple[BingoSquare, ...] = (
     BingoSquare('E18', 15, 'E', 'Have 5 upgraded cards', 'Bingo: Have 5 upgraded cards', None, None),
     BingoSquare('E19', 16, 'E', 'Have 6 relics', 'Bingo: Have 6 relics', None, None),
     BingoSquare('E20', 17, 'E', 'Defeat 2 elites in one act', 'Bingo: Defeat 2 elites in one act', None, None),
-    BingoSquare('E21', 18, 'E', 'Reach a boss without entering a ? room that act', 'Bingo: Reach a boss without entering a ? room that act', None, None),
+    BingoSquare('E21', 18, 'E', 'Reach a boss entering at most one ? room that act', 'Bingo: Reach a boss entering at most one ? room that act', None, None),
     BingoSquare('E22', 19, 'E', 'Reach a boss taking the leftmost path all act', 'Bingo: Reach a boss taking the leftmost path all act', None, None),
     BingoSquare('E23', 20, 'E', 'Reach a boss taking the rightmost path all act', 'Bingo: Reach a boss taking the rightmost path all act', None, None),
     BingoSquare('E24', 21, 'E', 'Visit 4 ? rooms in one act', 'Bingo: Visit 4 ? rooms in one act', None, None),
