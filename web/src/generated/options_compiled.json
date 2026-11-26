@@ -12,7 +12,7 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "11005f1e8631519e87ee0a74155df7f9c4b844d023c336e5162b0da3b4324755"
+      "sha256": "d6cd690a759aefffd4376675a566909e02af09e65c70a13ccc3edd901b2c1c8b"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
@@ -4583,7 +4583,7 @@
       "module": "worlds.spire2.options",
       "kind": "set",
       "display_name": "Boons",
-      "description": "Helpful modifiers for every run. Logic does not account for them. Names are case-sensitive.\nOnly Compound Interest, Gilded, Loyal Customer and Endless Upgrades work in multiplayer, where\nthe host's choice applies to the whole run; multiplayer runs leave out the others.\n\n- 'Wayfinder': Three times per act, travel to any room in the next row, ignoring the paths.\n- 'SecondWind': Once per act, survive a killing blow and heal 25% of your max HP.\n- 'EmberEnchanting': Campfires let you enchant a card with a random enchantment. This uses up\n  the campfire and needs the same Progressive Smith as upgrading.\n- 'CompoundInterest': At the start of Act 2 and of Act 3, gain 20% of the gold you hold, up to\n  100.\n- 'Gilded': Gain 30% more gold, including gold from Archipelago items.\n- 'SpringCleaning': After the Act 1 and Act 2 bosses, choose one: remove a card, transform a\n  card, or upgrade 2 random cards.\n- 'LoyalCustomer': Each purchase makes the rest of that shop 15% cheaper, up to 45%.\n  Archipelago checks in the shop count and get the discount too.\n- 'CampfireBrewing': Once per campfire, brew a random potion. You can still rest or upgrade\n  afterwards.\n- 'EndlessUpgrades': Cards can be upgraded any number of times. Each upgrade adds the card's\n  upgrade bonus again; upgrades that only add or remove a keyword do nothing after the first.",
+      "description": "Helpful modifiers for every run. Logic does not account for them. Names are case-sensitive.\nWayfinder, SecondWind, EmberEnchanting, SpringCleaning and CampfireBrewing are singleplayer only\nand multiplayer runs leave them out; for the rest, the host's choice applies to the whole run.\n\n- 'Wayfinder': Three times per run, travel to any room in the next row, ignoring the paths.\n- 'SecondWind': Once per run, survive a killing blow and heal 35% of your max HP.\n- 'EmberEnchanting': Campfires let you enchant a card with a random enchantment. This uses up\n  the campfire and needs the same Progressive Smith as upgrading.\n- 'CompoundInterest': At the start of Act 2 and of Act 3, gain 20% of the gold you hold, up to\n  100.\n- 'Gilded': Gain 30% more gold, including gold from Archipelago items.\n- 'SpringCleaning': After the Act 1 and Act 2 bosses, get one of these at random: remove a\n  card, transform a card, or upgrade 2 random cards.\n- 'LoyalCustomer': Each purchase makes the rest of that shop 15% cheaper, up to 45%.\n  Archipelago checks in the shop count and get the discount too.\n- 'CampfireBrewing': Once per campfire, brew a random potion. You can still rest or upgrade\n  afterwards.\n- 'EndlessUpgrades': Cards can be upgraded any number of times. Each upgrade adds the card's\n  upgrade bonus again; upgrades that only add or remove a keyword do nothing after the first.\n- 'InkBottle': Every time you play 10 cards, draw 1 card.\n- 'MedicalKit': Status cards can be played for 0 energy and Exhaust when played.\n- 'BlueCandle': Curses can be played for 0 energy; playing one costs 1 HP and Exhausts it.\n- 'PreservedInsect': Enemies in Elite fights have 25% less HP.\n- 'Torii': Unblocked attack damage of 5 or less is reduced to 1.\n- 'Turnip': You can't become Frail.\n- 'Amphorae': At the start of each act, fill all empty potion slots with random potions.\n- 'CursedKettle': The first time you draw a Curse each turn, draw 1 card.",
       "default": [],
       "raw_default": [],
       "visibility": {
@@ -4599,14 +4599,22 @@
       },
       "source": "game",
       "valid_keys": [
+        "Amphorae",
+        "BlueCandle",
         "CampfireBrewing",
         "CompoundInterest",
+        "CursedKettle",
         "EmberEnchanting",
         "EndlessUpgrades",
         "Gilded",
+        "InkBottle",
         "LoyalCustomer",
+        "MedicalKit",
+        "PreservedInsect",
         "SecondWind",
         "SpringCleaning",
+        "Torii",
+        "Turnip",
         "Wayfinder"
       ],
       "valid_keys_casefold": false,

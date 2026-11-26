@@ -1,13 +1,15 @@
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.Rooms;
+using StS2AP.Models;
 
 namespace StS2AP.Patches
 {
     /// <summary>
-    /// Applies the Enemy HP Scaling run modifier. CreateCreature rolls a monster's
-    /// HP and scales it for multiplayer before any health bar exists; it builds both encounter
-    /// monsters and summons.
+    /// Applies the Enemy HP Scaling run modifier and the Preserved Insect Boon. CreateCreature rolls
+    /// a monster's HP and scales it for multiplayer before any health bar exists; it builds both
+    /// encounter monsters and summons.
     /// </summary>
     [HarmonyPatch(typeof(CombatState), nameof(CombatState.CreateCreature))]
     public static class Patches_ApEnemyHpScaling
@@ -18,6 +20,9 @@ namespace StS2AP.Patches
             if (side != CombatSide.Enemy)
                 return;
             __instance.RunState.Modifiers.OfType<ApEnemyHpScaling>().FirstOrDefault()?.ScaleNewEnemy(__result);
+            if (__instance.Encounter?.RoomType == RoomType.Elite
+                && __instance.Players.Any(player => player.GetRelic<ApPreservedInsect>() != null))
+                ApPreservedInsect.ShrinkNewEnemy(__result);
         }
     }
 }

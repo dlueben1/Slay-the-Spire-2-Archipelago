@@ -10,14 +10,12 @@ using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Random;
 using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Rooms;
-using StS2AP.Utils;
 
 namespace StS2AP.Models;
 
 /// <summary>
-/// After the Act 1 and Act 2 bosses, the rewards include a linked choice: remove a card,
-/// transform a card, or upgrade 2 random cards. Taking one removes the others, through a
-/// choose-one linked reward set. Singleplayer only.
+/// After the Act 1 and Act 2 bosses, the rewards include one of these, picked at random: remove a
+/// card, transform a card, or upgrade 2 random cards. Singleplayer only.
 /// </summary>
 public sealed class ApSpringCleaning : ApRunModifier
 {
@@ -30,9 +28,16 @@ public sealed class ApSpringCleaning : ApRunModifier
         if (room?.RoomType != RoomType.Boss || RunState.CurrentActIndex >= 2)
             return false;
 
-        rewards.Add(ApLinkedRewardSets.CreateChooseOne(
-            [new CardRemovalReward(player), new ApTransformCardReward(player), new ApUpgradeCardsReward(player)],
-            player));
+        // Rewards are rebuilt when a save is loaded, so the pick comes from a stream named for this
+        // floor: a reload offers the same reward, and the run's other random rolls stay as they were.
+        var rng = new Rng(RunState.Rng.Seed, $"ap_spring_cleaning_pick_{RunState.TotalFloor}");
+        Reward[] choices =
+        [
+            new CardRemovalReward(player),
+            new ApTransformCardReward(player),
+            new ApUpgradeCardsReward(player),
+        ];
+        rewards.Add(choices[rng.NextInt(choices.Length)]);
         return true;
     }
 }

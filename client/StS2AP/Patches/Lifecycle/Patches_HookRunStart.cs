@@ -156,6 +156,7 @@ namespace StS2AP.Patches
             RelicCoupons.EnsureOwnedBy(player);
             AgedCheese.EnsureOwnedIfEarned(player);
             ApFrozenEye.EnsureOwnedIfEarned(player);
+            ApRouteDiagram.EnsureOwnedIfEarned(player);
 
             // Send "Press Start" check
             GameUtility.TrySendPressStartCheck();
