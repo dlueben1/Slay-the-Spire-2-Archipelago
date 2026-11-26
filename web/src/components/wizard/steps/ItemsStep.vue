@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { optionCatalog } from "../../../generated/optionCatalog";
 import { STARTING_ITEM_MAX_COUNT } from "../../../wizard/compiler/applyItemOptions";
 import {
@@ -21,6 +21,11 @@ import { useWizardAnswers } from "../core/wizardAnswersContext";
  *
  * Starting items are rows of character, item and count. Hints and placement lists offer
  * item groups; item names a hand-written YAML listed stay selected and show alongside.
+ *
+ * These are advanced settings most players should leave empty, so the questions stay
+ * behind a checkbox. The checkbox only changes what is shown: while any setting has a
+ * value, such as after importing a YAML, the questions stay open, so nothing that goes
+ * into the YAML is hidden.
  */
 const props = defineProps<{
   modelValue: ItemAnswers;
@@ -31,6 +36,26 @@ const emit = defineEmits<{
 }>();
 
 const answers = useWizardAnswers();
+
+const hasSettings = computed(
+  () =>
+    props.modelValue.startingInventory.length > 0 ||
+    props.modelValue.startHints.length > 0 ||
+    props.modelValue.localItems.length > 0 ||
+    props.modelValue.nonLocalItems.length > 0,
+);
+
+// Leaving the step closes an empty section again.
+const wantsToEdit = ref(false);
+
+const isOpen = computed(() => wantsToEdit.value || hasSettings.value);
+
+function setWantsToEdit(value: unknown): void {
+  // Nuxt UI's checkbox can also emit its indeterminate state, which this never uses.
+  if (typeof value === "boolean") {
+    wantsToEdit.value = value;
+  }
+}
 
 /**
  * Select value for items no character owns. A select can't hold null or an empty
@@ -155,7 +180,27 @@ const nonBlockingSelectContent = { bodyLock: false };
       </p>
     </div>
 
-    <div class="space-y-8">
+    <UCheckbox
+      :model-value="isOpen"
+      :disabled="hasSettings"
+      label="Edit advanced item settings"
+      :description="
+        hasSettings
+          ? 'Some of these settings are in use. Clear them to hide this section again.'
+          : 'Most players should leave these empty. They are Archipelago\'s own settings, not part of the Slay the Spire options, and they can make a run too easy or make generation fail.'
+      "
+      color="warning"
+      variant="card"
+      class="items-opt-in cursor-pointer"
+      :class="{ 'mb-8': isOpen }"
+      :ui="{
+        label: 'cursor-pointer',
+        description: 'cursor-pointer',
+      }"
+      @update:model-value="setWantsToEdit"
+    />
+
+    <div v-if="isOpen" class="space-y-8">
       <WizardQuestion :question="startingInventoryQuestion">
         <div
           class="starting-items"
@@ -316,6 +361,10 @@ const nonBlockingSelectContent = { bodyLock: false };
 <style scoped src="../core/wizard.css"></style>
 
 <style scoped>
+.items-opt-in {
+  border-color: var(--color-amber-500);
+}
+
 .starting-items {
   overflow: hidden;
   border: 1px solid var(--ui-border-muted);
