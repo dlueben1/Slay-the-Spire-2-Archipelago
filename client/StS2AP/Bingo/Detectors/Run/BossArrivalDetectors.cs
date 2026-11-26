@@ -87,7 +87,7 @@ internal static class BossArrivalDetectors
             RunHistory.StatsFor(run, me).All(stats => stats.PotionUsed.Count == 0));
     }
 
-    private static IEnumerable<CardType> CardsAddedThisAct(IReadOnlyList<MapPointHistoryEntry> act, Player me) =>
+    internal static IEnumerable<CardType> CardsAddedThisAct(IReadOnlyList<MapPointHistoryEntry> act, Player me) =>
         RunHistory.CardsAdded(act, me)
             .Select(card => card.Type)
             .Where(type => type is CardType.Attack or CardType.Skill or CardType.Power);
@@ -105,7 +105,7 @@ internal static class BossArrivalDetectors
     /// (right) side. A move to anything else, including travel that skips the map's links,
     /// breaks it.
     /// </summary>
-    private static class EdgePath
+    internal static class EdgePath
     {
         public static bool Followed(IRunState runState, bool leftmost)
         {

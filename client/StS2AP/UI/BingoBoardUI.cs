@@ -2,6 +2,7 @@ using Godot;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.HoverTips;
 using StS2AP.Bingo;
+using StS2AP.Bingo.Detectors.Run;
 using StS2AP.UI.RunGraph;
 using static StS2AP.UI.RunGraph.RunGraphStyle;
 
@@ -73,6 +74,8 @@ internal sealed partial class BingoBoardUI : Control
     private BingoLineGems _lineGems = null!;
     private Button _close = null!;
     private Label _pinHint = null!;
+    private Control _actLegend = null!;
+    private Control _runLegend = null!;
     // Null until the grid is built in Ready.
     private BingoLineStrokes? _strokes;
     private readonly List<BingoCellView> _cells = new();
@@ -351,6 +354,12 @@ internal sealed partial class BingoBoardUI : Control
         _squareCount.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         header.AddChild(_squareCount);
 
+        // Shown only while some square's streak is broken, so the two colours explain themselves.
+        _actLegend = LegendEntry(BingoCellView.BrokenThisActColor, "Next act");
+        _runLegend = LegendEntry(BingoCellView.BrokenThisRunColor, "Next run");
+        header.AddChild(_actLegend);
+        header.AddChild(_runLegend);
+
         _pinHint = Caps("Click to keep open", 12, TextFaint);
         _pinHint.VerticalAlignment = VerticalAlignment.Center;
         header.AddChild(_pinHint);
@@ -360,6 +369,22 @@ internal sealed partial class BingoBoardUI : Control
         _close.Visible = false;
         header.AddChild(_close);
         return header;
+    }
+
+    private static Control LegendEntry(Color color, string text)
+    {
+        var entry = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Visible = false };
+        entry.AddThemeConstantOverride("separation", 6);
+        entry.AddChild(new BrokenStreakBadge(color)
+        {
+            CustomMinimumSize = new Vector2(22f, 22f),
+            SizeFlagsVertical = SizeFlags.ShrinkCenter,
+            MouseFilter = MouseFilterEnum.Ignore,
+        });
+        Label label = Caps(text, 12, color);
+        label.VerticalAlignment = VerticalAlignment.Center;
+        entry.AddChild(label);
+        return entry;
     }
 
     private Control BuildGrid(Vector2 area)
@@ -464,12 +489,16 @@ internal sealed partial class BingoBoardUI : Control
             .Select(missing => missing[0])
             .ToHashSet();
 
+        StreakState[] streaks = _board.Squares.Select(BingoStreaks.StateOf).ToArray();
         for (int index = 0; index < _cells.Count; index++)
         {
             // Only squares done while the board is open pop in; the rest are simply there.
             bool newlyDone = animate && done[index] && _shownDone != null && !_shownDone.Contains(index);
-            _cells[index].SetState(done[index], onFullLine.Contains(index), finishesLine.Contains(index), newlyDone);
+            _cells[index].SetState(
+                done[index], onFullLine.Contains(index), finishesLine.Contains(index), streaks[index], newlyDone);
         }
+        _actLegend.Visible = streaks.Contains(StreakState.BrokenThisAct);
+        _runLegend.Visible = streaks.Contains(StreakState.BrokenThisRun);
         _shownDone = Enumerable.Range(0, done.Length).Where(index => done[index]).ToHashSet();
 
         _strokes.SetLines(fullLines);
@@ -533,18 +562,25 @@ internal sealed partial class BingoCellView : PanelContainer
     private static readonly Color MediumTier = new("#F5A524");
     private static readonly Color HardTier = new("#E5484D");
     private static readonly Color DoneFill = Card.Lerp(Claim, 0.16f);
+    // Broken streaks: violet comes back next act, red only next run. Kept apart from the tier
+    // pips' amber and from the done teal so neither reads as the other.
+    internal static readonly Color BrokenThisActColor = new("#A78BFA");
+    internal static readonly Color BrokenThisRunColor = new("#F0525A");
 
     // Smallest text a square shrinks to, so long squares on a 6x6 board stay readable.
     private const int MinFontSize = 11;
     private const float TopRowHeight = 24f;
     // A square on a full line is finished business: its contents fade back behind the line's stroke.
     private const float FullLineContentAlpha = 0.38f;
+    // A broken streak stays readable, since the player will want it again later.
+    private const float BrokenContentAlpha = 0.6f;
 
     private readonly Control _content;
     private readonly Label _text;
     private readonly BingoDaub _daub;
+    private readonly BrokenStreakMark _broken;
     private readonly int _maxFontSize;
-    private (bool Done, bool OnFullLine, bool FinishesLine)? _state;
+    private (bool Done, bool OnFullLine, bool FinishesLine, StreakState Streak)? _state;
 
     public BingoCellView(BingoSquareInfo square, Vector2 size, int maxFontSize, (Texture2D Icon, string Text)? character)
     {
@@ -555,6 +591,8 @@ internal sealed partial class BingoCellView : PanelContainer
         // The daub sits behind the text so a done square stays readable.
         _daub = new BingoDaub { MouseFilter = MouseFilterEnum.Ignore, Visible = false };
         AddChild(_daub);
+        _broken = new BrokenStreakMark { MouseFilter = MouseFilterEnum.Ignore, Visible = false };
+        AddChild(_broken);
 
         var stack = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         stack.AddThemeConstantOverride("separation", 0);
@@ -612,14 +650,25 @@ internal sealed partial class BingoCellView : PanelContainer
         stack.AddChild(new Control { CustomMinimumSize = new Vector2(0f, TopRowHeight * 0.5f), MouseFilter = MouseFilterEnum.Ignore });
     }
 
-    internal void SetState(bool done, bool onFullLine, bool finishesLine, bool popIn)
+    internal void SetState(bool done, bool onFullLine, bool finishesLine, StreakState streak, bool popIn)
     {
-        if (_state == (done, onFullLine, finishesLine) && !popIn)
+        if (_state == (done, onFullLine, finishesLine, streak) && !popIn)
             return;
-        _state = (done, onFullLine, finishesLine);
+        _state = (done, onFullLine, finishesLine, streak);
+
+        Color? brokenColor = streak switch
+        {
+            StreakState.BrokenThisAct => BrokenThisActColor,
+            StreakState.BrokenThisRun => BrokenThisRunColor,
+            _ => null,
+        };
 
         StyleBoxFlat style;
-        if (onFullLine)
+        if (brokenColor is { } broken)
+        {
+            style = RunGraphStyle.Box(Card.Darkened(0.15f), broken.Darkened(0.1f), 12, 10f, borderWidth: 2);
+        }
+        else if (onFullLine)
         {
             style = RunGraphStyle.Box(DoneFill.Darkened(0.35f), Gold.Darkened(0.25f), 12, 10f, borderWidth: 2);
         }
@@ -640,7 +689,11 @@ internal sealed partial class BingoCellView : PanelContainer
         }
         AddThemeStyleboxOverride("panel", style);
 
-        float contentAlpha = onFullLine ? FullLineContentAlpha : 1f;
+        _broken.Visible = brokenColor != null;
+        if (brokenColor is { } markColor)
+            _broken.SetColor(markColor);
+
+        float contentAlpha = onFullLine ? FullLineContentAlpha : brokenColor != null ? BrokenContentAlpha : 1f;
         _content.Modulate = new Color(1f, 1f, 1f, contentAlpha);
         // SelfModulate, because PopIn animates the daub's Modulate.
         _daub.SelfModulate = new Color(1f, 1f, 1f, contentAlpha);
@@ -717,6 +770,59 @@ internal sealed partial class BingoDaub : Control
         DrawPolyline(
             [badge + new Vector2(-4.5f, 0f), badge + new Vector2(-1.2f, 3.5f), badge + new Vector2(4.8f, -3.8f)],
             Ink, 2.6f, antialiased: true);
+    }
+}
+
+/// <summary>
+/// A broken streak's mark, behind the square's text: faint diagonal stripes across the square
+/// and a barred badge in the corner where a done square has its check.
+/// </summary>
+internal sealed partial class BrokenStreakMark : Control
+{
+    private const float StripeSpacing = 16f;
+    private Color _color;
+
+    public BrokenStreakMark()
+    {
+        // The stripes run past the edges; clipping keeps them inside the square.
+        ClipContents = true;
+        Draw += DrawMark;
+    }
+
+    internal void SetColor(Color color)
+    {
+        if (_color == color)
+            return;
+        _color = color;
+        QueueRedraw();
+    }
+
+    private void DrawMark()
+    {
+        var stripe = new Color(_color, 0.13f);
+        for (float x = -Size.Y; x < Size.X; x += StripeSpacing)
+            DrawLine(new Vector2(x, Size.Y), new Vector2(x + Size.Y, 0f), stripe, 5f, antialiased: true);
+
+        BrokenStreakBadge.DrawBadge(this, new Vector2(Size.X - 12f, Size.Y - 12f), _color);
+    }
+}
+
+/// <summary>A small barred circle in a broken streak's colour, also used by the header's legend.</summary>
+internal sealed partial class BrokenStreakBadge : Control
+{
+    private readonly Color _color;
+
+    public BrokenStreakBadge(Color color)
+    {
+        _color = color;
+        Draw += () => DrawBadge(this, Size / 2f, _color);
+    }
+
+    internal static void DrawBadge(CanvasItem canvas, Vector2 center, Color color)
+    {
+        canvas.DrawCircle(center, 11f, Ink);
+        canvas.DrawCircle(center, 9f, color);
+        canvas.DrawLine(center + new Vector2(-4.5f, 4.5f), center + new Vector2(4.5f, -4.5f), Ink, 2.8f, antialiased: true);
     }
 }
 
