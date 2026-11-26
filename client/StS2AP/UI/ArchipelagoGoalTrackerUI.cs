@@ -299,6 +299,9 @@ namespace StS2AP.UI
             _contentLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
             _contentLabel.SizeFlagsVertical   = Control.SizeFlags.ShrinkCenter;
             _contentLabel.FitContent          = true;
+            // MegaRichTextLabel shrinks its text to fit by default. Beside the bingo Board button the
+            // label starts out narrow, which shrank the text to the minimum; SetContent sets a fixed size.
+            _contentLabel.AutoSizeEnabled     = false;
             _contentLabel.AutowrapMode        = TextServer.AutowrapMode.Word;
             _contentLabel.BbcodeEnabled       = true;
             _contentLabel.MouseFilter         = Control.MouseFilterEnum.Ignore;

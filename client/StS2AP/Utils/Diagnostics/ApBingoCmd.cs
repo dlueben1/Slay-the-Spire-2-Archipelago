@@ -1,6 +1,7 @@
 using MegaCrit.Sts2.Core.DevConsole;
 using MegaCrit.Sts2.Core.DevConsole.ConsoleCommands;
 using MegaCrit.Sts2.Core.Entities.Players;
+using System.Text.RegularExpressions;
 using StS2AP.Bingo;
 
 namespace StS2AP.Utils.Diagnostics;
@@ -8,15 +9,16 @@ namespace StS2AP.Utils.Diagnostics;
 /// <summary>
 /// Dev-console view of the slot's bingo board, and a way to complete a square without meeting its
 /// condition, for testing the board, the goal and the UI. Completing goes through the same entry
-/// point as the detectors, so it sends a real check; it refuses in race rooms.
+/// point as the detectors, so it sends a real check; it refuses in race rooms. A square is named
+/// by its key (<c>E04</c>) or by its place on the board, row then column from 1 (<c>R5C4</c>).
 /// </summary>
-public sealed class ApBingoCmd : AbstractConsoleCmd
+public sealed partial class ApBingoCmd : AbstractConsoleCmd
 {
     private const string CompleteArgumentName = "complete";
 
     public override string CmdName => "ap_bingo";
 
-    public override string Args => "[complete <key>]";
+    public override string Args => "[complete <key or R#C#>]";
 
     public override string Description => "Lists the AP bingo board, or completes one of its squares (sends its check)";
 
@@ -32,7 +34,7 @@ public sealed class ApBingoCmd : AbstractConsoleCmd
             return new CmdResult(true, DescribeBoard(board));
 
         if (args.Length != 2 || !args[0].Equals(CompleteArgumentName, StringComparison.OrdinalIgnoreCase))
-            return new CmdResult(false, $"Usage: {CmdName} | {CmdName} {CompleteArgumentName} <key>");
+            return new CmdResult(false, $"Usage: {CmdName} | {CmdName} {CompleteArgumentName} <key or R#C#>");
 
         if (ArchipelagoClient.IsRaceMode != false)
         {
@@ -41,8 +43,7 @@ public sealed class ApBingoCmd : AbstractConsoleCmd
                 : "The room's race mode is unknown, so completing squares stays disabled.");
         }
 
-        BingoSquareInfo? square = board.Squares.FirstOrDefault(candidate =>
-            candidate.Key.Equals(args[1], StringComparison.OrdinalIgnoreCase));
+        BingoSquareInfo? square = FindSquare(board, args[1]);
         if (square == null)
             return new CmdResult(false, $"Square '{args[1]}' is not on this board.");
         if (!BingoSquares.IsOpen(square.Key))
@@ -60,11 +61,37 @@ public sealed class ApBingoCmd : AbstractConsoleCmd
             return CompleteArgument([CompleteArgumentName], [], args.FirstOrDefault() ?? "", CompletionType.Subcommand);
         if (args.Length == 2 && BingoState.Board is { } board)
         {
-            IEnumerable<string> openKeys = board.Squares.Where(square => !BingoState.IsDone(square)).Select(square => square.Key);
-            return CompleteArgument(openKeys, [args[0]], args[1]);
+            IEnumerable<string> openSquares = board.Squares
+                .Select((square, index) => (square, index))
+                .Where(entry => !BingoState.IsDone(entry.square))
+                .SelectMany(entry => new[] { Position(board, entry.index), entry.square.Key });
+            return CompleteArgument(openSquares, [args[0]], args[1]);
         }
         return base.GetArgumentCompletions(player, args);
     }
+
+    /// <summary>The square named by its key or by its R#C# position, or null when neither matches.</summary>
+    private static BingoSquareInfo? FindSquare(BingoBoard board, string name)
+    {
+        Match position = PositionPattern().Match(name);
+        if (position.Success)
+        {
+            int row = int.Parse(position.Groups["row"].Value) - 1;
+            int column = int.Parse(position.Groups["column"].Value) - 1;
+            return row >= 0 && row < board.Size && column >= 0 && column < board.Size
+                ? board.SquareAt(row, column)
+                : null;
+        }
+        return board.Squares.FirstOrDefault(square => square.Key.Equals(name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string Position(BingoBoard board, int index) =>
+        $"R{(index / board.Size) + 1}C{(index % board.Size) + 1}";
+
+    // No square key looks like this: keys start with a tier letter (E04) or a group (C-, F-, R-, I-)
+    // and R-keys always have a hyphen.
+    [GeneratedRegex(@"^R(?<row>\d+)C(?<column>\d+)$", RegexOptions.IgnoreCase)]
+    private static partial Regex PositionPattern();
 
     private static string DescribeBoard(BingoBoard board)
     {
