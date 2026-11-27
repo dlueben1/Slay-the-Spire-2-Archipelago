@@ -293,9 +293,10 @@ FULL_SHOP_PAGE_VALUE = sum(sum(values) for _, values in SHOP_SLOT_VALUES)
 
 # Each act's shop asks for gold from Combat, Elite and Boss Gold items, and the amount grows by act
 # because a run spends its gold at earlier shops. Only Act 1 can lean on starting gold (99): it
-# covers several Fixed or Super Discount checks, so those shops ask for nothing in Act 1. With
-# Discount prices the amounts buy about two checks at every act's shop in one run; with Tiered
-# prices, about one. Act 3's 375 is about 75% of the gold pool (503).
+# covers several Fixed or Super Discount checks, so those shops ask for nothing in Act 1. A check
+# costs the same in every slot, by the item it holds; progression is dearest (150 at full price).
+# With Discount prices the amounts buy about two progression checks at every act's shop in one
+# run; with Tiered prices, about one. Act 3's 300 is about 60% of the gold pool (503).
 #
 # Gold amounts keep a conservative allowance for Poverty (x0.75). Each act's chest is on every
 # path and gives 42-52 gold.
@@ -308,8 +309,8 @@ CHEST_GOLD = 31
 SHOP_GOLD_BY_COST_MODE = (
     (0, 30, 60),        # Fixed: 15 per check
     (0, 50, 100),       # Super Discount Tiered
-    (100, 225, 375),    # Discount Tiered
-    (100, 225, 375),    # Tiered
+    (75, 175, 300),     # Discount Tiered
+    (75, 175, 300),     # Tiered
 )
 
 
