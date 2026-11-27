@@ -35,6 +35,24 @@ namespace StS2AP.Data
             return itemId / BlockSize;
         }
 
+        /// <summary>
+        /// First ID of the bingo square locations. They sit in block 1000, above every character
+        /// block (modded characters are reserved through block 999), so they are never a
+        /// character's location even though the block arithmetic below would accept them.
+        /// </summary>
+        public const long BingoLocationBase = 9_990_000L;
+
+        public static bool IsBingoLocationId(long locationId) =>
+            locationId >= BingoLocationBase && locationId < BingoLocationBase + BlockSize;
+
+        /// <summary>
+        /// Whether a location belongs to a character's block. Only these may be mapped to a
+        /// character with <see cref="GetAPCharacterNumberFromLocationId"/> or
+        /// <see cref="GetLocationIdOffset"/>.
+        /// </summary>
+        public static bool IsCharacterLocationId(long locationId) =>
+            locationId >= 0 && locationId < BingoLocationBase;
+
         public static long GetLocationIdOffset(long locationId)
         {
             return locationId % BlockSize;

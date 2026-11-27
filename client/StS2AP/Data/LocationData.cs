@@ -259,6 +259,9 @@ namespace StS2AP.Data
 
         public static bool IsCampfireLocationId(long locationId)
         {
+            // Bingo squares share the block offsets, so square 89 would otherwise read as a campfire.
+            if (!ArchipelagoIdCodec.IsCharacterLocationId(locationId))
+                return false;
             long baseId = ArchipelagoIdCodec.GetLocationIdOffset(locationId);
             return baseId is >= FirstCampfireBaseId
                 and < FirstCampfireBaseId + (3 * CampfiresPerAct);

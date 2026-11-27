@@ -906,6 +906,8 @@ public static class MultiplayerSupport
             IsSeeded = source.IsSeeded,
             NoCharactersLocked = source.NoCharactersLocked,
             NumCharsGoal = source.NumCharsGoal,
+            Goal = source.Goal,
+            Bingo = source.Bingo,
             TotalCharacters = source.TotalCharacters,
             NeowSanity = source.NeowSanity,
             AncientRelicLocation = AncientSettingsUtility.ForNewRun.Location,

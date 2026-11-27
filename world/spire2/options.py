@@ -6,6 +6,7 @@ from Options import OptionSet, OptionList, Range, Toggle, Visibility, Choice, Te
 
 from schema import Schema, Optional, And, Or
 
+from .bingo_squares import BINGO_SQUARES
 from .characters import PREDEFINED_CHARACTERS, character_list, unique_character_ids
 from .constants import NUM_CUSTOM, ASCENSIONS
 
@@ -60,6 +61,65 @@ class GoalNumChar(Range):
     range_start = 0
     range_end = MAX_ROSTER_SIZE
     default = 0
+
+class Goal(Choice):
+    """What you need to do to goal.
+    characters: win runs with Number of Characters to Goal characters.
+    bingo: complete lines on a bingo board of challenges instead of winning with characters. The
+    board only has challenges your characters and settings allow."""
+    display_name = "Goal"
+    option_characters = 0
+    option_bingo = 1
+    default = 0
+
+class BingoSize(Range):
+    """Squares per side of the bingo board, from 3 (9 squares) to 6 (36 squares). Every square is a
+    check. Only used with the bingo goal."""
+    display_name = "Bingo Board Size"
+    range_start = 3
+    range_end = 6
+    default = 5
+
+class BingoLines(Range):
+    """How many complete lines (rows, columns or diagonals) you need to goal with bingo. A board has
+    2 x size + 2 lines; a larger number is lowered to that. Only used with the bingo goal."""
+    display_name = "Bingo Lines Needed"
+    range_start = 1
+    range_end = 14
+    default = 2
+
+class BingoEasyWeight(Range):
+    """How often bingo squares are Easy (doable in Act 1), weighed against the Medium and Hard
+    weights. 0 leaves Easy squares out. Only used with the bingo goal."""
+    display_name = "Bingo Easy Weight"
+    range_start = 0
+    range_end = 100
+    default = 40
+
+class BingoMediumWeight(Range):
+    """How often bingo squares are Medium (doable by the end of Act 2), weighed against the Easy and
+    Hard weights. 0 leaves Medium squares out. Only used with the bingo goal."""
+    display_name = "Bingo Medium Weight"
+    range_start = 0
+    range_end = 100
+    default = 40
+
+class BingoHardWeight(Range):
+    """How often bingo squares are Hard (Act 3 or a win), weighed against the Easy and Medium
+    weights. 0 leaves Hard squares out. If your characters and settings don't have enough squares
+    of a tier, the board is filled from the others. Only used with the bingo goal."""
+    display_name = "Bingo Hard Weight"
+    range_start = 0
+    range_end = 100
+    default = 20
+
+class BingoTestSquares(OptionList):
+    """Developer testing only: square keys (such as C-IR-M6) placed on the bingo board first, row
+    by row, ignoring the roster, tier weights and conflicts. Any cells left over are dealt as usual."""
+    display_name = "Bingo Test Squares"
+    visibility = Visibility.none
+    valid_keys = [square.key for square in BINGO_SQUARES]
+    default = []
 
 class PickNumberCharacters(Range):
     """Randomly select this many of the configured characters to generate for.
@@ -1113,6 +1173,13 @@ class Spire2Options(PerGameCommonOptions):
     modded_characters: ModdedCharacters
     pick_num_characters: PickNumberCharacters
     num_chars_goal: GoalNumChar
+    goal: Goal
+    bingo_size: BingoSize
+    bingo_lines: BingoLines
+    bingo_easy_weight: BingoEasyWeight
+    bingo_medium_weight: BingoMediumWeight
+    bingo_hard_weight: BingoHardWeight
+    bingo_test_squares: BingoTestSquares
     lock_characters: LockCharacters
     unlocked_character: UnlockedCharacter
     # final_act: FinalAct

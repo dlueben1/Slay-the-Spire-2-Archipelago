@@ -37,8 +37,26 @@ Slay the Spire II:
   # Randomly pick this many characters from the lists above. 0-37; 0 uses all of them.
   pick_num_characters: 0
 
+  # What you need to do to goal.
+  #   characters  - win runs with num_chars_goal characters
+  #   bingo       - complete lines on a bingo board of challenges instead
+  goal: "characters"
+
   # Number of characters you must win with to goal. 0-37; 0 means every character.
   num_chars_goal: 0
+
+  # Bingo goal only: squares per side of the board, 3-6. Every square is a check.
+  bingo_size: 5
+
+  # Bingo goal only: complete lines (rows, columns, diagonals) needed. 1-14; capped at 2 x size + 2.
+  bingo_lines: 2
+
+  # Bingo goal only: how often squares are Easy (Act 1), Medium (Act 2) or Hard (Act 3 or a win),
+  # weighed against each other. 0-100 each; 0 leaves that tier out, e.g. 0/100/0 for an all-Medium
+  # board. A tier your characters and settings can't fill is topped up from the others.
+  bingo_easy_weight: 40
+  bingo_medium_weight: 40
+  bingo_hard_weight: 20
 
   # Whether characters must be unlocked by "Unlock <Character>" items.
   #   unlocked       - every character is available from the start

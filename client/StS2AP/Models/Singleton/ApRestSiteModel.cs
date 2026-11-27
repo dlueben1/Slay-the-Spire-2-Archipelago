@@ -52,7 +52,7 @@ public sealed class ApRestSiteModel : HookedSingletonModel
         }
 
         var policy = new RestSitePolicy(player.RunState.CurrentActIndex + 1, restLevel, smithLevel);
-        bool needsFallback = policy.ApplyLocks(
+        bool skipIsOnlyExit = policy.ApplyLocks(
             options,
             option => option.OptionId,
             // A free action such as Campfire Brewing does not end the campfire, so it cannot be
@@ -78,7 +78,7 @@ public sealed class ApRestSiteModel : HookedSingletonModel
 
         LogUtility.Info(
             $"Applied AP rest-site options for player {player.NetId}: act={policy.CurrentAct}, "
-                + $"restLevel={restLevel}, smithLevel={smithLevel}, fallback={needsFallback}"
+                + $"restLevel={restLevel}, smithLevel={smithLevel}, skipIsOnlyExit={skipIsOnlyExit}"
         );
         return true;
     }

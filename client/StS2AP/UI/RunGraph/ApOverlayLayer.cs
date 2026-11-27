@@ -20,6 +20,16 @@ internal static class ApOverlayLayer
     /// </summary>
     internal static void Show(Control overlay, Node owner, Action close)
     {
+        Attach(overlay, owner, close);
+        BindBack(overlay, close);
+    }
+
+    /// <summary>
+    /// Like <see cref="Show"/> but leaves the game's inputs alone, for an overlay that only shows
+    /// something (the bingo board's hover peek) while the screen below keeps working.
+    /// </summary>
+    internal static void Attach(Control overlay, Node owner, Action close)
+    {
         EnsureLayer().AddChild(overlay);
 
         void CloseWithOwner() => close();
@@ -29,7 +39,6 @@ internal static class ApOverlayLayer
             if (GodotObject.IsInstanceValid(owner))
                 owner.TreeExiting -= CloseWithOwner;
         };
-        BindBack(overlay, close);
     }
 
     /// <summary>

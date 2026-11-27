@@ -1,12 +1,17 @@
 ﻿using Godot;
 using MegaCrit.Sts2.addons.mega_text;
+using MegaCrit.Sts2.Core.ControllerInput;
+using MegaCrit.Sts2.Core.Nodes.CommonUi;
+using StS2AP.Bingo;
+using StS2AP.UI.RunGraph;
 using StS2AP.Utils;
 
 namespace StS2AP.UI
 {
     /// <summary>
     /// Static class that creates and manages the Archipelago Goal Tracker panel
-    /// on the Character Select screen.
+    /// on the Character Select screen. With the bingo goal it shows line progress and a Board
+    /// button that opens <see cref="BingoBoardUI"/>; the AP menu hotkey opens it too.
     ///
     /// Injected and removed alongside <see cref="ArchipelagoCharTrackerUI"/> via the
     /// <c>CharTrackerPanelPatches</c> in <c>Patches_MainMenuBehavior</c>.
@@ -26,6 +31,9 @@ namespace StS2AP.UI
         /// Uses <see cref="MegaRichTextLabel"/> to support BBCode and the game's custom text effects.
         /// </summary>
         private static MegaRichTextLabel? _contentLabel;
+
+        /// <summary>Opens the bingo board; shown only when the slot's goal is bingo.</summary>
+        private static Button? _boardButton;
 
         #endregion
 
@@ -121,7 +129,26 @@ namespace StS2AP.UI
                 _canvasLayer  = null;
                 _rootPanel    = null;
                 _contentLabel = null;
+                _boardButton  = null;
             }
+        }
+
+        /// <summary>
+        /// Opens or closes the bingo board while this panel is on screen. Returns false when there
+        /// is no board to show here, so the caller can treat the input as unhandled.
+        /// </summary>
+        public static bool ToggleBingoBoard()
+        {
+            if (BingoBoardUI.IsOpen)
+            {
+                BingoBoardUI.Close();
+                return true;
+            }
+            if (!BingoState.IsActive || !IsVisible || _canvasLayer == null || !IsInstanceValid(_canvasLayer))
+                return false;
+
+            BingoBoardUI.Open(_canvasLayer);
+            return true;
         }
 
         /// <summary>
@@ -174,11 +201,36 @@ namespace StS2AP.UI
                 LogUtility.Error("Cannot update goal progress without AP slot settings.");
                 return;
             }
+            if (BingoState.Board is { } board)
+            {
+                UpdateBingoProgress(board);
+                return;
+            }
+            if (_boardButton != null && IsInstanceValid(_boardButton))
+                _boardButton.Visible = false;
+
             // Get the number of characters you need to beat the game with. If the value for `NumCharsGoal` is `0`, we need to use the number of characters available
             var charsToGoal = settings.NumCharsGoal > 0 ? settings.NumCharsGoal : settings.TotalCharacters;
 
             // Update the UI
             SetContent($"[gold]Goal: Slay the Spire with {charsToGoal} Characters[/gold]\nProgress: {GameUtility.GoaledCharactersCount} / {charsToGoal}");
+        }
+
+        private static void UpdateBingoProgress(BingoBoard board)
+        {
+            string lineWord = board.Lines == 1 ? "line" : "lines";
+            SetContent($"[gold]Goal: Bingo, {board.Lines} {lineWord}[/gold]\nProgress: {BingoState.CompletedLines} / {board.Lines}");
+
+            if (_boardButton == null || !IsInstanceValid(_boardButton))
+                return;
+            _boardButton.Visible = true;
+            // Name the AP menu hotkey where the player can't simply click.
+            _boardButton.Text = NControllerManager.Instance?.InputType switch
+            {
+                InputType.KeyboardOnlyMode => $"Board ({ModSettingsRegistration.ApLootKeyboardBinding})",
+                InputType.Controller => "Board (L3)",
+                _ => "Board",
+            };
         }
 
         #endregion
@@ -237,12 +289,19 @@ namespace StS2AP.UI
 
             root.AddChild(panel);
 
+            var row = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+            row.AddThemeConstantOverride("separation", 12);
+            panel.AddChild(row);
+
             // Content label
             _contentLabel = new MegaRichTextLabel();
             _contentLabel.Name = "GoalTrackerLabel";
-            _contentLabel.SizeFlagsHorizontal = Control.SizeFlags.Fill;
+            _contentLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
             _contentLabel.SizeFlagsVertical   = Control.SizeFlags.ShrinkCenter;
             _contentLabel.FitContent          = true;
+            // MegaRichTextLabel shrinks its text to fit by default. Beside the bingo Board button the
+            // label starts out narrow, which shrank the text to the minimum; SetContent sets a fixed size.
+            _contentLabel.AutoSizeEnabled     = false;
             _contentLabel.AutowrapMode        = TextServer.AutowrapMode.Word;
             _contentLabel.BbcodeEnabled       = true;
             _contentLabel.MouseFilter         = Control.MouseFilterEnum.Ignore;
@@ -270,7 +329,14 @@ namespace StS2AP.UI
             /// after _Ready() has already fired, matching the pattern in ArchipelagoCharTrackerUI.
             _contentLabel.Text = "";
 
-            panel.AddChild(_contentLabel);
+            row.AddChild(_contentLabel);
+
+            _boardButton = RunGraphStyle.ActionButton("Board");
+            _boardButton.CustomMinimumSize = new Vector2(120f, 42f);
+            _boardButton.AddThemeFontSizeOverride("font_size", 16);
+            _boardButton.Visible = false;
+            _boardButton.Pressed += () => ToggleBingoBoard();
+            row.AddChild(_boardButton);
 
             return root;
         }
