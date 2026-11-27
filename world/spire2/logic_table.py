@@ -22,7 +22,9 @@ class PowerCheck:
     """What a run needs to clear one region, and the support a normal run has by then."""
     act: int
     power: float
-    # Combat card rewards a normal run has seen on entering the region.
+    # Combat card rewards a normal run has seen on entering the region. Not a requirement: with
+    # half shuffle every other one stays vanilla and adds card strength (vanilla_card_strength),
+    # and the Late rows count the fights behind normal_run_gold.
     card_rewards: int
     # Card strength needed however many relics the run has.
     minimum_cards: float
@@ -138,22 +140,17 @@ ELITES_PER_ACT = (3, 2, 2)
 # get a lot of floor checks
 # until you get strong enough to where you can fight elites. In practice this has worked pretty well
 # especially with relic 2 and relic 3 which felt too hard at times to logically get
-def _relic_regions() -> dict[int, str]:
-    """Each Relic N's region: Act 1's chest, then each act's elites, after the Act 2 and 3 chests."""
-    regions = ["Mid Act 1"]
-    for act, elites in enumerate(ELITES_PER_ACT, start=1):
-        if act > 1:
-            regions.append(f"Act {act} Chest")
-        regions += [f"Act {act} Elite {number}" for number in range(1, elites + 1)]
-    return dict(enumerate(regions, start=1))
-
-
-RELIC_REGIONS = _relic_regions()
-RELIC_NUMBERS = {region: number for number, region in RELIC_REGIONS.items()}
-assert len(RELIC_REGIONS) == 10, "the client counts ten relic rewards"
-assert ({region for region in REGIONS if " Elite " in region}
-        == {region for region in RELIC_REGIONS.values() if " Elite " in region}), \
-    "REGIONS needs exactly one elite row per elite in ELITES_PER_ACT"
+#
+# Each Relic N check's region. Relic 1 is the Act 1 chest, which every path passes in Mid Act 1.
+# From there the numbers follow a run that fights every elite in ELITES_PER_ACT: only that run
+# opens the Act 2 chest as its 5th relic and the Act 3 chest as its 8th, so those chests have
+# their own regions on the elite track.
+RELIC_REGIONS = {
+    1: "Mid Act 1",
+    2: "Act 1 Elite 1", 3: "Act 1 Elite 2", 4: "Act 1 Elite 3",
+    5: "Act 2 Chest",   6: "Act 2 Elite 1", 7: "Act 2 Elite 2",
+    8: "Act 3 Chest",   9: "Act 3 Elite 1", 10: "Act 3 Elite 2",
+}
 
 
 def last_elite(act: int) -> str:
@@ -162,43 +159,60 @@ def last_elite(act: int) -> str:
 
 # --- Claimable relics ------------------------------------------------------------------------
 
-# Relics logically gotten from just the mid act chest. Doesn't take into account the small
-# chance to get chests from events.
+# How many relic rewards a run has taken by each region, which caps the AP Relic items that count
+# towards its power. A run reaches the same chest with very different counts: Mid Act 3 is 3 for a
+# run that walked around every elite (one chest per act), while Act 3 Chest is 7 for a run that
+# fought all of them.
+#
+# Path regions count the relics from chests alone: each act's chest from its Mid region on.
+# Doesn't take into account the small chance to get chests from events.
+# Elite track regions count the relics before their own, Relic N - 1: the fight or chest is
+# still ahead on entering.
 PATH_RELIC_REWARDS = {
     "Act 1 Hallway": 0, "Mid Act 1": 1, "Late Act 1": 1, "Act 1 Boss Arena": 1,
-    "Early Act 2": 1, "Mid Act 2": 2, "Late Act 2": 2, "Act 2 Boss Arena": 2,
-    "Early Act 3": 2, "Mid Act 3": 3, "Late Act 3": 3, "Act 3 Boss Arena": 3,
-    **{region: number - 1 for number, region in RELIC_REGIONS.items() if number > 1},
+    "Early Act 2": 1,   "Mid Act 2": 2, "Late Act 2": 2, "Act 2 Boss Arena": 2,
+    "Early Act 3": 2,   "Mid Act 3": 3, "Late Act 3": 3, "Act 3 Boss Arena": 3,
+
+    "Act 1 Elite 1": 1, "Act 1 Elite 2": 2, "Act 1 Elite 3": 3,
+    "Act 2 Chest": 4,   "Act 2 Elite 1": 5, "Act 2 Elite 2": 6,
+    "Act 3 Chest": 7,   "Act 3 Elite 1": 8, "Act 3 Elite 2": 9,
 }
-# Relic rewards taken by a region after also fighting an earlier act's elites, up to its second
-# elite or a later one. Helper table to better handle relics available anytime. Two elites an act
-# is what an elite-ready run takes; Act 1's third asks for far more power, so a run that can
-# fight only two Act 1 elites still claims their relics.
-FIRST_CREDITED_ELITE = 2
 
+# A path region's higher relic count once the run can reach an elite track region: that elite's
+# relic number plus the chests passed since. Helper table to better handle relics available
+# anytime. Late and Boss regions also credit their own act's elites; Early and Mid only earlier
+# acts', and Early has not passed its own act's chest yet.
+# Each act's elites count from the second on. Two elites an act is what an elite-ready run takes;
+# Act 1's third asks for far more power, so a run that can fight only two Act 1 elites still
+# claims their relics.
+ELITE_RELIC_REWARDS = {
+    "Late Act 1":       {"Act 1 Elite 2": 3, "Act 1 Elite 3": 4},
+    "Act 1 Boss Arena": {"Act 1 Elite 2": 3, "Act 1 Elite 3": 4},
+    "Early Act 2":      {"Act 1 Elite 2": 3, "Act 1 Elite 3": 4},
+    "Mid Act 2":        {"Act 1 Elite 2": 4, "Act 1 Elite 3": 5},
+    "Late Act 2":       {"Act 1 Elite 2": 4, "Act 1 Elite 3": 5, "Act 2 Elite 2": 7},
+    "Act 2 Boss Arena": {"Act 1 Elite 2": 4, "Act 1 Elite 3": 5, "Act 2 Elite 2": 7},
+    "Early Act 3":      {"Act 1 Elite 2": 4, "Act 1 Elite 3": 5, "Act 2 Elite 2": 7},
+    "Mid Act 3":        {"Act 1 Elite 2": 5, "Act 1 Elite 3": 6, "Act 2 Elite 2": 8},
+    "Late Act 3":       {"Act 1 Elite 2": 5, "Act 1 Elite 3": 6, "Act 2 Elite 2": 8, "Act 3 Elite 2": 10},
+    "Act 3 Boss Arena": {"Act 1 Elite 2": 5, "Act 1 Elite 3": 6, "Act 2 Elite 2": 8, "Act 3 Elite 2": 10},
+}
 
-def _elite_relic_rewards() -> dict[str, dict[str, int]]:
-    """For each path region, the relic rewards a run has taken after each credited elite of an
-    earlier act (or of its own act, from Late on): that elite's relic number plus the chests
-    passed since."""
-    rewards = {}
-    for act in (1, 2, 3):
-        for stage, passed_own_chest in (("Early", False), ("Mid", True), ("Late", True), ("Boss", True)):
-            region = f"Act {act} Boss Arena" if stage == "Boss" else f"{stage} Act {act}"
-            last_elite_act = act if stage in ("Late", "Boss") else act - 1
-            alternatives = {}
-            for elite_act in range(1, last_elite_act + 1):
-                chests_since = act - elite_act - 1 + passed_own_chest if act > elite_act else 0
-                elites = ELITES_PER_ACT[elite_act - 1]
-                for number in range(min(FIRST_CREDITED_ELITE, elites), elites + 1):
-                    elite = f"Act {elite_act} Elite {number}"
-                    alternatives[elite] = RELIC_NUMBERS[elite] + chests_since
-            if alternatives:
-                rewards[region] = alternatives
-    return rewards
-
-
-ELITE_RELIC_REWARDS = _elite_relic_rewards()
+# The tables above are written out by hand, so check them against each other.
+assert list(RELIC_REGIONS) == list(range(1, 11)), "the client counts ten relic rewards"
+assert ([region for region in RELIC_REGIONS.values() if " Elite " in region]
+        == [f"Act {act} Elite {number}" for act, elites in enumerate(ELITES_PER_ACT, start=1)
+            for number in range(1, elites + 1)]), "RELIC_REGIONS needs one row per elite in ELITES_PER_ACT"
+assert ({region for region in REGIONS if " Elite " in region}
+        == {region for region in RELIC_REGIONS.values() if " Elite " in region}), \
+    "REGIONS needs exactly one elite row per elite in ELITES_PER_ACT"
+assert PATH_RELIC_REWARDS.keys() == REGIONS.keys(), "PATH_RELIC_REWARDS needs one row per region"
+assert all(PATH_RELIC_REWARDS[region] == number - 1 for number, region in RELIC_REGIONS.items() if number > 1), \
+    "an elite track region counts the relics before its own"
+_RELIC_NUMBERS = {region: number for number, region in RELIC_REGIONS.items()}
+assert all(count >= _RELIC_NUMBERS[elite]
+           for alternatives in ELITE_RELIC_REWARDS.values() for elite, count in alternatives.items()), \
+    "ELITE_RELIC_REWARDS counts at least the elite's own relic"
 
 
 # --- Card strength and power from AP items ---------------------------------------------------
@@ -226,7 +240,6 @@ SIGHT_BONUS_POWER = {
     "Pile Sight": 1.5,
     "Map Sight": 1.0,
     "Card Sight": 2.0,
-    # Placeholder until the user picks a number. The bonus only works in singleplayer.
     "Relic Sight": 1.5,
 }
 # Half shuffle leaves every other combat card reward vanilla.
