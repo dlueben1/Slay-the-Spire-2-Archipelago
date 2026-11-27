@@ -71,7 +71,6 @@ internal static class EconomyDetector
         GoldDetectors.CheckGoldSpentInRun(player);
         ShopDetectors.CheckShopCardRemovals(player);
         DeckDetectors.CheckDeck(player);
-        DeckDetectors.CheckTransforms(player);
         RelicAndPotionDetectors.CheckRelics(player);
         RelicAndPotionDetectors.CheckPotionSlots(player);
         MaxHpDetectors.CheckMaxHp(player);

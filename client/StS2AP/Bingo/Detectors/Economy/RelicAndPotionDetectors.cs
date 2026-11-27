@@ -19,7 +19,7 @@ internal static class RelicAndPotionDetectors
     {
         ("E19", 6),
         ("M14", 12),
-        ("H08", 25),
+        ("H08", 20),
     };
 
     // I-E01 "Have relics of 3 different rarities (not Starter)" and I-M01 "Have relics of 4

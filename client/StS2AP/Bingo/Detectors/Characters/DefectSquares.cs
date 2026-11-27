@@ -1,6 +1,8 @@
 using HarmonyLib;
+using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.Entities.Orbs;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Models;
@@ -19,7 +21,9 @@ internal static class DefectSquares
     private const string ChannelTwelveInOneCombat = "C-DE-M3";
     private const string DarkEvokeForFifty = "C-DE-M5";
     private const string EvokeFourWithOneCard = "C-DE-M6";
+    private const string AddTenStatusCardsInOneCombat = "C-DE-M7";
     private const string ChannelAllFiveTypes = "C-DE-H1";
+    private const string HaveTenOrbSlots = "C-DE-H3";
 
     /// <summary>The five vanilla orbs; modded orbs don't count toward "all 5 orb types".</summary>
     private static readonly HashSet<Type> VanillaOrbTypes = new()
@@ -30,12 +34,13 @@ internal static class DefectSquares
     private static readonly PlayerTally EvokedThisTurn = new(TallyScope.Turn);
     private static readonly PlayerTally ChanneledThisCombat = new(TallyScope.Combat);
     private static readonly PlayerSet<Type> OrbTypesChanneledThisCombat = new(TallyScope.Combat);
+    private static readonly PlayerTally StatusCardsAddedThisCombat = new(TallyScope.Combat);
 
-    /// <summary>The outermost card a player is playing and the distinct orbs it has evoked so far.</summary>
+    /// <summary>The outermost card a player is playing and how many evokes it has caused so far.</summary>
     private sealed class CardInPlay(CardModel card)
     {
         public CardModel Card { get; } = card;
-        public HashSet<OrbModel> EvokedOrbs { get; } = new();
+        public int Evokes { get; set; }
     }
 
     /// <summary>
@@ -49,8 +54,8 @@ internal static class DefectSquares
     // C-DE-E1: every evoke counts, so Dualcast's double evoke of one orb counts twice.
     // C-DE-M5: the Dark orb's evoke value (what it deals before the target's modifiers), and only
     // when it had a target to hit.
-    // C-DE-M6: distinct orbs evoked while a card of the player's is resolving, per card play, so
-    // evoking one orb several times (Multi-Cast) counts once.
+    // C-DE-M6: every evoke while a card of the player's is resolving, per card play, so evoking
+    // the same orb several times (Quadcast, Multi-Cast) counts each time.
     // AfterOrbEvoked runs before the evoked orb is detached, so its Owner is still set.
     [HarmonyPatch(typeof(Hook), nameof(Hook.AfterOrbEvoked))]
     private static class OrbEvoked
@@ -73,9 +78,8 @@ internal static class DefectSquares
                 // The evoke value is a decimal; truncating it keeps "50 or more" exactly as before.
                 if (orb is DarkOrb && targets.Any())
                     BingoSquares.Reach(DarkEvokeForFifty, owner, (int)orb.EvokeVal, 50);
-                if (CardsInPlay.TryGetValue(owner.NetId, out CardInPlay? cardInPlay)
-                    && cardInPlay.EvokedOrbs.Add(orb))
-                    BingoSquares.Reach(EvokeFourWithOneCard, owner, cardInPlay.EvokedOrbs.Count, 4);
+                if (CardsInPlay.TryGetValue(owner.NetId, out CardInPlay? cardInPlay))
+                    BingoSquares.Reach(EvokeFourWithOneCard, owner, ++cardInPlay.Evokes, 4);
             });
         }
     }
@@ -160,6 +164,49 @@ internal static class DefectSquares
                 if (CardsInPlay.TryGetValue(netId, out CardInPlay? cardInPlay) && cardInPlay.Card == cardPlay.Card)
                     CardsInPlay.Remove(netId);
             });
+        }
+    }
+
+    // C-DE-M7: Status cards generated into the player's own piles by the player. The game passes
+    // the player as the creator when their cards, powers, relics or potions generate a card
+    // (Overclock, Turbo, Boost Away, Tea of Discourtesy), and null when an enemy or an enemy's
+    // power does (Slimed, Dazed, Wounds), so the creator tells the two apart.
+    [HarmonyPatch(typeof(Hook), nameof(Hook.AfterCardGeneratedForCombat))]
+    private static class CardGenerated
+    {
+        [HarmonyPrefix]
+        private static void Prefix(CardModel card, Player? creator)
+        {
+            if (card.Type != CardType.Status || !BingoSquares.IsOpen(AddTenStatusCardsInOneCombat))
+                return;
+
+            CharacterSquares.Guard($"{nameof(DefectSquares)}.{nameof(CardGenerated)}", () =>
+            {
+                Player owner = card.Owner;
+                if (creator != owner || !CharacterSquares.Plays<Defect>(owner))
+                    return;
+
+                BingoSquares.Reach(AddTenStatusCardsInOneCombat, owner,
+                    StatusCardsAddedThisCombat.Add(owner), 10);
+            });
+        }
+    }
+
+    // C-DE-H3: the orb slot count after any slot gain. The game caps it at 10
+    // (OrbQueue.maxCapacity), so this square means reaching the cap. AddSlots is synchronous,
+    // so the postfix sees the new capacity.
+    [HarmonyPatch(typeof(OrbCmd), nameof(OrbCmd.AddSlots))]
+    private static class SlotsAdded
+    {
+        [HarmonyPostfix]
+        private static void Postfix(Player player)
+        {
+            if (!BingoSquares.IsOpen(HaveTenOrbSlots))
+                return;
+
+            CharacterSquares.Guard($"{nameof(DefectSquares)}.{nameof(SlotsAdded)}", () =>
+                CharacterSquares.Reach<Defect>(HaveTenOrbSlots, player,
+                    player.PlayerCombatState?.OrbQueue.Capacity ?? 0, OrbQueue.maxCapacity));
         }
     }
 }

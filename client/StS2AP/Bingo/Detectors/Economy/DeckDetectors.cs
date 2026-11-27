@@ -43,9 +43,9 @@ internal static class DeckDetectors
     // deck card (Strikes, Defends and each character's own starters).
     private const string NoStarterCardsSquare = "H11";
 
-    // H12 "Upgrade every card in your deck (10+ cards)": at least 10 upgraded cards and every card
-    // that can be upgraded at all is. Curses and the statuses that can never be upgraded don't
-    // block it.
+    // H12 "Upgrade every card in your deck": every card that can be upgraded at all is, and at
+    // least one card is upgraded, so a deck of only Curses (or an empty one) doesn't count.
+    // Curses and the statuses that can never be upgraded don't block it.
     private const string EveryCardUpgradedSquare = "H12";
 
     // AP-M05 / AP-H02 "Upgrade one card 3 / 6 times" (Endless Upgrades boon): any card the player
@@ -55,10 +55,6 @@ internal static class DeckDetectors
         ("AP-M05", 3),
         ("AP-H02", 6),
     };
-
-    // I-M12 "Transform 2 cards in one run": the run record's CardsTransformed, which the game
-    // fills for every deck card transformed (events, relics, Blitz merchants).
-    private const string TwoTransformsSquare = "I-M12";
 
     // I-M13 "Take a Curse from an event": a Curse entering the deck while an event option is being
     // carried out. Curses added by Cursed Run at the start of an act and Death Link curses arrive
@@ -111,16 +107,8 @@ internal static class DeckDetectors
         BingoSquares.Reach(ThreeCursesSquare, player, curses, 3);
         EconomyDetector.CompleteIf(NoStarterCardsSquare, starters == 0, player);
         EconomyDetector.CompleteIf(
-            EveryCardUpgradedSquare, upgraded >= 10 && upgradableButNotUpgraded == 0, player);
+            EveryCardUpgradedSquare, upgraded > 0 && upgradableButNotUpgraded == 0, player);
         CheckUpgradeLevel(player, highestUpgradeLevel);
-    }
-
-    public static void CheckTransforms(Player player)
-    {
-        if (!BingoSquares.IsOpen(TwoTransformsSquare))
-            return;
-        int transformed = EconomyDetector.RunRecord(player).Sum(stats => stats.CardsTransformed.Count);
-        BingoSquares.Reach(TwoTransformsSquare, player, transformed, 2);
     }
 
     private static void CheckUpgradeLevel(Player player, int upgradeLevel)
@@ -153,7 +141,6 @@ internal static class DeckDetectors
                 if (owner == null || !LocalContext.IsMe(owner) || card.Pile?.Type != PileType.Deck)
                     return;
                 CheckDeck(owner);
-                CheckTransforms(owner);
                 CheckCurseFromEvent(owner, card);
             });
     }

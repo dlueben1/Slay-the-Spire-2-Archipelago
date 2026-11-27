@@ -18,10 +18,16 @@ internal static class SilentSquares
     private const string TriggerTwoSlyInOneCombat = "C-SI-E2";
     private const string DiscardEightInOneTurn = "C-SI-M3";
     private const string TriggerThreeSlyInOneTurn = "C-SI-M4";
+    private const string TwoHundredBlock = "C-SI-H2";
+    private const string TwentyFiveShivsInOneTurn = "C-SI-H3";
+
+    // C-SI-M5 "Draw 8 extra cards in one turn" shares the core draw count in
+    // Combat/TurnAndPileDetectors.cs.
 
     private static readonly PlayerTally SlyTriggeredThisCombat = new(TallyScope.Combat);
     private static readonly PlayerTally SlyTriggeredThisTurn = new(TallyScope.Turn);
     private static readonly PlayerTally DiscardedThisTurn = new(TallyScope.Turn);
+    private static readonly PlayerTally ShivsPlayedThisTurn = new(TallyScope.Turn);
 
     // C-SI-E1: Poison ticks deal Unblockable, Unpowered damage with no dealer and no card source
     // (PoisonPower.Trigger), and the Poison power is still on its owner when the killing hit is
@@ -92,6 +98,43 @@ internal static class SilentSquares
                 Player owner = card.Owner;
                 if (CharacterSquares.Plays<Silent>(owner))
                     BingoSquares.Reach(DiscardEightInOneTurn, owner, DiscardedThisTurn.Add(owner), 8);
+            });
+        }
+    }
+
+    // C-SI-H2: like E06, the Block is already on the creature when AfterBlockGained runs.
+    [HarmonyPatch(typeof(Hook), nameof(Hook.AfterBlockGained))]
+    private static class BlockGained
+    {
+        [HarmonyPrefix]
+        private static void Prefix(Creature creature)
+        {
+            if (!BingoSquares.IsOpen(TwoHundredBlock))
+                return;
+
+            CharacterSquares.Guard($"{nameof(SilentSquares)}.{nameof(BlockGained)}",
+                () => CharacterSquares.Reach<Silent>(TwoHundredBlock, creature.Player, creature.Block, 200));
+        }
+    }
+
+    // C-SI-H3: a Shiv is any card with the game's Shiv tag (upgraded Shivs too), the test Helical
+    // Dart and Phantom Blades use. As with "Play 8 cards in one turn", only the first play of a
+    // replayed card counts, and Shivs played during the enemies' turn don't.
+    [HarmonyPatch(typeof(Hook), nameof(Hook.BeforeCardPlayed))]
+    private static class CardPlayed
+    {
+        [HarmonyPrefix]
+        private static void Prefix(ICombatState combatState, CardPlay cardPlay)
+        {
+            if (!BingoSquares.IsOpen(TwentyFiveShivsInOneTurn) || !cardPlay.IsFirstInSeries
+                || combatState.CurrentSide != CombatSide.Player)
+                return;
+
+            CharacterSquares.Guard($"{nameof(SilentSquares)}.{nameof(CardPlayed)}", () =>
+            {
+                Player player = cardPlay.Player;
+                if (CharacterSquares.Plays<Silent>(player) && cardPlay.Card.Tags.Contains(CardTag.Shiv))
+                    BingoSquares.Reach(TwentyFiveShivsInOneTurn, player, ShivsPlayedThisTurn.Add(player), 25);
             });
         }
     }
