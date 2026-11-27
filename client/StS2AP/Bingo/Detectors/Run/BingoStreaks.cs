@@ -1,9 +1,12 @@
+using MegaCrit.Sts2.Core.Combat;
+using MegaCrit.Sts2.Core.Combat.History;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Runs.History;
+using StS2AP.Bingo.Detectors.Combat;
 using StS2AP.Utils;
 
 namespace StS2AP.Bingo.Detectors.Run;
@@ -13,6 +16,9 @@ internal enum StreakState
 {
     /// <summary>Still possible, done already, not a streak square, or no run in progress.</summary>
     Alive,
+
+    /// <summary>Broken in the fight in progress; the next fight starts it over.</summary>
+    BrokenThisFight,
 
     /// <summary>Broken in this act; the next act starts it over.</summary>
     BrokenThisAct,
@@ -25,6 +31,8 @@ internal enum StreakState
 /// Streak squares are the ones a single slip ruins until the next act or run: "Reach a boss
 /// taking the leftmost path all act", "Win without entering a shop". The board asks this class
 /// whether such a square is still alive, so a player can see they need to try again later.
+/// Fight streaks ("Win a combat without playing a Skill") are marked only while a fight they
+/// count for is in progress.
 /// </summary>
 /// <remarks>
 /// Everything is read from the run as it stands (map point history, visited map points, the
@@ -71,6 +79,30 @@ internal static class BingoStreaks
         ["R-M06"] = null,
     };
 
+    /// <summary>A square judged when a fight is won, and the fights it counts for.</summary>
+    private readonly record struct FightStreak(Func<RoomType, bool> CountsFor, Func<CombatHistory, RunState, Player, bool> Slipped);
+
+    private static bool AnyFight(RoomType room) => room is RoomType.Monster or RoomType.Elite or RoomType.Boss;
+    private static bool EliteFight(RoomType room) => room == RoomType.Elite;
+    private static bool BossFight(RoomType room) => room == RoomType.Boss;
+
+    // Judged at a victory by CombatVictoryDetectors, from the same checks: broken once the fight
+    // in progress shows the slip.
+    private static readonly Dictionary<string, FightStreak> FightStreaks = new()
+    {
+        ["E02"] = new(AnyFight, (history, _, me) => CombatVictoryDetectors.PlayedCardOfTypeThisFight(history, me, CardType.Skill)),
+        ["R-E11"] = new(AnyFight, (history, _, me) => CombatVictoryDetectors.GainedBlockThisFight(history, me)),
+        // Damage is recorded per map point, so damage from an event before its fight counts too.
+        ["R-M02"] = new(AnyFight, (_, run, me) => TookDamageHere(run, me)),
+        ["M04"] = new(EliteFight, (_, run, me) => TookDamageHere(run, me)),
+        ["F-M10"] = new(EliteFight, (history, _, me) => CombatVictoryDetectors.GainedBlockThisFight(history, me)),
+        ["R-M01"] = new(EliteFight, (_, _, me) => CombatNotes.PlayedMoreThanTwoInATurn(me)),
+        ["H05"] = new(BossFight, (_, run, me) => TookDamageHere(run, me)),
+        ["F-E07"] = new(BossFight, (history, _, me) => CombatVictoryDetectors.UsedPotionThisFight(history, me)),
+        ["F-H01"] = new(BossFight, (history, _, me) => CombatVictoryDetectors.PlayedCardOfTypeThisFight(history, me, CardType.Attack)),
+        ["F-H02"] = new(BossFight, (history, _, me) => CombatVictoryDetectors.GainedBlockThisFight(history, me)),
+    };
+
     private static readonly HashSet<string> LoggedFailures = new();
 
     /// <summary>The square's streak state in the run in progress; Alive when there is none.</summary>
@@ -98,10 +130,19 @@ internal static class BingoStreaks
     }
 
     private static bool IsStreak(string key) =>
-        ActStreaks.ContainsKey(key) || RunStreaks.ContainsKey(key) || Act2BossStreaks.ContainsKey(key);
+        ActStreaks.ContainsKey(key) || RunStreaks.ContainsKey(key) || Act2BossStreaks.ContainsKey(key)
+        || FightStreaks.ContainsKey(key);
 
     private static StreakState Judge(string key, RunState run, Player me)
     {
+        if (FightStreaks.TryGetValue(key, out FightStreak fight))
+        {
+            // The combat history holds only the fight in progress and is cleared once it is won.
+            CombatManager combat = CombatManager.Instance;
+            bool counts = combat.IsInProgress && run.CurrentRoom is { } room && fight.CountsFor(room.RoomType);
+            return counts && fight.Slipped(combat.History, run, me) ? StreakState.BrokenThisFight : StreakState.Alive;
+        }
+
         if (ActStreaks.TryGetValue(key, out var actSlip))
         {
             if (!BossReachedThisAct(run) && !actSlip(run, me))
@@ -131,6 +172,9 @@ internal static class BingoStreaks
     /// </summary>
     private static bool BossReachedThisAct(RunState run) =>
         RunHistory.CountRooms(RunHistory.CurrentAct(run), RoomType.Boss) > 0;
+
+    private static bool TookDamageHere(RunState run, Player me) =>
+        CombatVictoryDetectors.DamageTakenHere(run, me) > 0;
 
     /// <summary>Whether a card of another type than <paramref name="wanted"/> was added this act.</summary>
     private static bool AddedOtherThan(RunState run, Player me, CardType wanted) =>

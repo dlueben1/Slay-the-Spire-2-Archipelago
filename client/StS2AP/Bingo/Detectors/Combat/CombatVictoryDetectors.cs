@@ -75,15 +75,9 @@ internal static class CombatVictoryDetectors
         bool elite = room.RoomType == RoomType.Elite;
         int turnNumber = me.PlayerCombatState?.TurnNumber ?? int.MaxValue;
 
-        // Card plays include auto-plays (Havoc, Mayhem and the like): the game records them as
-        // plays, and the user left the choice to whatever is simplest.
-        bool PlayedCardOfType(CardType type) =>
-            history.CardPlaysStarted.Any(e => e.CardPlay.Player == me && e.CardPlay.Card.Type == type);
-        // Osty's summons are not Block; Frost orbs are (accepted).
-        bool GainedBlock() =>
-            history.Entries.OfType<BlockGainedEntry>().Any(e => e.Receiver == body && e.Amount > 0);
-        bool UsedPotion() =>
-            history.Entries.OfType<PotionUsedEntry>().Any(e => e.Actor == body);
+        bool PlayedCardOfType(CardType type) => PlayedCardOfTypeThisFight(history, me, type);
+        bool GainedBlock() => GainedBlockThisFight(history, me);
+        bool UsedPotion() => UsedPotionThisFight(history, me);
 
         // E02: no Skill card play by this player in the combat history.
         CompleteIf("E02", me, () => !PlayedCardOfType(CardType.Skill));
@@ -126,8 +120,27 @@ internal static class CombatVictoryDetectors
         ReachIfOpen("R-M02", me, () => CleanCombatStreak(runState, me), 3);
     }
 
+    // The "without" checks below are shared with BingoStreaks, which marks these squares broken
+    // as soon as the fight in progress shows the slip.
+
+    /// <summary>
+    /// Whether the player played a card of the type in the current combat. Card plays include
+    /// auto-plays (Havoc, Mayhem and the like): the game records them as plays, and the user left
+    /// the choice to whatever is simplest.
+    /// </summary>
+    internal static bool PlayedCardOfTypeThisFight(CombatHistory history, Player player, CardType type) =>
+        history.CardPlaysStarted.Any(e => e.CardPlay.Player == player && e.CardPlay.Card.Type == type);
+
+    /// <summary>Whether the player gained Block in the current combat. Osty's summons are not Block; Frost orbs are (accepted).</summary>
+    internal static bool GainedBlockThisFight(CombatHistory history, Player player) =>
+        history.Entries.OfType<BlockGainedEntry>().Any(e => e.Receiver == player.Creature && e.Amount > 0);
+
+    /// <summary>Whether the player used a potion in the current combat.</summary>
+    internal static bool UsedPotionThisFight(CombatHistory history, Player player) =>
+        history.Entries.OfType<PotionUsedEntry>().Any(e => e.Actor == player.Creature);
+
     /// <summary>Damage the player took at the current map point, or null when it isn't recorded.</summary>
-    private static int? DamageTakenHere(IRunState runState, Player player) =>
+    internal static int? DamageTakenHere(IRunState runState, Player player) =>
         runState.CurrentMapPointHistoryEntry?.PlayerStats
             .FirstOrDefault(e => e.PlayerId == player.NetId)?.DamageTaken;
 

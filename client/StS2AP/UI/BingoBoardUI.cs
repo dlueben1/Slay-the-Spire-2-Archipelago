@@ -1,4 +1,5 @@
 using Godot;
+using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.HoverTips;
 using StS2AP.Bingo;
@@ -74,8 +75,10 @@ internal sealed partial class BingoBoardUI : Control
     private BingoLineGems _lineGems = null!;
     private Button _close = null!;
     private Label _pinHint = null!;
+    private Control _fightLegend = null!;
     private Control _actLegend = null!;
     private Control _runLegend = null!;
+    private bool _fightRefreshQueued;
     // Null until the grid is built in Ready.
     private BingoLineStrokes? _strokes;
     private readonly List<BingoCellView> _cells = new();
@@ -311,8 +314,34 @@ internal sealed partial class BingoBoardUI : Control
             SlideIn();
             UpdateCells(animate: false);
         };
-        TreeEntered += () => GetTree().ProcessFrame += TrackPeekHover;
-        TreeExiting += () => GetTree().ProcessFrame -= TrackPeekHover;
+        TreeEntered += () =>
+        {
+            GetTree().ProcessFrame += TrackPeekHover;
+            CombatManager.Instance.History.Changed += QueueFightRefresh;
+        };
+        TreeExiting += () =>
+        {
+            GetTree().ProcessFrame -= TrackPeekHover;
+            CombatManager.Instance.History.Changed -= QueueFightRefresh;
+        };
+    }
+
+    /// <summary>
+    /// A fight streak can break while the board is open (a hit on the enemies' turn while it is
+    /// peeked). The combat history changes many times per card, so the restyle waits for the end
+    /// of the frame and runs once.
+    /// </summary>
+    private void QueueFightRefresh()
+    {
+        if (_fightRefreshQueued)
+            return;
+        _fightRefreshQueued = true;
+        Callable.From(() =>
+        {
+            _fightRefreshQueued = false;
+            if (IsInstanceValid(this) && ReferenceEquals(_open, this))
+                Refresh();
+        }).CallDeferred();
     }
 
     private void LayOut()
@@ -354,9 +383,11 @@ internal sealed partial class BingoBoardUI : Control
         _squareCount.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         header.AddChild(_squareCount);
 
-        // Shown only while some square's streak is broken, so the two colours explain themselves.
+        // Shown only while some square's streak is broken, so the colours explain themselves.
+        _fightLegend = LegendEntry(BingoCellView.BrokenThisFightColor, "Next fight");
         _actLegend = LegendEntry(BingoCellView.BrokenThisActColor, "Next act");
         _runLegend = LegendEntry(BingoCellView.BrokenThisRunColor, "Next run");
+        header.AddChild(_fightLegend);
         header.AddChild(_actLegend);
         header.AddChild(_runLegend);
 
@@ -498,6 +529,7 @@ internal sealed partial class BingoBoardUI : Control
                 done[index], onFullLine.Contains(index), finishesLine.Contains(index), streaks[index],
                 BingoProgress.For(_board.Squares[index].Key), newlyDone);
         }
+        _fightLegend.Visible = streaks.Contains(StreakState.BrokenThisFight);
         _actLegend.Visible = streaks.Contains(StreakState.BrokenThisAct);
         _runLegend.Visible = streaks.Contains(StreakState.BrokenThisRun);
         _shownDone = Enumerable.Range(0, done.Length).Where(index => done[index]).ToHashSet();
@@ -563,8 +595,9 @@ internal sealed partial class BingoCellView : PanelContainer
     private static readonly Color MediumTier = new("#F5A524");
     private static readonly Color HardTier = new("#E5484D");
     private static readonly Color DoneFill = Card.Lerp(Claim, 0.16f);
-    // Broken streaks: violet comes back next act, red only next run. Kept apart from the tier
-    // pips' amber and from the done teal so neither reads as the other.
+    // Broken streaks: pink comes back next fight, violet next act, red only next run. Kept apart
+    // from the tier pips' amber and from the done teal so neither reads as the other.
+    internal static readonly Color BrokenThisFightColor = new("#F472B6");
     internal static readonly Color BrokenThisActColor = new("#A78BFA");
     internal static readonly Color BrokenThisRunColor = new("#F0525A");
 
@@ -681,6 +714,7 @@ internal sealed partial class BingoCellView : PanelContainer
 
         Color? brokenColor = streak switch
         {
+            StreakState.BrokenThisFight => BrokenThisFightColor,
             StreakState.BrokenThisAct => BrokenThisActColor,
             StreakState.BrokenThisRun => BrokenThisRunColor,
             _ => null,
