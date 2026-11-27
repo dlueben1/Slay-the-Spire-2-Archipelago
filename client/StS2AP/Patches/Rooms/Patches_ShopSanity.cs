@@ -9,7 +9,6 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Gold;
 using MegaCrit.Sts2.Core.Entities.Merchant;
 using MegaCrit.Sts2.Core.Entities.Players;
-using MegaCrit.Sts2.Core.Entities.Rngs;
 using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
@@ -230,45 +229,40 @@ namespace StS2AP.Patches
         }
 
         /// <summary>
-        /// Prices an AP slot as the game prices that kind of entry, without drawing from the
-        /// player's shop RNG. The game's CalcCost varies the price with that RNG, but AP pages
-        /// are built only on their own player's machine, so a draw there would leave the other
-        /// players' copies of the RNG behind and their later rolls for this player different:
-        /// shop stock, and the offers of a Blitz merchant. A throwaway RNG seeded with the
-        /// location stands in for it, which also keeps each check's price the same every visit.
+        /// Prices an AP check by the classification of the item it holds, the same in every
+        /// slot: the game's price for a rare, uncommon or common card (150, 75, 50; traps as
+        /// common), varied by 5% either way as cards are, then reduced per the ShopSanityCosts
+        /// option. Values match options.py: 0=Fixed(15g), 1=Super_Discount_Tiered(20%),
+        /// 2=Discount_Tiered(50%), 3=Tiered(full price). A card slot the shop put on sale does
+        /// not discount its check.
+        ///
+        /// The variation comes from a throwaway RNG seeded with the location, not the player's
+        /// shop RNG. AP pages are built only on their own player's machine, so a draw from the
+        /// shop RNG there would leave the other players' copies of it behind and their later
+        /// rolls for this player different: shop stock, and the offers of a Blitz merchant.
+        /// Seeding with the location also keeps each check's price the same every visit.
         /// </summary>
-        private static void CalcCostOffShopRng(MerchantEntry entry, long locationId)
+        private static void PriceCheck(
+            MerchantEntry entry,
+            ApItemClassification classification,
+            long locationId,
+            ArchipelagoSettings settings)
         {
-            Dictionary<PlayerRngType, MegaCrit.Sts2.Core.Random.Rng> rngs = entry._player.PlayerRng._rngs;
-            MegaCrit.Sts2.Core.Random.Rng shopRng = rngs[PlayerRngType.Shops];
-            rngs[PlayerRngType.Shops] = new MegaCrit.Sts2.Core.Random.Rng(unchecked((uint)locationId));
-            try
+            int baseline = classification switch
             {
-                entry.CalcCost();
-            }
-            finally
-            {
-                rngs[PlayerRngType.Shops] = shopRng;
-            }
-        }
-
-        /// <summary>
-        /// Reads whatever CalcCost() just computed (the vanilla-style rarity-tiered
-        /// baseline) and reduces it per the ShopSanityCosts option. Values match
-        /// options.py exactly: 0=Fixed(15g), 1=Super_Discount_Tiered(20%),
-        /// 2=Discount_Tiered(50%), 3=Tiered(full baseline, no discount).
-        /// </summary>
-        private static void ApplyCostTier(MerchantEntry entry, ArchipelagoSettings settings)
-        {
-            int baseline = entry._cost;
-            int final = settings.ShopSanityCosts switch
+                ApItemClassification.Progression => 150,
+                ApItemClassification.Useful => 75,
+                _ => 50,
+            };
+            float variation = new MegaCrit.Sts2.Core.Random.Rng(unchecked((uint)locationId)).NextFloat(0.95f, 1.05f);
+            int fullPrice = Mathf.RoundToInt(baseline * variation);
+            entry._cost = settings.ShopSanityCosts switch
             {
                 0 => 15,
-                1 => Math.Max(1, (int)Math.Round(baseline * 0.20f)),
-                2 => Math.Max(1, (int)Math.Round(baseline * 0.50f)),
-                _ => baseline,
+                1 => Math.Max(1, (int)Math.Round(fullPrice * 0.20f)),
+                2 => Math.Max(1, (int)Math.Round(fullPrice * 0.50f)),
+                _ => fullPrice,
             };
-            entry._cost = final;
         }
 
         #region Slot Population
@@ -415,8 +409,7 @@ namespace StS2AP.Patches
                     );
                     entry.CreationResult = new CardCreationResult(apCard);
                     ApCheckTargets.Add(entry, target);
-                    CalcCostOffShopRng(entry, target.LocationId);
-                    ApplyCostTier(entry, settings);
+                    PriceCheck(entry, classification, target.LocationId, settings);
                 }
                 else
                 {
@@ -448,8 +441,7 @@ namespace StS2AP.Patches
                             target.LocationId
                         );
                     ApCheckTargets.Add(entry, target);
-                    CalcCostOffShopRng(entry, target.LocationId);
-                    ApplyCostTier(entry, settings);
+                    PriceCheck(entry, classification, target.LocationId, settings);
                 }
                 else
                 {
@@ -481,8 +473,7 @@ namespace StS2AP.Patches
                             target.LocationId
                         );
                     ApCheckTargets.Add(entry, target);
-                    CalcCostOffShopRng(entry, target.LocationId);
-                    ApplyCostTier(entry, settings);
+                    PriceCheck(entry, classification, target.LocationId, settings);
                 }
                 else
                 {

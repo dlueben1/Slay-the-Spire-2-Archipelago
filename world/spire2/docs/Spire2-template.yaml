@@ -230,6 +230,8 @@ Slay the Spire II:
   shop_remove_slots: false    # card removal, unlocked progressively per act
 
   # Price of checks on the Archipelago shop page (normal shop prices are unaffected).
+  # The vanilla-style price depends on the item, not the slot: 150 gold for progression,
+  # 75 for useful, 50 for filler or traps.
   #   fixed                  - 15 gold each
   #   super_discount_tiered  - 20% of a vanilla-style price
   #   discount_tiered        - 50% of a vanilla-style price

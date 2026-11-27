@@ -275,21 +275,21 @@ namespace StS2AP.Models
                 LogUtility.Error($"Could not map Ancient reward item index {index} to its {expectedProgression} progression");
                 return Array.Empty<RelicModel>();
             }
-            if (rewardOrdinal > maxRewardOrdinal)
+            // Copies beyond the configured rewards (from start inventory, say) have no act, so
+            // they draw from the True Chaos pool whatever the Ancient Relic Pool setting is.
+            bool isSurplus = rewardOrdinal > maxRewardOrdinal;
+            if (isSurplus)
             {
-                // Preserve surplus receipts as unavailable rows. Neow Sanity adds one
-                // claimable reward before the Act 2 and Act 3 rewards.
                 LogUtility.Info(
-                    $"Progressive Ancient item index {index} has no {expectedProgression} reward; "
-                        + $"claimableOrdinal={rewardOrdinal}"
+                    $"Progressive Ancient item index {index} is beyond the {expectedProgression} rewards "
+                        + $"(ordinal {rewardOrdinal}); using the True Chaos pool"
                 );
-                return Array.Empty<RelicModel>();
             }
 
             // With Neow Sanity, ordinals 0/1/2 map to Act indices 0/1/2.
             // Otherwise ordinals 0/1 map to Act indices 1/2.
             var ancientActIndex = rewardOrdinal + (includesNeowReward ? 0 : 1);
-            var poolMode = AncientSettingsUtility.Current.Pool;
+            var poolMode = isSurplus ? AncientRelicPoolMode.TrueChaos : AncientSettingsUtility.Current.Pool;
             // True Chaos combines only Act 2/3; Neow's reward remains Neow-only.
             int? poolActIndex = ancientActIndex == 0
                 ? 0

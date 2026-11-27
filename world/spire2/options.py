@@ -300,7 +300,8 @@ class ShopRemoveSlots(Toggle):
 
 class ShopSanityCosts(Choice):
     """Controls the price paid for location checks on the AP shop page. Normal shop-item prices are
-    unaffected. Tiered modes first calculate a vanilla-style baseline for the AP card, relic, or potion.
+    unaffected. Tiered modes start from the item's card-style baseline, in any slot: 150 gold for
+    progression, 75 for useful, 50 for filler or traps.
 
     Fixed: 15 gold per AP check.
     Super Discount Tiered: 20 percent of the calculated baseline.

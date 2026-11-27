@@ -330,9 +330,12 @@ namespace StS2AP.Patches
             // MegaCrit executes a chosen option index against this owner's event clone on every
             // replica. Include the run-stable Net ID so same-character players keep independent,
             // deterministic lists while every replica still constructs the same owner list.
+            // The Ancient's ID gives each Ancient its own three relics. Mods that let the player
+            // pick the act's Ancient (Choose the Ancient) preview each candidate by generating
+            // its options on a copy, so without it every preview would show the same three.
             var choiceKey = MultiplayerSupport.IsRealMultiplayerRun
-                ? $"start-act-{currentAct}|owner-{player.NetId}"
-                : $"start-act-{currentAct}";
+                ? $"start-act-{currentAct}|ancient-{__instance.Id.Entry}|owner-{player.NetId}"
+                : $"start-act-{currentAct}|ancient-{__instance.Id.Entry}";
             var choices = AncientRelicPool.CreateChoices(
                 player,
                 choiceKey,

@@ -12,7 +12,7 @@
     },
     "options": {
       "path": "world/spire2/options.py",
-      "sha256": "d6cd690a759aefffd4376675a566909e02af09e65c70a13ccc3edd901b2c1c8b"
+      "sha256": "4fb714137410993115467ff3834642d611a0ebe37e95441e5d87d02a607f50fe"
     },
     "web_world": {
       "path": "world/spire2/web_world.py",
@@ -2142,7 +2142,7 @@
       "module": "worlds.spire2.options",
       "kind": "choice",
       "display_name": "Shop Sanity Costs",
-      "description": "Controls the price paid for location checks on the AP shop page. Normal shop-item prices are\nunaffected. Tiered modes first calculate a vanilla-style baseline for the AP card, relic, or potion.\n\nFixed: 15 gold per AP check.\nSuper Discount Tiered: 20 percent of the calculated baseline.\nDiscount Tiered: 50 percent of the calculated baseline.\nTiered: the full calculated baseline.\n\nSomewhat accounted for in logic.",
+      "description": "Controls the price paid for location checks on the AP shop page. Normal shop-item prices are\nunaffected. Tiered modes start from the item's card-style baseline, in any slot: 150 gold for\nprogression, 75 for useful, 50 for filler or traps.\n\nFixed: 15 gold per AP check.\nSuper Discount Tiered: 20 percent of the calculated baseline.\nDiscount Tiered: 50 percent of the calculated baseline.\nTiered: the full calculated baseline.\n\nSomewhat accounted for in logic.",
       "default": "Discount_Tiered",
       "raw_default": 2,
       "visibility": {
