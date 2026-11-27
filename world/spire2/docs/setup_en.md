@@ -100,14 +100,58 @@ fixes for common problems.
 
 ## Manual installation
 
-Install only one copy of the Archipelago mod. If you were using the Workshop item,
-unsubscribe from it first, and keep RitsuLib installed separately.
+Install only one copy of each mod. If you were using the Workshop item for the
+Archipelago mod, unsubscribe from it first. RitsuLib can come from Workshop or be
+installed by hand as below.
 
-1. Download `Archipelago.zip` from the release you want to play.
-2. In Steam, open Slay the Spire 2's **Browse Local Files** action.
-3. Create `mods/Archipelago` inside that game directory and extract the ZIP's
-   contents into it.
-4. Confirm that `Archipelago.dll`, `Archipelago.json`, the PCK and the `lib/` and
-   `data/` directories are directly inside `mods/Archipelago`, without an extra
-   nested `Archipelago` folder.
-5. Start the game.
+1. Download the two ZIPs:
+   - `Archipelago.zip` from the [Archipelago mod releases](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases),
+     for the release you want to play.
+   - `STS2-RitsuLib.<version>.variant-pack.zip` from the [RitsuLib releases](https://github.com/BAKAOLC/STS2-RitsuLib/releases)
+     (version 0.6.16 or newer; the latest is best). Take the **variant-pack**: it
+     works on both the main and beta branches. The other ZIPs on that page are each
+     for a single game version, and the `.nupkg` files are for mod developers.
+2. In Steam, right-click Slay the Spire 2 and select **Manage** > **Browse local
+   files**. This opens the game folder, which holds `SlayTheSpire2.exe` (or
+   `SlayTheSpire2` on Linux).
+3. Create a folder named `mods` there, if it isn't there yet.
+4. Copy both ZIPs into `mods`.
+5. Extract each ZIP into its own folder inside `mods`:
+   - **Windows:** right-click the ZIP, select **Extract All...**, and keep the
+     suggested folder. With 7-Zip or WinRAR, use the **Extract to** option named
+     after the ZIP (such as `Archipelago\`), not **Extract Here**, which spills the
+     files loose into `mods`.
+   - **Linux:** your file manager's **Extract Here** creates the folder.
+
+   You can delete the ZIPs afterwards or leave them; the game ignores them.
+6. Start the game.
+
+Afterwards, `mods` should look like this (the folder names don't matter, as long
+as each mod has its own folder):
+
+```
+Slay the Spire 2/
+├── SlayTheSpire2.exe
+└── mods/
+    ├── Archipelago.zip                              (optional to keep)
+    ├── Archipelago/
+    │   ├── Archipelago.dll
+    │   ├── Archipelago.json
+    │   ├── Archipelago.pck
+    │   ├── ...
+    │   ├── data/
+    │   └── lib/
+    ├── STS2-RitsuLib.0.6.16.variant-pack.zip        (optional to keep)
+    └── STS2-RitsuLib.0.6.16.variant-pack/
+        ├── STS2-RitsuLib.dll
+        ├── mod_manifest.json
+        ├── ...
+        ├── compat/
+        └── shared/
+```
+
+If the browser renamed a download, for example to `Archipelago (1).zip`, the folder
+gets that name too, which is fine.
+
+**Updating:** delete the mod's old folder first, then extract the new ZIP the same
+way. Two copies of the same mod in `mods` conflict with each other.
