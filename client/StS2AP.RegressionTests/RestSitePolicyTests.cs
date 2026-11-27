@@ -23,14 +23,14 @@ public sealed class RestSitePolicyTests
     {
         var options = NativeOptions(smithEnabled: false);
         Assert.True(Apply(new RestSitePolicy(act, 0, 3), options));
-        Assert.Equal(new[] { new Option("NOTHING"), new Option("SMITH", false) }, options);
+        Assert.Equal(new[] { new Option("SMITH", false), new Option("NOTHING") }, options);
     }
 
     [Theory]
-    [InlineData(0, 1, true, false, "SMITH")]
-    [InlineData(1, 1, false, false, "HEAL,MEND,SMITH")]
+    [InlineData(0, 1, true, false, "SMITH,NOTHING")]
+    [InlineData(1, 1, false, false, "HEAL,MEND,SMITH,NOTHING")]
     [InlineData(0, 0, true, true, "NOTHING")]
-    [InlineData(1, 0, false, false, "HEAL,MEND")]
+    [InlineData(1, 0, false, false, "HEAL,MEND,NOTHING")]
     public void ProgressionLocksPreserveUsableActions(
         int rest, int smith, bool smithEnabled, bool fallback, string expectedIds)
     {
@@ -41,8 +41,8 @@ public sealed class RestSitePolicyTests
     }
 
     [Theory]
-    [InlineData(1, false, "SMITH,DIG")]
-    [InlineData(0, true, "NOTHING,DIG")]
+    [InlineData(1, false, "SMITH,DIG,NOTHING")]
+    [InlineData(0, true, "DIG,NOTHING")]
     public void RelicActionsRemainUsableAndBothLockedFallbackIsPreserved(
         int smith, bool fallback, string expectedIds)
     {
@@ -96,7 +96,7 @@ public sealed class RestSitePolicyTests
         var options = NativeOptions(smithEnabled: false);
         Assert.True(Apply(policy, options));
         var checks = policy.GetAvailableChecks(checkedIds, SuppliedLocationId).ToArray();
-        Assert.Equal("NOTHING", options[0].Id);
+        Assert.Equal("NOTHING", options[^1].Id);
         Assert.Equal(3, checks.Length);
         Assert.DoesNotContain(checks, check => checkedIds.Contains(check.LocationId));
         Assert.Equal(new[] { SuppliedLocationId(1, 1) }, checkedIds);

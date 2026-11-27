@@ -14,12 +14,17 @@ internal sealed class RestSitePolicy(int currentAct, int restLevel, int smithLev
     /// <summary>Whether this act's Progressive Smith has been received.</summary>
     public bool CanSmith => smithLevel >= CurrentAct;
 
-    /// <summary>Applies progression locks, then provides a safe exit before AP checks are added.</summary>
+    /// <summary>
+    /// Applies progression locks, then adds a Do Nothing option after the remaining native and
+    /// relic actions, before AP checks are added. Do Nothing is always offered so a player can
+    /// leave without resting or smithing; it is also the safe exit when no other action is usable.
+    /// Returns whether Do Nothing is the only way out.
+    /// </summary>
     public bool ApplyLocks<TOption>(
         ICollection<TOption> options,
         Func<TOption, string> getOptionId,
         Func<TOption, bool> isEnabled,
-        Func<TOption> createFallback)
+        Func<TOption> createSkip)
     {
         bool canRest = CanRest;
         bool canSmith = CanSmith;
@@ -31,17 +36,10 @@ internal sealed class RestSitePolicy(int currentAct, int restLevel, int smithLev
         }
 
         // Unlocked Smith can still be disabled, and relic actions must remain usable.
-        // Preserve the both-locked fallback even if a relic provides another action.
-        bool needsFallback = (!canRest && !canSmith) || !options.Any(isEnabled);
-        if (needsFallback)
-        {
-            TOption fallback = createFallback();
-            if (options is List<TOption> list)
-                list.Insert(0, fallback);
-            else
-                options.Add(fallback);
-        }
-        return needsFallback;
+        // With Rest and Smith both locked, relic actions do not count as a way out.
+        bool skipIsOnlyExit = (!canRest && !canSmith) || !options.Any(isEnabled);
+        options.Add(createSkip());
+        return skipIsOnlyExit;
     }
 
     public IEnumerable<(int Act, int Campfire, long LocationId)> GetAvailableChecks(
