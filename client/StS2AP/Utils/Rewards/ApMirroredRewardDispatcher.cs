@@ -294,6 +294,8 @@ public static partial class ApMirroredRewardDispatcher
             .GroupBy(receipt => receipt.Index)
             .Select(group => group.First())
             .OrderBy(receipt => receipt.Index);
+        // Menu rank by received item index, worked out while each receipt is at hand.
+        var menuOrder = new Dictionary<int, int>();
 
         foreach (IndexedItemInfo receipt in receipts)
         {
@@ -310,7 +312,9 @@ public static partial class ApMirroredRewardDispatcher
                 if (kind == ApMirroredRewardKind.Relic && approvedRelics != null
                     && !approvedRelics.Contains(receipt.Index)) continue;
 
-                menu.Rewards.Add(BuildAssignedSpec(receipt, player, apSlotId, kind));
+                ApMirroredRewardSpec spec = BuildAssignedSpec(receipt, player, apSlotId, kind);
+                menu.Rewards.Add(spec);
+                menuOrder[receipt.Index] = GetMenuOrder(spec, receipt);
                 continue;
             }
 
@@ -334,6 +338,7 @@ public static partial class ApMirroredRewardDispatcher
                 FoundLocation = receipt.Item.LocationDisplayName,
                 UnavailableReason = $"Unavailable in experimental multiplayer ({feature}).",
             });
+            menuOrder[receipt.Index] = UnavailableMenuOrder;
         }
 
         // Persist all newly materialized assignments in one revision after the complete menu
@@ -342,7 +347,7 @@ public static partial class ApMirroredRewardDispatcher
             throw new InvalidOperationException("The AP reward assignments could not reach the host.");
 
         menu.Rewards = menu.Rewards
-            .OrderBy(spec => GetNativeOrder(spec.Kind))
+            .OrderBy(spec => menuOrder[spec.ReceivedItemIndex])
             .ThenBy(spec => spec.ReceivedItemIndex)
             .ToList();
         return menu;
@@ -897,12 +902,24 @@ public static partial class ApMirroredRewardDispatcher
         return false;
     }
 
-    private static int GetNativeOrder(ApMirroredRewardKind kind) => kind switch
+    private const int UnavailableMenuOrder = 99;
+
+    /// <summary>
+    /// Where a reward sits in the AP menu, most wanted first. Gold always heads the screen (see
+    /// BuildRewardsSet); then Ancient relics, relics, the other bonus items (relics, cards,
+    /// enchantments, Max HP), rare card rewards, card rewards, potions and wax relics. Rewards
+    /// that cannot be given come last. Rewards of one rank keep the order they arrived in.
+    /// </summary>
+    private static int GetMenuOrder(ApMirroredRewardSpec spec, IndexedItemInfo receipt) => spec.Kind switch
     {
-        ApMirroredRewardKind.Potion => 2,
-        ApMirroredRewardKind.Relic or ApMirroredRewardKind.Ancient or ApMirroredRewardKind.Bonus => 3,
-        ApMirroredRewardKind.Card => 5,
-        _ => 99,
+        ApMirroredRewardKind.Ancient => 0,
+        ApMirroredRewardKind.Relic => 1,
+        ApMirroredRewardKind.Bonus when receipt.Item.GetUniversalItemId() == ItemTable.APItem.BonusWaxRelic => 6,
+        ApMirroredRewardKind.Bonus => 2,
+        ApMirroredRewardKind.Card when spec.IsRareCardReward => 3,
+        ApMirroredRewardKind.Card => 4,
+        ApMirroredRewardKind.Potion => 5,
+        _ => UnavailableMenuOrder,
     };
 
     private static bool TryGetMirroredKind(
