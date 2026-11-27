@@ -41,9 +41,9 @@ public static class BingoSquares
     /// <summary>
     /// Reports a "reach a number" square's current value ("Play 8 cards in one turn": the cards
     /// played so far this turn). Completes the square once <paramref name="value"/> reaches
-    /// <paramref name="target"/>; below that it raises the best so far the board shows. Call it
-    /// whenever the value changes, not only when it reaches the target. Same player rules as
-    /// <see cref="Complete"/>.
+    /// <paramref name="target"/>; below that the board shows it as the current value and keeps the
+    /// best so far. Call it whenever the value changes, also when it goes down, not only when it
+    /// reaches the target. Same player rules as <see cref="Complete"/>.
     /// </summary>
     public static void Reach(string key, Player? player, int value, int target)
     {
@@ -52,8 +52,11 @@ public static class BingoSquares
         if (!BingoState.IsOpen(key))
             return;
         if (value >= target)
+        {
             BingoState.Complete(key);
-        else
-            BingoProgress.Record(key, value, target);
+            return;
+        }
+        BingoProgress.RecordCurrent(key, value, target);
+        BingoProgress.Record(key, value, target);
     }
 }

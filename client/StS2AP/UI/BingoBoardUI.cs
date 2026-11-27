@@ -150,6 +150,24 @@ internal sealed partial class BingoBoardUI : Control
     /// <summary>Called on slot changes: a board from another slot must not stay open.</summary>
     internal static void RemoveUI() => Close();
 
+    private static bool _refreshQueued;
+
+    /// <summary>
+    /// Restyles the open board at the end of the frame. Progress values change many times per
+    /// card (damage, cards played), so they ask for one restyle instead of one each.
+    /// </summary>
+    internal static void RefreshSoon()
+    {
+        if (_refreshQueued || !IsOpen)
+            return;
+        _refreshQueued = true;
+        Callable.From(() =>
+        {
+            _refreshQueued = false;
+            Refresh();
+        }).CallDeferred();
+    }
+
     /// <summary>Restyles the open board after squares were checked.</summary>
     internal static void Refresh()
     {
@@ -616,7 +634,7 @@ internal sealed partial class BingoCellView : PanelContainer
     private readonly Label _progressText;
     private readonly BingoProgressBar _progressBar;
     private readonly int _maxFontSize;
-    private (bool Done, bool OnFullLine, bool FinishesLine, StreakState Streak, BingoProgress.Entry? Progress)? _state;
+    private (bool Done, bool OnFullLine, bool FinishesLine, StreakState Streak, BingoProgress.Shown? Progress)? _state;
 
     public BingoCellView(BingoSquareInfo square, Vector2 size, int maxFontSize, (Texture2D Icon, string Text)? character)
     {
@@ -699,18 +717,23 @@ internal sealed partial class BingoCellView : PanelContainer
     }
 
     internal void SetState(
-        bool done, bool onFullLine, bool finishesLine, StreakState streak, BingoProgress.Entry? progress, bool popIn)
+        bool done, bool onFullLine, bool finishesLine, StreakState streak, BingoProgress.Shown? progress, bool popIn)
     {
         if (_state == (done, onFullLine, finishesLine, streak, progress) && !popIn)
             return;
         _state = (done, onFullLine, finishesLine, streak, progress);
 
-        // Progress only matters while the square is still to do.
-        bool showProgress = !done && progress is { Best: > 0, Target: > 0 };
+        // Progress only matters while the square is still to do. The value for the turn, fight,
+        // act or run in progress is shown plainly; with none, the best so far is shown dimmed.
+        bool showProgress = !done && progress is { Target: > 0 } shown && (shown.Live || shown.Value > 0);
         _progressText.Visible = showProgress;
-        _progressBar.SetFraction(showProgress ? (float)progress!.Value.Best / progress.Value.Target : 0f);
+        bool live = showProgress && progress!.Value.Live;
+        _progressBar.SetFraction(showProgress ? (float)progress!.Value.Value / progress.Value.Target : 0f, dimmed: !live);
         if (showProgress)
-            _progressText.Text = $"{progress!.Value.Best}/{progress.Value.Target}";
+        {
+            _progressText.Text = $"{progress!.Value.Value}/{progress.Value.Target}";
+            _progressText.AddThemeColorOverride("font_color", live ? Text : new Color(TextMuted, 0.55f));
+        }
 
         Color? brokenColor = streak switch
         {
@@ -883,20 +906,25 @@ internal sealed partial class BrokenStreakBadge : Control
     }
 }
 
-/// <summary>A thin bar under a square's text: how close its best so far came to the target.</summary>
+/// <summary>
+/// A thin bar under a square's text: how close the current value (or, dimmed, the best so far)
+/// is to the target.
+/// </summary>
 internal sealed partial class BingoProgressBar : Control
 {
     private const float Thickness = 4f;
     private float _fraction;
+    private bool _dimmed;
 
     public BingoProgressBar() => Draw += DrawBar;
 
-    internal void SetFraction(float fraction)
+    internal void SetFraction(float fraction, bool dimmed)
     {
         fraction = Math.Clamp(fraction, 0f, 1f);
-        if (Mathf.IsEqualApprox(_fraction, fraction))
+        if (Mathf.IsEqualApprox(_fraction, fraction) && _dimmed == dimmed)
             return;
         _fraction = fraction;
+        _dimmed = dimmed;
         QueueRedraw();
     }
 
@@ -907,7 +935,7 @@ internal sealed partial class BingoProgressBar : Control
         float width = Size.X * 0.7f;
         var track = new Rect2((Size.X - width) / 2f, (Size.Y - Thickness) / 2f, width, Thickness);
         DrawRect(track, Track);
-        DrawRect(track with { Size = new Vector2(width * _fraction, Thickness) }, new Color(Claim, 0.85f));
+        DrawRect(track with { Size = new Vector2(width * _fraction, Thickness) }, new Color(Claim, _dimmed ? 0.35f : 0.85f));
     }
 }
 
