@@ -100,9 +100,18 @@ fixes for common problems.
 
 ## Manual installation
 
-Install only one copy of each mod. If you were using the Workshop item for the
-Archipelago mod, unsubscribe from it first. RitsuLib can come from Workshop or be
-installed by hand as below.
+RitsuLib can come from Workshop or be installed by hand as below.
+
+If you are subscribed to the Archipelago mod on Workshop, make sure only one copy
+is used. In order of preference:
+
+1. With [Mod Launch Manager](https://steamcommunity.com/sharedfiles/filedetails/?id=3788556097),
+   keep both copies and choose which one to use when you launch the game.
+2. Right-click Slay the Spire 2 in Steam, select **Properties** > **Workshop**, and
+   untick the Archipelago mod.
+3. Unsubscribe from the Archipelago mod on Workshop.
+
+To install:
 
 1. Download the two ZIPs:
    - `Archipelago.zip` from the [Archipelago mod releases](https://github.com/dlueben1/Slay-the-Spire-2-Archipelago/releases),
@@ -155,3 +164,13 @@ gets that name too, which is fine.
 
 **Updating:** delete the mod's old folder first, then extract the new ZIP the same
 way. Two copies of the same mod in `mods` conflict with each other.
+
+### Going back to the Workshop version
+
+Undo whichever option you chose above:
+
+1. With Mod Launch Manager, choose the Workshop copy when you launch the game.
+2. Delete the `Archipelago` folder from `mods`, then tick the Archipelago mod
+   again under **Properties** > **Workshop**.
+3. Subscribe to the Archipelago mod on Workshop again, and delete the `Archipelago`
+   folder from `mods`.
