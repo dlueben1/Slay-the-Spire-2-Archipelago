@@ -44,8 +44,8 @@ internal static class FoolSquares
             CharacterSquares.Guard($"{nameof(FoolSquares)}.{nameof(ArrowDislodged)}", () =>
             {
                 Player owner = arrow.owner;
-                if (CharacterSquares.Plays<Fool>(owner) && ArrowsRetrievedThisCombat.Add(owner) >= 2)
-                    BingoSquares.Complete(RetrieveTwoArrows, owner);
+                if (CharacterSquares.Plays<Fool>(owner))
+                    BingoSquares.Reach(RetrieveTwoArrows, owner, ArrowsRetrievedThisCombat.Add(owner), 2);
             });
         }
     }
@@ -64,8 +64,8 @@ internal static class FoolSquares
             CharacterSquares.Guard($"{nameof(FoolSquares)}.{nameof(ArrowImpaled)}", () =>
             {
                 Player owner = arrow.owner;
-                if (CharacterSquares.Plays<Fool>(owner) && EnemiesImpaledThisCombat.Add(owner, power.Owner) >= 2)
-                    BingoSquares.Complete(ImpaleTwoEnemies, owner);
+                if (CharacterSquares.Plays<Fool>(owner))
+                    BingoSquares.Reach(ImpaleTwoEnemies, owner, EnemiesImpaledThisCombat.Add(owner, power.Owner), 2);
             });
         }
     }
@@ -83,14 +83,14 @@ internal static class FoolSquares
 
             CharacterSquares.Guard($"{nameof(FoolSquares)}.{nameof(ArrowShot)}", () =>
             {
-                if (CharacterSquares.Plays<Fool>(owner) && ArrowsShotThisTurn.Add(owner) >= 3)
-                    BingoSquares.Complete(ShootThreeInOneTurn, owner);
+                if (CharacterSquares.Plays<Fool>(owner))
+                    BingoSquares.Reach(ShootThreeInOneTurn, owner, ArrowsShotThisTurn.Add(owner), 3);
             });
         }
     }
 
-    // C-FO-M1: after a melody card resolves, the game's own MelodyCmd count of Wah, Cho and Ki
-    // played this turn (from the combat history) reaches all three.
+    // C-FO-M1: after a melody card resolves, the game's own MelodyCmd count of the distinct
+    // melodies (Wah, Cho, Ki) played this turn, from the combat history; all three complete it.
     [HarmonyPatch(typeof(Hook), nameof(Hook.AfterCardPlayed))]
     private static class CardPlayed
     {
@@ -104,8 +104,8 @@ internal static class FoolSquares
             {
                 Player player = cardPlay.Player;
                 bool isMelody = cardPlay.Card.Tags.Any(tag => tag is CardTag.Wah or CardTag.Cho or CardTag.Ki);
-                if (isMelody && CharacterSquares.Plays<Fool>(player) && MelodyCmd.MelodiesThisTurn(player) >= 3)
-                    BingoSquares.Complete(PlayWahChoKi, player);
+                if (isMelody && CharacterSquares.Plays<Fool>(player))
+                    BingoSquares.Reach(PlayWahChoKi, player, MelodyCmd.MelodiesThisTurn(player), 3);
             });
         }
     }
@@ -120,11 +120,8 @@ internal static class FoolSquares
             if (power is not AimPower || !BingoSquares.IsOpen(HaveTwentyAim))
                 return;
 
-            CharacterSquares.Guard($"{nameof(FoolSquares)}.{nameof(PowerAmountChanged)}", () =>
-            {
-                if (power.Amount >= 20)
-                    CharacterSquares.Complete<Fool>(HaveTwentyAim, power.Owner.Player);
-            });
+            CharacterSquares.Guard($"{nameof(FoolSquares)}.{nameof(PowerAmountChanged)}",
+                () => CharacterSquares.Reach<Fool>(HaveTwentyAim, power.Owner.Player, power.Amount, 20));
         }
     }
 
@@ -143,8 +140,7 @@ internal static class FoolSquares
             CharacterSquares.Guard($"{nameof(FoolSquares)}.{nameof(DamageGiven)}", () =>
             {
                 Player? shooter = dealer?.Player ?? cardSource?.Owner;
-                if (CharacterSquares.HitDamage(results) >= 60)
-                    CharacterSquares.Complete<Fool>(ArrowHitFor60, shooter);
+                CharacterSquares.Reach<Fool>(ArrowHitFor60, shooter, CharacterSquares.HitDamage(results), 60);
             });
         }
     }

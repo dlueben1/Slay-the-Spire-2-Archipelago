@@ -45,13 +45,10 @@ internal static class IroncladSquares
                 if (!CharacterSquares.Plays<Ironclad>(owner))
                     return;
 
-                if (ExhaustedThisTurn.Add(owner) >= 6)
-                    BingoSquares.Complete(ExhaustSixInOneTurn, owner);
-                if (ExhaustedThisCombat.Add(owner) >= 20)
-                    BingoSquares.Complete(ExhaustTwentyInOneCombat, owner);
-                if (card.Type is CardType.Status or CardType.Curse
-                    && StatusOrCurseExhaustedThisCombat.Add(owner) >= 3)
-                    BingoSquares.Complete(ExhaustThreeStatusOrCurse, owner);
+                BingoSquares.Reach(ExhaustSixInOneTurn, owner, ExhaustedThisTurn.Add(owner), 6);
+                BingoSquares.Reach(ExhaustTwentyInOneCombat, owner, ExhaustedThisCombat.Add(owner), 20);
+                if (card.Type is CardType.Status or CardType.Curse)
+                    BingoSquares.Reach(ExhaustThreeStatusOrCurse, owner, StatusOrCurseExhaustedThisCombat.Add(owner), 3);
             });
         }
     }
@@ -76,8 +73,8 @@ internal static class IroncladSquares
                 if (results.UnblockedDamage <= 0 || !CharacterSquares.Plays<Ironclad>(victim))
                     return;
 
-                if (dealer == target && SelfHurtsThisCombat.Add(victim!) >= 3)
-                    BingoSquares.Complete(HurtYourselfThreeTimes, victim);
+                if (dealer == target)
+                    BingoSquares.Reach(HurtYourselfThreeTimes, victim, SelfHurtsThisCombat.Add(victim!), 3);
                 if (cardSource != null && cardSource.Owner == victim)
                     HpLostToOwnCardsThisCombat.Add(victim!, results.UnblockedDamage);
             });
@@ -97,8 +94,8 @@ internal static class IroncladSquares
             {
                 foreach (Player player in combatState.Players)
                 {
-                    if (HpLostToOwnCardsThisCombat.Get(player) >= 20)
-                        CharacterSquares.Complete<Ironclad>(LoseTwentyHpToOwnCardsAndWin, player);
+                    CharacterSquares.Reach<Ironclad>(
+                        LoseTwentyHpToOwnCardsAndWin, player, HpLostToOwnCardsThisCombat.Get(player), 20);
                 }
             });
         }
@@ -119,9 +116,8 @@ internal static class IroncladSquares
                 Player player = cardPlay.Player;
                 if (cardPlay.IsFirstInSeries
                     && cardPlay.Card.Type == CardType.Power
-                    && CharacterSquares.Plays<Ironclad>(player)
-                    && PowersPlayedThisCombat.Add(player) >= 6)
-                    BingoSquares.Complete(PlaySixPowers, player);
+                    && CharacterSquares.Plays<Ironclad>(player))
+                    BingoSquares.Reach(PlaySixPowers, player, PowersPlayedThisCombat.Add(player), 6);
             });
         }
     }

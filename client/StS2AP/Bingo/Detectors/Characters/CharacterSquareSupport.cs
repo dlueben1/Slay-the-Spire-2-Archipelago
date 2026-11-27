@@ -31,6 +31,17 @@ internal static class CharacterSquares
     }
 
     /// <summary>
+    /// Reports a "reach a number" square's current value (see <see cref="BingoSquares.Reach"/>)
+    /// for the player who reached it, provided that player is playing the square's character.
+    /// </summary>
+    public static void Reach<TCharacter>(string key, Player? player, int value, int target)
+        where TCharacter : CharacterModel
+    {
+        if (Plays<TCharacter>(player))
+            BingoSquares.Reach(key, player, value, target);
+    }
+
+    /// <summary>
     /// Completes a square for this client's player whoever caused it (Doom kills count for every
     /// player), still only when this client's player is playing the square's character.
     /// </summary>
@@ -39,6 +50,17 @@ internal static class CharacterSquares
     {
         if (Plays<TCharacter>(LocalContext.GetMe(combatState.Players)))
             BingoSquares.Complete(key, null);
+    }
+
+    /// <summary>
+    /// Reports a "reach a number" square's current value for this client's player whoever caused
+    /// it, with the same character rule as <see cref="CompleteForLocalPlayer{TCharacter}"/>.
+    /// </summary>
+    public static void ReachForLocalPlayer<TCharacter>(string key, ICombatState combatState, int value, int target)
+        where TCharacter : CharacterModel
+    {
+        if (Plays<TCharacter>(LocalContext.GetMe(combatState.Players)))
+            BingoSquares.Reach(key, null, value, target);
     }
 
     /// <summary>

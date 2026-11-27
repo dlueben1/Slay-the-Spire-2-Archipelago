@@ -70,10 +70,8 @@ internal static class SilentSquares
                 if (!CharacterSquares.Plays<Silent>(owner))
                     return;
 
-                if (SlyTriggeredThisCombat.Add(owner) >= 2)
-                    BingoSquares.Complete(TriggerTwoSlyInOneCombat, owner);
-                if (SlyTriggeredThisTurn.Add(owner) >= 3)
-                    BingoSquares.Complete(TriggerThreeSlyInOneTurn, owner);
+                BingoSquares.Reach(TriggerTwoSlyInOneCombat, owner, SlyTriggeredThisCombat.Add(owner), 2);
+                BingoSquares.Reach(TriggerThreeSlyInOneTurn, owner, SlyTriggeredThisTurn.Add(owner), 3);
             });
         }
     }
@@ -92,8 +90,8 @@ internal static class SilentSquares
             CharacterSquares.Guard($"{nameof(SilentSquares)}.{nameof(CardDiscarded)}", () =>
             {
                 Player owner = card.Owner;
-                if (CharacterSquares.Plays<Silent>(owner) && DiscardedThisTurn.Add(owner) >= 8)
-                    BingoSquares.Complete(DiscardEightInOneTurn, owner);
+                if (CharacterSquares.Plays<Silent>(owner))
+                    BingoSquares.Reach(DiscardEightInOneTurn, owner, DiscardedThisTurn.Add(owner), 8);
             });
         }
     }

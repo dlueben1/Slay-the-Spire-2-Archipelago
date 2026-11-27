@@ -38,15 +38,16 @@ internal static class CardPlayDetectors
         if (wantsTurnCount && combatState.CurrentSide == CombatSide.Player)
         {
             int playedThisTurn = CardsPlayedEarlierThisTurn(combatState, player) + 1;
-            CompleteIf("E04", player, () => playedThisTurn >= 8);
-            CompleteIf("M01", player, () => playedThisTurn >= 15);
+            BingoSquares.Reach("E04", player, playedThisTurn, 8);
+            BingoSquares.Reach("M01", player, playedThisTurn, 15);
             if (playedThisTurn > 2)
                 CombatNotes.MarkPlayedMoreThanTwoInATurn(player);
         }
 
         // W-M01: X is what the card will use, including Chemical X style bonuses. Auto-plays are
         // skipped: they pay nothing, and the game doesn't capture an X for them.
-        CompleteIf("W-M01", player, () => !cardPlay.IsAutoPlay && XValue(combatState, cardPlay) >= 5);
+        if (!cardPlay.IsAutoPlay)
+            ReachIfOpen("W-M01", player, () => XValue(combatState, cardPlay), 5);
     }
 
     /// <summary>
@@ -89,8 +90,8 @@ internal static class CardPlayDetectors
                 int exhausted = CombatManager.Instance.History.Entries
                     .OfType<CardExhaustedEntry>()
                     .Count(e => e.Actor == owner.Creature);
-                CompleteIf("E11", owner, () => exhausted >= 5);
-                CompleteIf("M09", owner, () => exhausted >= 12);
+                BingoSquares.Reach("E11", owner, exhausted, 5);
+                BingoSquares.Reach("M09", owner, exhausted, 12);
             });
     }
 
@@ -110,7 +111,7 @@ internal static class CardPlayDetectors
                     return;
                 Player owner = card.Owner;
                 int handSize = owner.PlayerCombatState?.Hand.Cards.Count ?? 0;
-                CompleteIf("E12", owner, () => handSize >= 10);
+                BingoSquares.Reach("E12", owner, handSize, 10);
             });
     }
 }

@@ -132,6 +132,16 @@ internal static class RunSquare
     }
 
     /// <summary>
+    /// Reports a "reach a number" square's current value for the player (see
+    /// <see cref="BingoSquares.Reach"/>). The value is only computed for open squares.
+    /// </summary>
+    public static void Reach(string key, Player player, Func<int> value, int target)
+    {
+        if (BingoSquares.IsOpen(key))
+            BingoSquares.Reach(key, player, value(), target);
+    }
+
+    /// <summary>
     /// Runs a detector from a game hook. Detectors only read game state; an exception in one
     /// must never break the hook it watches, so it is logged and swallowed. The hook's
     /// arguments come in as <paramref name="state"/> so callers pass a static lambda: a hook

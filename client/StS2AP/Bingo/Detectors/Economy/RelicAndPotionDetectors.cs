@@ -36,15 +36,15 @@ internal static class RelicAndPotionDetectors
             .Where(relic => !IsDefinedByThisMod(relic))
             .ToList();
         foreach ((string key, int count) in RelicCountSquares)
-            EconomyDetector.CompleteIf(key, relics.Count >= count, player);
+            BingoSquares.Reach(key, player, relics.Count, count);
 
         HashSet<RelicRarity> rarities = relics
             .Select(relic => relic.Rarity)
             .Where(rarity => rarity != RelicRarity.None)
             .ToHashSet();
-        EconomyDetector.CompleteIf(FourRaritiesSquare, rarities.Count >= 4, player);
+        BingoSquares.Reach(FourRaritiesSquare, player, rarities.Count, 4);
         rarities.Remove(RelicRarity.Starter);
-        EconomyDetector.CompleteIf(ThreeRaritiesSquare, rarities.Count >= 3, player);
+        BingoSquares.Reach(ThreeRaritiesSquare, player, rarities.Count, 3);
     }
 
     private static bool IsDefinedByThisMod(RelicModel relic) =>

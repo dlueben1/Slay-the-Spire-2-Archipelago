@@ -123,7 +123,7 @@ internal static class CombatVictoryDetectors
         }
 
         // R-M02: this combat and the two before it in the run, all without damage.
-        CompleteIf("R-M02", me, () => CleanCombatStreak(runState, me) >= 3);
+        ReachIfOpen("R-M02", me, () => CleanCombatStreak(runState, me), 3);
     }
 
     /// <summary>Damage the player took at the current map point, or null when it isn't recorded.</summary>

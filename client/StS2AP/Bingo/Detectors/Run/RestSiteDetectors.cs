@@ -75,19 +75,19 @@ internal static class RestSiteDetectors
         IEnumerable<MapPointHistoryEntry> run = RunHistory.WholeRun(runState);
 
         // I-E06: Smith chosen twice in the current act.
-        RunSquare.CompleteIf("I-E06", player,
-            () => RunHistory.CountRestChoices(act, player, RestChoices.Smith) >= 2);
+        RunSquare.Reach("I-E06", player,
+            () => RunHistory.CountRestChoices(act, player, RestChoices.Smith), 2);
         // I-M10: Smith chosen five times in the run.
-        RunSquare.CompleteIf("I-M10", player,
-            () => RunHistory.CountRestChoices(run, player, RestChoices.Smith) >= 5);
+        RunSquare.Reach("I-M10", player,
+            () => RunHistory.CountRestChoices(run, player, RestChoices.Smith), 5);
 
         // I-H04: three different rest site options in the run, Rest and Smith included,
         // Mend and the mod's own campfire options not.
-        RunSquare.CompleteIf("I-H04", player, () =>
+        RunSquare.Reach("I-H04", player, () =>
             ChoicesInRun(run, player)
                 .Where(choice => choice != RestChoices.Mend)
                 .Distinct()
-                .Count() >= 3);
+                .Count(), 3);
 
         // M27: any rest site option other than Rest, Smith or Mend (relic options such as Lift,
         // Dig, Cook or Hatch, and Clone), never the mod's own campfire options.

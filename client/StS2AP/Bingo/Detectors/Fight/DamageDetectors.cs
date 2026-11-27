@@ -43,16 +43,18 @@ internal static class DamageDetectors
         bool isHit = dealer != null;
 
         // E05: one hit showed 25+ damage.
-        if (isHit && damageDealt >= 25 && BingoSquares.IsOpen("E05"))
-            BingoSquares.Complete("E05", attacker);
+        if (isHit && BingoSquares.IsOpen("E05"))
+            BingoSquares.Reach("E05", attacker, damageDealt, 25);
 
-        // F-M07: one hit broke all of an enemy's Block, which was 25 or more.
-        if (isHit && hit.WasBlockBroken && hit.BlockedDamage >= 25 && BingoSquares.IsOpen("F-M07"))
-            BingoSquares.Complete("F-M07", attacker);
+        // F-M07: one hit broke all of an enemy's Block, which was 25 or more. Block that held
+        // isn't broken, so only a breaking hit counts toward the best.
+        if (isHit && hit.WasBlockBroken && BingoSquares.IsOpen("F-M07"))
+            BingoSquares.Reach("F-M07", attacker, hit.BlockedDamage, 25);
 
         // F-E06: 60+ damage dealt this turn, Poison ticks included.
-        if (FightLog.DamageThisTurn.Add(attacker, damageDealt) >= 60 && BingoSquares.IsOpen("F-E06"))
-            BingoSquares.Complete("F-E06", attacker);
+        int damageThisTurn = FightLog.DamageThisTurn.Add(attacker, damageDealt);
+        if (BingoSquares.IsOpen("F-E06"))
+            BingoSquares.Reach("F-E06", attacker, damageThisTurn, 60);
 
         if (hit.UnblockedDamage > 0 && FightCredit.IsBoss(combatState, target))
             OnBossHpLost(target, attacker, hit.UnblockedDamage);
@@ -67,12 +69,17 @@ internal static class DamageDetectors
         }
         int lostThisTurn = tally.Add(attacker, hpLost);
 
+        // Judged as a whole percentage of the boss's Max HP, so the best carries over between
+        // bosses of different sizes. Rounding down keeps "at least 25%" exact: the floor reaches
+        // a whole-number target only when the true share does.
+        int percentLost = boss.MaxHp > 0 ? lostThisTurn * 100 / boss.MaxHp : 100;
+
         // F-M11: a quarter of one boss's Max HP in one turn.
-        if (lostThisTurn * 4 >= boss.MaxHp && BingoSquares.IsOpen("F-M11"))
-            BingoSquares.Complete("F-M11", attacker);
+        if (BingoSquares.IsOpen("F-M11"))
+            BingoSquares.Reach("F-M11", attacker, percentLost, 25);
 
         // F-H03: half of one boss's Max HP in one turn.
-        if (lostThisTurn * 2 >= boss.MaxHp && BingoSquares.IsOpen("F-H03"))
-            BingoSquares.Complete("F-H03", attacker);
+        if (BingoSquares.IsOpen("F-H03"))
+            BingoSquares.Reach("F-H03", attacker, percentLost, 50);
     }
 }

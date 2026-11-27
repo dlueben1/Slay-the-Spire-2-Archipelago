@@ -27,7 +27,7 @@ internal static class MaxHpDetectors
         if (BingoSquares.IsOpen(GainFifteenMaxHpSquare))
         {
             int gained = EconomyDetector.RunRecord(player).Sum(stats => stats.MaxHpGained);
-            EconomyDetector.CompleteIf(GainFifteenMaxHpSquare, gained >= GainedMaxHp, player);
+            BingoSquares.Reach(GainFifteenMaxHpSquare, player, gained, GainedMaxHp);
         }
     }
 

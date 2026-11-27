@@ -103,12 +103,12 @@ internal static class DeckDetectors
             .DefaultIfEmpty(0)
             .Max();
 
-        EconomyDetector.CompleteIf(FiveUpgradedSquare, upgraded >= 5, player);
+        BingoSquares.Reach(FiveUpgradedSquare, player, upgraded, 5);
         EconomyDetector.CompleteIf(NoStrikesSquare, strikes == 0, player);
-        EconomyDetector.CompleteIf(ThreeEnchantedSquare, enchanted >= 3, player);
-        EconomyDetector.CompleteIf(FiveCopiesSquare, mostCopies >= 5, player);
-        EconomyDetector.CompleteIf(ThirtyFiveCardsSquare, deck.Count >= 35, player);
-        EconomyDetector.CompleteIf(ThreeCursesSquare, curses >= 3, player);
+        BingoSquares.Reach(ThreeEnchantedSquare, player, enchanted, 3);
+        BingoSquares.Reach(FiveCopiesSquare, player, mostCopies, 5);
+        BingoSquares.Reach(ThirtyFiveCardsSquare, player, deck.Count, 35);
+        BingoSquares.Reach(ThreeCursesSquare, player, curses, 3);
         EconomyDetector.CompleteIf(NoStarterCardsSquare, starters == 0, player);
         EconomyDetector.CompleteIf(
             EveryCardUpgradedSquare, upgraded >= 10 && upgradableButNotUpgraded == 0, player);
@@ -120,13 +120,13 @@ internal static class DeckDetectors
         if (!BingoSquares.IsOpen(TwoTransformsSquare))
             return;
         int transformed = EconomyDetector.RunRecord(player).Sum(stats => stats.CardsTransformed.Count);
-        EconomyDetector.CompleteIf(TwoTransformsSquare, transformed >= 2, player);
+        BingoSquares.Reach(TwoTransformsSquare, player, transformed, 2);
     }
 
     private static void CheckUpgradeLevel(Player player, int upgradeLevel)
     {
         foreach ((string key, int level) in UpgradeLevelSquares)
-            EconomyDetector.CompleteIf(key, upgradeLevel >= level, player);
+            BingoSquares.Reach(key, player, upgradeLevel, level);
     }
 
     private static void CheckCurseFromEvent(Player player, CardModel card)

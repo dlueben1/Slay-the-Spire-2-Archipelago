@@ -22,7 +22,7 @@ internal static class DefenseDetectors
             Guard("block gained", () =>
             {
                 if (creature.Player != null)
-                    CompleteIf("E06", creature.Player, () => creature.Block >= 30);
+                    BingoSquares.Reach("E06", creature.Player, creature.Block, 30);
             });
     }
 

@@ -51,20 +51,18 @@ internal static class NecrobinderSquares
                 if (power.Owner.Side != CombatSide.Enemy)
                     return;
 
-                if (power.Amount >= 30)
-                    CompleteForApplier(HaveThirtyDoom, applier, combatState);
-                if (power.Amount >= 300)
-                    CompleteForApplier(HaveThreeHundredDoom, applier, combatState);
+                ReachForApplier(HaveThirtyDoom, applier, combatState, power.Amount, 30);
+                ReachForApplier(HaveThreeHundredDoom, applier, combatState, power.Amount, 300);
             });
         }
 
-        private static void CompleteForApplier(string key, Creature? applier, ICombatState combatState)
+        private static void ReachForApplier(string key, Creature? applier, ICombatState combatState, int doom, int target)
         {
             Player? player = CharacterSquares.PlayerBehind(applier);
             if (player != null)
-                CharacterSquares.Complete<Necrobinder>(key, player);
+                CharacterSquares.Reach<Necrobinder>(key, player, doom, target);
             else
-                CharacterSquares.CompleteForLocalPlayer<Necrobinder>(key, combatState);
+                CharacterSquares.ReachForLocalPlayer<Necrobinder>(key, combatState, doom, target);
         }
     }
 
@@ -97,8 +95,8 @@ internal static class NecrobinderSquares
 
             CharacterSquares.Guard($"{nameof(NecrobinderSquares)}.{nameof(Summoned)}", () =>
             {
-                if (summoner.Osty is { IsAlive: true, MaxHp: >= 25 })
-                    CharacterSquares.Complete<Necrobinder>(OstyTo25MaxHp, summoner);
+                if (summoner.Osty is { IsAlive: true } osty)
+                    CharacterSquares.Reach<Necrobinder>(OstyTo25MaxHp, summoner, osty.MaxHp, 25);
             });
         }
     }
@@ -121,8 +119,8 @@ internal static class NecrobinderSquares
                     if (creature.Side == CombatSide.Enemy && creature.IsDead)
                         DoomKillsThisCombat.Add(creature);
                 }
-                if (DoomKillsThisCombat.Count >= 3)
-                    CharacterSquares.CompleteForLocalPlayer<Necrobinder>(KillThreeWithDoom, combatState);
+                CharacterSquares.ReachForLocalPlayer<Necrobinder>(
+                    KillThreeWithDoom, combatState, DoomKillsThisCombat.Count, 3);
             });
         }
     }
@@ -142,9 +140,8 @@ internal static class NecrobinderSquares
                 Player player = cardPlay.Player;
                 if (cardPlay.IsFirstInSeries
                     && cardPlay.Card is Soul
-                    && CharacterSquares.Plays<Necrobinder>(player)
-                    && SoulsPlayedThisCombat.Add(player) >= 3)
-                    BingoSquares.Complete(PlayThreeSouls, player);
+                    && CharacterSquares.Plays<Necrobinder>(player))
+                    BingoSquares.Reach(PlayThreeSouls, player, SoulsPlayedThisCombat.Add(player), 3);
             });
         }
     }
@@ -160,11 +157,9 @@ internal static class NecrobinderSquares
             if (dealer?.Monster is not Osty || !BingoSquares.IsOpen(OstyHitsFor100))
                 return;
 
-            CharacterSquares.Guard($"{nameof(NecrobinderSquares)}.{nameof(DamageGiven)}", () =>
-            {
-                if (CharacterSquares.HitDamage(results) >= 100)
-                    CharacterSquares.Complete<Necrobinder>(OstyHitsFor100, dealer.PetOwner);
-            });
+            CharacterSquares.Guard($"{nameof(NecrobinderSquares)}.{nameof(DamageGiven)}",
+                () => CharacterSquares.Reach<Necrobinder>(
+                    OstyHitsFor100, dealer.PetOwner, CharacterSquares.HitDamage(results), 100));
         }
     }
 }

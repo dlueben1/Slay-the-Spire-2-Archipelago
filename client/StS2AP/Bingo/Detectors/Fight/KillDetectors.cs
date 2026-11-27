@@ -132,32 +132,37 @@ internal static class KillDetectors
             BingoSquares.Complete("F-E01", killer);
 
         // F-E02: the killing hit overkilled by 25 or more.
-        if (kill.Hit is { OverkillDamage: >= 25 } && BingoSquares.IsOpen("F-E02"))
-            BingoSquares.Complete("F-E02", killer);
+        if (kill.Hit is { } killingHit && BingoSquares.IsOpen("F-E02"))
+            BingoSquares.Reach("F-E02", killer, killingHit.OverkillDamage, 25);
 
         // F-E03: the killer was resolving a potion when its damage killed the enemy.
         if (kill.Hit != null && FightLog.PotionInUse.ContainsKey(killer.NetId) && BingoSquares.IsOpen("F-E03"))
             BingoSquares.Complete("F-E03", killer);
 
         // F-E04: the enemy's intent, as this client's player sees it, was an attack for 15+.
-        if (BingoSquares.IsOpen("F-E04") && IntendedDamageToMe(combatState, enemy) >= 15)
-            BingoSquares.Complete("F-E04", killer);
+        if (BingoSquares.IsOpen("F-E04"))
+            BingoSquares.Reach("F-E04", killer, IntendedDamageToMe(combatState, enemy), 15);
 
         // F-M04: the kill came in the enemies' turn (Poison, Thorns, Doom...).
         if (combatState.CurrentSide == CombatSide.Enemy && BingoSquares.IsOpen("F-M04"))
             BingoSquares.Complete("F-M04", killer);
 
         // F-M06: three kills in one turn (players' turn plus the following enemies' turn).
-        if (FightLog.KillsThisTurn.Add(killer, 1) >= 3 && BingoSquares.IsOpen("F-M06"))
-            BingoSquares.Complete("F-M06", killer);
+        int killsThisTurn = FightLog.KillsThisTurn.Add(killer, 1);
+        if (BingoSquares.IsOpen("F-M06"))
+            BingoSquares.Reach("F-M06", killer, killsThisTurn, 3);
 
         // F-M02: three minions killed in one combat; minions dying with their summoner don't count.
-        if (enemy.IsSecondaryEnemy && FightLog.MinionKillsThisCombat.Add(killer, 1) >= 3 && BingoSquares.IsOpen("F-M02"))
-            BingoSquares.Complete("F-M02", killer);
+        if (enemy.IsSecondaryEnemy)
+        {
+            int minionKills = FightLog.MinionKillsThisCombat.Add(killer, 1);
+            if (BingoSquares.IsOpen("F-M02"))
+                BingoSquares.Reach("F-M02", killer, minionKills, 3);
+        }
 
         // F-M09: the enemy had 10+ Strength when it died.
-        if (enemy.GetPowerAmount<StrengthPower>() >= 10 && BingoSquares.IsOpen("F-M09"))
-            BingoSquares.Complete("F-M09", killer);
+        if (BingoSquares.IsOpen("F-M09"))
+            BingoSquares.Reach("F-M09", killer, enemy.GetPowerAmount<StrengthPower>(), 10);
 
         bool wasLastPrimary = enemy.IsPrimaryEnemy && !OtherLivingEnemies(combatState, enemy).Any(other => other.IsPrimaryEnemy);
 
@@ -186,8 +191,8 @@ internal static class KillDetectors
         if (FightLog.KillsByPlayingCard.TryGetValue(card, out int kills))
         {
             FightLog.KillsByPlayingCard[card] = kills + 1;
-            if (kills + 1 >= 2 && BingoSquares.IsOpen("E08"))
-                BingoSquares.Complete("E08", card.Owner);
+            if (BingoSquares.IsOpen("E08"))
+                BingoSquares.Reach("E08", card.Owner, kills + 1, 2);
         }
 
         // F-E09: the enemy had 40+ Max HP and full HP when the card began to be played.

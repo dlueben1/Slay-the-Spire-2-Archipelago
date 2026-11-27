@@ -13,7 +13,7 @@ namespace StS2AP.Bingo.Detectors.Fight;
 /// <summary>
 /// Works out which player gets the credit for something that happened in combat. Every client
 /// simulates every player, so detectors pass that player to <see cref="BingoSquares.Complete"/>
-/// and only the local player's squares count.
+/// or <see cref="BingoSquares.Reach"/> and only the local player's squares count.
 /// </summary>
 internal static class FightCredit
 {

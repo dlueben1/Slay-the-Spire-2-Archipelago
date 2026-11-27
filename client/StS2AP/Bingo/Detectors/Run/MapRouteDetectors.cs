@@ -35,14 +35,14 @@ internal static class MapRouteDetectors
         IReadOnlyList<MapPointHistoryEntry> act = RunHistory.CurrentAct(runState);
 
         // E24, M20: ? map points visited in the current act.
-        RunSquare.CompleteIf("E24", me, () => CountUnknown(act) >= 4);
-        RunSquare.CompleteIf("M20", me, () => CountUnknown(act) >= 6);
+        RunSquare.Reach("E24", me, () => CountUnknown(act), 4);
+        RunSquare.Reach("M20", me, () => CountUnknown(act), 6);
         // H14: ? map points over the whole run.
-        RunSquare.CompleteIf("H14", me, () => CountUnknown(RunHistory.WholeRun(runState)) >= 12);
+        RunSquare.Reach("H14", me, () => CountUnknown(RunHistory.WholeRun(runState)), 12);
 
         // R-E03: map points with a rest site room in the current act.
-        RunSquare.CompleteIf("R-E03", me,
-            () => act.Count(entry => entry.HasRoomOfType(RoomType.RestSite)) >= 4);
+        RunSquare.Reach("R-E03", me,
+            () => act.Count(entry => entry.HasRoomOfType(RoomType.RestSite)), 4);
 
         // R-E02: a fight, an elite, a ?, a shop, a rest site and a treasure room in one act.
         RunSquare.CompleteIf("R-E02", me, () =>

@@ -69,14 +69,13 @@ internal static class DefectSquares
                 if (!CharacterSquares.Plays<Defect>(owner))
                     return;
 
-                if (EvokedThisTurn.Add(owner) >= 3)
-                    BingoSquares.Complete(EvokeThreeInOneTurn, owner);
-                if (orb is DarkOrb && orb.EvokeVal >= 50m && targets.Any())
-                    BingoSquares.Complete(DarkEvokeForFifty, owner);
+                BingoSquares.Reach(EvokeThreeInOneTurn, owner, EvokedThisTurn.Add(owner), 3);
+                // The evoke value is a decimal; truncating it keeps "50 or more" exactly as before.
+                if (orb is DarkOrb && targets.Any())
+                    BingoSquares.Reach(DarkEvokeForFifty, owner, (int)orb.EvokeVal, 50);
                 if (CardsInPlay.TryGetValue(owner.NetId, out CardInPlay? cardInPlay)
-                    && cardInPlay.EvokedOrbs.Add(orb)
-                    && cardInPlay.EvokedOrbs.Count >= 4)
-                    BingoSquares.Complete(EvokeFourWithOneCard, owner);
+                    && cardInPlay.EvokedOrbs.Add(orb))
+                    BingoSquares.Reach(EvokeFourWithOneCard, owner, cardInPlay.EvokedOrbs.Count, 4);
             });
         }
     }
@@ -100,13 +99,13 @@ internal static class DefectSquares
                     return;
 
                 int typesHeld = player.PlayerCombatState?.OrbQueue.Orbs.Select(o => o.GetType()).Distinct().Count() ?? 0;
-                if (typesHeld >= 3)
-                    BingoSquares.Complete(ThreeOrbTypesAtOnce, player);
-                if (ChanneledThisCombat.Add(player) >= 12)
-                    BingoSquares.Complete(ChannelTwelveInOneCombat, player);
-                if (VanillaOrbTypes.Contains(orb.GetType())
-                    && OrbTypesChanneledThisCombat.Add(player, orb.GetType()) >= VanillaOrbTypes.Count)
-                    BingoSquares.Complete(ChannelAllFiveTypes, player);
+                BingoSquares.Reach(ThreeOrbTypesAtOnce, player, typesHeld, 3);
+                BingoSquares.Reach(ChannelTwelveInOneCombat, player, ChanneledThisCombat.Add(player), 12);
+                if (VanillaOrbTypes.Contains(orb.GetType()))
+                {
+                    int typesChanneled = OrbTypesChanneledThisCombat.Add(player, orb.GetType());
+                    BingoSquares.Reach(ChannelAllFiveTypes, player, typesChanneled, VanillaOrbTypes.Count);
+                }
             });
         }
     }
@@ -121,11 +120,8 @@ internal static class DefectSquares
             if (power is not FocusPower || !BingoSquares.IsOpen(HaveSevenFocus))
                 return;
 
-            CharacterSquares.Guard($"{nameof(DefectSquares)}.{nameof(PowerAmountChanged)}", () =>
-            {
-                if (power.Amount >= 7)
-                    CharacterSquares.Complete<Defect>(HaveSevenFocus, power.Owner.Player);
-            });
+            CharacterSquares.Guard($"{nameof(DefectSquares)}.{nameof(PowerAmountChanged)}",
+                () => CharacterSquares.Reach<Defect>(HaveSevenFocus, power.Owner.Player, power.Amount, 7));
         }
     }
 

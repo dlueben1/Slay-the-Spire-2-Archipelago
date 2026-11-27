@@ -58,10 +58,10 @@ internal static class EliteDetectors
 
         IReadOnlyList<MapPointHistoryEntry> act = RunHistory.CurrentAct(runState);
         // E20, F-M15: elites defeated in the current act.
-        RunSquare.CompleteIf("E20", me, () => DefeatedIn(act) >= 2);
-        RunSquare.CompleteIf("F-M15", me, () => DefeatedIn(act) >= 3);
+        RunSquare.Reach("E20", me, () => DefeatedIn(act), 2);
+        RunSquare.Reach("F-M15", me, () => DefeatedIn(act), 3);
         // M19, H13: elites defeated over the whole run.
-        RunSquare.CompleteIf("M19", me, () => DefeatedIn(RunHistory.WholeRun(runState)) >= 4);
-        RunSquare.CompleteIf("H13", me, () => DefeatedIn(RunHistory.WholeRun(runState)) >= 7);
+        RunSquare.Reach("M19", me, () => DefeatedIn(RunHistory.WholeRun(runState)), 4);
+        RunSquare.Reach("H13", me, () => DefeatedIn(RunHistory.WholeRun(runState)), 7);
     }
 }

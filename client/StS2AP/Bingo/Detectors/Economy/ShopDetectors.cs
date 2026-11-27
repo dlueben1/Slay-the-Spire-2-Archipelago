@@ -83,7 +83,7 @@ internal static class ShopDetectors
     {
         int removals = player.ExtraFields.CardShopRemovalsUsed;
         EconomyDetector.CompleteIf(RemoveAtShopSquare, removals >= 1, player);
-        EconomyDetector.CompleteIf(RemoveThreeAtShopsSquare, removals >= 3, player);
+        BingoSquares.Reach(RemoveThreeAtShopsSquare, player, removals, 3);
     }
 
     private static void OnPurchased(IRunState runState, Player player, MerchantEntry entry)
@@ -93,7 +93,7 @@ internal static class ShopDetectors
         bool isApCheck = attempt?.IsApCheck ?? false;
 
         _visit.Purchases++;
-        EconomyDetector.CompleteIf(FourPurchasesSquare, _visit.Purchases >= FourPurchases, player);
+        BingoSquares.Reach(FourPurchasesSquare, player, _visit.Purchases, FourPurchases);
         if (BingoSquares.IsOpen(BlitzMerchantSquare))
             EconomyDetector.CompleteIf(BlitzMerchantSquare, IsBlitzMerchantPurchase(runState, entry), player);
 

@@ -30,7 +30,7 @@ internal static class PowerDetectors
 
         // M08: different buffs on the player.
         if (owner.Player != null)
-            CompleteIf("M08", owner.Player, () => DistinctPowers(owner, PowerType.Buff) >= 5);
+            ReachIfOpen("M08", owner.Player, () => DistinctPowers(owner, PowerType.Buff), 5);
 
         // E09: different debuffs on one enemy, credited to the player who applied the latest.
         // A debuff with no player behind it only counts in single-player, where it can only be
@@ -40,7 +40,7 @@ internal static class PowerDetectors
             Player? credited = applier?.Player ?? applier?.PetOwner
                 ?? (combatState.Players.Count == 1 ? combatState.Players[0] : null);
             if (credited != null)
-                CompleteIf("E09", credited, () => DistinctPowers(owner, PowerType.Debuff) >= 3);
+                BingoSquares.Reach("E09", credited, DistinctPowers(owner, PowerType.Debuff), 3);
         }
     }
 

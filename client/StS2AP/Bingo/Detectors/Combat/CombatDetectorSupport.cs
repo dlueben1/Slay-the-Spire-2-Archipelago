@@ -28,4 +28,14 @@ internal static class CombatDetectorSupport
         if (BingoSquares.IsOpen(key) && condition())
             BingoSquares.Complete(key, player);
     }
+
+    /// <summary>
+    /// Reports a "reach a number" square's current value through <see cref="BingoSquares.Reach"/>,
+    /// working the value out only while the square is still open.
+    /// </summary>
+    public static void ReachIfOpen(string key, Player? player, Func<int> value, int target)
+    {
+        if (BingoSquares.IsOpen(key))
+            BingoSquares.Reach(key, player, value(), target);
+    }
 }

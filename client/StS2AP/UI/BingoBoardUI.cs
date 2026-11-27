@@ -495,7 +495,8 @@ internal sealed partial class BingoBoardUI : Control
             // Only squares done while the board is open pop in; the rest are simply there.
             bool newlyDone = animate && done[index] && _shownDone != null && !_shownDone.Contains(index);
             _cells[index].SetState(
-                done[index], onFullLine.Contains(index), finishesLine.Contains(index), streaks[index], newlyDone);
+                done[index], onFullLine.Contains(index), finishesLine.Contains(index), streaks[index],
+                BingoProgress.For(_board.Squares[index].Key), newlyDone);
         }
         _actLegend.Visible = streaks.Contains(StreakState.BrokenThisAct);
         _runLegend.Visible = streaks.Contains(StreakState.BrokenThisRun);
@@ -579,8 +580,10 @@ internal sealed partial class BingoCellView : PanelContainer
     private readonly Label _text;
     private readonly BingoDaub _daub;
     private readonly BrokenStreakMark _broken;
+    private readonly Label _progressText;
+    private readonly BingoProgressBar _progressBar;
     private readonly int _maxFontSize;
-    private (bool Done, bool OnFullLine, bool FinishesLine, StreakState Streak)? _state;
+    private (bool Done, bool OnFullLine, bool FinishesLine, StreakState Streak, BingoProgress.Entry? Progress)? _state;
 
     public BingoCellView(BingoSquareInfo square, Vector2 size, int maxFontSize, (Texture2D Icon, string Text)? character)
     {
@@ -617,6 +620,12 @@ internal sealed partial class BingoCellView : PanelContainer
             });
         }
         topRow.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill, MouseFilter = MouseFilterEnum.Ignore });
+        // Best so far on a "reach a number" square, beside the tier pips: small, since the bar
+        // under the text already shows how far along it is.
+        _progressText = Label("", 13, TextMuted, bold: true);
+        _progressText.VerticalAlignment = VerticalAlignment.Center;
+        _progressText.Visible = false;
+        topRow.AddChild(_progressText);
         topRow.AddChild(new TierPips(square.Tier switch
         {
             "M" => (2, MediumTier),
@@ -646,15 +655,29 @@ internal sealed partial class BingoCellView : PanelContainer
         // The cell's size is only known after layout, so fit the text whenever the label is resized.
         _text.Resized += () => FitText(_text, _maxFontSize);
         stack.AddChild(_text);
-        // Keeps the text block centred in the cell: the top row is balanced by the same space below.
-        stack.AddChild(new Control { CustomMinimumSize = new Vector2(0f, TopRowHeight * 0.5f), MouseFilter = MouseFilterEnum.Ignore });
+        // Keeps the text block centred in the cell: the top row is balanced by the same space
+        // below, which also holds the progress bar.
+        _progressBar = new BingoProgressBar
+        {
+            CustomMinimumSize = new Vector2(0f, TopRowHeight * 0.5f),
+            MouseFilter = MouseFilterEnum.Ignore,
+        };
+        stack.AddChild(_progressBar);
     }
 
-    internal void SetState(bool done, bool onFullLine, bool finishesLine, StreakState streak, bool popIn)
+    internal void SetState(
+        bool done, bool onFullLine, bool finishesLine, StreakState streak, BingoProgress.Entry? progress, bool popIn)
     {
-        if (_state == (done, onFullLine, finishesLine, streak) && !popIn)
+        if (_state == (done, onFullLine, finishesLine, streak, progress) && !popIn)
             return;
-        _state = (done, onFullLine, finishesLine, streak);
+        _state = (done, onFullLine, finishesLine, streak, progress);
+
+        // Progress only matters while the square is still to do.
+        bool showProgress = !done && progress is { Best: > 0, Target: > 0 };
+        _progressText.Visible = showProgress;
+        _progressBar.SetFraction(showProgress ? (float)progress!.Value.Best / progress.Value.Target : 0f);
+        if (showProgress)
+            _progressText.Text = $"{progress!.Value.Best}/{progress.Value.Target}";
 
         Color? brokenColor = streak switch
         {
@@ -823,6 +846,34 @@ internal sealed partial class BrokenStreakBadge : Control
         canvas.DrawCircle(center, 11f, Ink);
         canvas.DrawCircle(center, 9f, color);
         canvas.DrawLine(center + new Vector2(-4.5f, 4.5f), center + new Vector2(4.5f, -4.5f), Ink, 2.8f, antialiased: true);
+    }
+}
+
+/// <summary>A thin bar under a square's text: how close its best so far came to the target.</summary>
+internal sealed partial class BingoProgressBar : Control
+{
+    private const float Thickness = 4f;
+    private float _fraction;
+
+    public BingoProgressBar() => Draw += DrawBar;
+
+    internal void SetFraction(float fraction)
+    {
+        fraction = Math.Clamp(fraction, 0f, 1f);
+        if (Mathf.IsEqualApprox(_fraction, fraction))
+            return;
+        _fraction = fraction;
+        QueueRedraw();
+    }
+
+    private void DrawBar()
+    {
+        if (_fraction <= 0f)
+            return;
+        float width = Size.X * 0.7f;
+        var track = new Rect2((Size.X - width) / 2f, (Size.Y - Thickness) / 2f, width, Thickness);
+        DrawRect(track, Track);
+        DrawRect(track with { Size = new Vector2(width * _fraction, Thickness) }, new Color(Claim, 0.85f));
     }
 }
 

@@ -39,10 +39,8 @@ internal static class RegentSquares
                     return;
 
                 int stars = gainer.PlayerCombatState?.Stars ?? 0;
-                if (stars >= 8)
-                    BingoSquares.Complete(HaveEightStars, gainer);
-                if (stars >= 20)
-                    BingoSquares.Complete(HaveTwentyStars, gainer);
+                BingoSquares.Reach(HaveEightStars, gainer, stars, 8);
+                BingoSquares.Reach(HaveTwentyStars, gainer, stars, 20);
             });
         }
     }
@@ -64,17 +62,15 @@ internal static class RegentSquares
                     return;
 
                 int spentThisTurn = StarsSpentThisTurn.Add(spender, amount);
-                if (spentThisTurn >= 6)
-                    BingoSquares.Complete(SpendSixStarsInOneTurn, spender);
-                if (spentThisTurn >= 15)
-                    BingoSquares.Complete(SpendFifteenStarsInOneTurn, spender);
+                BingoSquares.Reach(SpendSixStarsInOneTurn, spender, spentThisTurn, 6);
+                BingoSquares.Reach(SpendFifteenStarsInOneTurn, spender, spentThisTurn, 15);
             });
         }
     }
 
-    // C-RE-E2: every Forge counts. C-RE-H1: after a Forge, any of the player's Sovereign Blades
-    // has 150 base damage (ForgeCmd raises the blades' base damage before this hook), the same
-    // check as the game's 999-damage achievement.
+    // C-RE-E2: every Forge counts. C-RE-H1: after a Forge, the highest base damage among the
+    // player's Sovereign Blades reaches 150 (ForgeCmd raises the blades' base damage before this
+    // hook), the same check as the game's 999-damage achievement.
     [HarmonyPatch(typeof(Hook), nameof(Hook.AfterForge))]
     private static class Forged
     {
@@ -89,14 +85,15 @@ internal static class RegentSquares
                 if (!CharacterSquares.Plays<Regent>(forger))
                     return;
 
-                if (ForgesThisCombat.Add(forger) >= 3)
-                    BingoSquares.Complete(ForgeThreeTimesInOneCombat, forger);
+                BingoSquares.Reach(ForgeThreeTimesInOneCombat, forger, ForgesThisCombat.Add(forger), 3);
 
-                bool bladeAt150 = forger.PlayerCombatState?.AllCards
+                // Base damage is a decimal; truncating it keeps "150 or more" exactly as before.
+                decimal strongestBlade = forger.PlayerCombatState?.AllCards
                     .OfType<SovereignBlade>()
-                    .Any(blade => blade.DynamicVars.Damage.BaseValue >= 150m) ?? false;
-                if (bladeAt150)
-                    BingoSquares.Complete(ForgeBladeTo150, forger);
+                    .Select(blade => blade.DynamicVars.Damage.BaseValue)
+                    .DefaultIfEmpty(0m)
+                    .Max() ?? 0m;
+                BingoSquares.Reach(ForgeBladeTo150, forger, (int)strongestBlade, 150);
             });
         }
     }
@@ -117,9 +114,8 @@ internal static class RegentSquares
                 Player player = cardPlay.Player;
                 if (cardPlay.IsFirstInSeries
                     && cardPlay.Card.Tags.Contains(CardTag.Minion)
-                    && CharacterSquares.Plays<Regent>(player)
-                    && MinionCardsPlayedThisCombat.Add(player) >= 4)
-                    BingoSquares.Complete(PlayFourMinionCards, player);
+                    && CharacterSquares.Plays<Regent>(player))
+                    BingoSquares.Reach(PlayFourMinionCards, player, MinionCardsPlayedThisCombat.Add(player), 4);
             });
         }
     }

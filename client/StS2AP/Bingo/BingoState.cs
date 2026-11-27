@@ -118,5 +118,6 @@ internal static class BingoState
         _goalAnnounced = false;
         _knownLines = null;
         BingoBoardUI.RemoveUI();
+        BingoProgress.ResetSlotState();
     }
 }

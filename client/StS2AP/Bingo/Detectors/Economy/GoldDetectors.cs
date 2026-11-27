@@ -44,7 +44,7 @@ internal static class GoldDetectors
     public static void CheckGoldHeld(Player player)
     {
         foreach ((string key, int gold) in GoldHeldSquares)
-            EconomyDetector.CompleteIf(key, player.Gold >= gold, player);
+            BingoSquares.Reach(key, player, player.Gold, gold);
     }
 
     public static void CheckGoldSpentInRun(Player player)
@@ -53,7 +53,7 @@ internal static class GoldDetectors
             return;
         int spent = GoldSpentInRun(player);
         foreach ((string key, int gold) in GoldSpentInRunSquares)
-            EconomyDetector.CompleteIf(key, spent >= gold, player);
+            BingoSquares.Reach(key, player, spent, gold);
     }
 
     private static void CheckGoldSpentInShop(Player player)
@@ -61,7 +61,7 @@ internal static class GoldDetectors
         if (!BingoSquares.IsOpen(SpendInOneShopSquare) || player.RunState.CurrentRoom is not MerchantRoom)
             return;
         int spentHere = EconomyDetector.CurrentPointRecord(player)?.GoldSpent ?? 0;
-        EconomyDetector.CompleteIf(SpendInOneShopSquare, spentHere >= SpendInOneShopGold, player);
+        BingoSquares.Reach(SpendInOneShopSquare, player, spentHere, SpendInOneShopGold);
     }
 
     public static void CheckReachedAct2BossWithoutSpending(Player player, AbstractRoom room)
