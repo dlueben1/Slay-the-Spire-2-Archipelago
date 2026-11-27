@@ -186,7 +186,9 @@ namespace StS2AP.Patches
                     ArchipelagoCharTrackerUI.ProgressiveRestLabel?.SetText($"({ArchipelagoClient.Progress.MaxRestLevel(offset) ?? 0} / 3)");
                     ArchipelagoCharTrackerUI.ProgressiveSmithLabel?.SetText($"({ArchipelagoClient.Progress.MaxSmithLevel(offset) ?? 0} / 3)");
                 }
-                ArchipelagoCharTrackerUI.ProgressiveAncients?.SetText($"{ArchipelagoClient.Progress.MaxProgressiveAncientLevel(offset)} / 3");
+                // Extra copies (from start inventory, say) can push the level past 3.
+                int ancientLevel = Math.Min(ArchipelagoClient.Progress.MaxProgressiveAncientLevel(offset), 3);
+                ArchipelagoCharTrackerUI.ProgressiveAncients?.SetText($"{ancientLevel} / 3");
 
                 ArchipelagoClient.Progress.ProgressiveStarterCards.TryGetValue(offset, out int starterCardTier);
                 ArchipelagoCharTrackerUI.ProgressiveStarterCardLabel?.SetText($"({starterCardTier} / 2)");
