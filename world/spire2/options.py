@@ -6,6 +6,7 @@ from Options import OptionSet, OptionList, Range, Toggle, Visibility, Choice, Te
 
 from schema import Schema, Optional, And, Or
 
+from .bingo_squares import BINGO_SQUARES
 from .characters import PREDEFINED_CHARACTERS, character_list, unique_character_ids
 from .constants import NUM_CUSTOM, ASCENSIONS
 
@@ -111,6 +112,14 @@ class BingoHardWeight(Range):
     range_start = 0
     range_end = 100
     default = 20
+
+class BingoTestSquares(OptionList):
+    """Developer testing only: square keys (such as C-IR-M6) placed on the bingo board first, row
+    by row, ignoring the roster, tier weights and conflicts. Any cells left over are dealt as usual."""
+    display_name = "Bingo Test Squares"
+    visibility = Visibility.none
+    valid_keys = [square.key for square in BINGO_SQUARES]
+    default = []
 
 class PickNumberCharacters(Range):
     """Randomly select this many of the configured characters to generate for.
@@ -1170,6 +1179,7 @@ class Spire2Options(PerGameCommonOptions):
     bingo_easy_weight: BingoEasyWeight
     bingo_medium_weight: BingoMediumWeight
     bingo_hard_weight: BingoHardWeight
+    bingo_test_squares: BingoTestSquares
     lock_characters: LockCharacters
     unlocked_character: UnlockedCharacter
     # final_act: FinalAct

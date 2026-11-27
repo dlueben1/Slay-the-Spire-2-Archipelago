@@ -161,6 +161,8 @@ def deal_board(world: 'SlayTheSpire2World', size: int) -> List[BingoSquare]:
     """Deals size x size squares, row-major, with no conflicting pair sharing a line."""
     random = world.random
     cells = size * size
+    if world.options.bingo_test_squares.value:
+        return deal_test_board(world, cells)
     candidates = candidate_squares(world)
     if len(candidates) < cells:
         raise OptionError(f"Slay the Spire II player {world.player_name}: only {len(candidates)} bingo squares fit "
@@ -198,6 +200,20 @@ def deal_board(world: 'SlayTheSpire2World', size: int) -> List[BingoSquare]:
         chosen[chosen.index(unplaced)] = replacement
     raise OptionError(f"Slay the Spire II player {world.player_name}: could not deal a {size}x{size} bingo board "
                       "without conflicting squares in a line.")
+
+
+def deal_test_board(world: 'SlayTheSpire2World', cells: int) -> List[BingoSquare]:
+    """For testing squares in the game: the listed squares in order, then usual candidates in
+    random order for any cells left. Tiers, roster and conflicts are ignored for the listed ones."""
+    keys = list(dict.fromkeys(world.options.bingo_test_squares.value))
+    if len(keys) > cells:
+        raise OptionError(f"Slay the Spire II player {world.player_name}: {len(keys)} bingo test squares "
+                          f"do not fit a board of {cells} squares.")
+    board = [SQUARES_BY_KEY[key] for key in keys]
+    fillers = [square for square in candidate_squares(world) if square.key not in keys]
+    board += world.random.sample(fillers, cells - len(board))
+    logging.warning("Slay the Spire II player %s: the bingo board uses %d test squares.", world.player_name, len(keys))
+    return board
 
 
 def place_squares(random, chosen: List[BingoSquare], size: int, lines_of_cell: List[List[Tuple[int, ...]]]
